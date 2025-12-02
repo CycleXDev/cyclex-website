@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CycleX – AI-Powered Secure Reward Ecosystem</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg-main: #050509;
+      --bg-gradient-start: #050509;
+      --bg-gradient-mid: #140024;
+      --bg-gradient-end: #001321;
+      --text-main: #f5f7ff;
+      --text-muted: #a0a3b5;
+      --accent-cyan: #00e5ff;
+      --accent-green: #00e676;
+      --accent-purple: #6c2aff;
+      --card-bg: rgba(15, 15, 25, 0.92);
+      --border-subtle: rgba(255, 255, 255, 0.06);
+      --shadow-soft: 0 18px 60px rgba(0, 0, 0, 0.7);
+      --radius-xl: 24px;
+      --transition-fast: 0.18s ease-out;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, #1e093a 0, transparent 45%),
+        radial-gradient(circle at top right, #003a4c 0, transparent 45%),
+        radial-gradient(circle at bottom, #001b3a 0, transparent 55%),
+        linear-gradient(160deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
+      color: var(--text-main);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      animation: fadeBody 0.7s ease-out forwards;
+      opacity: 0;
+    }
+
+    @keyframes fadeBody {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page-shell {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    /* top bar */
+
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      object-fit: contain;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      font-size: 18px;
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+    }
+
+    /* language switcher */
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(10, 10, 20, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      gap: 2px;
+    }
+
+    .lang-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .lang-btn.active {
+      background: rgba(0, 229, 255, 0.14);
+      color: var(--accent-cyan);
+    }
+
+    /* main logo center */
+
+    .main-logo {
+      display: block;
+      margin: 10px auto 22px auto;
+      width: 100px;
+      height: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.9));
+      animation: floatLogo 6s ease-in-out infinite;
+    }
+
+    @keyframes floatLogo {
+      0%   { transform: translateY(0); }
+      50%  { transform: translateY(-6px); }
+      100% { transform: translateY(0); }
+    }
+
+    /* hero */
+
+    .hero {
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto 40px auto;
+      animation: fadeUp 0.8s ease-out forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* language switch fade animation */
+    body.lang-switching {
+      animation: langFade 0.3s ease-out;
+    }
+
+    @keyframes langFade {
+      from { opacity: 0.4; transform: translateY(4px); }
+      to   { opacity: 1;   transform: translateY(0); }
+    }
+
+    .hero-kicker {
+      font-size: 13px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      margin-bottom: 14px;
+    }
+
+    .hero-title {
+      font-size: clamp(40px, 5vw, 60px);
+      line-height: 1.1;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .hero-subtitle {
+      max-width: 650px;
+      margin: 0 auto 26px auto;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 13px 26px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+        background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), #7df2ff);
+      color: #020308;
+      box-shadow: 0 14px 40px rgba(0, 229, 255, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 60px rgba(0, 229, 255, 0.6);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--accent-green), #b9ffcf);
+      color: #020308;
+      box-shadow: 0 14px 40px rgba(0, 230, 118, 0.4);
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 60px rgba(0, 230, 118, 0.6);
+    }
+
+    .hero-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .hero-note span {
+      color: var(--accent-cyan);
+    }
+
+    /* sections */
+
+    .section {
+      margin-bottom: 40px;
+      padding: 32px 24px;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-subtle);
+      background: rgba(8, 8, 16, 0.78);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.7);
+      text-align: center;
+      animation: fadeUp 0.8s ease-out forwards;
+    }
+
+    .section-kicker {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-purple);
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .section-body {
+      max-width: 760px;
+      margin: 0 auto;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    .section-body p + p {
+      margin-top: 8px;
+    }
+
+    /* transparency stats */
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-subtle);
+      padding: 16px 16px 14px;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(18px);
+      text-align: left;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .stat-tag {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--accent-cyan);
+    }
+
+    .stat-caption {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* footer */
+
+    .footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin-top: 32px;
+      padding-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-tagline {
+      color: var(--accent-cyan);
+      font-weight: 500;
+    }
+
+    /* modal (shared) */
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      backdrop-filter: blur(8px);
+    }
+
+    .modal-backdrop.active {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .modal {
+      width: min(420px, 92vw);
+      background: radial-gradient(circle at 0 0, #ffffff12 0, transparent 55%),
+                  radial-gradient(circle at 100% 0, #00e5ff22 0, transparent 50%),
+                  rgba(8, 10, 24, 0.98);
+      border-radius: 24px;
+      padding: 22px 22px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.9);
+      color: var(--text-main);
+      animation: none !important;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) !important;
+      z-index: 999999;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--accent-cyan);
+      margin-bottom: 6px;
+    }
+
+    .modal-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .modal-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .modal-tagline {
+      font-size: 12px;
+      color: #ffe082;
+      margin-bottom: 14px;
+      font-style: italic;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .btn-wallet {
+      flex: 1;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+      color: #020308;
+      font-weight: 600;
+      border-radius: 999px;
+      border: none;
+      padding: 11px 18px;
+      cursor: pointer;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .btn-wallet:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+    }
+
+    .btn-close {
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .btn-close:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .modal-caption {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .modal-close-x {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* eligibility modal specific */
+
+    .eligibility-body {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      max-height: 55vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .eligibility-body ol {
+      padding-left: 18px;
+      margin: 0;
+    }
+
+    .eligibility-body li + li {
+      margin-top: 8px;
+    }
+
+    .eligibility-body ul {
+      margin-top: 4px;
+      padding-left: 16px;
+      list-style-type: disc;
+    }
+
+    @media (max-width: 768px) {
+      .page-shell {
+        padding-inline: 16px;
+      }
+
+      .top-bar {
+        flex-direction: row;
+        gap: 8px;
+      }
+
+      .hero {
+        margin-bottom: 32px;
+      }
+
+      .hero-title {
+        font-size: 34px;
+      }
+
+      .section {
+        padding-inline: 18px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <!-- top bar -->
+    <header class="top-bar">
+      <div class="brand">
+        <img src="logo.png" alt="CycleX logo" class="brand-logo" />
+        <div class="brand-text">
+          <div class="brand-title">CYCLEX</div>
+          <div class="brand-sub" data-i18n="brand_sub">
+            AI-Powered Reward & Security
+          </div>
+        </div>
+      </div>
+
+      <div class="lang-switch" aria-label="Language selector">
+        <button class="lang-btn active" data-lang="en">🇺🇸 EN</button>
+        <button class="lang-btn" data-lang="zh">🇨🇳 中文</button>
+        <button class="lang-btn" data-lang="ar">🇸🇦 عربي</button>
+        <button class="lang-btn" data-lang="ru">🇷🇺 RU</button>
+      </div>
+    </header>
+
+    <!-- main logo center -->
+    <img src="logo.png" alt="CycleX main logo" class="main-logo" />
+
+    <!-- hero -->
+    <main>
+      <section class="hero">
+        <div class="hero-kicker" data-i18n="hero_kicker">
+          AI-DRIVEN SECURITY & QUARTERLY REWARDS ENGINEERED FOR LONG-TERM HOLDERS
+        </div>
+        <h1 class="hero-title" data-i18n="hero_title">
+          A secure reward ecosystem powered by AI-enhanced blockchain protection.
+        </h1>
+        <p class="hero-subtitle" data-i18n="hero_subtitle">
+          CycleX builds next-generation blockchain security infrastructure using AI-driven analysis to safeguard digital
+          assets, reward long-term holders, and ensure that the treasury remains fully controlled by transparent
+          on-chain logic — never by individuals.
+        </p>
+
+        <div class="hero-actions">
+          <button class="btn btn-primary" id="btn-claim" data-i18n="btn_claim">
+            Claim rewards
+          </button>
+          <a href="#" id="presale-link">
+            <button class="btn btn-secondary" data-i18n="btn_presale">
+              Pre-Sale (PinkSale)
+            </button>
+          </a>
+        </div>
+
+        <p class="hero-note" data-i18n="hero_note">
+          First reward cycle: <span>31 March 2026</span>. Eligibility: hold at least 60 days before the cycle date.
+        </p>
+      </section>
+
+      <!-- 1. On-Chain Transparency -->
+      <section class="section">
+        <div class="section-kicker" data-i18n="transparency_kicker">
+          Transparency
+        </div>
+        <h2 class="section-title" data-i18n="transparency_title">
+          On-Chain Transparency
+        </h2>
+        <p class="section-body" data-i18n="transparency_p1">
+          All core flows — rewards, burns, and treasury movements — are executed directly by the smart contract.
+          Below are global counters that will sync automatically with the blockchain once the contract is deployed.
+        </p>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label" data-i18n="stat_rewards_label">Total rewards distributed</div>
+            <div class="stat-value" id="stat-rewards">0 CYCX</div>
+            <div class="stat-tag" data-i18n="stat_onchain_tag">Live on-chain metric</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label" data-i18n="stat_burn_label">Total tokens burned</div>
+            <div class="stat-value" id="stat-burned">0 CYCX</div>
+            <div class="stat-tag" data-i18n="stat_onchain_tag2">Live on-chain metric</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label" data-i18n="stat_last_cycle_label">Last distribution</div>
+            <div class="stat-value" id="stat-last-cycle">—</div>
+            <div class="stat-caption" data-i18n="stat_last_cycle_caption">
+              Updates after the first reward cycle is executed.
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label" data-i18n="stat_next_cycle_label">Next scheduled distribution</div>
+            <div class="stat-value" id="stat-next-cycle">31 March 2026</div>
+            <div class="stat-caption" id="countdown-text">
+              Days remaining: —
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Vision & AI Security -->
+      <section class="section">
+        <div class="section-kicker" data-i18n="vision_kicker">
+          Vision &amp; AI Security
+        </div>
+        <h2 class="section-title" style="font-size: 38px;" data-i18n="vision_title">
+          Vision &amp; AI-Powered Protection
+        </h2>
+        <div class="section-body">
+          <p data-i18n="vision_p1">
+            CycleX is built on a simple but powerful principle: let code, math, and cryptography enforce the rules —
+            not human promises.
+          </p>
+          <p data-i18n="vision_p2">
+            Our ecosystem is engineered to be transparent, reward-based, and resistant to exploitation. Rewards are
+            earned by holders who stay committed long term, while the protocol continuously burns tokens to reinforce
+            scarcity and long-term value.
+          </p>
+          <p data-i18n="vision_p3">
+            Treasury funds are permanently locked inside the smart contract. The developer cannot withdraw, redirect, or
+            override the treasury. Only reward distributions, burns, and Development &amp; Operations allocations are
+            permitted by code.
+          </p>
+        </div>
+      </section>
+
+      <!-- 3. Rewards Model -->
+      <section class="section">
+        <div class="section-kicker" data-i18n="rewards_kicker">
+          Rewards Model
+        </div>
+        <h2 class="section-title" data-i18n="rewards_title">Rewards Model</h2>
+        <div class="section-body">
+          <p data-i18n="rewards_p1">
+            • 9% reward every ~90 days, sourced entirely from the CycleX treasury.<br />
+            • First distribution: <strong>31 March 2026</strong> (all policy dates are on-chain and verifiable).
+          </p>
+          <p data-i18n="rewards_p2">
+            • Eligibility: hold for at least <strong>60 days</strong> before the distribution date.<br />
+            • Cycle flow:<br />
+            &nbsp;&nbsp;• 9% to eligible holders<br />
+            &nbsp;&nbsp;• 9% burned from the treasury (1:1)<br />
+            &nbsp;&nbsp;• +20% of the 9% is allocated to the Development &amp; Operations reserve,<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;taken from the treasury — without reducing the holders’ 9% (for every 1 CYCX in
+            rewards, 0.2 CYCX goes to D&amp;O from the treasury).
+          </p>
+          <p data-i18n="rewards_p3">
+            Rewards are claimed directly by users via a secure Merkle-proof system. No admin, no middleman, no manual
+            intervention — holders trigger their own on-chain <code>claim()</code> with their own wallet and pay their
+            own gas.
+          </p>
+          <p style="font-size:12px; margin-top:10px; color:var(--text-muted);" data-i18n="rewards_disclaimer">
+            Policy: the reward cycle is officially ~90 days. The contract enforces an internal minimum of 85 days to
+            provide operational buffer, without changing the economic schedule.
+          </p>
+        </div>
+      </section>
+
+      <!-- Future-Ready Protocol -->
+      <section class="section">
+        <div class="section-kicker" data-i18n="future_kicker">
+          Future-Ready Protocol
+        </div>
+        <h2 class="section-title" data-i18n="future_title">
+          Future-Ready Protocol
+        </h2>
+        <div class="section-body">
+          <p data-i18n="future_p1">
+            CycleX is engineered first and foremost to protect holders, with a hard cap on supply and a treasury that is
+            fully controlled by on-chain logic — not by any single person.
+          </p>
+          <p data-i18n="future_p2">
+            If the main treasury is ever exhausted after many years of reward cycles, the protocol can evolve through a
+            community-approved upgrade or a new contract that continues the same principles: transparent logic, no
+            surprise minting, and no hidden control over user funds.
+          </p>
+          <p data-i18n="future_p3">
+            Any future evolution will be designed so that early holders are not diluted unfairly, and that long-term
+            supporters continue to benefit from the scarcity and trust CycleX is built on.
+          </p>
+        </div>
+      </section>
+
+      <!-- 4. Pre-Sale & Liquidity Plan -->
+      <section class="section">
+        <div class="section-kicker" data-i18n="presale_kicker">
+          Pre-Sale &amp; Liquidity Plan
+        </div>
+        <h2 class="section-title" data-i18n="presale_title">
+          Pre-Sale &amp; Liquidity Strategy
+        </h2>
+        <div class="section-body">
+          <p data-i18n="presale_p1">
+            raised during the pre-sale are automatically directed toward liquidity creation, ecosystem expansion, and long-term protocol stability. The goal is to create deep, healthy market liquidity from day one — with no manual handling of user funds.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- footer -->
+    <footer class="footer">
+      <div data-i18n="footer_left">
+        CycleX is a fully on-chain, AI-secured reward ecosystem designed for long-term growth and total transparency.
+      </div>
+      <div class="footer-tagline" data-i18n="footer_tagline">
+        Powered by security, strengthened by community, and driven by a limited supply everyone wants.
+      </div>
+    </footer>
+  </div>
+
+  <!-- Eligibility modal (first-visit popup, multi-language) -->
+  <div class="modal-backdrop" id="eligibility-modal-backdrop" aria-hidden="true">
+    <div class="modal">
+      <h2 class="modal-title" data-i18n="elig_title">
+        Eligibility &amp; Holding Rules
+      </h2>
+      <p class="modal-subtitle" data-i18n="elig_subtitle">
+        To be included in a reward cycle, you must hold CYCLEX correctly and respect the 60-day Web3 holding rule:
+      </p>
+      <div class="eligibility-body" data-i18n="elig_body">
+        <ol>
+          <li><strong>Hold in a self-custody Web3 wallet</strong> (MetaMask, Trust Wallet, Ledger) for at least 60 days.</li>
+          <li><strong>Exchange balances do not count</strong> until tokens are withdrawn to your own Web3 wallet.</li>
+          <li><strong>Snapshots are taken before each cycle</strong>; moving or selling before snapshot removes eligibility.</li>
+          <li><strong>Rewards are based on duration + balance only</strong>, not on buy price or trading history.</li>
+          <li><strong>Claims use Merkle-proof</strong> and can only be triggered by the owner wallet.</li>
+        </ol>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-wallet" id="eligibility-continue-btn" data-i18n="elig_continue">
+          I understand – continue
+        </button>
+      </div>
+      <p class="modal-caption" data-i18n="elig_caption">
+        By continuing, you confirm that you understand how eligibility is calculated and agree to review these rules before making investment decisions.
+      </p>
+    </div>
+  </div>
+
+  <!-- Claim modal -->
+  <div class="modal-backdrop" id="claim-modal-backdrop" aria-hidden="true">
+    <div class="modal">
+      <button class="modal-close-x" id="modal-close-x" aria-label="Close">&times;</button>
+      <div class="modal-badge" data-i18n="claim_badge">Claim Portal</div>
+      <h2 class="modal-title" data-i18n="claim_title">Claim your rewards</h2>
+      <p class="modal-subtitle" data-i18n="claim_subtitle">
+        Connect your wallet to check your eligibility and claim what’s yours. Rewards are calculated per cycle based on
+        the official 9% model and 60-day holding rule.
+      </p>
+      <p class="modal-tagline" data-i18n="claim_tagline">
+        For important and loyal holders only.
+      </p>
+      <div class="modal-actions">
+        <button class="btn-wallet" id="btn-connect-wallet" data-i18n="claim_btn_connect">
+          Connect wallet
+        </button>
+        <button class="btn-close" id="btn-close-modal" data-i18n="claim_btn_close">
+          Close
+        </button>
+      </div>
+      <p class="modal-caption" data-i18n="claim_caption">
+        Web3 integration (MetaMask / WalletConnect) will connect here to read your Merkle allocation and trigger the
+        on-chain <code>claim()</code> call.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // -------- TRANSLATIONS --------
+    const translations = {
+      en: {
+        brand_sub: "AI-Powered Reward & Security",
+        hero_kicker: "AI-DRIVEN SECURITY & QUARTERLY REWARDS ENGINEERED FOR LONG-TERM HOLDERS",
+        hero_title:
+          "A secure reward ecosystem powered by AI-enhanced blockchain protection.",
+        hero_subtitle:
+          "CycleX builds next-generation blockchain security infrastructure using AI-driven analysis to safeguard digital assets, reward long-term holders, and ensure that the treasury remains fully controlled by transparent on-chain logic — never by individuals.",
+        btn_claim: "Claim rewards",
+        btn_presale: "Pre-Sale (PinkSale)",
+        hero_note:
+          "First reward cycle: <span>31 March 2026</span>. Eligibility: hold at least 60 days before the cycle date.",
+        transparency_kicker: "Transparency",
+        transparency_title: "On-Chain Transparency",
+        transparency_p1:
+          "All core flows — rewards, burns, and treasury movements — are executed directly by the smart contract. Below are global counters that will sync automatically with the blockchain once the contract is deployed.",
+        stat_rewards_label: "Total rewards distributed",
+        stat_burn_label: "Total tokens burned",
+        stat_onchain_tag: "Live on-chain metric",
+        stat_onchain_tag2: "Live on-chain metric",
+        stat_last_cycle_label: "Last distribution",
+        stat_last_cycle_caption: "Updates after the first reward cycle is executed.",
+        stat_next_cycle_label: "Next scheduled distribution",
+        vision_kicker: "Vision & AI Security",
+        vision_title: "Vision & AI-Powered Protection",
+        vision_p1:
+          "CycleX is built on a simple but powerful principle: let code, math, and cryptography enforce the rules — not human promises.",
+        vision_p2:
+          "Our ecosystem is engineered to be transparent, reward-based, and resistant to exploitation. Rewards are earned by holders who stay committed long term, while the protocol continuously burns tokens to reinforce scarcity and long-term value.",
+        vision_p3:
+          "Treasury funds are permanently locked inside the smart contract. The developer cannot withdraw, redirect, or override the treasury. Only reward distributions, burns, and Development & Operations allocations are permitted by code.",
+        rewards_kicker: "Rewards Model",
+        rewards_title: "Rewards Model",
+        rewards_p1:
+          "• 9% reward every ~90 days, sourced entirely from the CycleX treasury.<br />• First distribution: <strong>31 March 2026</strong> (all policy dates are on-chain and verifiable).",
+        rewards_p2:
+          "• Eligibility: hold for at least <strong>60 days</strong> before the distribution date.<br />• Cycle flow:<br />&nbsp;&nbsp;• 9% to eligible holders<br />&nbsp;&nbsp;• 9% burned from the treasury (1:1)<br />&nbsp;&nbsp;• +20% of the 9% is allocated to the Development &amp; Operations reserve, taken from the treasury — without reducing the holders’ 9% (for every 1 CYCX in rewards, 0.2 CYCX goes to D&amp;O from the treasury).",
+        rewards_p3:
+          "Rewards are claimed directly by users via a secure Merkle-proof system. No admin, no middleman, no manual intervention — holders trigger their own on-chain claim with their own wallet and pay their own gas.",
+        rewards_disclaimer:
+          "Policy: the reward cycle is officially ~90 days. The contract enforces an internal minimum of 85 days to provide operational buffer, without changing the economic schedule.",
+        future_kicker: "Future-Ready Protocol",
+        future_title: "Future-Ready Protocol",
+        future_p1:
+          "CycleX is engineered first and foremost to protect holders, with a hard cap on supply and a treasury that is fully controlled by on-chain logic — not by any single person.",
+        future_p2:
+          "If the main treasury is ever exhausted after many years of reward cycles, the protocol can evolve through a community-approved upgrade or a new contract that continues the same principles: transparent logic, no surprise minting, and no hidden control over user funds.",
+        future_p3:
+          "Any future evolution will be designed so that early holders are not diluted unfairly, and that long-term supporters continue to benefit from the scarcity and trust CycleX is built on.",
+        presale_kicker: "Pre-Sale & Liquidity Plan",
+        presale_title: "Pre-Sale & Liquidity Strategy",
+        presale_p1:
+          "raised during the pre-sale are automatically directed toward liquidity creation, ecosystem expansion, and long-term protocol stability. The goal is to create deep, healthy market liquidity from day one — with no manual handling of user funds.",
+        presale_p2:
+          "After the pre-sale:<br />• At least <strong>80% of net raised capital</strong> will be added directly to liquidity.<br />• Approximately <strong>30% of the remaining token supply</strong> will also be added to liquidity.<br />• Target pre-sale allocation: <strong>70,000,000 CYCX</strong> for early supporters.",
+        presale_p3:
+          "Up to <strong>100% of net proceeds</strong> (after marketing &amp; affiliate payouts) will return to liquidity to build deep, stable market conditions.",
+        footer_left:
+          "CycleX is a fully on-chain, AI-secured reward ecosystem designed for long-term growth and total transparency.",
+        footer_tagline:
+          "Powered by security, strengthened by community, and driven by a limited supply everyone wants.",
+        claim_badge: "Claim Portal",
+        claim_title: "Claim your rewards",
+        claim_subtitle:
+          "Connect your wallet to check your eligibility and claim what’s yours. Rewards are calculated per cycle based on the official 9% model and 60-day holding rule.",
+        claim_tagline: "For important and loyal holders only.",
+        claim_btn_connect: "Connect wallet",
+        claim_btn_close: "Close",
+        claim_caption:
+          "Web3 integration (MetaMask / WalletConnect) will connect here to read your Merkle allocation and trigger the on-chain claim() call.",
+
+        // Eligibility popup (SHORT)
+        elig_title: "Eligibility & Holding Rules",
+        elig_subtitle:
+          "To be included in a reward cycle, you must hold CYCLEX correctly and respect the 60-day Web3 holding rule:",
+        elig_body: `
+<p><strong>To qualify for rewards, you must follow these simple rules:</strong></p>
+<ol>
+  <li>
+    <strong>Hold your tokens in a Web3 wallet for 60 full days</strong><br>
+    MetaMask, Trust Wallet, Ledger, and similar wallets are allowed.<br>
+    <strong>Tokens kept on exchanges (Binance, Coinbase, KuCoin, etc.) do NOT count.</strong>
+  </li>
+
+  <li>
+    <strong>The 60-day timer starts only after tokens arrive in your Web3 wallet</strong><br>
+    If you withdraw today, the countdown begins today.
+  </li>
+
+  <li>
+    <strong>If tokens leave your wallet — the timer resets to zero</strong><br>
+    Selling, transferring, or moving tokens cancels eligibility for the next cycle.
+  </li>
+
+  <li>
+    <strong>Eligibility is calculated automatically</strong><br>
+    Snapshots verify:<br>
+    • Holding duration<br>
+    • Wallet balance<br>
+    • Continuous 60-day period
+  </li>
+
+  <li>
+    <strong>Rewards can be claimed only by the wallet that held the tokens</strong><br>
+    Merkle-proof ensures each user receives only their own allocation.
+  </li>
+</ol>
+`,
+
+        elig_continue: "I understand – continue",
+        elig_caption:
+          "By continuing, you confirm that you understand how eligibility is calculated and agree to review these rules before making investment decisions."
+      },
+      zh: {
+        brand_sub: "AI 驱动的奖励与安全",
+        hero_kicker: "AI 安全与季度奖励，专为长期持有者打造",
+        hero_title: "由 AI 增强区块链保护驱动的安全奖励生态系统。",
+        hero_subtitle:
+          "CycleX 构建下一代基于 AI 分析的区块链安全基础设施，用于保护数字资产、奖励长期持有者，并确保金库始终由透明的链上逻辑控制，而不是由个人控制。",
+        btn_claim: "领取奖励",
+        btn_presale: "预售（PinkSale）",
+        hero_note:
+          "首个分红周期：<span>2026 年 3 月 31 日</span>。资格：至少在周期日期前 60 天开始持有代币。",
+        transparency_kicker: "透明性",
+        transparency_title: "链上透明",
+        transparency_p1:
+          "所有核心流程——奖励、销毁与金库移动——均由智能合约直接执行。下方为全局计数器，部署后将自动与区块链同步。",
+        stat_rewards_label: "累计发放奖励总量",
+        stat_burn_label: "累计销毁代币总量",
+        stat_onchain_tag: "链上实时数据",
+        stat_onchain_tag2: "链上实时数据",
+        stat_last_cycle_label: "上一次分发",
+        stat_last_cycle_caption: "首个奖励周期执行后将自动更新。",
+        stat_next_cycle_label: "下一次计划分发",
+        vision_kicker: "愿景与 AI 安全",
+        vision_title: "愿景与 AI 驱动的保护",
+        vision_p1:
+          "CycleX 基于一个简单却强大的原则构建：让代码、数学与密码学来执行规则，而不是依赖人为承诺。",
+        vision_p2:
+          "我们的生态被设计为透明、以奖励为驱动并且难以被利用。奖励属于那些真正长期持有的用户，而协议会持续销毁代币以强化稀缺性和长期价值。",
+        vision_p3:
+          "金库资金被永久锁定在智能合约中。开发者无法提取、转移或覆盖金库。只有奖励分发、销毁以及开发与运营（D&O）分配可以按照代码执行。",
+        rewards_kicker: "奖励模型",
+        rewards_title: "奖励模型",
+        rewards_p1:
+          "• 每约 90 天发放一次 9% 奖励，全部来自 CycleX 金库。<br />• 首次分发时间：<strong>2026 年 3 月 31 日</strong>（所有规则日期均可在链上验证）。",
+        rewards_p2:
+          "• 资格：在分发日前至少连续持有 <strong>60 天</strong>。<br />• 每个周期的资金流：<br />&nbsp;&nbsp;• 9% 发放给符合条件的持有者<br />&nbsp;&nbsp;• 9% 从金库 1:1 销毁<br />&nbsp;&nbsp;• 其中 9% 的 <strong>20%</strong> 作为开发与运营（D&O）储备，从金库中划出，但<strong>不会减少</strong>持有者应得的 9%（每 1 枚奖励代币，将有 0.2 枚从金库进入 D&O）。",
+        rewards_p3:
+          "持有者通过安全的 Merkle 证明系统在官网自行领取奖励。无管理员、无中间人、无人工干预——用户用自己的钱包在链上执行 claim()，并自行支付 Gas。",
+        rewards_disclaimer:
+          "政策：官方奖励周期约为 90 天。合约内部使用 85 天的最小间隔，为运营预留缓冲区，同时不改变整体经济节奏。",
+        future_kicker: "面向未来的协议",
+        future_title: "面向未来的协议",
+        future_p1:
+          "CycleX 的核心目标是首先保护持有者，通过固定总量上限以及完全由链上逻辑控制的金库来实现安全，而不是依赖任何个人。",
+        future_p2:
+          "如果在多年奖励周期之后，主金库最终被完全使用完，协议可以在社区批准的前提下升级，或迁移到新的合约，在不改变原则的情况下继续运行：透明的逻辑、无意外增发、无对用户资金的隐藏控制。",
+        future_p3:
+          "任何未来的演进都将被设计为不对早期持有者造成不公平稀释，并确保长期支持者继续从 CycleX 的稀缺性和信任体系中受益。",
+        presale_kicker: "预售与流动性计划",
+        presale_title: "预售与流动性策略",
+        presale_p1:
+         "预售期间筹集的资金将自动用于增加流动性、扩展生态系统，以及提升协议的长期稳定性。目标是在第一天就建立深度健康的市场流动性——无需任何人工处理用户资金。",
+        presale_p2:
+          "CycleX 预售将通过第三方 Launchpad <strong>PinkSale</strong> 进行，所有募集资金将以 USDT 形式进入创始人钱包。",
+        presale_p3:
+          "在扣除市场推广与返佣成本后，最多可将<strong>100% 的净收益</strong>回流至流动性池，以打造更深的流动性和更稳定的市场环境。",
+        footer_left:
+          "CycleX 是一套完全链上、由 AI 驱动安全机制的奖励生态，旨在实现长期增长与彻底透明。",
+        footer_tagline:
+          "以安全为核心，由社区强化，并由人人渴望的有限供应驱动。",
+        claim_badge: "奖励领取入口",
+        claim_title: "领取你的奖励",
+        claim_subtitle:
+          "连接你的钱包以检查资格并领取属于你的奖励。奖励基于官方 9% 模型与 60 天持有规则按周期计算。",
+        claim_tagline: "仅限重要且忠诚的持有者。",
+        claim_btn_connect: "连接钱包",
+        claim_btn_close: "关闭",
+        claim_caption:
+          "后续将集成 Web3（MetaMask / WalletConnect），用于读取你的 Merkle 分配并触发链上 claim() 调用。",
+
+        elig_title: "资格与持有规则",
+        elig_subtitle:
+          "要参与某一奖励周期，你必须以正确方式持有 CYCLEX，并遵守 60 天 Web3 持有规则：",
+        elig_body: `
+<p><strong>要获得奖励，必须遵守以下简单规则：</strong></p>
+<ol>
+  <li>
+    <strong>在 Web3 钱包中持有代币满 60 天</strong><br>
+    支持 MetaMask、Trust Wallet、Ledger 等钱包。<br>
+    <strong>存放在交易所（Binance、Coinbase、KuCoin 等）的代币不计入持有时间。</strong>
+  </li>
+
+  <li>
+    <strong>60 天计时从代币到达您的 Web3 钱包时开始</strong><br>
+    如果您今天提现，倒计时也从今天开始。
+  </li>
+
+  <li>
+    <strong>如果代币离开钱包，计时将重置为零</strong><br>
+    卖出、转账或移动代币都会取消本周期的奖励资格。
+  </li>
+
+  <li>
+    <strong>资格计算是自动完成的</strong><br>
+    快照会验证：<br>
+    • 持有时长<br>
+    • 钱包余额<br>
+    • 连续 60 天持有
+  </li>
+
+  <li>
+    <strong>奖励只能由持有代币的钱包领取</strong><br>
+    Merkle-proof 确保每个用户只能领取自己的奖励。
+  </li>
+</ol>
+`,
+
+        elig_continue: "我已理解 – 继续",
+        elig_caption:
+          "继续操作即表示你理解并接受上述资格规则，并会在做出投资决策前再次审阅这些说明。"
+      },
+      ar: {
+        brand_sub: "نظام مكافآت وأمان مدعوم بالذكاء الاصطناعي",
+        hero_kicker: "أمان مدعوم بالذكاء الاصطناعي ومكافآت ربع سنوية مُصمَّمة لحاملي المدى الطويل",
+        hero_title:
+          "منظومة مكافآت آمنة مدعومة بحماية بلوكتشين محسّنة بالذكاء الاصطناعي.",
+        hero_subtitle:
+          "تقوم CycleX ببناء بنية تحتية من الجيل التالي لأمان البلوكتشين باستخدام تحليل مدفوع بالذكاء الاصطناعي لحماية الأصول الرقمية، مكافأة حاملي المدى الطويل، وضمان أن الخزينة تبقى تحت سيطرة منطق شفاف على السلسلة – وليس تحت سيطرة الأفراد.",
+        btn_claim: "استعلام عن المكافآت",
+        btn_presale: "الطرح المسبق (PinkSale)",
+        hero_note:
+          "أول دورة مكافآت: <span>31 مارس 2026</span>. الأهلية: يجب البدء في الاحتفاظ قبل موعد الدورة بـ 60 يومًا على الأقل.",
+        transparency_kicker: "الشفافية",
+        transparency_title: "شفافية على السلسلة",
+        transparency_p1:
+          "جميع التدفقات الأساسية – المكافآت، الحرق، وتحركات الخزينة – تُنفَّذ مباشرة بواسطة العقد الذكي. ستتم مزامنة العدادات العالمية أدناه تلقائيًا مع البلوكتشين بعد النشر。",
+        stat_rewards_label: "إجمالي المكافآت الموزعة",
+        stat_burn_label: "إجمالي الرموز المحروقة",
+        stat_onchain_tag: "مؤشر حي على السلسلة",
+        stat_onchain_tag2: "مؤشر حي على السلسلة",
+        stat_last_cycle_label: "آخر توزيع",
+        stat_last_cycle_caption: "سيتم التحديث بعد تنفيذ أول دورة مكافآت。",
+        stat_next_cycle_label: "موعد التوزيع القادم",
+        vision_kicker: "الرؤية وأمان الذكاء الاصطناعي",
+        vision_title: "الرؤية وحماية مدفوعة بالذكاء الاصطناعي",
+        vision_p1:
+          "تستند CycleX إلى مبدأ بسيط وقوي في الوقت نفسه: دع الكود والرياضيات والتشفير يفرضون القواعد – وليس الوعود البشرية。",
+        vision_p2:
+          "تمت هندسة منظومتنا لتكون شفافة، قائمة على المكافآت، ومقاومة للاستغلال。 تُكتسب المكافآت من قبل الحاملين الذين يلتزمون على المدى الطويل، بينما يستمر البروتوكول في حرق الرموز لتعزيز الندرة والقيمة طويلة الأجل。",
+        vision_p3:
+          "أموال الخزينة مقفلة بشكل دائم داخل العقد الذكي。 لا يستطيع المطوّر سحبها أو إعادة توجيهها أو تجاوزها。 يُسمح فقط بتوزيعات المكافآت، الحرق، وتخصيصات التطوير والتشغيل (D&O) وفقًا للكود。",
+        rewards_kicker: "نموذج المكافآت",
+        rewards_title: "نموذج المكافآت",
+        rewards_p1:
+          "• مكافأة 9٪ كل ~90 يومًا، ممولة بالكامل من خزينة CycleX。<br />• أول توزيع: <strong>31 مارس 2026</strong> (جميع تواريخ السياسة يمكن التحقق منها على السلسلة)。",
+        rewards_p2:
+          "• الأهلية: يجب الاحتفاظ بالرموز لمدة <strong>60 يومًا</strong> على الأقل قبل تاريخ التوزيع。<br />• تدفّق كل دورة:<br />&nbsp;&nbsp;• 9٪ تذهب إلى الحامليــن المؤهلين<br />&nbsp;&nbsp;• 9٪ تُحرق من الخزينة بنسبة 1:1<br />&nbsp;&nbsp;• يُخصَّص <strong>20٪ من نسبة 9٪</strong> لاحتياطي التطوير والتشغيل (D&O)، من الخزينة – دون أن يقلِّل من نسبة 9٪ الخاصة بالحامليـن (مقابل كل 1 رمز مكافأة، يذهب 0.2 رمز إلى D&O من الخزينة)。",
+        rewards_p3:
+          "يُجري المستخدمون عملية المطالبة بمكافآتهم مباشرة عبر نظام Merkle-proof آمن。 لا يوجد مسؤول، ولا وسيط، ولا تدخل يدوي – يقوم الحاملوْن بتنفيذ استدعاء claim() على السلسلة باستخدام محافظهم الخاصة ودفع رسوم الغاز بأنفسهم。",
+        rewards_disclaimer:
+          "السياسة: الدورة الرسمية للمكافآت تقارب 90 يومًا。 يفرض العقد داخليًا حدًا أدنى قدره 85 يومًا لتوفير هامش تشغيلي، دون تغيير الجدول الاقتصادي。",
+        future_kicker: "بروتوكول جاهز للمستقبل",
+        future_title: "بروتوكول جاهز للمستقبل",
+        future_p1:
+          "الهدف الأول لـ CycleX هو حماية الحامليـن، من خلال سقف صارم للمعروض وخزينة تتحكم بها قواعد على السلسلة بالكامل، وليست تحت سيطرة أي شخص فردي。",
+        future_p2:
+          "إذا نُفِدت الخزينة الرئيسية بعد سنوات طويلة من دورات المكافآت، يمكن للبروتوكول التطور عبر ترقية يوافق عليها المجتمع أو عقد جديد يواصل نفس المبادئ: منطق شفاف، بلا سك مفاجئ، ولا سيطرة خفية على أموال المستخدمين。",
+        future_p3:
+          "سيتم تصميم أي تطور مستقبلي بحيث لا يخفِّض حصة الحامليـن الأوائل بشكل غير عادل، مع استمرار استفادة الداعمين على المدى الطويل من الندرة والثقة التي بُنيت عليها CycleX。",
+        presale_kicker: "الطرح المسبق وخطة السيولة",
+        presale_title: "استراتيجية الطرح المسبق والسيولة",
+        presale_p1:
+          "يتم توجيه الأموال المُحصّلة خلال الطرح المسبق تلقائيًا نحو إنشاء السيولة، وتوسيع النظام البيئي، وتعزيز استقرار البروتوكول على المدى الطويل。 الهدف هو إنشاء سيولة سوقية عميقة وصحية منذ اليوم الأول — دون أي تعامل يدوي مع أموال المستخدمين。",
+        presale_p2:
+          "سيتم إطلاق طرح CycleX المسبق عبر منصة <strong>PinkSale</strong> الموثوقة كطرف ثالث。 تُستلم جميع الأموال المجمَّعة بـ USDT في محفظة المؤسس。",
+        presale_p3:
+          "حتى <strong>100٪ من صافي العائدات</strong> (بعد التسويق والعمولات) من المخطط أن تعود إلى السيولة لبناء عمق واستقرار قويَّيْن في السوق。",
+        footer_left:
+          "CycleX منظومة مكافآت مؤمَّنة بالذكاء الاصطناعي بالكامل على السلسلة، مصممة للنمو طويل الأجل والشفافية الكاملة。",
+        footer_tagline:
+          "مدعومة بالأمان، يقوّيها المجتمع، وتقودها كمية محدودة يرغب بها الجميع。",
+        claim_badge: "بوابة المطالبة",
+        claim_title: "اطلب مكافآتك",
+        claim_subtitle:
+          "قم بتوصيل محفظتك للتحقق من أهليتك وطلب المكافآت المستحقة لك。 تُحتسب المكافآت في كل دورة وفق نموذج 9٪ الرسمي وقاعدة الاحتفاظ لمدة 60 يومًا。",
+        claim_tagline:
+          "فقط للحامليـن المهمين والموثوقين。",
+        claim_btn_connect: "توصيل المحفظة",
+        claim_btn_close: "إغلاق",
+        claim_caption:
+          "سيتم لاحقًا ربط تكامل Web3 (MetaMask / WalletConnect) هنا لقراءة تخصيص Merkle الخاص بك وتنفيذ استدعاء claim() على السلسلة。",
+
+        elig_title: "قواعد الأهلية والاحتفاظ",
+        elig_subtitle:
+          "للدخول في دورة مكافآت، يجب أن تحتفظ برموز CYCLEX بالطريقة الصحيحة وأن تلتزم بقاعدة الاحتفاظ لمدة 60 يومًا في Web3:",
+        elig_body: `
+<p><strong>للحصول على المكافآت، يجب اتباع هذه القواعد البسيطة:</strong></p>
+<ol>
+  <li>
+    <strong>احتفظ بالرموز في محفظة Web3 لمدة 60 يومًا كاملة</strong><br>
+    المحافظ المدعومة تشمل MetaMask و Trust Wallet و Ledger وغيرها.<br>
+    <strong>الرموز المحتفظ بها في المنصات المركزية (Binance، Coinbase، KuCoin وغيرها) لا تُحتسب.</strong>
+  </li>
+
+  <li>
+    <strong>يبدأ عدّ 60 يومًا فقط بعد وصول الرموز إلى محفظة Web3 الخاصة بك</strong><br>
+    إذا سحبت اليوم، يبدأ العدّ التنازلي اليوم.
+  </li>
+
+  <li>
+    <strong>إذا غادرت الرموز محفظتك — تتم إعادة العداد إلى الصفر</strong><br>
+    البيع أو التحويل أو نقل الرموز يلغي أهليتك للدورة الحالية.
+  </li>
+
+  <li>
+    <strong>يتم حساب الأهلية تلقائيًا</strong><br>
+    التحقق يتم من خلال السجلات الكاملة للتحويلات، ويشمل:<br>
+    • مدة الاحتفاظ<br>
+    • رصيد المحفظة<br>
+    • فترة مستمرة من 60 يومًا
+  </li>
+
+  <li>
+    <strong>يمكن المطالبة بالمكافآت فقط من المحفظة التي احتفظت بالرموز</strong><br>
+    تضمن تقنية Merkle-proof أن كل مستخدم يحصل فقط على مكافآته.
+  </li>
+</ol>
+`,
+
+        elig_continue: "أنا أفهم – متابعة",
+        elig_caption:
+          "بمتابعتك، فإنك تقر بأنك تفهم كيفية حساب الأهلية وتوافق على مراجعة هذه القواعد قبل اتخاذ أي قرارات استثمارية."
+      },
+      ru: {
+        brand_sub: "Вознаграждения и безопасность на базе ИИ",
+        hero_kicker: "Безопасность на базе ИИ и квартальные награды, созданные для долгосрочных холдеров",
+        hero_title:
+          "Безопасная экосистема вознаграждений на базе блокчейна с защитой, усиленной ИИ。",
+        hero_subtitle:
+          "CycleX создает инфраструктуру блокчейн-безопасности нового поколения, используя анализ на базе ИИ, чтобы защищать цифровые активы, поощрять долгосрочных держателей и гарантировать, что казна всегда управляется прозрачной логикой смарт-контракта — а не людьми。",
+        btn_claim: "Получить награды",
+        btn_presale: "Pre-Sale (PinkSale)",
+        hero_note:
+          "Первая наградная циклическая выплата: <span>31 марта 2026</span>。 Право на участие: держать токены не менее 60 дней до даты цикла。",
+        transparency_kicker: "Прозрачность",
+        transparency_title: "Прозрачность на блокчейне",
+        transparency_p1:
+          "Все ключевые потоки — награды, сжигания и перемещение средств казны — выполняются напрямую смарт-контрактом。 Ниже будут отображаться глобальные счетчики, которые автоматически синхронизируются с блокчейном после деплоя контракта。",
+        stat_rewards_label: "Всего распределено наград",
+        stat_burn_label: "Всего токенов сожжено",
+        stat_onchain_tag: "Ончейн-метрика в реальном времени",
+        stat_onchain_tag2: "Ончейн-метрика в реальном времени",
+        stat_last_cycle_label: "Последнее распределение",
+        stat_last_cycle_caption:
+          "Обновится после выполнения первого наградного цикла。",
+        stat_next_cycle_label: "Следующее запланированное распределение",
+        vision_kicker: "Видение и ИИ-безопасность",
+        vision_title: "Видение и защита на базе ИИ",
+        vision_p1:
+          "CycleX основан на простом, но мощном принципе: правила должны обеспечиваться кодом, математикой и криптографией, а не человеческими обещаниями。",
+        vision_p2:
+          "Наша экосистема спроектирована так, чтобы быть прозрачной, основанной на вознаграждениях и устойчивой к злоупотреблениям。 Награды получают держатели, которые остаются с проектом надолго, в то время как протокол постоянно сжигает токены, укрепляя дефицит и долгосрочную ценность。",
+        vision_p3:
+          "Средства казны навсегда заблокированы внутри смарт-контракта。 Разработчик не может их вывести, перенаправить или обойти правила。 Код разрешает только распределение наград, сжигание и выделения на разработки и операционную деятельность (D&O)。",
+        rewards_kicker: "Модель наград",
+        rewards_title: "Модель наград",
+        rewards_p1:
+          "• 9% награды примерно каждые 90 дней, полностью за счет казны CycleX。<br />• Первое распределение: <strong>31 марта 2026</strong> (все даты политики можно проверить на блокчейне)。",
+        rewards_p2:
+          "• Право на участие: держать токены не менее <strong>60 дней</strong> до даты распределения。<br />• Потоки внутри цикла:<br />&nbsp;&nbsp;• 9% — квалифицированным держателям<br />&nbsp;&nbsp;• 9% сжигается из казны (1:1)<br />&nbsp;&nbsp;• +20% от этих 9% направляется в резерв Development &amp; Operations и берётся из казны — <strong>без</strong> уменьшения награды держателей (за каждый 1 CYCX награды 0.2 CYCX уходит в D&amp;O из казны)。",
+        rewards_p3:
+          "Награды пользователи получают самостоятельно через защищенную систему на базе Merkle-доказательств。 Без администратора, без посредников и ручных вмешательств — держатели запускают свой on-chain вызов claim() из собственного кошелька и сами оплачивают газ。",
+        rewards_disclaimer:
+          "Политика: официальный цикл наград ~90 дней。 В контракте зашит внутренний минимум в 85 дней, чтобы оставить операционный буфер без изменения экономического расписания。",
+        future_kicker: "Протокол, готовый к будущему",
+        future_title: "Протокол, готовый к будущему",
+        future_p1:
+          "CycleX в первую очередь спроектирован для защиты держателей: жесткий лимит эмиссии и казна, полностью управляемая ончейн-логикой, а не каким-то одним человеком。",
+        future_p2:
+          "Если через многие годы наградных циклов основная казна когда-нибудь будет полностью исчерпана, протокол может эволюционировать через обновление, одобренное сообществом, или новый контракт, который продолжит те же принципы: прозрачная логика, никакой неожиданной эмиссии и отсутствие скрытого контроля над средствами пользователей。",
+        future_p3:
+          "Любая будущая эволюция будет спроектирована так, чтобы ранние держатели не получали несправедливого размывания доли, а долгосрочные сторонники продолжали пользоваться выгодой от дефицита и доверия, на которых строится CycleX。",
+        presale_kicker: "Pre-Sale и план ликвидности",
+        presale_title: "Стратегия Pre-Sale и ликвидности",
+        presale_p1:
+          "Средства, собранные во время предпродажи, автоматически направляются на создание ликвидности, расширение экосистемы и долгосрочную стабильность протокола。 Цель — обеспечить глубокую и устойчивую рыночную ликвидность с первого дня — без какого-либо ручного управления средствами пользователей。",
+        presale_p2:
+          "Pre-sale CycleX будет проходить на платформе <strong>PinkSale</strong> — надежном стороннем лаунчпаде。 Все привлечённые средства в USDT поступают на кошелёк основателя。",
+        presale_p3:
+          "До <strong>100% чистых поступлений</strong> (после маркетинга и партнёрских выплат) могут быть возвращены в ликвидность, чтобы сформировать глубокий и устойчивый рынок。",
+        footer_left:
+          "CycleX — полностью ончейн-экосистема вознаграждений с защитой на базе ИИ, разработанная для долгосрочного роста и полной прозрачности。",
+        footer_tagline:
+          "Питается безопасностью, усиливается сообществом и поддерживается ограниченным предложением, которое хотят все。",
+        claim_badge: "Портал начислений",
+        claim_title: "Получите свои награды",
+        claim_subtitle:
+          "Подключите кошелёк, чтобы проверить право на участие и получить причитающиеся вам награды。 Расчёт выполняется по каждой циклической выплате на основе официальной модели 9% и правила удержания 60 дней。",
+        claim_tagline:
+          "Только для важных и лояльных держателей。",
+        claim_btn_connect: "Подключить кошелёк",
+        claim_btn_close: "Закрыть",
+        claim_caption:
+          "Интеграция Web3 (MetaMask / WalletConnect) будет подключена сюда, чтобы читать вашу Merkle-аллокацию и вызывать on-chain функцию claim().",
+
+        elig_title: "Правила участия и удержания",
+        elig_subtitle:
+          "Чтобы попасть в наградной цикл, вы должны правильно держать токены CYCLEX и соблюдать правило 60 дней в Web3:",
+       elig_body: `
+<p><strong>Чтобы получить награды, соблюдайте эти простые правила:</strong></p>
+<ol>
+  <li>
+    <strong>Держите токены в Web3-кошельке 60 полных дней</strong><br>
+    Подходят MetaMask, Trust Wallet, Ledger и аналогичные кошельки.<br>
+    <strong>Токены на биржах (Binance, Coinbase, KuCoin и др.) не засчитываются.</strong>
+  </li>
+
+  <li>
+    <strong>Отсчёт 60 дней начинается только после поступления токенов в ваш Web3-кошелёк</strong><br>
+    Если вы вывели токены сегодня — таймер начинает отсчёт сегодня.
+  </li>
+
+  <li>
+    <strong>Если токены покидают кошелёк — таймер сбрасывается</strong><br>
+    Продажа, перевод или перемещение токенов отменяет участие в текущем цикле.
+  </li>
+
+  <li>
+    <strong>Право на участие рассчитывается автоматически</strong><br>
+    Снимки проверяют:<br>
+    • Время удержания<br>
+    • Баланс кошелька<br>
+    • Непрерывный период в 60 дней
+  </li>
+
+  <li>
+    <strong>Награды может получить только тот кошелёк, который держал токены</strong><br>
+    Технология Merkle-proof гарантирует, что каждый пользователь получает только свою долю.
+  </li>
+</ol>
+`,
+
+        elig_continue: "Понимаю — продолжить",
+        elig_caption:
+          "Продолжая, вы подтверждаете, что понимаете, как рассчитывается право на участие, и соглашаетесь переодически перепроверять эти правила перед инвестиционными решениями."
+      },
+    };
+
+    // -------- LANGUAGE SWITCH --------
+    function setLanguage(lang) {
+      const dict = translations[lang] || translations.en;
+
+      document.body.classList.add("lang-switching");
+
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const key = el.getAttribute("data-i18n");
+        if (dict[key]) {
+          el.innerHTML = dict[key];
+        }
+      });
+
+      document.querySelectorAll(".lang-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
+      });
+
+      document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+
+      setTimeout(() => {
+        document.body.classList.remove("lang-switching");
+      }, 250);
+    }
+
+    document.querySelectorAll(".lang-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const lang = btn.getAttribute("data-lang");
+        setLanguage(lang);
+        // אחרי שינוי שפה – נפתח שוב את פופאפ ה-Eligibility
+        if (typeof showEligibilityForLangSwitch === "function") {
+          showEligibilityForLangSwitch();
+        }
+      });
+    });
+
+    setLanguage("en");
+
+    // -------- CLAIM MODAL --------
+    const claimBtn = document.getElementById("btn-claim");
+    const modalBackdrop = document.getElementById("claim-modal-backdrop");
+    const closeModalBtn = document.getElementById("btn-close-modal");
+    const closeX = document.getElementById("modal-close-x");
+
+    claimBtn.addEventListener("click", () => {
+      modalBackdrop.classList.add("active");
+      modalBackdrop.setAttribute("aria-hidden", "false");
+    });
+
+    function closeModal() {
+      modalBackdrop.classList.remove("active");
+      modalBackdrop.setAttribute("aria-hidden", "true");
+    }
+
+    closeModalBtn.addEventListener("click", closeModal);
+    closeX.addEventListener("click", closeModal);
+    modalBackdrop.addEventListener("click", (e) => {
+      if (e.target === modalBackdrop) closeModal();
+    });
+
+    // Placeholder wallet connect
+    document
+      .getElementById("btn-connect-wallet")
+      .addEventListener("click", () => {
+        alert("Wallet connect (MetaMask / WalletConnect) will be integrated here after deployment.");
+      });
+
+    // Presale link placeholder – replace with real PinkSale URL
+    document.getElementById("presale-link").addEventListener("click", (e) => {
+      const href = e.currentTarget.getAttribute("href");
+      if (!href || href === "#") {
+        e.preventDefault();
+        alert("Pre-Sale link will point to your official PinkSale page once it is live.");
+      }
+    });
+
+    // -------- COUNTDOWN TO 31 MAR 2026 --------
+    const countdownEl = document.getElementById("countdown-text");
+    const FIRST_DISTRIBUTION_UTC = Date.UTC(2026, 2, 31, 0, 0, 0); // 2026-03-31
+
+    function updateCountdown() {
+      const now = Date.now();
+      const diff = FIRST_DISTRIBUTION_UTC - now;
+      if (diff <= 0) {
+        countdownEl.textContent = "Cycle is live. Please check the latest on-chain distribution.";
+        return;
+      }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      countdownEl.textContent = `Days remaining: ${days} · Hours: ${hours}`;
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 60_000);
+
+    // -------- ELIGIBILITY MODAL (FIRST VISIT + LANGUAGE CHANGE) --------
+    const eligibilityBackdrop = document.getElementById("eligibility-modal-backdrop");
+    const eligibilityContinueBtn = document.getElementById("eligibility-continue-btn");
+    const ELIGIBILITY_KEY = "cx_eligibility_ack_v1";
+
+    function openEligibilityModal() {
+      if (!eligibilityBackdrop) return;
+      eligibilityBackdrop.classList.add("active");
+      eligibilityBackdrop.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeEligibilityModal() {
+      if (!eligibilityBackdrop) return;
+      eligibilityBackdrop.classList.remove("active");
+      eligibilityBackdrop.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+      try {
+        localStorage.setItem(ELIGIBILITY_KEY, "1");
+      } catch (e) {
+        // ignore storage errors
+      }
+    }
+
+    function showEligibilityForLangSwitch() {
+      try {
+        localStorage.removeItem(ELIGIBILITY_KEY);
+      } catch (e) {
+        // ignore
+      }
+      openEligibilityModal();
+    }
+
+    if (eligibilityContinueBtn) {
+      eligibilityContinueBtn.addEventListener("click", closeEligibilityModal);
+    }
+
+    if (eligibilityBackdrop) {
+      eligibilityBackdrop.addEventListener("click", (e) => {
+        if (e.target === eligibilityBackdrop) {
+          closeEligibilityModal();
+        }
+      });
+    }
+
+    window.addEventListener("load", () => {
+      try {
+        const seen = localStorage.getItem(ELIGIBILITY_KEY);
+        if (!seen) {
+          openEligibilityModal();
+        }
+      } catch (e) {
+        openEligibilityModal();
+      }
+    });
+  </script>
+</body>
+</html>
