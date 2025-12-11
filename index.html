@@ -1289,6 +1289,149 @@
     setLanguage("en");
 
     // -------- CLAIM MODAL --------
+    // -------- CYCLEX MERKLE CLAIM SYSTEM (FRONTEND) --------
+    const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+    const CX_CURRENT_CYCLE_ID = 1; // update if you open a new cycle
+    const CX_PROOFS_URL = "/proofs.json";
+    const CX_REWARDS_URL = "/rewards.json";
+
+    let cxProvider = null;
+    let cxSigner = null;
+    let cxContract = null;
+    let cxUserAddress = null;
+    let cxRewardsData = null;
+    let cxProofsData = null;
+
+    async function cxLoadMerkleData() {
+      try {
+        if (!cxRewardsData) {
+          const r = await fetch(CX_REWARDS_URL);
+          cxRewardsData = await r.json();
+        }
+        if (!cxProofsData) {
+          const p = await fetch(CX_PROOFS_URL);
+          cxProofsData = await p.json();
+        }
+      } catch (err) {
+        console.error("Error loading Merkle files:", err);
+        alert("Error loading reward data. Please try again later.");
+        throw err;
+      }
+    }
+
+    function cxGetUserAllocation(addrLower) {
+      if (!cxProofsData) return null;
+
+      const entry = cxProofsData[addrLower];
+      if (!entry) return null;
+
+      // proofs.json from the script usually looks like:
+      // { "0x...": { "amount": "123...", "proof": ["0x...","0x..."] } }
+      const amount = entry.amount || entry.reward || entry.value;
+      const proof = entry.proof || entry.proofs || entry;
+
+      if (!amount || !proof) return null;
+
+      return {
+        amount,
+        proof
+      };
+    }
+
+    async function cxEnsureWeb3() {
+      if (!window.ethereum) {
+        alert("Web3 wallet (MetaMask) not detected in this browser.");
+        throw new Error("No ethereum provider");
+      }
+
+      if (!cxProvider) {
+        cxProvider = new ethers.BrowserProvider(window.ethereum);
+        cxSigner = await cxProvider.getSigner();
+        cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
+        cxContract = new ethers.Contract(CX_CONTRACT_ADDRESS, [
+          "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
+          "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
+        ], cxSigner);
+      }
+    }
+
+    function cxEnsureClaimButton() {
+      const modal = document.querySelector("#claim-modal-backdrop .modal");
+      if (!modal) return;
+
+      let btn = document.getElementById("cx-claim-now-btn");
+      if (!btn) {
+        btn = document.createElement("button");
+        btn.id = "cx-claim-now-btn";
+        btn.className = "btn-wallet";
+        btn.style.marginTop = "10px";
+        btn.textContent = "Claim now";
+        btn.addEventListener("click", cxPerformClaim);
+        modal.appendChild(btn);
+      }
+    }
+
+    async function cxConnectAndCheck() {
+      try {
+        await cxEnsureWeb3();
+        await cxLoadMerkleData();
+
+        const addr = cxUserAddress;
+        const alloc = cxGetUserAllocation(addr);
+
+        if (!alloc) {
+          alert("Your wallet is NOT eligible for this reward cycle.");
+          return;
+        }
+
+        const human = ethers.formatUnits(alloc.amount, 18);
+        alert("You ARE eligible for this cycle.\nWallet: " + addr + "\nAmount: " + human + " CYCX");
+
+        cxEnsureClaimButton();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function cxPerformClaim() {
+      if (!cxUserAddress || !cxContract || !cxProofsData) {
+        alert("Please connect your wallet first.");
+        return;
+      }
+
+      const addr = cxUserAddress;
+      const alloc = cxGetUserAllocation(addr);
+      if (!alloc) {
+        alert("No allocation found for this wallet in the current cycle.");
+        return;
+      }
+
+      try {
+        const already = await cxContract.hasClaimed(CX_CURRENT_CYCLE_ID, addr);
+        if (already) {
+          alert("You have already claimed for this cycle.");
+          return;
+        }
+      } catch (e) {
+        console.warn("hasClaimed check failed (non-fatal):", e);
+      }
+
+      try {
+        const tx = await cxContract.claim(
+          CX_CURRENT_CYCLE_ID,
+          addr,
+          alloc.amount,
+          alloc.proof
+        );
+        alert("Transaction sent:\n" + tx.hash);
+        await tx.wait();
+        alert("Claim successful! ✅");
+      } catch (err) {
+        console.error("Claim failed:", err);
+        alert("Claim failed: " + (err?.message || "Unknown error"));
+      }
+    }
+
     const claimBtn = document.getElementById("btn-claim");
     const modalBackdrop = document.getElementById("claim-modal-backdrop");
     const closeModalBtn = document.getElementById("btn-close-modal");
@@ -1310,13 +1453,13 @@
       if (e.target === modalBackdrop) closeModal();
     });
 
-    // Placeholder wallet connect
+    // Connect wallet + check eligibility using on-chain Merkle data
     document
       .getElementById("btn-connect-wallet")
       .addEventListener("click", () => {
-        alert("Wallet connect (MetaMask / WalletConnect) will be integrated here after deployment.");
+        cxConnectAndCheck();
       });
-
+    
     // Presale link placeholder – replace with real PinkSale URL
     document.getElementById("presale-link").addEventListener("click", (e) => {
       const href = e.currentTarget.getAttribute("href");
