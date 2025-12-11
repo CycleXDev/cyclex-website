@@ -581,6 +581,119 @@
   color: #ffcc80;       
   font-size: 18px;       
 }
+    .cx-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(6px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.cx-modal-content {
+    width: 450px;
+    background: linear-gradient(180deg, #111827, #0d1320);
+    padding: 35px;
+    border-radius: 22px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.35);
+    position: relative;
+    color: white;
+}
+
+.cx-modal-close {
+    position: absolute;
+    top: 18px;
+    right: 20px;
+    background: transparent;
+    color: #ccc;
+    font-size: 26px;
+    cursor: pointer;
+    border: none;
+}
+
+.cx-modal-close:hover {
+    color: white;
+}
+
+.cx-modal-title {
+    font-size: 28px;
+    margin-bottom: 6px;
+}
+
+.cx-modal-sub {
+    font-size: 15px;
+    opacity: 0.9;
+    margin-bottom: 22px;
+}
+
+.cx-label {
+    display: block;
+    margin-top: 18px;
+    margin-bottom: 6px;
+    font-size: 15px;
+    opacity: 0.95;
+}
+
+.cx-input,
+.cx-select {
+    width: 100%;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
+    color: white;
+    font-size: 17px;
+    outline: none;
+}
+
+.cx-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='white' width='18' height='18' viewBox='0 0 24 24'><path d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+}
+
+.cx-calc-btn {
+    width: 100%;
+    margin-top: 22px;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 40px;
+    background: linear-gradient(90deg, #32ffb2, #8fffca);
+    color: #0b0f14;
+    border: none;
+    cursor: pointer;
+}
+
+.cx-calc-btn:hover {
+    filter: brightness(1.08);
+}
+
+.cx-results {
+    margin-top: 20px;
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.cx-disclaimer {
+    margin-top: 25px;
+    font-size: 14px;
+    opacity: 0.85;
+}
+
+.cx-warning {
+    margin-top: 12px;
+    font-size: 15px;
+    font-weight: bold;
+    color: #d4ffd1;
+}
+
 
 .calc-close-x {
   position: absolute;
@@ -963,45 +1076,52 @@
       </p>
     </div>
   </div>
-   <!-- Reward Calculator Modal -->
-<div id="calculatorModal" class="calculator-modal" aria-hidden="true">
-  <div class="calculator-content">
-    <button class="calc-close-x" id="calcCloseBtn">&times;</button>
+  <!-- REWARD CALCULATOR MODAL -->
+<div id="calculatorModal" class="cx-modal" aria-hidden="true">
 
-    <h2>Reward Calculator</h2>
-    <p class="calc-desc">
-      Estimate your long-term CycleX rewards with compounding cycles.
+  <div class="cx-modal-content">
+
+    <!-- Close Button -->
+    <button class="cx-modal-close" id="calcCloseBtn">&times;</button>
+
+    <h2 class="cx-modal-title">Reward Calculator</h2>
+    <p class="cx-modal-sub">
+        Estimate your long-term CycleX rewards with compounding cycles.
     </p>
 
-    <label>Tokens you hold:</label>
-    <input type="number" id="calcTokensInput" placeholder="Enter amount..." />
+    <label class="cx-label">Tokens you hold:</label>
+    <input id="calcTokensInput" type="number" class="cx-input" placeholder="Enter amount..."/>
 
-    <label>Number of cycles:</label>
-
-    <div class="select-wrapper">
-      <select id="calcCyclesSelect">
+    <label class="cx-label">Number of cycles:</label>
+    <select id="calcCyclesSelect" class="cx-select">
         <option value="1">1 cycle</option>
+        <option value="2">2 cycles</option>
         <option value="4">4 cycles (≈ 1 year)</option>
+        <option value="8">8 cycles (≈ 2 years)</option>
         <option value="12">12 cycles (≈ 3 years)</option>
         <option value="20">20 cycles (≈ 5 years)</option>
-      </select>
-    </div>
+    </select>
 
-    <button id="calcRunBtn" class="calc-btn">CALCULATE</button>
+    <button id="calcRunBtn" class="cx-calc-btn">CALCULATE</button>
 
-    <div id="calcResultBox" class="calc-result"></div>
+    <div id="calcResultBox" class="cx-results"></div>
 
-    <p class="calc-note">
-      CycleX pays 9% every reward cycle.<br>
-      If you hold your tokens (including the rewards you claim) without selling or moving them,<br>
-      you earn compound rewards — meaning each cycle is calculated on top of the previous one.
-      <br><br>
-      <b>Claim is required every cycle to receive your rewards.<br>
-      Unclaimed rewards do not roll over.</b>
+    <p class="cx-disclaimer">
+        CycleX pays 9% every reward cycle.  
+        If you hold your tokens (including the rewards you claim)  
+        without selling or moving them,  
+        you earn compound rewards — meaning each cycle is calculated  
+        on top of the previous one.
+    </p>
+
+    <p class="cx-warning">
+        Claim is required every cycle to receive your rewards.<br>
+        Unclaimed rewards do not roll over.
     </p>
 
   </div>
 </div>
+
 
 
   <!-- Load ethers.js -->
@@ -1760,58 +1880,36 @@
     const calcCyclesSelect = document.getElementById("calcCycles");
     const calcResultBox = document.getElementById("calcResult");
 
-    function openCalculator() {
-      if (!calcModal) return;
-      calcModal.classList.add("active");
-      document.body.style.overflow = "hidden";
-      calcResultBox.innerHTML = "";
+    document.getElementById("openCalculatorBtn").onclick = () => {
+    document.getElementById("calculatorModal").style.display = "flex";
+};
+
+document.getElementById("calcCloseBtn").onclick = () => {
+    document.getElementById("calculatorModal").style.display = "none";
+};
+
+const calcRunBtn = document.getElementById("calcRunBtn");
+const calcResultBox = document.getElementById("calcResultBox");
+
+calcRunBtn.onclick = () => {
+    const tokens = parseFloat(document.getElementById("calcTokensInput").value);
+    const cycles = parseInt(document.getElementById("calcCyclesSelect").value);
+    const rate = 1.09;
+
+    if (!tokens || tokens <= 0) {
+        calcResultBox.innerHTML = "Enter a valid amount.";
+        return;
     }
 
-    function closeCalculator() {
-      if (!calcModal) return;
-      calcModal.classList.remove("active");
-      document.body.style.overflow = "";
-    }
+    const finalAmount = tokens * Math.pow(rate, cycles);
+    const profit = finalAmount - tokens;
 
-    if (openCalcBtn) {
-      openCalcBtn.addEventListener("click", openCalculator);
-    }
-
-    if (closeCalcBtn) {
-      closeCalcBtn.addEventListener("click", closeCalculator);
-    }
-
-    if (calcModal) {
-      calcModal.addEventListener("click", (e) => {
-        if (e.target === calcModal) {
-          closeCalculator();
-        }
-      });
-    }
-
-    if (calcRunBtn) {
-      calcRunBtn.addEventListener("click", () => {
-        const tokens = parseFloat(calcTokensInput.value);
-        const cycles = parseInt(calcCyclesSelect.value, 10);
-        const rate = 1.09; // 9% per cycle
-
-        if (!tokens || tokens <= 0) {
-          calcResultBox.innerHTML = "Enter a valid token amount.";
-          return;
-        }
-
-        const finalAmount = tokens * Math.pow(rate, cycles);
-        const profit = finalAmount - tokens;
-
-        calcResultBox.innerHTML = `
-          Final amount after ${cycles} cycle(s): 
-          <span style="color:#00e676">${finalAmount.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span> CYCX<br/>
-          Profit over starting balance: 
-          <span style="color:#00e676">${profit.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span> CYCX
-        `;
-      });
-      document.getElementById("calcCloseBtn").onclick = () => {
-  document.getElementById("calculatorModal").style.display = "none";
+    calcResultBox.innerHTML = `
+        Final amount after ${cycles} cycle(s): 
+        <span style="color:#32ffb2">${finalAmount.toFixed(2)}</span> CYCX<br>
+        Profit over starting balance: 
+        <span style="color:#32ffb2">${profit.toFixed(2)}</span> CYCX
+    `;
 };
 
     }
