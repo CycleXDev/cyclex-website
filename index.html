@@ -1033,38 +1033,40 @@
 <!-- Load Ethers.js v6 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.8.1/ethers.umd.min.js"></script>
 
-  <!-- Web3Modal V3 – Full Wallet List -->
+<!-- Web3Modal + Claim Logic -->
 <script type="module">
-  import * as wagmi from "https://unpkg.com/@wagmi/core@1.4.7/dist/wagmi-core.js?module";
+
+import * as wagmi from "https://unpkg.com/@wagmi/core@1.4.7/dist/wagmi-core.js?module";
+import { createWeb3Modal, defaultWagmiConfig } 
+  from "https://unpkg.com/@web3modal/wagmi@3.5.7/dist/wagmi.js";
+import { bsc } 
+  from "https://unpkg.com/@wagmi/core@1.4.7/chains";
+
+const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+const projectId = "d91c22a9f6ae27cd37d7fc36d8a0295d";
+
 window.wagmi = wagmi;
 
-  import { createWeb3Modal, defaultWagmiConfig } 
-    from "https://unpkg.com/@web3modal/wagmi@3.5.7/dist/wagmi.js";
+// metadata for wallet list
+const metadata = {
+  name: "CycleX Claim Portal",
+  description: "AI-Secured Quarterly Rewards",
+  url: window.location.origin,
+  icons: [window.location.origin + "/logo.png"]
+};
 
-  import { bsc } 
-    from "https://unpkg.com/@wagmi/core@1.4.7/chains";
+const chains = [bsc];
 
-  const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
-  const projectId = "d91c22a9f6ae27cd37d7fc36d8a0295d";
+const wagmiConfig = defaultWagmiConfig({
+  appName: "CycleX Claim Portal",
+  projectId,
+  chains,
+  metadata,
+  enableWalletConnect: true
+});
 
-  const metadata = {
-    name: "CycleX Claim Portal",
-    description: "AI-Secured Quarterly Rewards",
-    url: window.location.origin,
-    icons: [window.location.origin + "/logo.png"]
-  };
-
-  const chains = [bsc];
-
-  const wagmiConfig = defaultWagmiConfig({
-    appName: "CycleX Claim Portal",
-    projectId,
-    chains,
-    metadata,
-    enableWalletConnect: true
-  });
-
-  const modal = createWeb3Modal({
+// create wallet selector modal
+const modal = createWeb3Modal({
   wagmiConfig,
   projectId,
   chains,
@@ -1078,8 +1080,13 @@ window.wagmi = wagmi;
 
 window.cxModal = modal;
 
-  window.cxConnectWallet = async function () {
+// -----------------------------------------------------------------------
+// CONNECT WALLET + SETUP SIGNER + CONTRACT
+// -----------------------------------------------------------------------
+
+window.cxConnectWallet = async function () {
   try {
+    // open wallet selector
     await window.cxModal.open();
 
     const { getAccount, getWalletClient } = window.wagmi;
@@ -1105,10 +1112,8 @@ window.cxModal = modal;
       window.cxSigner
     );
 
+    // continue to eligibility check
     cxConnectAndCheck();
-    // Re-open the claim modal after connecting
-document.getElementById("claim-modal-backdrop").classList.add("active");
-document.getElementById("claim-modal-backdrop").setAttribute("aria-hidden", "false");
 
   } catch (err) {
     console.error(err);
