@@ -1036,10 +1036,16 @@
 <!-- Web3Modal + Claim Logic -->
 <script type="module">
 
-  import * as wagmi from "https://esm.sh/@wagmi/core@1.4.7";
-  import { createWeb3Modal, defaultWagmiConfig } 
-    from "https://esm.sh/@web3modal/wagmi@3.5.7";
-  import { bsc } from "https://esm.sh/viem/chains";
+import { createWeb3Modal, defaultWagmiConfig } 
+  from "https://esm.sh/@web3modal/wagmi@3.5.7";
+import * as wagmi from "https://esm.sh/@wagmi/core@1.4.7";
+import { bsc } from "https://esm.sh/viem/chains";
+import { ethers } from "https://cdnjs.cloudflare.com/ajax/libs/ethers/6.8.1/ethers.esm.min.js";
+
+
+// -------------------------------
+// CONFIG
+// -------------------------------
 
 const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
 const projectId = "d91c22a9f6ae27cd37d7fc36d8a0295d";
@@ -1050,7 +1056,7 @@ window.cxProofsData = null;
 window.cxPendingAlloc = null;
 
 
-// metadata for wallet list
+// Wallet metadata
 const metadata = {
   name: "CycleX Claim Portal",
   description: "AI-Secured Quarterly Rewards",
@@ -1060,15 +1066,24 @@ const metadata = {
 
 const chains = [bsc];
 
+
+// -------------------------------
+// WAGMI CONFIG
+// -------------------------------
+
 const wagmiConfig = defaultWagmiConfig({
   appName: "CycleX Claim Portal",
   projectId,
   chains,
   metadata,
-  enableWalletConnect: true
+  enableWalletConnect: true,
 });
 
-// create wallet selector modal
+
+// -------------------------------
+// CREATE WEB3MODAL V3
+// -------------------------------
+
 const modal = createWeb3Modal({
   wagmiConfig,
   projectId,
@@ -1083,27 +1098,32 @@ const modal = createWeb3Modal({
 
 window.cxModal = modal;
 
-// -----------------------------------------------------------------------
-// CONNECT WALLET + SETUP SIGNER + CONTRACT
-// -----------------------------------------------------------------------
+
+// -------------------------------
+// CONNECT WALLET (THE FIXED VERSION)
+// -------------------------------
 
 window.cxConnectWallet = async function () {
   try {
-    // open wallet selector
+    console.log("Opening wallet modal...");
     await window.cxModal.open();
 
-    const { getAccount, getWalletClient } = window.wagmi;
-    const acc = getAccount();
+    const account = wagmi.getAccount();
 
-    if (!acc?.address) {
+    if (!account?.address) {
       alert("Wallet connection failed.");
       return;
     }
 
-    window.cxUserAddress = acc.address.toLowerCase();
+    window.cxUserAddress = account.address.toLowerCase();
 
-    const client = await getWalletClient();
-    const provider = new ethers.BrowserProvider(client);
+    const walletClient = await wagmi.getWalletClient();
+    if (!walletClient) {
+      alert("Wallet client error.");
+      return;
+    }
+
+    const provider = new ethers.BrowserProvider(walletClient);
     window.cxSigner = await provider.getSigner();
 
     window.cxContract = new ethers.Contract(
@@ -1115,17 +1135,16 @@ window.cxConnectWallet = async function () {
       window.cxSigner
     );
 
-    // continue to eligibility check
+    console.log("WALLET CONNECTED:", window.cxUserAddress);
     cxConnectAndCheck();
 
   } catch (err) {
-    console.error(err);
+    console.error("Wallet error:", err);
     alert("Wallet connection error.");
   }
 };
 
 </script>
-
 
 
   <script>
