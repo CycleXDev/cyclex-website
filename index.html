@@ -954,6 +954,27 @@
           Close
         </button>
       </div>
+      <!-- Eligibility Result Box -->
+<div id="cx-eligibility-box" style="display:none; margin-top:20px;">
+  <p id="cx-eligibility-text" style="color:#fff; font-size:18px;"></p>
+
+  <button 
+    id="cx-claim-btn"
+    onclick="cxPerformClaim()"
+    style="
+      margin-top:15px;
+      padding:12px 22px;
+      border-radius:12px;
+      font-size:18px;
+      background: linear-gradient(90deg, #7b2ff7, #00e5ff);
+      border:none;
+      cursor:pointer;
+      color:white;
+      display:none;
+    ">
+    Claim Rewards
+  </button>
+</div>
       <p class="modal-caption" data-i18n="claim_caption">
         Web3 integration (MetaMask / WalletConnect) will connect here to read your Merkle allocation and trigger the
         on-chain <code>claim()</code> call.
@@ -1658,91 +1679,84 @@
 
   async function cxConnectAndCheck() {
   try {
-    // Load Merkle + proofs
+    // Load Merkle JSON files
     await cxLoadMerkleData();
 
     const addr = cxUserAddress.toLowerCase();
     const alloc = cxGetUserAllocation(addr);
 
+    const box = document.getElementById("cx-eligibility-box");
+    const text = document.getElementById("cx-eligibility-text");
+    const claimBtn = document.getElementById("cx-claim-btn");
+
     if (!alloc) {
-      alert("Your wallet is NOT eligible for this reward cycle.");
+      text.innerHTML = "❌ Your wallet is NOT eligible for this reward cycle.";
+      box.style.display = "block";
+      claimBtn.style.display = "none";
       return;
     }
 
     const human = ethers.formatUnits(alloc.amount, 18);
 
-    alert(
-      "You ARE eligible for this cycle.\nWallet: " +
-      addr +
-      "\nAmount: " + human + " CYCX"
-    );
+    // Show eligibility info
+    text.innerHTML =
+      `<span style='color:#00e5ff;'>You ARE eligible!</span><br>` +
+      `Reward: <b>${human} CYCX</b><br>` +
+      `Wallet: <span style='font-size:14px;'>${addr}</span>`;
 
-    cxEnsureClaimButton();
+    box.style.display = "block";
+    claimBtn.style.display = "inline-block";
 
+    // Store for claim
+    window.cxPendingAlloc = alloc;
+    
   } catch (err) {
     console.error(err);
     alert("Something went wrong while checking eligibility.");
   }
 }
-
-
-    // 4) מציג מידע למשתמש
-    const human = ethers.formatUnits(alloc.amount, 18);
-    alert(
-      "You ARE eligible for this cycle.\nWallet: " +
-        addr +
-        "\nAmount: " +
-        human +
-        " CYCX"
-    );
-
-    // 5) מוודא שיש כפתור Claim בתוך המודל
-    cxEnsureClaimButton();
-  } catch (err) {
-    console.error(err);
-    alert("Something went wrong while checking eligibility.");
-  }
-}
-
-
-    async function cxPerformClaim() {
-      if (!cxUserAddress || !cxContract || !cxProofsData) {
-        alert("Please connect your wallet first.");
-        return;
-      }
-
-      const addr = cxUserAddress;
-      const alloc = cxGetUserAllocation(addr);
-      if (!alloc) {
-        alert("No allocation found for this wallet in the current cycle.");
-        return;
-      }
-
-      try {
-        const already = await cxContract.hasClaimed(CX_CURRENT_CYCLE_ID, addr);
-        if (already) {
-          alert("You have already claimed for this cycle.");
-          return;
-        }
-      } catch (e) {
-        console.warn("hasClaimed check failed (non-fatal):", e);
-      }
-
-      try {
-        const tx = await cxContract.claim(
-          CX_CURRENT_CYCLE_ID,
-          addr,
-          alloc.amount,
-          alloc.proof
-        );
-        alert("Transaction sent:\n" + tx.hash);
-        await tx.wait();
-        alert("Claim successful! ✅");
-      } catch (err) {
-        console.error("Claim failed:", err);
-        alert("Claim failed: " + (err?.message || "Unknown error"));
-      }
+async function cxPerformClaim() {
+  try {
+    if (!window.cxPendingAlloc) {
+      alert("No eligible reward found.");
+      return;
     }
+
+    const alloc = window.cxPendingAlloc;
+
+    const alreadyClaimed = await window.cxContract.hasClaimed(
+      CX_CURRENT_CYCLE_ID,
+      cxUserAddress
+    );
+
+    if (alreadyClaimed) {
+      alert("You have already claimed for this cycle.");
+      return;
+    }
+
+    const tx = await window.cxContract.claim(
+      CX_CURRENT_CYCLE_ID,
+      cxUserAddress,
+      alloc.amount,
+      alloc.proof
+    );
+
+    await tx.wait();
+
+    alert(
+      "🎉 Success!\n\n" +
+      "Your reward has been sent to your wallet.\n" +
+      "Transaction Hash:\n" + tx.hash
+    );
+
+    document.getElementById("cx-claim-btn").style.display = "none";
+
+  } catch (err) {
+    console.error(err);
+    alert("Claim failed.\n" + (err?.message || "Unknown error"));
+  }
+}
+
 
     const claimBtn = document.getElementById("btn-claim");
     const modalBackdrop = document.getElementById("claim-modal-backdrop");
@@ -1767,10 +1781,10 @@
 
     // Connect wallet + check eligibility using on-chain Merkle data
     document
-      .getElementById("btn-connect-wallet")
-      .addEventListener("click", () => {
-        cxConnectAndCheck();
-      });
+  .getElementById("btn-connect-wallet")
+  .addEventListener("click", () => {
+    cxConnectWallet(); 
+  });
     
     // Presale link placeholder – replace with real PinkSale URL
     document.getElementById("presale-link").addEventListener("click", (e) => {
