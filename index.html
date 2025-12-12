@@ -955,9 +955,10 @@
         For important and loyal holders only.
       </p>
       <div class="modal-actions">
-        <button class="btn-wallet" id="btn-connect-wallet" data-i18n="claim_btn_connect">
-          Connect wallet
-        </button>
+        <button class="btn-wallet" id="btn-connect-wallet" data-i18n="claim_btn_connect"
+        onclick="cxConnectWallet()">
+  Connect wallet
+</button>
         <button class="btn-close" id="btn-close-modal" data-i18n="claim_btn_close">
           Close
         </button>
@@ -1048,51 +1049,41 @@ import { ethers }
   from "https://cdnjs.cloudflare.com/ajax/libs/ethers/6.8.1/ethers.esm.min.js";
 
 
-// -------------------------------
-// CONFIG
-// -------------------------------
+// -------- GLOBAL VARS --------
+window.cxUserAddress = null;
+window.cxSigner = null;
+window.cxContract = null;
 
-const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
-const projectId = "d91c22a9f6ae27cd37d7fc36d8a0295d";
-
-window.wagmi = wagmi;
 window.cxRewardsData = null;
 window.cxProofsData = null;
 window.cxPendingAlloc = null;
 
 
-// Wallet metadata
+// -------- CONFIG --------
+const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+const projectId = "d91c22a9f6ae27cd37d7fc36d8a0295d";
+
+window.wagmi = wagmi;
+
 const metadata = {
   name: "CycleX Claim Portal",
   description: "AI-Secured Quarterly Rewards",
   url: window.location.origin,
-  icons: [window.location.origin + "/logo.png"]
+  icons: ["https://cyclex-website.vercel.app/logo.png"]
 };
 
-const chains = [bsc];
-
-
-// -------------------------------
-// WAGMI CONFIG
-// -------------------------------
-
-const wagmiConfig = defaultWagmiConfig({
-  appName: "CycleX Claim Portal",
+const config = defaultWagmiConfig({
+  chains: [bsc],
   projectId,
-  chains,
   metadata,
-  enableWalletConnect: true,
+  enableWalletConnect: true
 });
 
-
-// -------------------------------
-// CREATE WEB3MODAL V3
-// -------------------------------
-
+// create modal
 const modal = createWeb3Modal({
-  wagmiConfig,
+  wagmiConfig: config,
   projectId,
-  chains,
+  chains: [bsc],
   themeMode: "dark",
   themeVariables: {
     "--w3m-accent-color": "#00e5ff",
@@ -1101,56 +1092,49 @@ const modal = createWeb3Modal({
   }
 });
 
+// expose modal globally
 window.cxModal = modal;
 
 
-// -------------------------------
-// CONNECT WALLET (THE FIXED VERSION)
-// -------------------------------
-
+// -------- CONNECT WALLET (GLOBAL) --------
 window.cxConnectWallet = async function () {
   try {
-    console.log("Opening wallet modal...");
     await window.cxModal.open();
 
-    const account = wagmi.getAccount();
+    const { getAccount, getWalletClient } = window.wagmi;
+    const acc = getAccount();
 
-    if (!account?.address) {
+    if (!acc?.address) {
       alert("Wallet connection failed.");
       return;
     }
 
-    window.cxUserAddress = account.address.toLowerCase();
+    window.cxUserAddress = acc.address.toLowerCase();
 
-    const walletClient = await wagmi.getWalletClient();
-    if (!walletClient) {
-      alert("Wallet client error.");
-      return;
-    }
-
-    const provider = new ethers.BrowserProvider(walletClient);
+    const client = await getWalletClient();
+    const provider = new ethers.BrowserProvider(client);
     window.cxSigner = await provider.getSigner();
 
     window.cxContract = new ethers.Contract(
       CX_CONTRACT_ADDRESS,
       [
-        "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
-        "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
+        "function claim(uint256,address,uint256,bytes32[]) external",
+        "function hasClaimed(uint256,address) view returns (bool)"
       ],
       window.cxSigner
     );
 
-    console.log("WALLET CONNECTED:", window.cxUserAddress);
-    cxConnectAndCheck();
+    // Continue eligibility check
+    if (typeof window.cxConnectAndCheck === "function") {
+      window.cxConnectAndCheck();
+    }
 
   } catch (err) {
-    console.error("Wallet error:", err);
+    console.error(err);
     alert("Wallet connection error.");
   }
 };
-
 </script>
-
 
   <script>
     // -------- TRANSLATIONS --------
