@@ -1665,58 +1665,10 @@
       if (e.target === modalBackdrop) closeModal();
     });
 
-   // Connect wallet + check eligibility using on-chain Merkle data
-document.getElementById("btn-connect-wallet").addEventListener("click", async () => {
-  try {
-    // פותח למשתמש את רשימת כל הארנקים
-    const session = await wallet.connect();
-
-    if (!session || !session.accounts || !session.accounts[0]) {
-      alert("Wallet connection canceled.");
-      return;
-    }
-
-    // הכתובת של המשתמש מתוך WalletConnect
-    const address = session.accounts[0].address.toLowerCase();
-
-    // מחליף את השכבה הישנה של Metamask בלבד
-    cxUserAddress = address;
-
-    // יוצר provider מסוג WalletConnect
-    cxProvider = new ethers.BrowserProvider(wallet.getProvider());
-    cxSigner = await cxProvider.getSigner();
-
-    // בונה מחדש את החוזה לפי הארנק המחובר
-    cxContract = new ethers.Contract(
-      CX_CONTRACT_ADDRESS,
-      [
-        "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
-        "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
-      ],
-      cxSigner
-    );
-
-    // טוען את נתוני המרקל
-    await cxLoadMerkleData();
-
-    // בודק זכאות – לא נגעתי בכלל בלוגיקה שלך
-    const alloc = cxGetUserAllocation(address);
-
-    if (!alloc) {
-      alert("Your wallet is NOT eligible for this reward cycle.");
-      return;
-    }
-
-    const human = ethers.formatUnits(alloc.amount, 18);
-    alert(`You ARE eligible.\nWallet: ${address}\nAmount: ${human} CYCX`);
-
-    cxEnsureClaimButton();
-
-  } catch (err) {
-    console.error(err);
-    alert("Wallet connection failed.");
-  }
+  document.getElementById("btn-connect-wallet").addEventListener("click", () => {
+  alert("Wallet connection system initializing...");
 });
+
     
     // Presale link placeholder – replace with real PinkSale URL
     document.getElementById("presale-link").addEventListener("click", (e) => {
