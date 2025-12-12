@@ -3,8 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>CycleX – AI-Powered Secure Reward Ecosystem</title>
-  <link rel="stylesheet" href="https://unpkg.com/@web3modal/wagmi@3.5.7/dist/wagmi.css" />
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
@@ -690,12 +688,6 @@
         grid-template-columns: 1fr;
       }
     }
-    #w3m-modal {
-    z-index: 999999999 !important;
-  }
-  #w3m-overlay {
-    z-index: 999999998 !important;
-  }
   </style>
 </head>
 <body>
@@ -955,35 +947,13 @@
         For important and loyal holders only.
       </p>
       <div class="modal-actions">
-        <button class="btn-wallet" id="btn-connect-wallet" data-i18n="claim_btn_connect"
-        onclick="cxConnectWallet()">
-  Connect wallet
-</button>
+        <button class="btn-wallet" id="btn-connect-wallet" data-i18n="claim_btn_connect">
+          Connect wallet
+        </button>
         <button class="btn-close" id="btn-close-modal" data-i18n="claim_btn_close">
           Close
         </button>
       </div>
-      <!-- Eligibility Result Box -->
-<div id="cx-eligibility-box" style="display:none; margin-top:20px;">
-  <p id="cx-eligibility-text" style="color:#fff; font-size:18px;"></p>
-
-  <button 
-    id="cx-claim-btn"
-    onclick="cxPerformClaim()"
-    style="
-      margin-top:15px;
-      padding:12px 22px;
-      border-radius:12px;
-      font-size:18px;
-      background: linear-gradient(90deg, #7b2ff7, #00e5ff);
-      border:none;
-      cursor:pointer;
-      color:white;
-      display:none;
-    ">
-    Claim Rewards
-  </button>
-</div>
       <p class="modal-caption" data-i18n="claim_caption">
         Web3 integration (MetaMask / WalletConnect) will connect here to read your Merkle allocation and trigger the
         on-chain <code>claim()</code> call.
@@ -1031,113 +1001,9 @@
     </div>
   </div>
 
-<!-- Load Ethers.js v6 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.8.1/ethers.umd.min.js"></script>
 
-<!-- Web3Modal + Claim Logic -->
-<script type="module">
-import { createWeb3Modal, defaultWagmiConfig } 
-  from "https://unpkg.com/@web3modal/wagmi@3.5.7/dist/wagmi.js";
-
-import * as wagmi 
-  from "https://unpkg.com/@wagmi/core@1.4.7/dist/wagmi-core.js";
-
-import { bsc } 
-  from "https://unpkg.com/@wagmi/core@1.4.7/dist/chains/bsc.js";
-
-// ⚠️ שורה שגרמה לבאג – למחוק לגמרי:
-// import { ethers }
-
-// במקום זה נשתמש ב־ethers הגלובלי מה־CDN:
-const { ethers } = window;
-
-
-// -------- GLOBAL VARS --------
-window.cxUserAddress = null;
-window.cxSigner = null;
-window.cxContract = null;
-
-window.cxRewardsData = null;
-window.cxProofsData = null;
-window.cxPendingAlloc = null;
-
-
-// -------- CONFIG --------
-const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
-const projectId = "d91c22a9f6ae27cd37d7fc36d8a0295d";
-
-window.wagmi = wagmi;
-
-const metadata = {
-  name: "CycleX Claim Portal",
-  description: "AI-Secured Quarterly Rewards",
-  url: window.location.origin,
-  icons: ["https://cyclex-website.vercel.app/logo.png"]
-};
-
-const config = defaultWagmiConfig({
-  chains: [bsc],
-  projectId,
-  metadata,
-  enableWalletConnect: true
-});
-
-// create modal
-const modal = createWeb3Modal({
-  wagmiConfig: config,
-  projectId,
-  chains: [bsc],
-  themeMode: "dark",
-  themeVariables: {
-    "--w3m-accent-color": "#00e5ff",
-    "--w3m-border-radius": "20px",
-    "--w3m-font-size-master": "16px"
-  }
-});
-
-// expose modal globally
-window.cxModal = modal;
-
-
-// -------- CONNECT WALLET (GLOBAL) --------
-window.cxConnectWallet = async function () {
-  try {
-    await window.cxModal.open();
-
-    const { getAccount, getWalletClient } = window.wagmi;
-    const acc = getAccount();
-
-    if (!acc?.address) {
-      alert("Wallet connection failed.");
-      return;
-    }
-
-    window.cxUserAddress = acc.address.toLowerCase();
-
-    const client = await getWalletClient();
-    const provider = new ethers.BrowserProvider(client);
-    window.cxSigner = await provider.getSigner();
-
-    window.cxContract = new ethers.Contract(
-      CX_CONTRACT_ADDRESS,
-      [
-        "function claim(uint256,address,uint256,bytes32[]) external",
-        "function hasClaimed(uint256,address) view returns (bool)"
-      ],
-      window.cxSigner
-    );
-
-    if (typeof window.cxConnectAndCheck === "function") {
-      window.cxConnectAndCheck();
-    }
-
-  } catch (err) {
-    console.error(err);
-    alert("Wallet connection error.");
-  }
-};
-</script>
-
+  <!-- Load ethers.js -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
 
   <script>
     // -------- TRANSLATIONS --------
@@ -1630,13 +1496,17 @@ window.cxConnectWallet = async function () {
 
     // -------- CLAIM MODAL --------
     // -------- CYCLEX MERKLE CLAIM SYSTEM (FRONTEND) --------
-       const CX_CURRENT_CYCLE_ID = 1;
-const CX_PROOFS_URL = "/proofs.json";
-const CX_REWARDS_URL = "/rewards.json";
+    const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+    const CX_CURRENT_CYCLE_ID = 1; // update if you open a new cycle
+    const CX_PROOFS_URL = "/proofs.json";
+    const CX_REWARDS_URL = "/rewards.json";
 
-let cxRewardsData = null;
-let cxProofsData = null;
-
+    let cxProvider = null;
+    let cxSigner = null;
+    let cxContract = null;
+    let cxUserAddress = null;
+    let cxRewardsData = null;
+    let cxProofsData = null;
 
     async function cxLoadMerkleData() {
       try {
@@ -1673,10 +1543,24 @@ let cxProofsData = null;
         proof
       };
     }
-  
-</script>
 
-<script>
+    async function cxEnsureWeb3() {
+      if (!window.ethereum) {
+        alert("Web3 wallet (MetaMask) not detected in this browser.");
+        throw new Error("No ethereum provider");
+      }
+
+      if (!cxProvider) {
+        cxProvider = new ethers.BrowserProvider(window.ethereum);
+        cxSigner = await cxProvider.getSigner();
+        cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
+        cxContract = new ethers.Contract(CX_CONTRACT_ADDRESS, [
+          "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
+          "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
+        ], cxSigner);
+      }
+    }
+
     function cxEnsureClaimButton() {
       const modal = document.querySelector("#claim-modal-backdrop .modal");
       if (!modal) return;
@@ -1693,86 +1577,66 @@ let cxProofsData = null;
       }
     }
 
-  async function cxConnectAndCheck() {
-  try {
-    // Load Merkle JSON files
-    await cxLoadMerkleData();
+    async function cxConnectAndCheck() {
+      try {
+        await cxEnsureWeb3();
+        await cxLoadMerkleData();
 
-    const addr = cxUserAddress.toLowerCase();
-    const alloc = cxGetUserAllocation(addr);
+        const addr = cxUserAddress;
+        const alloc = cxGetUserAllocation(addr);
 
-    const box = document.getElementById("cx-eligibility-box");
-    const text = document.getElementById("cx-eligibility-text");
-    const claimBtn = document.getElementById("cx-claim-btn");
+        if (!alloc) {
+          alert("Your wallet is NOT eligible for this reward cycle.");
+          return;
+        }
 
-    if (!alloc) {
-      text.innerHTML = "❌ Your wallet is NOT eligible for this reward cycle.";
-      box.style.display = "block";
-      claimBtn.style.display = "none";
-      return;
+        const human = ethers.formatUnits(alloc.amount, 18);
+        alert("You ARE eligible for this cycle.\nWallet: " + addr + "\nAmount: " + human + " CYCX");
+
+        cxEnsureClaimButton();
+      } catch (err) {
+        console.error(err);
+      }
     }
 
-    const human = ethers.formatUnits(alloc.amount, 18);
+    async function cxPerformClaim() {
+      if (!cxUserAddress || !cxContract || !cxProofsData) {
+        alert("Please connect your wallet first.");
+        return;
+      }
 
-    // Show eligibility info
-    text.innerHTML =
-      `<span style='color:#00e5ff;'>You ARE eligible!</span><br>` +
-      `Reward: <b>${human} CYCX</b><br>` +
-      `Wallet: <span style='font-size:14px;'>${addr}</span>`;
+      const addr = cxUserAddress;
+      const alloc = cxGetUserAllocation(addr);
+      if (!alloc) {
+        alert("No allocation found for this wallet in the current cycle.");
+        return;
+      }
 
-    box.style.display = "block";
-    claimBtn.style.display = "inline-block";
+      try {
+        const already = await cxContract.hasClaimed(CX_CURRENT_CYCLE_ID, addr);
+        if (already) {
+          alert("You have already claimed for this cycle.");
+          return;
+        }
+      } catch (e) {
+        console.warn("hasClaimed check failed (non-fatal):", e);
+      }
 
-    // Store for claim
-    window.cxPendingAlloc = alloc;
-    
-  } catch (err) {
-    console.error(err);
-    alert("Something went wrong while checking eligibility.");
-  }
-}
-async function cxPerformClaim() {
-  try {
-    if (!window.cxPendingAlloc) {
-      alert("No eligible reward found.");
-      return;
+      try {
+        const tx = await cxContract.claim(
+          CX_CURRENT_CYCLE_ID,
+          addr,
+          alloc.amount,
+          alloc.proof
+        );
+        alert("Transaction sent:\n" + tx.hash);
+        await tx.wait();
+        alert("Claim successful! ✅");
+      } catch (err) {
+        console.error("Claim failed:", err);
+        alert("Claim failed: " + (err?.message || "Unknown error"));
+      }
     }
-
-    const alloc = window.cxPendingAlloc;
-
-    const alreadyClaimed = await window.cxContract.hasClaimed(
-      CX_CURRENT_CYCLE_ID,
-      cxUserAddress
-    );
-
-    if (alreadyClaimed) {
-      alert("You have already claimed for this cycle.");
-      return;
-    }
-
-    const tx = await window.cxContract.claim(
-      CX_CURRENT_CYCLE_ID,
-      cxUserAddress,
-      alloc.amount,
-      alloc.proof
-    );
-
-    await tx.wait();
-
-    alert(
-      "🎉 Success!\n\n" +
-      "Your reward has been sent to your wallet.\n" +
-      "Transaction Hash:\n" + tx.hash
-    );
-
-    document.getElementById("cx-claim-btn").style.display = "none";
-
-  } catch (err) {
-    console.error(err);
-    alert("Claim failed.\n" + (err?.message || "Unknown error"));
-  }
-}
-
 
     const claimBtn = document.getElementById("btn-claim");
     const modalBackdrop = document.getElementById("claim-modal-backdrop");
@@ -1797,11 +1661,10 @@ async function cxPerformClaim() {
 
     // Connect wallet + check eligibility using on-chain Merkle data
     document
-  .getElementById("btn-connect-wallet")
-  .addEventListener("click", () => {
-     cxConnectWallet(); 
-});
-
+      .getElementById("btn-connect-wallet")
+      .addEventListener("click", () => {
+        cxConnectAndCheck();
+      });
     
     // Presale link placeholder – replace with real PinkSale URL
     document.getElementById("presale-link").addEventListener("click", (e) => {
