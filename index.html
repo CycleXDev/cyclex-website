@@ -1553,9 +1553,7 @@
         proof
       };
     }
-
-       async function cxEnsureWeb3() {
-         async function cxEnsureWeb3() {
+async function cxEnsureWeb3() {
   if (!window.WalletConnectWeb3Modal) {
     alert("Web3Modal library not loaded.");
     throw new Error("Web3Modal not loaded");
@@ -1589,7 +1587,7 @@
   );
 }
 
-
+      
 
       cxContract = new ethers.Contract(
         CX_CONTRACT_ADDRESS,
@@ -1618,27 +1616,40 @@
       }
     }
 
-    async function cxConnectAndCheck() {
-      try {
-        await cxEnsureWeb3();
-        await cxLoadMerkleData();
+   async function cxConnectAndCheck() {
+  try {
+    // 1) התחברות לארנק (פותח את Web3Modal ומחכה לבחירה)
+    await cxEnsureWeb3();
 
-        const addr = cxUserAddress;
-        const alloc = cxGetUserAllocation(addr);
-
-        if (!alloc) {
-          alert("Your wallet is NOT eligible for this reward cycle.");
-          return;
-        }
-
-        const human = ethers.formatUnits(alloc.amount, 18);
-        alert("You ARE eligible for this cycle.\nWallet: " + addr + "\nAmount: " + human + " CYCX");
-
-        cxEnsureClaimButton();
-      } catch (err) {
-        console.error(err);
-      }
+    // 2) אם לא נוצר חיבור אמיתי – לעצור
+    if (!cxUserAddress) {
+      alert("Wallet connection failed. Please try again.");
+      return;
     }
+
+    // 3) טוען נתוני מרקל
+    await cxLoadMerkleData();
+
+    // 4) מוצא אלוקציה
+    const addr = cxUserAddress;
+    const alloc = cxGetUserAllocation(addr);
+
+    if (!alloc) {
+      alert("Your wallet is NOT eligible for this reward cycle.");
+      return;
+    }
+
+    // 5) אם יש זכאות – מציג מידע
+    const human = ethers.formatUnits(alloc.amount, 18);
+    alert("You ARE eligible for this cycle.\nWallet: " + addr + "\nAmount: " + human + " CYCX");
+
+    // 6) מציג כפתור CLAIM
+    cxEnsureClaimButton();
+
+  } catch (err) {
+    console.error(err);
+  }
+}
 
     async function cxPerformClaim() {
       if (!cxUserAddress || !cxContract || !cxProofsData) {
