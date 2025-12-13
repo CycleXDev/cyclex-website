@@ -4,10 +4,6 @@
   <meta charset="UTF-8" />
   <title>CycleX – AI-Powered Secure Reward Ecosystem</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Web3Modal / WalletConnect styles -->
-  <link rel="stylesheet" href="https://unpkg.com/@web3modal/wagmi@3.5.7/dist/wagmi.css" />
-
   <style>
     :root {
       --bg-main: #050509;
@@ -1005,166 +1001,9 @@
     </div>
   </div>
 
-<!-- Web3Modal HTML SDK -->
-<script src="https://unpkg.com/@web3modal/html@2.6.2/dist/web3modal.min.js"></script>
-
 
   <!-- Load ethers.js -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
-
-<script>
-  // ----- Web3Modal V3 setup -----
-  const projectId = "d91c22a9f6ae27cd37d7fc36d8a0295d";
-
-  const bsc = {
-    id: 56,
-    name: "BNB Smart Chain",
-    network: "bsc",
-    nativeCurrency: {
-      name: "BNB",
-      symbol: "BNB",
-      decimals: 18
-    },
-    rpcUrls: {
-      default: {
-        http: ["https://bsc-dataseed.binance.org/"]
-      }
-    },
-    blockExplorers: {
-      default: {
-        name: "BscScan",
-        url: "https://bscscan.com"
-      }
-    }
-  };
-
-  const wagmiConfig = defaultWagmiConfig({
-    chains: [bsc],
-    projectId,
-    metadata: {
-      name: "CycleX",
-      description: "AI-secured reward ecosystem",
-      url: "https://cyclex.app",
-      icons: []
-    }
-  });
-
-  const web3Modal = createWeb3Modal({
-    wagmiConfig,
-    projectId,
-    chains: [bsc]
-  });
-
-  // ----- Connect wallet button -----
-  const connectBtn = document.getElementById("btn-connect-wallet");
-
-  connectBtn.addEventListener("click", async () => {
-    try {
-      // פותח את הרשימה של כל הארנקים
-      web3Modal.open();
-
-      // מחכה לחיבור
-      const unsubscribe = web3Modal.subscribeState(async (state) => {
-        if (state.selectedNetworkId && state.address) {
-          unsubscribe();
-
-          const address = state.address.toLowerCase();
-          console.log("Connected wallet:", address);
-
-          // ---- חיבור ל-ethers (בלי לשנות Merkle) ----
-          const provider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await provider.getSigner();
-
-          cxUserAddress = address;
-          cxProvider = provider;
-          cxSigner = signer;
-
-          cxContract = new ethers.Contract(
-            CX_CONTRACT_ADDRESS,
-            [
-              "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
-              "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
-            ],
-            cxSigner
-          );
-
-          // ממשיך ללוגיקה הקיימת שלך
-          await cxLoadMerkleData();
-          const alloc = cxGetUserAllocation(address);
-
-          if (!alloc) {
-            alert("Your wallet is NOT eligible for this reward cycle.");
-            return;
-          }
-
-          const human = ethers.formatUnits(alloc.amount, 18);
-          alert(`You ARE eligible.\nWallet: ${address}\nAmount: ${human} CYCX`);
-
-          cxEnsureClaimButton();
-        }
-      });
-    } catch (err) {
-      console.error(err);
-      alert("Wallet connection failed.");
-    }
-  });
-</script>
-  <script>
-  const projectId = "d91c22a9f6ae27cd37d7fc36d8a0295d";
-
-  const modal = new Web3Modal({
-    projectId,
-    themeMode: "dark",
-    walletConnectVersion: 2,
-    chains: [56] // BNB Smart Chain
-  });
-
-  const connectBtn = document.getElementById("btn-connect-wallet");
-
-  connectBtn.addEventListener("click", async () => {
-    try {
-      const provider = await modal.connect();
-      const ethersProvider = new ethers.BrowserProvider(provider);
-      const signer = await ethersProvider.getSigner();
-
-      const address = (await signer.getAddress()).toLowerCase();
-      console.log("Connected wallet:", address);
-
-      cxUserAddress = address;
-      cxProvider = ethersProvider;
-      cxSigner = signer;
-
-      cxContract = new ethers.Contract(
-        CX_CONTRACT_ADDRESS,
-        [
-          "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
-          "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
-        ],
-        cxSigner
-      );
-
-      await cxLoadMerkleData();
-      const alloc = cxGetUserAllocation(address);
-
-      if (!alloc) {
-        alert("Your wallet is NOT eligible for this reward cycle.");
-        return;
-      }
-
-      const human = ethers.formatUnits(alloc.amount, 18);
-      alert(`You ARE eligible.\nWallet: ${address}\nAmount: ${human} CYCX`);
-
-      cxEnsureClaimButton();
-    } catch (err) {
-      console.error(err);
-      alert("Wallet connection failed.");
-    }
-  });
-</script>
-
-
-  
-
 
   <script>
     // -------- TRANSLATIONS --------
@@ -1705,22 +1544,41 @@
       };
     }
 
-    async function cxEnsureWeb3() {
-      if (!window.ethereum) {
-        alert("Web3 wallet (MetaMask) not detected in this browser.");
-        throw new Error("No ethereum provider");
-      }
+  async function cxEnsureWeb3() {
+  let providerSource = null;
 
-      if (!cxProvider) {
-        cxProvider = new ethers.BrowserProvider(window.ethereum);
-        cxSigner = await cxProvider.getSigner();
-        cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
-        cxContract = new ethers.Contract(CX_CONTRACT_ADDRESS, [
-          "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
-          "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
-        ], cxSigner);
-      }
-    }
+  // 1️⃣ MetaMask קיים – כמו היום
+  if (window.ethereum) {
+    providerSource = window.ethereum;
+  } 
+  // 2️⃣ אין MetaMask → WalletConnect
+  else {
+    const wcProvider = new WalletConnectProvider.default({
+      projectId: "d91c22a9f6ae27cd37d7fc36d8a0295d",
+      chains: [56],
+      showQrModal: true
+    });
+
+    await wcProvider.enable();
+    providerSource = wcProvider;
+  }
+
+  if (!cxProvider) {
+    cxProvider = new ethers.BrowserProvider(providerSource);
+    cxSigner = await cxProvider.getSigner();
+    cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
+
+    cxContract = new ethers.Contract(
+      CX_CONTRACT_ADDRESS,
+      [
+        "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
+        "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
+      ],
+      cxSigner
+    );
+  }
+}
+
 
     function cxEnsureClaimButton() {
       const modal = document.querySelector("#claim-modal-backdrop .modal");
@@ -1820,6 +1678,12 @@
       if (e.target === modalBackdrop) closeModal();
     });
 
+    // Connect wallet + check eligibility using on-chain Merkle data
+    document
+      .getElementById("btn-connect-wallet")
+      .addEventListener("click", () => {
+        cxConnectAndCheck();
+      });
     
     // Presale link placeholder – replace with real PinkSale URL
     document.getElementById("presale-link").addEventListener("click", (e) => {
