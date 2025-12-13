@@ -1001,27 +1001,32 @@
     </div>
   </div>
 
+<!-- ✅ REQUIRED: process polyfill for WalletConnect -->
+<script>
+  window.process = { env: { NODE_ENV: "production" } };
+</script>
 
-  <!-- Load ethers.js -->
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
 
-  <!-- ===== Reown AppKit (WalletConnect V3) ===== -->
 <script type="module">
-  import { createAppKit } from 'https://esm.sh/@reown/appkit@1.0.2'
-  import { EthersAdapter } from 'https://esm.sh/@reown/appkit-adapter-ethers@1.0.2'
-  import { bsc } from 'https://esm.sh/@reown/appkit/networks@1.0.2'
+  import { createAppKit } from "https://cdn.jsdelivr.net/npm/@reown/appkit@1.0.7/dist/appkit.esm.js";
+  import { mainnet, bsc } from "https://cdn.jsdelivr.net/npm/@reown/appkit@1.0.7/dist/networks.esm.js";
 
-  const appkit = createAppKit({
-    adapters: [new EthersAdapter()],
+  const appKit = createAppKit({
+    projectId: "d91c22a9f6ae27cd37d7fc36d8a0295d",
     networks: [bsc],
-    projectId: 'd91c22a9f6ae27cd37d7fc36d8a0295d',
     metadata: {
-      name: 'CycleX',
-      description: 'AI-Powered Secure Reward Ecosystem',
+      name: "CycleX",
+      description: "CycleX Claim Portal",
       url: window.location.origin,
-      icons: []
+      icons: ["https://cyclex.io/logo.png"]
     }
   });
+
+  window.cxOpenWalletModal = () => appKit.open();
+</script>
+
+
 
   // expose globally
   window.cxOpenWalletModal = () => appkit.open();
