@@ -1007,18 +1007,10 @@
     </div>
   </div>
 
-
-  <!-- Load ethers.js -->
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
-  <!-- WalletConnect v1 provider -->
-<script src="https://unpkg.com/@walletconnect/ethereum-provider@1.8.0/dist/umd/index.min.js"></script>
-
-<!-- Web3Modal v1 -->
-<script src="https://unpkg.com/web3modal@1.9.12/dist/index.js"></script>
-
-<!-- ethers v5 (ל־Web3Modal בלבד) -->
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-
+  <!-- Web3 (placeholder – AppKit will be injected here) -->
+<script>
+  // 🔒 Wallet connection will be injected here in the next step (Reown AppKit)
+</script>
 
   <script>
     // -------- TRANSLATIONS --------
@@ -1512,32 +1504,8 @@
     // -------- CLAIM MODAL --------
     // -------- CYCLEX MERKLE CLAIM SYSTEM (FRONTEND) --------
     // -------- WEB3MODAL STATE --------
-let web3Modal;
-let externalProvider;
-    const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
-    const CX_CURRENT_CYCLE_ID = 1; // update if you open a new cycle
-    const CX_PROOFS_URL = "/proofs.json";
-    const CX_REWARDS_URL = "/rewards.json";
-
-    function initWeb3Modal() {
-  const providerOptions = {
-    walletconnect: {
-      package: window.WalletConnectProvider.default,
-      options: {
-        rpc: {
-          56: "https://bsc-dataseed.binance.org/"
-        },
-        chainId: 56
-      }
-    }
-  };
-
-  web3Modal = new window.Web3Modal.default({
-    cacheProvider: false,
-    providerOptions,
-    theme: "dark"
-  });
-}
+// 🔒 Wallet system placeholder
+// Reown AppKit will initialize here (step 2)
 
 
     let cxProvider = null;
@@ -1683,36 +1651,45 @@ let externalProvider;
     });
 
     // Connect wallet + check eligibility using on-chain Merkle data
-document
-  .getElementById("btn-connect-wallet")
-  .addEventListener("click", async () => {
-    try {
-      // 1️⃣ סגור את ה-Claim modal לפני פתיחת Web3Modal
-      const claimBackdrop = document.getElementById("claim-modal-backdrop");
-      claimBackdrop.classList.remove("active");
+   <script type="module">
+  import { createAppKit } from "https://esm.sh/@reown/appkit@1.6.3";
+  import { Ethers6Adapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.6.3";
+  import { bsc } from "https://esm.sh/@reown/appkit/networks";
 
-      // 2️⃣ פתח Web3Modal (Uniswap-style)
-      const externalProvider = await web3Modal.connect();
+  // 🔑 WalletConnect Project ID (שלך)
+  const projectId = "7886bcb95105e9e47337cec481d5de75";
 
-      // 3️⃣ החזר את Claim modal אחרי החיבור
-      claimBackdrop.classList.add("active");
-
-      const web3Provider = new ethers.providers.Web3Provider(externalProvider);
-      const signer = web3Provider.getSigner();
-      const address = await signer.getAddress();
-
-      console.log("Connected wallet:", address);
-      alert("Wallet connected: " + address);
-
-    } catch (err) {
-      // אם המשתמש ביטל – נחזיר את המודאל
-      document
-        .getElementById("claim-modal-backdrop")
-        .classList.add("active");
-
-      console.log("Wallet connection cancelled", err);
+  const appKit = createAppKit({
+    adapters: [new Ethers6Adapter()],
+    networks: [bsc],
+    projectId,
+    metadata: {
+      name: "CycleX",
+      description: "CycleX Claim Portal",
+      url: window.location.origin,
+      icons: ["https://cyclex.website/logo.png"]
+    },
+    features: {
+      analytics: false
     }
   });
+
+  // 🔗 חיבור לכפתור הקיים שלך
+  const connectBtn = document.getElementById("btn-connect-wallet");
+
+  if (connectBtn) {
+    connectBtn.addEventListener("click", async () => {
+      try {
+        await appKit.open(); // 👈 זה פותח רשימת ארנקים כמו Uniswap
+      } catch (e) {
+        console.log("Wallet connect cancelled", e);
+      }
+    });
+  }
+
+  // לשימוש עתידי ב-claim
+  window.__CYCLEX_APPKIT__ = appKit;
+</script>
 
 
     // Presale link placeholder – replace with real PinkSale URL
@@ -1859,7 +1836,9 @@ document
         `;
       });
     }
-    initWeb3Modal();
+    // 🔒 Wallet system placeholder
+// Reown AppKit will initialize here (step 2)
+
 
 
   </script>
