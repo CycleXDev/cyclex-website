@@ -1513,6 +1513,27 @@ let externalProvider;
     const CX_PROOFS_URL = "/proofs.json";
     const CX_REWARDS_URL = "/rewards.json";
 
+    function initWeb3Modal() {
+  const providerOptions = {
+    walletconnect: {
+      package: window.WalletConnectProvider,
+      options: {
+        rpc: {
+          56: "https://bsc-dataseed.binance.org/"
+        },
+        chainId: 56
+      }
+    }
+  };
+
+  web3Modal = new window.Web3Modal.default({
+    cacheProvider: false,
+    providerOptions,
+    theme: "dark"
+  });
+}
+
+
     let cxProvider = null;
     let cxSigner = null;
     let cxContract = null;
@@ -1656,13 +1677,26 @@ let externalProvider;
     });
 
     // Connect wallet + check eligibility using on-chain Merkle data
-    document
+document
   .getElementById("btn-connect-wallet")
-  .addEventListener("click", () => {
-    alert("Wallet selector will open here (Web3Modal coming next).");
+  .addEventListener("click", async () => {
+    try {
+      console.log("web3Modal =", web3Modal);
+      externalProvider = await web3Modal.connect();
+
+      // ethers v5 provider (רק לחיבור)
+      const web3Provider = new ethers.providers.Web3Provider(externalProvider);
+      const signer = web3Provider.getSigner();
+      const address = await signer.getAddress();
+
+      console.log("Connected wallet:", address);
+
+      alert("Wallet connected: " + address);
+    } catch (err) {
+      console.log("Wallet connection cancelled", err);
+    }
   });
 
-    
     // Presale link placeholder – replace with real PinkSale URL
     document.getElementById("presale-link").addEventListener("click", (e) => {
       const href = e.currentTarget.getAttribute("href");
@@ -1807,6 +1841,8 @@ let externalProvider;
         `;
       });
     }
+    initWeb3Modal();
+
 
   </script>
 </body>
