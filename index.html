@@ -1593,32 +1593,22 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
 }
 
 
-
     async function cxEnsureWeb3() {
-  let providerSource = null;
-
-  // 1️⃣ עדיפות ל-AppKit (כל הארנקים)
-  if (window.cxAppKitModal?.getWalletProvider) {
-    providerSource = window.cxAppKitModal.getWalletProvider();
-    console.log("🟢 [CycleX] Using AppKit wallet provider");
+  if (!window.cxAppKitModal?.getWalletProvider) {
+    console.warn("[CycleX] AppKit not ready");
+    return false;
   }
 
-  // 2️⃣ fallback ל-MetaMask (אם מישהו פתח את האתר בלי AppKit)
-  if (!providerSource) {
-  alert("Please select a wallet from the list.");
-  throw new Error("No wallet selected");
-}
+  const providerSource = window.cxAppKitModal.getWalletProvider();
 
   if (!providerSource) {
-    alert("No Web3 wallet provider found.");
-    throw new Error("No wallet provider");
+    console.log("[CycleX] Wallet not selected yet");
+    return false; // חשוב – לא alert
   }
 
   cxProvider = new ethers.BrowserProvider(providerSource);
   cxSigner = await cxProvider.getSigner();
   cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
-
-  console.log("🟢 [CycleX] Wallet address:", cxUserAddress);
 
   cxContract = new ethers.Contract(
     CX_CONTRACT_ADDRESS,
@@ -1628,6 +1618,15 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
     ],
     cxSigner
   );
+
+  console.log("🟢 [CycleX] Wallet connected:", cxUserAddress);
+  return true;
+}
+
+
+  return true;
+}
+
       function cxUpdateWalletUI(address) {
   const btn = document.getElementById("btn-connect-wallet");
   if (!btn) return;
@@ -1660,31 +1659,30 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
 
     window.cxConnectAndCheck = async function () {
   try {
-    await cxEnsureWeb3();
+    const ready = await cxEnsureWeb3();
+    if (!ready) return;
+
     await cxLoadMerkleData();
 
     const address = cxUserAddress;
     const alloc = cxGetUserAllocation(address);
 
-    // ❌ לא זכאי
-    if (!address || !alloc || !alloc.amount) {
+    if (!alloc || !alloc.amount) {
       cxShowNotEligible();
       return;
     }
 
-    // ✅ זכאי
     cxShowEligibility({
       address,
       amount: alloc.amount
     });
 
-    // הצגת כפתור Claim רק אם זכאי
     cxEnsureClaimButton();
-
   } catch (err) {
     console.error(err);
   }
 };
+
 
 
     async function cxPerformClaim() {
@@ -1932,6 +1930,17 @@ window.cxAppKitModal = modal;
 console.log("🟢 [CycleX] AppKit modal exposed globally");
 console.log("🟢 [CycleX] AppKit initialized");
 
+    // ✅ React when AppKit modal closes (wallet selected)
+modal.subscribe?.((state) => {
+  if (state?.open === false) {
+    console.log("🟢 [CycleX] Modal closed – checking wallet");
+    if (typeof window.cxConnectAndCheck === "function") {
+      window.cxConnectAndCheck();
+    }
+  }
+});
+
+
     // -------- Auto Reconnect --------
 async function cxAutoReconnect() {
   try {
@@ -1962,15 +1971,11 @@ window.addEventListener("load", cxAutoReconnect);
     console.log("🟢 [CycleX] btn-connect-wallet found");
 
     btn.addEventListener("click", async () => {
-  console.log("🟡 [CycleX] Connect wallet clicked – opening wallet list");
-
-  await modal.open({
-  view: "Connect"
+  console.log("🟡 [CycleX] Opening wallet list");
+  await modal.open({ view: "Connect" });
 });
-  console.log("🟢 [CycleX] Wallet selected");
 
   // חיבור ethers + בדיקת זכאות
-  await cxConnectAndCheck();
       const connectBtn = document.getElementById("btn-connect-wallet");
 if (connectBtn) {
   connectBtn.textContent = "Wallet connected";
