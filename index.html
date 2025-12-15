@@ -1545,21 +1545,41 @@
     }
 
     async function cxEnsureWeb3() {
-      if (!window.ethereum) {
-        alert("Web3 wallet (MetaMask) not detected in this browser.");
-        throw new Error("No ethereum provider");
-      }
+  let providerSource = null;
 
-      if (!cxProvider) {
-        cxProvider = new ethers.BrowserProvider(window.ethereum);
-        cxSigner = await cxProvider.getSigner();
-        cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
-        cxContract = new ethers.Contract(CX_CONTRACT_ADDRESS, [
-          "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
-          "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
-        ], cxSigner);
-      }
-    }
+  // 1️⃣ עדיפות ל-AppKit (כל הארנקים)
+  if (window.cxAppKitModal?.getWalletProvider) {
+    providerSource = window.cxAppKitModal.getWalletProvider();
+    console.log("🟢 [CycleX] Using AppKit wallet provider");
+  }
+
+  // 2️⃣ fallback ל-MetaMask (אם מישהו פתח את האתר בלי AppKit)
+  if (!providerSource && window.ethereum) {
+    providerSource = window.ethereum;
+    console.log("🟡 [CycleX] Using window.ethereum fallback");
+  }
+
+  if (!providerSource) {
+    alert("No Web3 wallet provider found.");
+    throw new Error("No wallet provider");
+  }
+
+  cxProvider = new ethers.BrowserProvider(providerSource);
+  cxSigner = await cxProvider.getSigner();
+  cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
+
+  console.log("🟢 [CycleX] Wallet address:", cxUserAddress);
+
+  cxContract = new ethers.Contract(
+    CX_CONTRACT_ADDRESS,
+    [
+      "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
+      "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
+    ],
+    cxSigner
+  );
+}
+
 
     function cxEnsureClaimButton() {
       const modal = document.querySelector("#claim-modal-backdrop .modal");
