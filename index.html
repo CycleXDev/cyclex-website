@@ -1578,9 +1578,20 @@
     ],
     cxSigner
   );
+      function cxUpdateWalletUI(address) {
+  const btn = document.getElementById("btn-connect-wallet");
+  if (!btn) return;
+
+  const short = address.slice(0, 6) + "…" + address.slice(-4);
+  btn.textContent = `Connected: ${short}`;
+  btn.disabled = true;
+  btn.style.opacity = "0.85";
 }
 
+      
+}
 
+    
     function cxEnsureClaimButton() {
       const modal = document.querySelector("#claim-modal-backdrop .modal");
       if (!modal) return;
@@ -1597,7 +1608,7 @@
       }
     }
 
-    async function cxConnectAndCheck() {
+    window.cxConnectAndCheck = async function () {
       try {
         await cxEnsureWeb3();
         await cxLoadMerkleData();
@@ -1859,6 +1870,27 @@ window.cxAppKitModal = modal;
 console.log("🟢 [CycleX] AppKit modal exposed globally");
 console.log("🟢 [CycleX] AppKit initialized");
 
+    // -------- Auto Reconnect --------
+async function cxAutoReconnect() {
+  try {
+    if (window.cxAppKitModal?.getWalletProvider) {
+      const provider = window.cxAppKitModal.getWalletProvider();
+      if (provider) {
+        console.log("🟢 [CycleX] Auto-reconnect: wallet already connected");
+        // לא פותחים modal – רק מחברים ethers
+        if (typeof window.cxEnsureWeb3 === "function") {
+          await window.cxEnsureWeb3();
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("🟡 [CycleX] Auto-reconnect skipped:", e);
+  }
+}
+
+window.addEventListener("load", cxAutoReconnect);
+
+
 
   const btn = document.getElementById("btn-connect-wallet");
 
@@ -1868,10 +1900,22 @@ console.log("🟢 [CycleX] AppKit initialized");
     console.log("🟢 [CycleX] btn-connect-wallet found");
 
     btn.addEventListener("click", async () => {
-      console.log("🟡 [CycleX] Connect wallet clicked – opening wallet list");
-      await modal.open();
-      console.log("🟢 [CycleX] modal.open() resolved");
-    });
+  console.log("🟡 [CycleX] Connect wallet clicked – opening wallet list");
+
+  await modal.open();
+  console.log("🟢 [CycleX] Wallet selected");
+
+  // חיבור ethers + בדיקת זכאות
+  await cxConnectAndCheck();
+      const connectBtn = document.getElementById("btn-connect-wallet");
+if (connectBtn) {
+  connectBtn.textContent = "Wallet connected";
+  connectBtn.disabled = true;
+  connectBtn.style.opacity = "0.8";
+}
+
+});
+
   }
 </script>
 
