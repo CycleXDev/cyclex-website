@@ -416,11 +416,14 @@
     }
 
     .modal-tagline {
-      font-size: 18px;
-      color: #ffe082;
-      margin-bottom: 14px;
-      font-style: italic;
-    }
+  font-size: 18px;
+  color: #ffe082;
+  margin-bottom: 10px; 
+  font-style: normal;  
+  font-weight: 600;    
+  letter-spacing: 0.02em;
+}
+
 
     .modal-actions {
       display: flex;
@@ -948,7 +951,7 @@
       </p>
       <div id="claim-status" style="
   display:none;
-  margin-top:14px;
+  margin-top:6px;
   padding:14px;
   border-radius:14px;
   background: rgba(0, 230, 118, 0.12);
@@ -1584,13 +1587,18 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
   const box = document.getElementById("claim-status");
   if (!box) return;
 
+  box.style.background = "rgba(255, 193, 7, 0.12)";
+  box.style.border = "1px solid rgba(255, 193, 7, 0.4)";
+  box.style.color = "#ffc107";
+
   box.innerHTML = `
-    <strong>⭐ <span data-i18n="not_eligible_title"></span></strong><br>
-    <span data-i18n="not_eligible_text"></span>
+    <strong>⭐ Not eligible for this reward cycle</strong><br>
+    Join the CycleX family and hold CYCX to qualify for future rewards.
   `;
 
   box.style.display = "block";
 }
+
 
 
     async function cxEnsureWeb3() {
@@ -1660,7 +1668,6 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
   try {
     const ready = await cxEnsureWeb3();
     if (!ready) return;
-    cxUpdateWalletUI(cxUserAddress);
 
     await cxLoadMerkleData();
 
@@ -1678,10 +1685,12 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
     });
 
     cxEnsureClaimButton();
+
   } catch (err) {
     console.error(err);
   }
 };
+
 
 
 
