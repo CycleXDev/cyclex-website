@@ -1922,14 +1922,6 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
     icons: []
   }
 });
-modal.subscribe((state) => {
-  if (state?.connected === true) {
-    console.log("🟢 [CycleX] Wallet connected via AppKit – running check");
-    cxConnectAndCheck();
-  }
-});
-
-
 
 window.cxAppKitModal = modal;
 console.log("🟢 [CycleX] AppKit modal exposed globally");
@@ -1971,9 +1963,15 @@ window.addEventListener("load", cxAutoReconnect);
 
     btn.addEventListener("click", async () => {
   console.log("🟡 [CycleX] Opening wallet list");
-  await modal.open({ view: "Connect" });
-});
 
+  await modal.open({ view: "Connect" });
+
+  // ⏳ נותנים רגע לארנק להיסגר / להתחבר
+  setTimeout(async () => {
+    console.log("🟢 [CycleX] Running connect & eligibility check");
+    await cxConnectAndCheck();
+  }, 500);
+});
 
   }
 </script>
