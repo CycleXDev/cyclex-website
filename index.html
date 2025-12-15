@@ -1793,43 +1793,36 @@
 
 </script>
 
- <script>
-window.addEventListener("DOMContentLoaded", () => {
-  if (!window.ReownAppKit || !window.ReownAppKitEthers) {
-    console.error("❌ Reown AppKit not loaded");
-    return;
-  }
+<script>
+  window.addEventListener("DOMContentLoaded", () => {
+    console.log("ReownAppKit:", window.ReownAppKit);
 
-  const { createAppKit } = window.ReownAppKit;
-  const { Ethers6Adapter } = window.ReownAppKitEthers;
+    const { createAppKit } = window.ReownAppKit;
+    const { Ethers6Adapter } = window.ReownAppKitEthers;
 
-  const appKit = createAppKit({
-    projectId: "7886bcb95105e9e47337cec481d5de75",
-    adapters: [new Ethers6Adapter()],
-    networks: [{
-      id: 56,
-      name: "BNB Smart Chain",
-      rpcUrls: { default: { http: ["https://bsc-dataseed.binance.org"] }},
-      nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 }
-    }],
-    metadata: {
-      name: "CycleX",
-      description: "CycleX Claim Portal",
-      url: window.location.origin,
-      icons: ["https://cyclex.website/logo.png"]
-    }
-  });
-
-  const connectBtn = document.getElementById("btn-connect-wallet");
-  if (connectBtn) {
-    connectBtn.addEventListener("click", () => {
-      appKit.open(); // ✅ Uniswap-style wallet list
+    const appKit = createAppKit({
+      projectId: "7886bcb95105e9e47337cec481d5de75",
+      adapters: [new Ethers6Adapter()],
+      networks: [{
+        id: 56,
+        name: "BNB Smart Chain",
+        rpcUrls: { default: { http: ["https://bsc-dataseed.binance.org"] }},
+        nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 }
+      }],
+      metadata: {
+        name: "CycleX",
+        description: "CycleX Claim Portal",
+        url: window.location.origin,
+        icons: ["https://cyclex.website/logo.png"]
+      }
     });
-  }
 
-  window.__CYCLEX_APPKIT__ = appKit;
-  console.log("✅ Reown AppKit READY");
-});
+    document
+      .getElementById("btn-connect-wallet")
+      ?.addEventListener("click", () => appKit.open());
+
+    console.log("✅ Reown AppKit READY");
+  });
 </script>
 
 
