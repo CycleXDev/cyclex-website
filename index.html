@@ -375,11 +375,6 @@
       justify-content: center !important;
     }
 
-    /* Eligibility modal always above Claim modal */
-#eligibility-modal-backdrop {
-  z-index: 1000000;
-}
-
     .modal {
       width: min(420px, 92vw);
       background: radial-gradient(circle at 0 0, #ffffff12 0, transparent 55%),
@@ -692,8 +687,7 @@
       .stats-grid {
         grid-template-columns: 1fr;
       }
- 
-
+    }
   </style>
 </head>
 <body>
@@ -1006,10 +1000,12 @@
       </p>
     </div>
   </div>
-<script src="https://unpkg.com/@reown/appkit@1.6.3/dist/appkit.umd.js"></script>
-<script src="https://unpkg.com/@reown/appkit-adapter-ethers@1.6.3/dist/ethers.umd.js"></script>
 
-  <script>  
+
+  <!-- Load ethers.js -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
+
+  <script>
     // -------- TRANSLATIONS --------
     const translations = {
       en: {
@@ -1500,7 +1496,10 @@
 
     // -------- CLAIM MODAL --------
     // -------- CYCLEX MERKLE CLAIM SYSTEM (FRONTEND) --------
-    // -------- WEB3MODAL STATE --------
+    const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+    const CX_CURRENT_CYCLE_ID = 1; // update if you open a new cycle
+    const CX_PROOFS_URL = "/proofs.json";
+    const CX_REWARDS_URL = "/rewards.json";
 
     let cxProvider = null;
     let cxSigner = null;
@@ -1545,6 +1544,22 @@
       };
     }
 
+    async function cxEnsureWeb3() {
+      if (!window.ethereum) {
+        alert("Web3 wallet (MetaMask) not detected in this browser.");
+        throw new Error("No ethereum provider");
+      }
+
+      if (!cxProvider) {
+        cxProvider = new ethers.BrowserProvider(window.ethereum);
+        cxSigner = await cxProvider.getSigner();
+        cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
+        cxContract = new ethers.Contract(CX_CONTRACT_ADDRESS, [
+          "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
+          "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
+        ], cxSigner);
+      }
+    }
 
     function cxEnsureClaimButton() {
       const modal = document.querySelector("#claim-modal-backdrop .modal");
@@ -1644,7 +1659,13 @@
       if (e.target === modalBackdrop) closeModal();
     });
 
-
+    // Connect wallet + check eligibility using on-chain Merkle data
+    //document
+      //.getElementById("btn-connect-wallet")
+     // .addEventListener("click", () => {
+      //  cxConnectAndCheck();
+     // });
+    
     // Presale link placeholder – replace with real PinkSale URL
     document.getElementById("presale-link").addEventListener("click", (e) => {
       const href = e.currentTarget.getAttribute("href");
@@ -1790,42 +1811,46 @@
       });
     }
 
+  </script>
+  <script type="module">
+  console.log("🟢 [CycleX] Step 2 module loaded");
 
-</script>
+  import { createAppKit } from "https://cdn.jsdelivr.net/npm/@reown/appkit@1.8.15/+esm";
+  import { EthersAdapter } from "https://cdn.jsdelivr.net/npm/@reown/appkit-adapter-ethers@1.8.15/+esm";
+  import { bsc } from "https://cdn.jsdelivr.net/npm/@reown/appkit@1.8.15/networks/+esm";
 
-<script>
-  window.addEventListener("DOMContentLoaded", () => {
-    console.log("ReownAppKit:", window.ReownAppKit);
+  console.log("🟢 [CycleX] AppKit imports OK");
 
-    const { createAppKit } = window.ReownAppKit;
-    const { Ethers6Adapter } = window.ReownAppKitEthers;
+  const projectId = "7886bcb95105e9e47337cec481d5de75";
 
-    const appKit = createAppKit({
-      projectId: "7886bcb95105e9e47337cec481d5de75",
-      adapters: [new Ethers6Adapter()],
-      networks: [{
-        id: 56,
-        name: "BNB Smart Chain",
-        rpcUrls: { default: { http: ["https://bsc-dataseed.binance.org"] }},
-        nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 }
-      }],
-      metadata: {
-        name: "CycleX",
-        description: "CycleX Claim Portal",
-        url: window.location.origin,
-        icons: ["https://cyclex.website/logo.png"]
-      }
-    });
-
-    document
-      .getElementById("btn-connect-wallet")
-      ?.addEventListener("click", () => appKit.open());
-
-    console.log("✅ Reown AppKit READY");
+  const modal = createAppKit({
+    adapters: [new EthersAdapter()],
+    networks: [bsc],
+    defaultNetwork: bsc,
+    projectId,
+    metadata: {
+      name: "CycleX",
+      description: "CycleX Claim Portal",
+      url: window.location.origin
+    }
   });
+
+  console.log("🟢 [CycleX] AppKit initialized");
+
+  const btn = document.getElementById("btn-connect-wallet");
+
+  if (!btn) {
+    console.error("🔴 [CycleX] btn-connect-wallet NOT FOUND");
+  } else {
+    console.log("🟢 [CycleX] btn-connect-wallet found");
+
+    btn.addEventListener("click", async () => {
+      console.log("🟡 [CycleX] Connect wallet clicked – opening wallet list");
+      await modal.open();
+      console.log("🟢 [CycleX] modal.open() resolved");
+    });
+  }
 </script>
-
-
 
 </body>
 </html>
