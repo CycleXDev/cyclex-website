@@ -1603,7 +1603,7 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
 
   if (!providerSource) {
     console.log("[CycleX] Wallet not selected yet");
-    return false; // חשוב – לא alert
+    return false;
   }
 
   cxProvider = new ethers.BrowserProvider(providerSource);
@@ -1622,6 +1622,10 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
   console.log("🟢 [CycleX] Wallet connected:", cxUserAddress);
   return true;
 }
+
+// ✅ זה חייב להיות *מחוץ* לפונקציה
+window.cxEnsureWeb3 = cxEnsureWeb3;
+
 
       function cxUpdateWalletUI(address) {
   const btn = document.getElementById("btn-connect-wallet");
@@ -1655,6 +1659,7 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
   try {
     const ready = await cxEnsureWeb3();
     if (!ready) return;
+    cxUpdateWalletUI(cxUserAddress);
 
     await cxLoadMerkleData();
 
@@ -1918,25 +1923,28 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
     icons: [] // מונע שגיאות SVG מיותרות
   }
 });
+    modal.subscribe((state) => {
+  // המודל נסגר
+  if (state?.open === false) {
+    console.log("🟢 [CycleX] Modal closed – checking wallet connection");
+
+    // ניסיון חיבור בפועל
+    cxConnectAndCheck();
+  }
+});
 
 
 window.cxAppKitModal = modal;
 console.log("🟢 [CycleX] AppKit modal exposed globally");
 console.log("🟢 [CycleX] AppKit initialized");
 
-    // ✅ React when AppKit modal closes (wallet selected)
-modal.subscribe?.((state) => {
-  if (state?.open === false) {
-    console.log("🟢 [CycleX] Modal closed – checking wallet");
-    if (typeof window.cxConnectAndCheck === "function") {
-      window.cxConnectAndCheck();
-    }
-  }
-});
-
 
     // -------- Auto Reconnect --------
 async function cxAutoReconnect() {
+  if (!window.cxAppKitModal?.getWalletProvider) {
+    console.log("🟡 [CycleX] AutoReconnect skipped – AppKit not ready");
+    return;
+  }
   try {
     if (window.cxAppKitModal?.getWalletProvider) {
       const provider = window.cxAppKitModal.getWalletProvider();
