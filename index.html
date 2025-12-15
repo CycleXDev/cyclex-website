@@ -946,6 +946,18 @@
       <p class="modal-tagline" data-i18n="claim_tagline">
         For important and loyal holders only.
       </p>
+      <div id="claim-status" style="
+  display:none;
+  margin-top:14px;
+  padding:14px;
+  border-radius:14px;
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.4);
+  color: #00e676;
+  font-size: 14px;
+  line-height: 1.4;
+"></div>
+
       <div class="modal-actions">
         <button class="btn-wallet" id="btn-connect-wallet" data-i18n="claim_btn_connect">
           Connect wallet
@@ -1077,6 +1089,8 @@
         claim_btn_close: "Close",
         claim_caption:
           "Web3 integration (MetaMask / WalletConnect) will connect here to read your Merkle allocation and trigger the on-chain claim() call.",
+        not_eligible_title: "Join the CycleX family",
+not_eligible_text: "Hold CYCX to qualify for future reward cycles.",
 
         // Eligibility popup (SHORT)
         elig_title: "Eligibility & Holding Rules",
@@ -1188,6 +1202,8 @@
         claim_btn_close: "关闭",
         claim_caption:
           "后续将集成 Web3（MetaMask / WalletConnect），用于读取你的 Merkle 分配并触发链上 claim() 调用。",
+        not_eligible_title: "加入 CycleX 家族",
+not_eligible_text: "持有 CYCX 以获得未来奖励资格。",
 
         elig_title: "资格与持有规则",
         elig_subtitle:
@@ -1300,6 +1316,8 @@
         claim_btn_close: "إغلاق",
         claim_caption:
           "سيتم لاحقًا ربط تكامل Web3 (MetaMask / WalletConnect) هنا لقراءة تخصيص Merkle الخاص بك وتنفيذ استدعاء claim() على السلسلة。",
+        not_eligible_title: "انضم إلى عائلة CycleX",
+not_eligible_text: "احتفظ بـ CYCX للتأهل لمكافآت مستقبلية。",
 
         elig_title: "قواعد الأهلية والاحتفاظ",
         elig_subtitle:
@@ -1417,6 +1435,8 @@
         elig_title: "Правила участия и удержания",
         elig_subtitle:
           "Чтобы попасть в наградной цикл, вы должны правильно держать токены CYCLEX и соблюдать правило 60 дней в Web3:",
+        not_eligible_title: "Присоединяйтесь к семье CycleX",
+not_eligible_text: "Держите CYCX, чтобы участвовать в будущих наградах。",
        elig_body: `
 <p><strong>Чтобы получить награды, соблюдайте эти простые правила:</strong></p>
 <ol>
@@ -1543,6 +1563,36 @@
         proof
       };
     }
+    function cxShowEligibility({ address, amount }) {
+  const box = document.getElementById("claim-status");
+  if (!box) return;
+
+  const short =
+    address.slice(0, 6) + "…" + address.slice(-4);
+
+  const humanAmount = ethers.formatUnits(amount, 18);
+
+  box.innerHTML = `
+    <strong>✅ You are eligible for this reward cycle</strong><br>
+    Wallet: <code>${short}</code><br>
+    Allocation: <strong>${humanAmount} CYCX</strong>
+  `;
+
+  box.style.display = "block";
+}
+    function cxShowNotEligible() {
+  const box = document.getElementById("claim-status");
+  if (!box) return;
+
+  box.innerHTML = `
+    <strong>⭐ <span data-i18n="not_eligible_title"></span></strong><br>
+    <span data-i18n="not_eligible_text"></span>
+  `;
+
+  box.style.display = "block";
+}
+
+
 
     async function cxEnsureWeb3() {
   let providerSource = null;
@@ -1609,26 +1659,33 @@
     }
 
     window.cxConnectAndCheck = async function () {
-      try {
-        await cxEnsureWeb3();
-        await cxLoadMerkleData();
+  try {
+    await cxEnsureWeb3();
+    await cxLoadMerkleData();
 
-        const addr = cxUserAddress;
-        const alloc = cxGetUserAllocation(addr);
+    const address = cxUserAddress;
+    const alloc = cxGetUserAllocation(address);
 
-        if (!alloc) {
-          alert("Your wallet is NOT eligible for this reward cycle.");
-          return;
-        }
-
-        const human = ethers.formatUnits(alloc.amount, 18);
-        alert("You ARE eligible for this cycle.\nWallet: " + addr + "\nAmount: " + human + " CYCX");
-
-        cxEnsureClaimButton();
-      } catch (err) {
-        console.error(err);
-      }
+    // ❌ לא זכאי
+    if (!address || !alloc || !alloc.amount) {
+      cxShowNotEligible();
+      return;
     }
+
+    // ✅ זכאי
+    cxShowEligibility({
+      address,
+      amount: alloc.amount
+    });
+
+    // הצגת כפתור Claim רק אם זכאי
+    cxEnsureClaimButton();
+
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 
     async function cxPerformClaim() {
       if (!cxUserAddress || !cxContract || !cxProofsData) {
@@ -1859,14 +1916,10 @@
   networks: [bsc],
   defaultNetwork: bsc,
   projectId,
-
-  analytics: false,
-
   metadata: {
     name: "CycleX",
     description: "CycleX Claim Portal",
-    url: window.location.origin,
-    icons: [] 
+    url: window.location.origin
   }
 });
 
