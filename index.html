@@ -1789,50 +1789,56 @@
     }
 
 
-  </script>
-  <!-- Reown AppKit (official UMD build – stable) -->
+</script>
 <script src="https://unpkg.com/@reown/appkit@1.6.3/dist/appkit.umd.js"></script>
 <script src="https://unpkg.com/@reown/appkit-adapter-ethers@1.6.3/dist/ethers.umd.js"></script>
 
-<script>
-  const { createAppKit } = window.ReownAppKit;
-  const { Ethers6Adapter } = window.ReownAppKitEthers;
-
-  const appKit = createAppKit({
-    projectId: "7886bcb95105e9e47337cec481d5de75",
-    adapters: [new Ethers6Adapter()],
-    networks: [
-      {
-        id: 56,
-        name: "BNB Smart Chain",
-        rpcUrls: {
-          default: { http: ["https://bsc-dataseed.binance.org"] }
-        },
-        nativeCurrency: {
-          name: "BNB",
-          symbol: "BNB",
-          decimals: 18
-        }
-      }
-    ],
-    metadata: {
-      name: "CycleX",
-      description: "CycleX Claim Portal",
-      url: window.location.origin,
-      icons: ["https://cyclex.website/logo.png"]
+  <script>
+  window.addEventListener("DOMContentLoaded", () => {
+    if (!window.ReownAppKit || !window.ReownAppKitEthers) {
+      console.error("❌ Reown AppKit not loaded");
+      return;
     }
-  });
 
-  const connectBtn = document.getElementById("btn-connect-wallet");
+    const { createAppKit } = window.ReownAppKit;
+    const { Ethers6Adapter } = window.ReownAppKitEthers;
 
-  if (connectBtn) {
-    connectBtn.addEventListener("click", () => {
-      appKit.open(); // 🔥 Uniswap-style wallet list
+    const appKit = createAppKit({
+      projectId: "7886bcb95105e9e47337cec481d5de75",
+      adapters: [new Ethers6Adapter()],
+      networks: [
+        {
+          id: 56,
+          name: "BNB Smart Chain",
+          rpcUrls: {
+            default: { http: ["https://bsc-dataseed.binance.org"] }
+          },
+          nativeCurrency: {
+            name: "BNB",
+            symbol: "BNB",
+            decimals: 18
+          }
+        }
+      ],
+      metadata: {
+        name: "CycleX",
+        description: "CycleX Claim Portal",
+        url: window.location.origin,
+        icons: ["https://cyclex.website/logo.png"]
+      }
     });
-  }
 
-  window.__CYCLEX_APPKIT__ = appKit;
-</script>
+    const connectBtn = document.getElementById("btn-connect-wallet");
+
+    if (connectBtn) {
+      connectBtn.addEventListener("click", () => {
+        appKit.open(); // ✅ Uniswap-style wallet list
+      });
+    }
+
+    window.__CYCLEX_APPKIT__ = appKit;
+    console.log("✅ Reown AppKit initialized");
+  });
 
 </body>
 </html>
