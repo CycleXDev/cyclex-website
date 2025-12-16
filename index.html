@@ -423,7 +423,19 @@
   font-weight: 600;    
   letter-spacing: 0.02em;
 }
-
+    /* Claim status box (eligibility result) */
+#claim-status {
+  display: none;
+  text-align: center;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.4);
+  color: #00e676;
+  font-size: 14px;
+  line-height: 1.4;
+}
 
     .modal-actions {
       display: flex;
@@ -949,18 +961,7 @@
       <p class="modal-tagline" data-i18n="claim_tagline">
         For important and loyal holders only.
       </p>
-      <div id="claim-status" style="
-  display:none;
-  margin-top:4px;
-  padding:14px;
-  border-radius:14px;
-  background: rgba(0, 230, 118, 0.12);
-  border: 1px solid rgba(0, 230, 118, 0.4);
-  color: #00e676;
-  font-size: 14px;
-  line-height: 1.4;
-"></div>
-
+      <div id="claim-status"></div>
       <div class="modal-actions">
         <button class="btn-wallet" id="btn-connect-wallet" data-i18n="claim_btn_connect">
           Connect wallet
@@ -1724,32 +1725,32 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
       }
     }
 
-    window.cxConnectAndCheck = async function () {
-  try {
-    const ready = await cxEnsureWeb3();
-    if (!ready) return;
+  // window.cxConnectAndCheck = async function () {
+  //try {
+   // const ready = await cxEnsureWeb3();
+    //if (!ready) return;
 
-    await cxLoadMerkleData();
+    //await cxLoadMerkleData();
 
-    const address = cxUserAddress;
-    const alloc = cxGetUserAllocation(address.toLowerCase());
+    //const address = cxUserAddress;
+    //const alloc = cxGetUserAllocation(address.toLowerCase());
 
-    if (!alloc || !alloc.amount) {
-      cxShowNotEligible();
-      return;
-    }
+   // if (!alloc || !alloc.amount) {
+     // cxShowNotEligible();
+   //   return;
+  //  }
 
-    cxShowEligibility({
-      address,
-      amount: alloc.amount
-    });
+ //   cxShowEligibility({
+   //   address,
+   //   amount: alloc.amount
+  //  });
 
-    cxEnsureClaimButton();
+//    cxEnsureClaimButton();
 
-  } catch (err) {
-    console.error(err);
-  }
-};
+//  } catch (err) {
+ //   console.error(err);
+//  }
+//};
 
 
     async function cxPerformClaim() {
@@ -2030,10 +2031,11 @@ console.log("🟢 [CycleX] AppKit initialized");
 
    btn.addEventListener("click", async () => {
   console.log("🟡 Opening wallet list");
+
   await modal.open({ view: "ConnectWallet" });
 
-  let tries = 0;
   let provider;
+  let tries = 0;
 
   while (tries < 10) {
     provider = window.cxAppKitModal.getWalletProvider();
@@ -2053,10 +2055,10 @@ console.log("🟢 [CycleX] AppKit initialized");
 
   console.log("🟢 [CycleX] Wallet connected:", address);
 
-  await handleWalletConnected(address);
+  // 🔥 זה הסדר הקריטי
+  closeModal();                 // ⬅️ סוגר את הפופאפ
+  await handleWalletConnected(address); // ⬅️ מציג זכאות
 });
-
-
 
 
   }
