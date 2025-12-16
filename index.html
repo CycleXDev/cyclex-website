@@ -1094,6 +1094,9 @@
           "Web3 integration (MetaMask / WalletConnect) will connect here to read your Merkle allocation and trigger the on-chain claim() call.",
         not_eligible_title: "Join the CycleX family",
 not_eligible_text: "Hold CYCX to qualify for future reward cycles.",
+        eligible_title: "✅You are eligible for this reward cycle",
+eligible_wallet: "Wallet",
+eligible_amount: "Allocation",
 
         // Eligibility popup (SHORT)
         elig_title: "Eligibility & Holding Rules",
@@ -1207,6 +1210,9 @@ not_eligible_text: "Hold CYCX to qualify for future reward cycles.",
           "后续将集成 Web3（MetaMask / WalletConnect），用于读取你的 Merkle 分配并触发链上 claim() 调用。",
         not_eligible_title: "加入 CycleX 家族",
 not_eligible_text: "持有 CYCX 以获得未来奖励资格。",
+        eligible_title: "✅您符合本次奖励周期的资格",
+eligible_wallet: "钱包",
+eligible_amount: "奖励额度",
 
         elig_title: "资格与持有规则",
         elig_subtitle:
@@ -1321,6 +1327,10 @@ not_eligible_text: "持有 CYCX 以获得未来奖励资格。",
           "سيتم لاحقًا ربط تكامل Web3 (MetaMask / WalletConnect) هنا لقراءة تخصيص Merkle الخاص بك وتنفيذ استدعاء claim() على السلسلة。",
         not_eligible_title: "انضم إلى عائلة CycleX",
 not_eligible_text: "احتفظ بـ CYCX للتأهل لمكافآت مستقبلية。",
+        eligible_title: "أنت مؤهل لهذه الدورة من المكافآت✅",
+eligible_wallet: "المحفظة",
+eligible_amount: "قيمة المكافأة",
+
 
         elig_title: "قواعد الأهلية والاحتفاظ",
         elig_subtitle:
@@ -1440,6 +1450,10 @@ not_eligible_text: "احتفظ بـ CYCX للتأهل لمكافآت مستقب�
           "Чтобы попасть в наградной цикл, вы должны правильно держать токены CYCLEX и соблюдать правило 60 дней в Web3:",
         not_eligible_title: "Присоединяйтесь к семье CycleX",
 not_eligible_text: "Держите CYCX, чтобы участвовать в будущих наградах。",
+        eligible_title: "✅Вы имеете право на участие в этом цикле вознаграждений",
+eligible_wallet: "Кошелёк",
+eligible_amount: "Начисление",
+
        elig_body: `
 <p><strong>Чтобы получить награды, соблюдайте эти простые правила:</strong></p>
 <ol>
@@ -1575,11 +1589,15 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
 
   const humanAmount = ethers.formatUnits(amount, 18);
 
-  box.innerHTML = `
-    <strong>✅ You are eligible for this reward cycle</strong><br>
-    Wallet: <code>${short}</code><br>
-    Allocation: <strong>${humanAmount} CYCX</strong>
-  `;
+  const lang =
+  document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
+const dict = translations[lang] || translations.en;
+
+box.innerHTML = `
+  <strong>✅ ${dict.eligible_title}</strong><br>
+  ${dict.eligible_wallet}: <code>${short}</code><br>
+  ${dict.eligible_amount}: <strong>${humanAmount} CYCX</strong>
+`;
 
   box.style.display = "block";
 }
@@ -1587,18 +1605,51 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
   const box = document.getElementById("claim-status");
   if (!box) return;
 
+  const lang =
+    document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
+  const dict = translations[lang] || translations.en;
+
   box.style.background = "rgba(255, 193, 7, 0.12)";
   box.style.border = "1px solid rgba(255, 193, 7, 0.4)";
   box.style.color = "#ffc107";
 
   box.innerHTML = `
-    <strong>⭐ Not eligible for this reward cycle</strong><br>
-    Join the CycleX family and hold CYCX to qualify for future rewards.
+    <strong>⭐ ${dict.not_eligible_title}</strong><br>
+    ${dict.not_eligible_text}
   `;
 
   box.style.display = "block";
 }
 
+async function handleWalletConnected(address) {
+  try {
+    console.log("🟢 [CycleX] Running eligibility check");
+
+    const ready = await cxEnsureWeb3();
+    if (!ready) return;
+
+    await cxLoadMerkleData();
+
+    const alloc = cxGetUserAllocation(address.toLowerCase());
+
+    cxUpdateWalletUI(address);
+
+    if (!alloc || !alloc.amount) {
+      cxShowNotEligible();
+      return;
+    }
+
+    cxShowEligibility({
+      address,
+      amount: alloc.amount
+    });
+
+    cxEnsureClaimButton();
+
+  } catch (err) {
+    console.error("Eligibility check failed:", err);
+  }
+}
 
 
     async function cxEnsureWeb3() {
@@ -1607,7 +1658,12 @@ not_eligible_text: "Держите CYCX, чтобы участвовать в б
     return false;
   }
 
-  const providerSource = window.cxAppKitModal.getWalletProvider();
+  let providerSource = window.cxAppKitModal.getWalletProvider();
+
+  if (!providerSource) {
+    await new Promise(r => setTimeout(r, 300));
+    providerSource = window.cxAppKitModal.getWalletProvider();
+  }
 
   if (!providerSource) {
     console.log("[CycleX] No provider yet – waiting for user");
@@ -1672,7 +1728,7 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
     await cxLoadMerkleData();
 
     const address = cxUserAddress;
-    const alloc = cxGetUserAllocation(address);
+    const alloc = cxGetUserAllocation(address.toLowerCase());
 
     if (!alloc || !alloc.amount) {
       cxShowNotEligible();
@@ -1742,9 +1798,12 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
     });
 
     function closeModal() {
-      modalBackdrop.classList.remove("active");
-      modalBackdrop.setAttribute("aria-hidden", "true");
-    }
+  modalBackdrop.classList.remove("active");
+  modalBackdrop.setAttribute("aria-hidden", "true");
+
+  // ⬇️ חובה
+  window.__cxCheckedAddress = null;
+}
 
     closeModalBtn.addEventListener("click", closeModal);
     closeX.addEventListener("click", closeModal);
@@ -1934,38 +1993,19 @@ window.cxAppKitModal = modal;
 console.log("🟢 [CycleX] AppKit modal exposed globally");
 console.log("🟢 [CycleX] AppKit initialized");
     // 🔔 Listen to wallet connection state
-modal.subscribeState(async (state) => {
-  if (state.status === "connected") {
-    console.log("🟢 [CycleX] Wallet connected – running eligibility check");
+modal.subscribe((state) => {
+  const account = state?.accounts?.[0];
 
-    // 1️⃣ לחבר ethers + signer
-    const ready = await window.cxEnsureWeb3();
-    if (!ready) return;
+  if (!account) return;
 
-    // 2️⃣ לטעון קבצי Merkle
-    await cxLoadMerkleData();
+  console.log("🟢 [CycleX] Wallet detected:", account.address);
 
-    // 3️⃣ לבדוק זכאות
-    const alloc = cxGetUserAllocation(cxUserAddress);
+  // למנוע ריצה כפולה
+  if (window.__cxCheckedAddress === account.address) return;
+  window.__cxCheckedAddress = account.address;
 
-    if (!alloc || !alloc.amount) {
-      cxShowNotEligible();
-      cxUpdateWalletUI(cxUserAddress);
-      return;
-    }
-
-    // 4️⃣ להציג זכאות
-    cxShowEligibility({
-      address: cxUserAddress,
-      amount: alloc.amount
-    });
-
-    // 5️⃣ לעדכן UI + כפתור Claim
-    cxUpdateWalletUI(cxUserAddress);
-    cxEnsureClaimButton();
-  }
+  handleWalletConnected(account.address);
 });
-
 
 
     // -------- Auto Reconnect --------
@@ -1997,10 +2037,16 @@ modal.subscribeState(async (state) => {
   } else {
     console.log("🟢 [CycleX] btn-connect-wallet found");
 
-    btn.addEventListener("click", async () => {
-  console.log("🟡 [CycleX] Opening wallet list");
+   btn.addEventListener("click", async () => {
+  const provider = window.cxAppKitModal.getWalletProvider();
 
-  // 🔥 פותח תמיד את הרשימה
+  if (provider) {
+    console.log("🟢 Wallet already connected – running eligibility");
+    handleWalletConnected(cxUserAddress);
+    return;
+  }
+
+  console.log("🟡 Opening wallet list");
   await modal.open({ view: "ConnectWallet" });
 });
 
