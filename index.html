@@ -1094,7 +1094,7 @@
           "Web3 integration (MetaMask / WalletConnect) will connect here to read your Merkle allocation and trigger the on-chain claim() call.",
         not_eligible_title: "Join the CycleX family",
 not_eligible_text: "Hold CYCX to qualify for future reward cycles.",
-        eligible_title: "✅You are eligible for this reward cycle",
+        eligible_title: "You are eligible for this reward cycle",
 eligible_wallet: "Wallet",
 eligible_amount: "Allocation",
 
@@ -1210,7 +1210,7 @@ eligible_amount: "Allocation",
           "后续将集成 Web3（MetaMask / WalletConnect），用于读取你的 Merkle 分配并触发链上 claim() 调用。",
         not_eligible_title: "加入 CycleX 家族",
 not_eligible_text: "持有 CYCX 以获得未来奖励资格。",
-        eligible_title: "✅您符合本次奖励周期的资格",
+        eligible_title: "您符合本次奖励周期的资格",
 eligible_wallet: "钱包",
 eligible_amount: "奖励额度",
 
@@ -1327,7 +1327,7 @@ eligible_amount: "奖励额度",
           "سيتم لاحقًا ربط تكامل Web3 (MetaMask / WalletConnect) هنا لقراءة تخصيص Merkle الخاص بك وتنفيذ استدعاء claim() على السلسلة。",
         not_eligible_title: "انضم إلى عائلة CycleX",
 not_eligible_text: "احتفظ بـ CYCX للتأهل لمكافآت مستقبلية。",
-        eligible_title: "أنت مؤهل لهذه الدورة من المكافآت✅",
+        eligible_title: "أنت مؤهل لهذه الدورة من المكافآت",
 eligible_wallet: "المحفظة",
 eligible_amount: "قيمة المكافأة",
 
@@ -1450,7 +1450,7 @@ eligible_amount: "قيمة المكافأة",
           "Чтобы попасть в наградной цикл, вы должны правильно держать токены CYCLEX и соблюдать правило 60 дней в Web3:",
         not_eligible_title: "Присоединяйтесь к семье CycleX",
 not_eligible_text: "Держите CYCX, чтобы участвовать в будущих наградах。",
-        eligible_title: "✅Вы имеете право на участие в этом цикле вознаграждений",
+        eligible_title: "Вы имеете право на участие в этом цикле вознаграждений",
 eligible_wallet: "Кошелёк",
 eligible_amount: "Начисление",
 
@@ -1622,35 +1622,26 @@ box.innerHTML = `
 }
 
 async function handleWalletConnected(address) {
-  try {
-    console.log("🟢 [CycleX] Running eligibility check");
+  console.log("🟢 [CycleX] Running eligibility check for", address);
 
-    const ready = await cxEnsureWeb3();
-    if (!ready) return;
+  await cxLoadMerkleData();
 
-    await cxLoadMerkleData();
+  const alloc = cxGetUserAllocation(address);
 
-    const alloc = cxGetUserAllocation(address.toLowerCase());
+  cxUpdateWalletUI(address);
 
-    cxUpdateWalletUI(address);
-
-    if (!alloc || !alloc.amount) {
-      cxShowNotEligible();
-      return;
-    }
-
-    cxShowEligibility({
-      address,
-      amount: alloc.amount
-    });
-
-    cxEnsureClaimButton();
-
-  } catch (err) {
-    console.error("Eligibility check failed:", err);
+  if (!alloc || !alloc.amount || alloc.amount === "0") {
+    cxShowNotEligible();
+    return;
   }
-}
 
+  cxShowEligibility({
+    address,
+    amount: alloc.amount
+  });
+
+  cxEnsureClaimButton();
+}
 
     async function cxEnsureWeb3() {
   if (!window.cxAppKitModal?.getWalletProvider) {
@@ -1666,9 +1657,9 @@ async function handleWalletConnected(address) {
   }
 
   if (!providerSource) {
-    console.log("[CycleX] No provider yet – waiting for user");
-    return false;
-  }
+  console.log("[CycleX] No provider yet");
+  return false; // רק לוג, לא לוגיקה
+}
 
   cxProvider = new ethers.BrowserProvider(providerSource);
   cxSigner = await cxProvider.getSigner();
@@ -2040,7 +2031,10 @@ console.log("🟢 [CycleX] AppKit initialized");
   const ready = await cxEnsureWeb3();
   if (!ready) return;
 
-  handleWalletConnected(cxUserAddress);
+const signer = await cxProvider.getSigner();
+const address = (await signer.getAddress()).toLowerCase();
+
+handleWalletConnected(address);
 });
 
 
