@@ -1561,6 +1561,16 @@ eligible_amount: "Начисление",
         throw err;
       }
     }
+    // 🔹 Preload Merkle data on page load (CRITICAL)
+window.addEventListener("load", async () => {
+  try {
+    console.log("🟢 [CycleX] Preloading Merkle data");
+    await cxLoadMerkleData();
+    console.log("🟢 [CycleX] Merkle ready");
+  } catch (e) {
+    console.error("🔴 Merkle preload failed", e);
+  }
+});
 
     function cxGetUserAllocation(addrLower) {
       if (!cxProofsData) return null;
@@ -1620,23 +1630,9 @@ box.innerHTML = `
 
   box.style.display = "block";
 }
-
 async function handleWalletConnected(address) {
   try {
-    console.log("🟢 [CycleX] Running eligibility check");
-    if (typeof window.handleWalletConnected === "function") {
-  let attempts = 0;
-  while (attempts < 5) {
-    const ok = await window.handleWalletConnected(account.address);
-    if (ok !== false) break;
-    await new Promise(r => setTimeout(r, 250));
-    attempts++;
-  }
-}
-
-    if (!ready) return;
-
-    await cxLoadMerkleData();
+    console.log("🟢 [CycleX] Checking eligibility for", address);
 
     const alloc = cxGetUserAllocation(address.toLowerCase());
 
@@ -1658,6 +1654,7 @@ async function handleWalletConnected(address) {
     console.error("Eligibility check failed:", err);
   }
 }
+
 
     async function cxEnsureWeb3() {
   if (!window.cxAppKitModal?.getWalletProvider) {
@@ -2058,6 +2055,7 @@ console.log("🟢 [CycleX] AppKit initialized");
 
   await handleWalletConnected(address);
 });
+
 
 
 
