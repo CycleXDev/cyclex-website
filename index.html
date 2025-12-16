@@ -1632,6 +1632,7 @@ box.innerHTML = `
   box.style.display = "block";
 }
 async function handleWalletConnected(address) {
+  if (!cxProofsData) await cxLoadMerkleData();
   try {
     console.log("🟢 [CycleX] Checking eligibility for", address);
 
@@ -1976,6 +1977,16 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
   import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
   import { bsc } from "https://esm.sh/@reown/appkit/networks";
 
+    async function waitForWalletProvider(timeoutMs = 90000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const p = window.cxAppKitModal?.getWalletProvider?.();
+    if (p) return p;
+    await new Promise(r => setTimeout(r, 250));
+  }
+  return null;
+}
+
   console.log("🟢 [CycleX] AppKit imports OK");
 
   const projectId = "7886bcb95105e9e47337cec481d5de75";
@@ -2032,32 +2043,34 @@ console.log("🟢 [CycleX] AppKit initialized");
    btn.addEventListener("click", async () => {
   console.log("🟡 Opening wallet list");
 
-  await modal.open({ view: "ConnectWallet" });
-
-  // ⏳ חכה ל-provider עד 3 שניות
-  let provider = null;
-  for (let i = 0; i < 15; i++) {
-    provider = window.cxAppKitModal.getWalletProvider();
-    if (provider) break;
-    await new Promise(r => setTimeout(r, 200));
+  // אופציונלי: תראה למשתמש "connecting..."
+  const box = document.getElementById("claim-status");
+  if (box) {
+    box.style.display = "block";
+    box.style.background = "rgba(0,229,255,0.10)";
+    box.style.border = "1px solid rgba(0,229,255,0.35)";
+    box.style.color = "#00e5ff";
+    box.innerHTML = "<strong>⏳ Connecting wallet…</strong>";
   }
 
+  await modal.open({ view: "ConnectWallet" });
+
+  const provider = await waitForWalletProvider(90000);
   if (!provider) {
-    console.error("🔴 Provider never became ready");
+    console.error("🔴 Provider never became ready (timeout)");
+    if (box) box.innerHTML = "<strong>⚠️ Connection timeout. Please try again.</strong>";
     return;
   }
 
-  // ethers
-  cxProvider = new ethers.BrowserProvider(provider);
-  cxSigner = await cxProvider.getSigner();
-  const address = await cxSigner.getAddress();
+  // ethers (לוקאלי, לא תלוי ב-let גלובלי)
+  const browserProvider = new ethers.BrowserProvider(provider);
+  const signer = await browserProvider.getSigner();
+  const address = await signer.getAddress();
 
   console.log("🟢 [CycleX] Wallet connected:", address);
 
-  await handleWalletConnected(address);
+  await handleWalletConnected(address); // פה אמור להציג מיד eligible / not eligible
 });
-
-
 
   }
 </script>
