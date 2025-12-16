@@ -1622,25 +1622,41 @@ box.innerHTML = `
 }
 
 async function handleWalletConnected(address) {
-  console.log("🟢 [CycleX] Running eligibility check for", address);
-
-  await cxLoadMerkleData();
-
-  const alloc = cxGetUserAllocation(address);
-
-  cxUpdateWalletUI(address);
-
-  if (!alloc || !alloc.amount || alloc.amount === "0") {
-    cxShowNotEligible();
-    return;
+  try {
+    console.log("🟢 [CycleX] Running eligibility check");
+    if (typeof window.handleWalletConnected === "function") {
+  let attempts = 0;
+  while (attempts < 5) {
+    const ok = await window.handleWalletConnected(account.address);
+    if (ok !== false) break;
+    await new Promise(r => setTimeout(r, 250));
+    attempts++;
   }
+}
 
-  cxShowEligibility({
-    address,
-    amount: alloc.amount
-  });
+    if (!ready) return;
 
-  cxEnsureClaimButton();
+    await cxLoadMerkleData();
+
+    const alloc = cxGetUserAllocation(address.toLowerCase());
+
+    cxUpdateWalletUI(address);
+
+    if (!alloc || !alloc.amount || alloc.amount === "0") {
+      cxShowNotEligible();
+      return;
+    }
+
+    cxShowEligibility({
+      address,
+      amount: alloc.amount
+    });
+
+    cxEnsureClaimButton();
+
+  } catch (err) {
+    console.error("Eligibility check failed:", err);
+  }
 }
 
     async function cxEnsureWeb3() {
@@ -1984,6 +2000,25 @@ window.cxAppKitModal = modal;
 console.log("🟢 [CycleX] AppKit modal exposed globally");
 console.log("🟢 [CycleX] AppKit initialized");
     
+// 🔑 AppKit connection listener (MISSING PIECE)
+modal.subscribe(async (state) => {
+  const account =
+  typeof state?.accounts?.[0] === "string"
+    ? { address: state.accounts[0] }
+    : state?.accounts?.[0];
+  if (!account?.address) return;
+
+  // הגנה מריצה כפולה
+  if (window.__cxCheckedAddress === account.address) return;
+  window.__cxCheckedAddress = account.address;
+
+  console.log("🟢 [CycleX] Wallet detected via AppKit:", account.address);
+
+  // כאן מתבצעת בדיקת זכאות אמיתית
+  if (typeof window.handleWalletConnected === "function") {
+    await window.handleWalletConnected(account.address);
+  }
+});
 
 
     // -------- Auto Reconnect --------
@@ -2018,25 +2053,7 @@ console.log("🟢 [CycleX] AppKit initialized");
    btn.addEventListener("click", async () => {
   console.log("🟡 Opening wallet list");
   await modal.open({ view: "ConnectWallet" });
-
-  // ⏳ חכה לחיבור
-  let tries = 0;
-  while (tries < 10) {
-    const provider = window.cxAppKitModal.getWalletProvider();
-    if (provider) break;
-    await new Promise(r => setTimeout(r, 300));
-    tries++;
-  }
-
-  const ready = await cxEnsureWeb3();
-  if (!ready) return;
-
-const signer = await cxProvider.getSigner();
-const address = (await signer.getAddress()).toLowerCase();
-
-handleWalletConnected(address);
 });
-
 
 
   }
