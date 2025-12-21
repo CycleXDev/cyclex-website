@@ -2050,7 +2050,7 @@ calc_note:
 
     // -------- CLAIM MODAL --------
     // ===== TESTNET CONFIG (TEMP) =====
-const CX_CONTRACT_ADDRESS = "PUT_TESTNET_CONTRACT_ADDRESS_HERE"; // כתובת החוזה בטסטנט!
+const CX_CONTRACT_ADDRESS = "0x9B9E7a2E9e7D1aA80Ca47892CB4CE30b9C8F47d0";
 const CX_CHAIN_ID = 97; // BSC Testnet
 const CX_CURRENT_CYCLE_ID = 2;
 
@@ -2220,14 +2220,22 @@ if (Number(net.chainId) !== CX_CHAIN_ID) {
   cxSigner = await cxProvider.getSigner();
   cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
 
-  cxContract = new ethers.Contract(
-    CX_CONTRACT_ADDRESS,
-    [
-      "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
-      "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
-    ],
-    cxSigner
-  );
+  // ✅ Validate + normalize contract address (prevents ENS resolution on testnet)
+if (!ethers.isAddress(CX_CONTRACT_ADDRESS)) {
+  cxSetClaimUI("error", "❌ Bad contract address in site config.");
+  return false;
+}
+const CX_CONTRACT = ethers.getAddress(CX_CONTRACT_ADDRESS);
+
+cxContract = new ethers.Contract(
+  CX_CONTRACT,
+  [
+    "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
+    "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
+  ],
+  cxSigner
+);
+
 
   console.log("🟢 [CycleX] Wallet connected:", cxUserAddress);
   return true;
