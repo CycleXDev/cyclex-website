@@ -2166,7 +2166,13 @@ async function handleWalletConnected(address) {
   try {
     console.log("🟢 [CycleX] Checking eligibility for", address);
 
-    const alloc = await cxGetUserAllocation(address.toLowerCase());
+    const addrLower = (address || "").toLowerCase();
+if (!ethers.isAddress(addrLower)) {
+  console.error("Invalid address from wallet:", address);
+  return;
+}
+const alloc = await cxGetUserAllocation(addrLower);
+
 
     cxUpdateWalletUI(address);
 
@@ -2330,6 +2336,11 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
   }
 
   const addr = cxUserAddress;
+      // ✅ Prevent ENS / invalid address issues
+if (!ethers.isAddress(addr)) {
+  cxSetClaimUI("error", "❌ Invalid wallet address.");
+  return;
+}
   const alloc = await cxGetUserAllocation(addr);
 
   if (!alloc) {
