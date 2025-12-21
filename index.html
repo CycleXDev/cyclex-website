@@ -2049,16 +2049,14 @@ calc_note:
     setLanguage("en");
 
     // -------- CLAIM MODAL --------
-    // ===== TESTNET CONFIG (TEMP) =====
-const CX_CONTRACT_ADDRESS = "0x9B9E7a2E9e7D1aA80Ca47892CB4CE30b9C8F47d0";
-const CX_CHAIN_ID = 97; // BSC Testnet
-const CX_CURRENT_CYCLE_ID = 2;
+    // -------- CYCLEX MERKLE CLAIM SYSTEM (FRONTEND) --------
+    const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+    const CX_CURRENT_CYCLE_ID = 1; // כשתתחיל Cycle אמיתי - תעדכן פה
+    const CX_CYCLES_BASE = `/cycles/${CX_CURRENT_CYCLE_ID}`;
+    const CX_REWARDS_URL = `${CX_CYCLES_BASE}/rewards.json?v=${CX_CURRENT_CYCLE_ID}`;
+    const CX_PROOFS_DIR  = `${CX_CYCLES_BASE}/proofs`;
+    const CX_SHARD_HEX_LEN = 2; // חייב להתאים למה שהסקריפט מרקל ייצר
 
-const CX_CYCLES_BASE = `/cycles-testnet/${CX_CURRENT_CYCLE_ID}`;
-const CX_REWARDS_URL = `${CX_CYCLES_BASE}/rewards.json?v=${CX_CURRENT_CYCLE_ID}`;
-const CX_PROOFS_DIR  = `${CX_CYCLES_BASE}/proofs`;
-const CX_SHARD_HEX_LEN = 2;
-// ================================
 
 
     let cxProvider = null;
@@ -2166,13 +2164,7 @@ async function handleWalletConnected(address) {
   try {
     console.log("🟢 [CycleX] Checking eligibility for", address);
 
-    const addrLower = (address || "").toLowerCase();
-if (!ethers.isAddress(addrLower)) {
-  console.error("Invalid address from wallet:", address);
-  return;
-}
-const alloc = await cxGetUserAllocation(addrLower);
-
+    const alloc = await cxGetUserAllocation(address.toLowerCase());
 
     cxUpdateWalletUI(address);
 
@@ -2210,32 +2202,17 @@ const alloc = await cxGetUserAllocation(addrLower);
 }
 
   cxProvider = new ethers.BrowserProvider(providerSource);
-      // ✅ Ensure correct network (Testnet)
-const net = await cxProvider.getNetwork();
-if (Number(net.chainId) !== CX_CHAIN_ID) {
-  cxSetClaimUI("error", `❌ Wrong network. Switch to BSC Testnet (chainId ${CX_CHAIN_ID}).`);
-  return false;
-}
-
   cxSigner = await cxProvider.getSigner();
   cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
 
-  // ✅ Validate + normalize contract address (prevents ENS resolution on testnet)
-if (!ethers.isAddress(CX_CONTRACT_ADDRESS)) {
-  cxSetClaimUI("error", "❌ Bad contract address in site config.");
-  return false;
-}
-const CX_CONTRACT = ethers.getAddress(CX_CONTRACT_ADDRESS);
-
-cxContract = new ethers.Contract(
-  CX_CONTRACT,
-  [
-    "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
-    "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
-  ],
-  cxSigner
-);
-
+  cxContract = new ethers.Contract(
+    CX_CONTRACT_ADDRESS,
+    [
+      "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
+      "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
+    ],
+    cxSigner
+  );
 
   console.log("🟢 [CycleX] Wallet connected:", cxUserAddress);
   return true;
@@ -2344,11 +2321,6 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
   }
 
   const addr = cxUserAddress;
-      // ✅ Prevent ENS / invalid address issues
-if (!ethers.isAddress(addr)) {
-  cxSetClaimUI("error", "❌ Invalid wallet address.");
-  return;
-}
   const alloc = await cxGetUserAllocation(addr);
 
   if (!alloc) {
@@ -2581,7 +2553,7 @@ if (!ethers.isAddress(addr)) {
 
   import { createAppKit } from "https://esm.sh/@reown/appkit@1.8.15";
   import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
-  import { bscTestnet } from "https://esm.sh/@reown/appkit/networks";
+  import { bsc } from "https://esm.sh/@reown/appkit/networks";
 
     async function waitForWalletProvider(timeoutMs = 90000) {
   const start = Date.now();
@@ -2599,8 +2571,8 @@ if (!ethers.isAddress(addr)) {
 
   const modal = createAppKit({
   adapters: [new EthersAdapter()],
-  networks: [bscTestnet],
-defaultNetwork: bscTestnet,
+  networks: [bsc],
+  defaultNetwork: bsc,
   projectId,
   analytics: false,
   metadata: {
