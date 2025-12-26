@@ -2116,24 +2116,32 @@ calc_note:
   }
 }
 
+    
     async function cxFetchProofEntry(addrLower) {
-  // addrLower חייב להיות lowercase
   const prefix = addrLower.slice(2, 2 + CX_SHARD_HEX_LEN); // בלי 0x
   const url = `${CX_PROOFS_DIR}/${prefix}.json?v=${CX_CURRENT_CYCLE_ID}`;
 
   try {
     const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) return null;
+
+    // 404/410 = אין shard כזה => פשוט "לא זכאי", בלי רעש בקונסול
+    if (r.status === 404 || r.status === 410) return null;
+
+    // שגיאות אחרות כן שווה לראות
+    if (!r.ok) {
+      console.warn("[CycleX] shard fetch failed:", r.status, url);
+      return null;
+    }
 
     const shard = await r.json();
-    return shard?.[addrLower] || null; // ✅ lookup בתוך shard
+    return shard?.[addrLower] || null;
   } catch (e) {
-    console.warn("[CycleX] shard not ready:", url, e);
+    console.warn("[CycleX] shard fetch error:", url, e?.message || e);
     return null;
   }
 }
 
-
+    
     // 🔹 Preload Merkle data on page load (CRITICAL)
 window.addEventListener("load", async () => {
   try {
