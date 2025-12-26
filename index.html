@@ -437,17 +437,18 @@
     }
 
     /* modal (shared) */
-
     .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 50;
-      backdrop-filter: blur(8px);
-    }
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 5000; /* ✅ מעל ה-top-bar */
+  backdrop-filter: blur(8px);
+}
+
 
     .modal-backdrop.active {
       display: flex !important;
@@ -635,18 +636,18 @@
       padding-left: 16px;
       list-style-type: disc;
     }
-
         /* Reward calculator modal */
     .calculator-modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.72);
-      backdrop-filter: blur(10px);
-      z-index: 60;
-    }
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+
+  z-index: 6000; /* ✅ מעל כולם */
+}
 
     .calculator-modal.active {
       display: flex;
@@ -952,37 +953,44 @@
 }
 
     
-
-
-    @media (max-width: 768px) {
-      .page-shell {
-        padding-inline: 16px;
-      }
-
-      .top-bar {
-        flex-direction: row;
-        gap: 8px;
-      }
-
-      .hero {
-        margin-bottom: 32px;
-      }
-
-      .hero-title {
-        font-size: 34px;
-      }
-
-      .section {
-        padding-inline: 18px;
-      }
-
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-      @media (max-width: 900px) {
+   @media (max-width: 900px) {
   .rewards-grid {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 768px) {
+  .page-shell { padding-inline: 16px; }
+
+  .top-bar { flex-direction: row; gap: 8px; }
+
+  .hero { margin-bottom: 32px; }
+  .hero-title { font-size: 34px; }
+
+  .section { padding-inline: 18px; }
+
+  .stats-grid { grid-template-columns: 1fr; }
+
+  body.modal-open .top-bar {
+    display: none !important;
+  }
+
+
+  .modal-backdrop.active,
+  .calculator-modal.active {
+    align-items: flex-start !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  }
+
+  .modal,
+  .calculator-content {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
       
 
     }
@@ -2455,15 +2463,17 @@ function cxSetClaimUI(state, message) {
     const closeX = document.getElementById("modal-close-x");
 
     claimBtn.addEventListener("click", () => {
-      modalBackdrop.classList.add("active");
-      modalBackdrop.setAttribute("aria-hidden", "false");
-    });
+  modalBackdrop.classList.add("active");
+  modalBackdrop.setAttribute("aria-hidden", "false");
+  cxModalOpen(); // ✅ add
+});
+
 
     function closeModal() {
   modalBackdrop.classList.remove("active");
   modalBackdrop.setAttribute("aria-hidden", "true");
+  cxModalClose(); // ✅ add
 
-  // ⬇️ חובה
   window.__cxCheckedAddress = null;
 }
 
@@ -2508,23 +2518,36 @@ function cxSetClaimUI(state, message) {
     updateCountdown();
     setInterval(updateCountdown, 60_000);
 
+    // ✅ Mobile: hide top-bar when ANY modal is open
+function cxModalOpen() {
+  document.body.classList.add("modal-open");
+}
+
+function cxModalClose() {
+  document.body.classList.remove("modal-open");
+}
+
+
     // -------- ELIGIBILITY MODAL (FIRST VISIT + LANGUAGE CHANGE) --------
     const eligibilityBackdrop = document.getElementById("eligibility-modal-backdrop");
     const eligibilityContinueBtn = document.getElementById("eligibility-continue-btn");
     const ELIGIBILITY_KEY = "cx_eligibility_ack_v1";
 
     function openEligibilityModal() {
-      if (!eligibilityBackdrop) return;
-      eligibilityBackdrop.classList.add("active");
-      eligibilityBackdrop.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-    }
+  if (!eligibilityBackdrop) return;
+  eligibilityBackdrop.classList.add("active");
+  eligibilityBackdrop.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  cxModalOpen(); 
+}
 
     function closeEligibilityModal() {
       if (!eligibilityBackdrop) return;
       eligibilityBackdrop.classList.remove("active");
       eligibilityBackdrop.setAttribute("aria-hidden", "true");
       document.body.style.overflow = "";
+      cxModalClose();
+      
       try {
         localStorage.setItem(ELIGIBILITY_KEY, "1");
       } catch (e) {
@@ -2577,6 +2600,7 @@ function cxSetClaimUI(state, message) {
       if (!calcModal) return;
       calcModal.classList.add("active");
       document.body.style.overflow = "hidden";
+      cxModalOpen();
       calcResultBox.innerHTML = "";
     }
 
@@ -2584,6 +2608,7 @@ function cxSetClaimUI(state, message) {
       if (!calcModal) return;
       calcModal.classList.remove("active");
       document.body.style.overflow = "";
+      cxModalClose();
     }
 
     if (openCalcBtn) {
