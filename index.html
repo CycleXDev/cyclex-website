@@ -2579,6 +2579,81 @@ function cxSetClaimUI(state, message) {
     }
 
   </script>
+
+  <!-- ✅ CycleX Live On-Chain Metrics -->
+<script>
+(() => {
+  const CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+
+  const RPCS = [
+    "https://bsc-dataseed.binance.org",
+    "https://bsc-dataseed1.defibit.io",
+  ];
+
+  const ABI = [
+    "function globalStats() view returns (uint256 claimed, uint256 burned, uint256 devSent)",
+    "function latestCycleId() view returns (uint256)",
+    "function cycles(uint256) view returns (bytes32 merkleRoot, uint256 startTime, uint256 totalReward, uint256 devReserve, uint256 burnAmount, bool finalized)"
+  ];
+
+  const DECIMALS = 18;
+  const $ = (id) => document.getElementById(id);
+
+  async function pickProvider() {
+    for (const url of RPCS) {
+      try {
+        const p = new ethers.JsonRpcProvider(url);
+        await p.getBlockNumber();
+        return p;
+      } catch (_) {}
+    }
+    throw new Error("All RPCs failed");
+  }
+
+  function formatCYCX(value) {
+    try {
+      const s = ethers.formatUnits(value, DECIMALS);
+      const [i, f = ""] = s.split(".");
+      const intWithCommas = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+      const frac = f.slice(0, 2);
+      return `${intWithCommas}${frac ? "." + frac : ""} CYCX`;
+    } catch {
+      return "0 CYCX";
+    }
+  }
+
+  function formatTime(ts) {
+    const n = Number(ts);
+    if (!n) return "—";
+    return new Date(n * 1000).toLocaleString("en-GB", { timeZone: "Asia/Jerusalem" });
+  }
+
+  async function refreshMetrics() {
+    const provider = await pickProvider();
+    const c = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+    const stats = await c.globalStats();
+    const claimed = stats.claimed ?? stats[0];
+    const burned  = stats.burned  ?? stats[1];
+
+    if ($("stat-rewards")) $("stat-rewards").textContent = formatCYCX(claimed);
+    if ($("stat-burned"))  $("stat-burned").textContent  = formatCYCX(burned);
+
+    const id = await c.latestCycleId();
+    if (id === 0n) {
+      if ($("stat-last-cycle")) $("stat-last-cycle").textContent = "—";
+    } else {
+      const cy = await c.cycles(id);
+      const startTime = cy.startTime ?? cy[1];
+      if ($("stat-last-cycle")) $("stat-last-cycle").textContent = formatTime(startTime);
+    }
+  }
+
+  refreshMetrics().catch((e) => console.warn("CycleX metrics error:", e));
+  setInterval(() => refreshMetrics().catch(() => {}), 30000);
+})();
+</script>
+
   <script type="module">
   console.log("🟢 [CycleX] Step 2 module loaded");
 
