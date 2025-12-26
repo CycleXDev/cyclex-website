@@ -2622,9 +2622,9 @@ function cxSetClaimUI(state, message) {
   const CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
 
   const RPCS = [
-    "https://bsc-dataseed.binance.org",
-    "https://bsc-dataseed1.defibit.io",
-  ];
+  "https://bsc-dataseed.binance.org/",
+  "https://bsc-dataseed1.defibit.io/",
+];
 
 
   const ABI = [
@@ -2636,16 +2636,30 @@ function cxSetClaimUI(state, message) {
   const DECIMALS = 18;
   const $ = (id) => document.getElementById(id);
 
+ 
   async function pickProvider() {
-    for (const url of RPCS) {
-      try {
-        const p = new ethers.JsonRpcProvider(url);
-        await p.getBlockNumber();
-        return p;
-      } catch (_) {}
+  for (const url of RPCS) {
+    try {
+      const p = new ethers.JsonRpcProvider(url);
+
+      // בדיקה שה-RPC חי
+      await p.getBlockNumber();
+
+      // בדיקה שזה באמת BSC Mainnet (56)
+      const net = await p.getNetwork();
+      if (Number(net.chainId) !== 56) {
+        throw new Error(`Wrong chainId ${net.chainId} on ${url}`);
+      }
+
+      console.log("✅ [CycleX] Using RPC:", url);
+      return p;
+    } catch (e) {
+      console.warn("⚠️ [CycleX] RPC failed:", url, e?.message || e);
     }
-    throw new Error("All RPCs failed");
   }
+  throw new Error("All RPCs failed");
+}
+
 
   function formatCYCX(value) {
   try {
