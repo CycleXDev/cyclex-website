@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
   <link rel="icon" href="/logo.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="apple-touch-icon" href="/logo.png">
   <meta charset="UTF-8" />
   <title>CycleX – AI-Powered Secure Reward Ecosystem</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -352,24 +355,30 @@
       text-align: left;
     }
 
-    .stat-label {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
+   .stat-label {
+    font-size: 14px;        /* היה 13px */
+    font-weight: 800;       /* בולט */
+    color: var(--text-main);/* יותר לבן */
+    margin-bottom: 8px;     /* נותן מקום למספר */
+    letter-spacing: 0.01em;
     }
 
     .stat-value {
-      font-size: 20px;
-      font-weight: 700;
-      margin-bottom: 2px;
-    }
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 0px;     /* נצמיד את ה-tag למטה, לא למספר */
+  line-height: 1.08;      /* המספר יושב יפה */
+}
 
-    .stat-tag {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      color: var(--accent-cyan);
-    }
+   .stat-tag {
+  display: inline-block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent-cyan);
+
+  margin-top: 10px;       /* ⬅️ זה מוריד את "LIVE ON-CHAIN METRIC" למטה */
+}
 
     .stat-caption {
       font-size: 11px;
@@ -377,6 +386,36 @@
       margin-top: 4px;
     }
 
+/* ===== Glow only (first 2 cards + their numbers) ===== */
+/* subtle glow around the first 2 cards only (no layout changes) */
+.stats-grid .stat-card:nth-child(1),
+.stats-grid .stat-card:nth-child(2) {
+  box-shadow:
+    var(--shadow-soft),
+    0 0 22px rgba(0, 229, 255, 0.10),
+    0 0 46px rgba(0, 229, 255, 0.06);
+  border-color: rgba(0, 229, 255, 0.20);
+}
+
+/* subtle glow for the number only (first 2 cards) */
+.stats-grid .stat-card:nth-child(1) .stat-value,
+.stats-grid .stat-card:nth-child(2) .stat-value {
+  text-shadow:
+    0 0 10px rgba(0, 229, 255, 0.22),
+    0 0 22px rgba(0, 229, 255, 0.12);
+}
+
+/* optional: tiny hover glow (still no size changes) */
+.stats-grid .stat-card:nth-child(1):hover,
+.stats-grid .stat-card:nth-child(2):hover {
+  box-shadow:
+    var(--shadow-soft),
+    0 0 28px rgba(0, 229, 255, 0.14),
+    0 0 60px rgba(0, 229, 255, 0.08);
+  border-color: rgba(0, 229, 255, 0.26);
+}
+
+   
     /* footer */
 
     .footer {
@@ -2080,24 +2119,32 @@ calc_note:
   }
 }
 
+    
     async function cxFetchProofEntry(addrLower) {
-  // addrLower חייב להיות lowercase
   const prefix = addrLower.slice(2, 2 + CX_SHARD_HEX_LEN); // בלי 0x
   const url = `${CX_PROOFS_DIR}/${prefix}.json?v=${CX_CURRENT_CYCLE_ID}`;
 
   try {
     const r = await fetch(url, { cache: "no-store" });
-    if (!r.ok) return null;
+
+    // 404/410 = אין shard כזה => פשוט "לא זכאי", בלי רעש בקונסול
+    if (r.status === 404 || r.status === 410) return null;
+
+    // שגיאות אחרות כן שווה לראות
+    if (!r.ok) {
+      console.warn("[CycleX] shard fetch failed:", r.status, url);
+      return null;
+    }
 
     const shard = await r.json();
-    return shard?.[addrLower] || null; // ✅ lookup בתוך shard
+    return shard?.[addrLower] || null;
   } catch (e) {
-    console.warn("[CycleX] shard not ready:", url, e);
+    console.warn("[CycleX] shard fetch error:", url, e?.message || e);
     return null;
   }
 }
 
-
+    
     // 🔹 Preload Merkle data on page load (CRITICAL)
 window.addEventListener("load", async () => {
   try {
@@ -2579,6 +2626,111 @@ function cxSetClaimUI(state, message) {
     }
 
   </script>
+
+  <!-- ✅ CycleX Live On-Chain Metrics -->
+<script>
+(() => {
+  const CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+
+  const RPCS = [
+  "https://bsc-dataseed.binance.org",
+
+  // ✅ BNBChain public seeds
+  "https://bsc-dataseed1.bnbchain.org",
+  "https://bsc-dataseed2.bnbchain.org",
+  "https://bsc-dataseed3.bnbchain.org",
+
+  // ✅ backup
+  "https://bsc-dataseed1.defibit.io",
+];
+
+
+
+  const ABI = [
+    "function globalStats() view returns (uint256 claimed, uint256 burned, uint256 devSent)",
+    "function latestCycleId() view returns (uint256)",
+    "function cycles(uint256) view returns (bytes32 merkleRoot, uint256 startTime, uint256 totalReward, uint256 devReserve, uint256 burnAmount, bool finalized)"
+  ];
+
+  const DECIMALS = 18;
+  const $ = (id) => document.getElementById(id);
+let _cxRpcProvider = null;
+let _cxRpcUrl = "";
+async function pickProvider() {
+  if (_cxRpcProvider) return _cxRpcProvider; // ✅ cache
+
+  for (const url of RPCS) {
+    try {
+      const p = new ethers.JsonRpcProvider(url);
+
+      await p.getBlockNumber(); // RPC חי
+
+      const net = await p.getNetwork();
+      if (Number(net.chainId) !== 56) {
+        throw new Error(`Wrong chainId ${net.chainId} on ${url}`);
+      }
+
+      _cxRpcProvider = p;
+      _cxRpcUrl = url;
+
+      console.log("✅ [CycleX] Using RPC:", url);
+      return p;
+    } catch (e) {
+      console.warn("⚠️ [CycleX] RPC failed:", url, e?.message || e);
+    }
+  }
+  throw new Error("All RPCs failed");
+}
+
+  function formatCYCX(value) {
+  try {
+    // string מדויק מהבלוקצ'יין
+    const s = ethers.formatUnits(value, DECIMALS);
+    let [i, f = ""] = s.split(".");
+
+    // עד 2 ספרות אחרי הנקודה (אם אי פעם יהיו), ואז מוריד אפסים בסוף
+    f = f.slice(0, 2).replace(/0+$/, "");
+    const intWithCommas = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    return `${intWithCommas}${f ? "." + f : ""} CYCX`;
+  } catch {
+    return "0 CYCX";
+  }
+}
+
+
+  function formatTime(ts) {
+    const n = Number(ts);
+    if (!n) return "—";
+    return new Date(n * 1000).toLocaleString("en-GB", { timeZone: "Asia/Jerusalem" });
+  }
+
+  async function refreshMetrics() {
+    const provider = await pickProvider();
+    const c = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+
+    const stats = await c.globalStats();
+    const claimed = stats.claimed ?? stats[0];
+    const burned  = stats.burned  ?? stats[1];
+
+    if ($("stat-rewards")) $("stat-rewards").textContent = formatCYCX(claimed);
+    if ($("stat-burned"))  $("stat-burned").textContent  = formatCYCX(burned);
+
+    const id = await c.latestCycleId();
+    if (id === 0n) {
+      if ($("stat-last-cycle")) $("stat-last-cycle").textContent = "—";
+    } else {
+      const cy = await c.cycles(id);
+      const startTime = cy.startTime ?? cy[1];
+      if ($("stat-last-cycle")) $("stat-last-cycle").textContent = formatTime(startTime);
+    }
+  }
+
+  refreshMetrics().catch((e) => console.warn("CycleX metrics error:", e));
+  setInterval(() => refreshMetrics().catch(() => {}), 60000);
+})();
+</script>
+
   <script type="module">
   console.log("🟢 [CycleX] Step 2 module loaded");
 
