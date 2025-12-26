@@ -2051,33 +2051,53 @@ calc_note:
     // -------- CLAIM MODAL --------
     // -------- CYCLEX MERKLE CLAIM SYSTEM (FRONTEND) --------
     const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
-    const CX_CURRENT_CYCLE_ID = 1; // update if you open a new cycle
-    const CX_PROOFS_URL = "/proofs.json";
-    const CX_REWARDS_URL = "/rewards.json";
+    const CX_CURRENT_CYCLE_ID = 0; // כשתתחיל Cycle אמיתי - תעדכן פה
+    const CX_R2_BASE = "https://cycles.cyclex.network";
+    const CX_CYCLES_BASE = `${CX_R2_BASE}/cycles/${CX_CURRENT_CYCLE_ID}`;
+    const CX_REWARDS_URL = `${CX_CYCLES_BASE}/rewards.json?v=${CX_CURRENT_CYCLE_ID}`;
+    const CX_PROOFS_DIR  = `${CX_CYCLES_BASE}/proofs`;
+    console.log("rewards url:", CX_REWARDS_URL);
 
+    const CX_SHARD_HEX_LEN = 2;
+
+    let cxClaimInFlight = false;
     let cxProvider = null;
     let cxSigner = null;
     let cxContract = null;
     let cxUserAddress = null;
     let cxRewardsData = null;
-    let cxProofsData = null;
 
-    async function cxLoadMerkleData() {
-      try {
-        if (!cxRewardsData) {
-          const r = await fetch(CX_REWARDS_URL);
-          cxRewardsData = await r.json();
-        }
-        if (!cxProofsData) {
-          const p = await fetch(CX_PROOFS_URL);
-          cxProofsData = await p.json();
-        }
-      } catch (err) {
-        console.error("Error loading Merkle files:", err);
-        alert("Error loading reward data. Please try again later.");
-        throw err;
-      }
+   async function cxLoadMerkleData() {
+  // ב-sharded אין proofs.json אחד גדול
+  try {
+    if (!cxRewardsData) {
+      const r = await fetch(CX_REWARDS_URL, { cache: "no-store" });
+      cxRewardsData = r.ok ? await r.json() : {};
     }
+  } catch (err) {
+    console.warn("[CycleX] rewards.json not ready yet:", err);
+    cxRewardsData = cxRewardsData || {};
+  }
+}
+
+    async function cxFetchProofEntry(addrLower) {
+  // addrLower חייב להיות lowercase
+  const prefix = addrLower.slice(2, 2 + CX_SHARD_HEX_LEN); // בלי 0x
+  const url = `${CX_PROOFS_DIR}/${prefix}.json?v=${CX_CURRENT_CYCLE_ID}`;
+
+  try {
+    const r = await fetch(url, { cache: "no-store" });
+    if (!r.ok) return null;
+
+    const shard = await r.json();
+    return shard?.[addrLower] || null; // ✅ lookup בתוך shard
+  } catch (e) {
+    console.warn("[CycleX] shard not ready:", url, e);
+    return null;
+  }
+}
+
+
     // 🔹 Preload Merkle data on page load (CRITICAL)
 window.addEventListener("load", async () => {
   try {
@@ -2089,24 +2109,18 @@ window.addEventListener("load", async () => {
   }
 });
 
-    function cxGetUserAllocation(addrLower) {
-      if (!cxProofsData) return null;
+    async function cxGetUserAllocation(addrLower) {
+  const entry = await cxFetchProofEntry(addrLower);
+  if (!entry) return null;
 
-      const entry = cxProofsData[addrLower];
-      if (!entry) return null;
+  const amount = entry.amount;
+  const proof  = entry.proof;
 
-      // proofs.json from the script usually looks like:
-      // { "0x...": { "amount": "123...", "proof": ["0x...","0x..."] } }
-      const amount = entry.amount || entry.reward || entry.value;
-      const proof = entry.proof || entry.proofs || entry;
+  if (!amount || !Array.isArray(proof)) return null;
 
-      if (!amount || !proof) return null;
+  return { amount, proof };
+}
 
-      return {
-        amount,
-        proof
-      };
-    }
     function cxShowEligibility({ address, amount }) {
   const box = document.getElementById("claim-status");
   if (!box) return;
@@ -2148,11 +2162,11 @@ box.innerHTML = `
   box.style.display = "block";
 }
 async function handleWalletConnected(address) {
-  if (!cxProofsData) await cxLoadMerkleData();
+  await cxLoadMerkleData(); 
   try {
     console.log("🟢 [CycleX] Checking eligibility for", address);
 
-    const alloc = cxGetUserAllocation(address.toLowerCase());
+    const alloc = await cxGetUserAllocation(address.toLowerCase());
 
     cxUpdateWalletUI(address);
 
@@ -2161,17 +2175,27 @@ async function handleWalletConnected(address) {
       return;
     }
 
-    cxShowEligibility({
-      address,
-      amount: alloc.amount
-    });
+    cxShowEligibility({ address, amount: alloc.amount });
 
-    cxEnsureClaimButton();
+// ✅ If already claimed - show it immediately and hide button
+try {
+  const already = await cxContract?.hasClaimed(CX_CURRENT_CYCLE_ID, address.toLowerCase());
+  if (already) {
+    cxShowAlreadyClaimed();
+    return;
+  }
+} catch (e) {
+  console.warn("hasClaimed check failed (non-fatal):", e);
+}
+
+cxEnsureClaimButton();
+
 
   } catch (err) {
     console.error("Eligibility check failed:", err);
   }
 }
+
 
 
     async function cxEnsureWeb3() {
@@ -2196,9 +2220,15 @@ async function handleWalletConnected(address) {
   cxSigner = await cxProvider.getSigner();
   cxUserAddress = (await cxSigner.getAddress()).toLowerCase();
 
-  cxContract = new ethers.Contract(
-    CX_CONTRACT_ADDRESS,
-    [
+  if (!ethers.isAddress(CX_CONTRACT_ADDRESS)) {
+  console.error("[CycleX] Bad contract address:", CX_CONTRACT_ADDRESS);
+  return false;
+}
+const CX_CONTRACT = ethers.getAddress(CX_CONTRACT_ADDRESS);
+
+cxContract = new ethers.Contract(
+  CX_CONTRACT,
+  [
       "function claim(uint256 cycleId, address account, uint256 amount, bytes32[] calldata proof) external",
       "function hasClaimed(uint256 cycleId, address account) view returns (bool)"
     ],
@@ -2240,8 +2270,8 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
         modal.appendChild(btn);
       }
     }
-
-    function cxShowAlreadyClaimed() {
+   // ✅ Already-claimed UI (does NOT override success message unless we explicitly call it)
+function cxShowAlreadyClaimed() {
   const box = document.getElementById("claim-status");
   const claimBtn = document.getElementById("cx-claim-now-btn");
 
@@ -2253,26 +2283,30 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
     box.innerHTML = "<strong>✅ Already claimed for this cycle</strong>";
   }
 
-  if (claimBtn) {
-    claimBtn.style.display = "none";
-  }
+  // hide claim button so user can't try again
+  if (claimBtn) claimBtn.style.display = "none";
 }
-    function cxSetClaimUI(state, message) {
+
+// ✅ Generic status UI (keeps your success message intact, handles pending button disable)
+function cxSetClaimUI(state, message) {
   const box = document.getElementById("claim-status");
   const btn = document.getElementById("cx-claim-now-btn");
 
   if (!box) return;
 
-  box.className = "";            // ניקוי מצבים קודמים
-  box.id = "claim-status";       // שמירה על ה-ID
+  // reset visuals
   box.style.display = "block";
+  box.className = "";
+  box.id = "claim-status";
 
+  // apply state class (pending/success/error)
   if (state) box.classList.add(state);
+
+  // write message
   box.innerHTML = message || "";
 
-  if (btn) {
-    btn.disabled = (state === "pending");
-  }
+  // disable button only during pending
+  if (btn) btn.disabled = (state === "pending");
 }
 
 
@@ -2304,31 +2338,36 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
 //  }
 //};
 
-
-    async function cxPerformClaim() {
-  if (!cxUserAddress || !cxContract || !cxProofsData) {
-    alert("Please connect your wallet first.");
-    return;
-  }
-
-  const addr = cxUserAddress;
-  const alloc = cxGetUserAllocation(addr);
-  if (!alloc) {
-    cxSetClaimUI("error", "❌ No allocation found for this wallet.");
-    return;
-  }
+   async function cxPerformClaim() {
+  if (cxClaimInFlight) return;
+  cxClaimInFlight = true;
 
   try {
-    const already = await cxContract.hasClaimed(CX_CURRENT_CYCLE_ID, addr);
-    if (already) {
-      cxShowAlreadyClaimed(); // 👈 שימוש בפונקציה הקיימת שלך
+    if (!cxUserAddress || !cxContract) {
+      alert("Please connect your wallet first.");
       return;
     }
-  } catch (e) {
-    console.warn("hasClaimed check failed (non-fatal):", e);
-  }
 
-  try {
+    const addr = cxUserAddress.toLowerCase();
+    const alloc = await cxGetUserAllocation(addr);
+
+
+    if (!alloc) {
+      cxSetClaimUI("error", "❌ No allocation found for this wallet.");
+      return;
+    }
+
+    // ✅ Prevent double-claim (on-chain)
+    try {
+      const already = await cxContract.hasClaimed(CX_CURRENT_CYCLE_ID, addr);
+      if (already) {
+        cxShowAlreadyClaimed();
+        return;
+      }
+    } catch (e) {
+      console.warn("hasClaimed check failed (non-fatal):", e);
+    }
+
     // 🔹 Pending
     cxSetClaimUI(
       "pending",
@@ -2344,19 +2383,21 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
 
     await tx.wait();
 
-    // 🔹 Success
+    // 🔹 Success (keep the nice message)
     cxSetClaimUI(
       "success",
       "<strong>✅ Claim successful!</strong><br>Your rewards were claimed on-chain."
     );
 
+    // ✅ Hide claim button after success (so user can't click again)
+    const claimBtn = document.getElementById("cx-claim-now-btn");
+    if (claimBtn) claimBtn.style.display = "none";
+
   } catch (err) {
     console.error("Claim failed:", err);
-
-    cxSetClaimUI(
-      "error",
-      "❌ Transaction failed or was rejected."
-    );
+    cxSetClaimUI("error", "❌ Transaction failed or was rejected.");
+  } finally {
+    cxClaimInFlight = false;
   }
 }
 
@@ -2569,7 +2610,7 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
     name: "CycleX",
     description: "CycleX Claim Portal",
     url: window.location.origin,
-    icons: ["https://yourdomain.com/logo.png"]
+    icons: [`${window.location.origin}/logo.png`]
   }
 });
 
@@ -2636,6 +2677,12 @@ console.log("🟢 [CycleX] AppKit initialized");
   const address = await signer.getAddress();
 
   console.log("🟢 [CycleX] Wallet connected:", address);
+     // ✅ זה עושה: cxProvider/cxSigner/cxUserAddress/cxContract
+const ok = await window.cxEnsureWeb3?.();
+if (!ok) {
+  if (box) box.innerHTML = "<strong>⚠️ Web3 init failed. Try again.</strong>";
+  return;
+}
 
   await handleWalletConnected(address); // פה אמור להציג מיד eligible / not eligible
 });
