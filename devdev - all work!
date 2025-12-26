@@ -437,17 +437,18 @@
     }
 
     /* modal (shared) */
-
     .modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 50;
-      backdrop-filter: blur(8px);
-    }
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 5000; /* ✅ מעל ה-top-bar */
+  backdrop-filter: blur(8px);
+}
+
 
     .modal-backdrop.active {
       display: flex !important;
@@ -635,18 +636,18 @@
       padding-left: 16px;
       list-style-type: disc;
     }
-
         /* Reward calculator modal */
     .calculator-modal {
-      position: fixed;
-      inset: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0, 0, 0, 0.72);
-      backdrop-filter: blur(10px);
-      z-index: 60;
-    }
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+
+  z-index: 6000; /* ✅ מעל כולם */
+}
 
     .calculator-modal.active {
       display: flex;
@@ -952,38 +953,92 @@
 }
 
     
-
-
-    @media (max-width: 768px) {
-      .page-shell {
-        padding-inline: 16px;
-      }
-
-      .top-bar {
-        flex-direction: row;
-        gap: 8px;
-      }
-
-      .hero {
-        margin-bottom: 32px;
-      }
-
-      .hero-title {
-        font-size: 34px;
-      }
-
-      .section {
-        padding-inline: 18px;
-      }
-
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-      @media (max-width: 900px) {
+   @media (max-width: 900px) {
   .rewards-grid {
     grid-template-columns: 1fr;
   }
-      
+}
+
+@media (max-width: 768px) {
+  .page-shell { padding-inline: 16px; }
+
+  .top-bar { flex-direction: row; gap: 8px; }
+
+  .hero { margin-bottom: 32px; }
+  .hero-title { font-size: 34px; }
+
+  .section { padding-inline: 18px; }
+
+  .stats-grid { grid-template-columns: 1fr; }
+
+  /* ✅ מוסתר רק במובייל כשמודאל פתוח */
+  body.modal-open .top-bar {
+    display: none !important;
+  }
+
+  .modal-backdrop.active,
+  .calculator-modal.active {
+    align-items: flex-start !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  }
+
+  .modal,
+  .calculator-content {
+    max-height: calc(
+      100dvh
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+      - 24px
+    );
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 900px) {
+  .rewards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-shell { padding-inline: 16px; }
+
+  .top-bar { flex-direction: row; gap: 8px; }
+
+  .hero { margin-bottom: 32px; }
+  .hero-title { font-size: 34px; }
+
+  .section { padding-inline: 18px; }
+
+  .stats-grid { grid-template-columns: 1fr; }
+
+  body.modal-open .top-bar {
+    display: none !important;
+  }
+
+  .modal-backdrop.active,
+.calculator-modal.active {
+  align-items: center !important;
+  justify-content: center !important;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+  .modal,
+  .calculator-content {
+    max-height: calc(
+      100dvh
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+      - 24px
+    );
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}     
 
     }
   </style>
@@ -2087,6 +2142,19 @@ calc_note:
 
     setLanguage("en");
 
+    
+// ✅ Modal state helper (prevents missing close / multiple modals issues)
+function cxUpdateModalState() {
+  const anyOpen = !!document.querySelector(
+    "#claim-modal-backdrop.active, #eligibility-modal-backdrop.active, #calculatorModal.active"
+  );
+
+  document.body.classList.toggle("modal-open", anyOpen);
+  document.body.style.overflow = anyOpen ? "hidden" : "";
+}
+
+    window.addEventListener("resize", cxUpdateModalState);
+
     // -------- CLAIM MODAL --------
     // -------- CYCLEX MERKLE CLAIM SYSTEM (FRONTEND) --------
     const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
@@ -2454,18 +2522,22 @@ function cxSetClaimUI(state, message) {
     const closeModalBtn = document.getElementById("btn-close-modal");
     const closeX = document.getElementById("modal-close-x");
 
-    claimBtn.addEventListener("click", () => {
-      modalBackdrop.classList.add("active");
-      modalBackdrop.setAttribute("aria-hidden", "false");
-    });
+   claimBtn.addEventListener("click", () => {
+  modalBackdrop.classList.add("active");
+  modalBackdrop.setAttribute("aria-hidden", "false");
+  cxUpdateModalState(); 
+});
+
 
     function closeModal() {
   modalBackdrop.classList.remove("active");
   modalBackdrop.setAttribute("aria-hidden", "true");
 
-  // ⬇️ חובה
+  cxUpdateModalState(); // ✅
+
   window.__cxCheckedAddress = null;
 }
+
 
     closeModalBtn.addEventListener("click", closeModal);
     closeX.addEventListener("click", closeModal);
@@ -2514,17 +2586,20 @@ function cxSetClaimUI(state, message) {
     const ELIGIBILITY_KEY = "cx_eligibility_ack_v1";
 
     function openEligibilityModal() {
-      if (!eligibilityBackdrop) return;
-      eligibilityBackdrop.classList.add("active");
-      eligibilityBackdrop.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-    }
+  if (!eligibilityBackdrop) return;
+  eligibilityBackdrop.classList.add("active");
+  eligibilityBackdrop.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  cxUpdateModalState(); 
+}
 
     function closeEligibilityModal() {
       if (!eligibilityBackdrop) return;
       eligibilityBackdrop.classList.remove("active");
       eligibilityBackdrop.setAttribute("aria-hidden", "true");
       document.body.style.overflow = "";
+      cxUpdateModalState();
+      
       try {
         localStorage.setItem(ELIGIBILITY_KEY, "1");
       } catch (e) {
@@ -2577,6 +2652,7 @@ function cxSetClaimUI(state, message) {
       if (!calcModal) return;
       calcModal.classList.add("active");
       document.body.style.overflow = "hidden";
+      cxUpdateModalState();
       calcResultBox.innerHTML = "";
     }
 
@@ -2584,6 +2660,7 @@ function cxSetClaimUI(state, message) {
       if (!calcModal) return;
       calcModal.classList.remove("active");
       document.body.style.overflow = "";
+      cxUpdateModalState();
     }
 
     if (openCalcBtn) {
@@ -2688,7 +2765,6 @@ async function pickProvider() {
     const s = ethers.formatUnits(value, DECIMALS);
     let [i, f = ""] = s.split(".");
 
-    // עד 2 ספרות אחרי הנקודה (אם אי פעם יהיו), ואז מוריד אפסים בסוף
     f = f.slice(0, 2).replace(/0+$/, "");
     const intWithCommas = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
@@ -2804,7 +2880,7 @@ console.log("🟢 [CycleX] AppKit initialized");
    btn.addEventListener("click", async () => {
   console.log("🟡 Opening wallet list");
 
-  // אופציונלי: תראה למשתמש "connecting..."
+  
   const box = document.getElementById("claim-status");
   if (box) {
     box.style.display = "block";
@@ -2823,20 +2899,20 @@ console.log("🟢 [CycleX] AppKit initialized");
     return;
   }
 
-  // ethers (לוקאלי, לא תלוי ב-let גלובלי)
+  
   const browserProvider = new ethers.BrowserProvider(provider);
   const signer = await browserProvider.getSigner();
   const address = await signer.getAddress();
 
   console.log("🟢 [CycleX] Wallet connected:", address);
-     // ✅ זה עושה: cxProvider/cxSigner/cxUserAddress/cxContract
+    
 const ok = await window.cxEnsureWeb3?.();
 if (!ok) {
   if (box) box.innerHTML = "<strong>⚠️ Web3 init failed. Try again.</strong>";
   return;
 }
 
-  await handleWalletConnected(address); // פה אמור להציג מיד eligible / not eligible
+  await handleWalletConnected(address); 
 });
 
   }
