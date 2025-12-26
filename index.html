@@ -376,6 +376,20 @@
       color: var(--text-muted);
       margin-top: 4px;
     }
+    /* Make the first two on-chain metric titles bolder & bigger */
+.stat-card--metric .stat-label{
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+
+.stat-card--metric .stat-value{
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
 
     /* footer */
 
@@ -2619,16 +2633,21 @@ const RPCS = [
   }
 
   function formatCYCX(value) {
-    try {
-      const s = ethers.formatUnits(value, DECIMALS);
-      const [i, f = ""] = s.split(".");
-      const intWithCommas = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-      const frac = f.slice(0, 2);
-      return `${intWithCommas}${frac ? "." + frac : ""} CYCX`;
-    } catch {
-      return "0 CYCX";
-    }
+  try {
+    // string מדויק מהבלוקצ'יין
+    const s = ethers.formatUnits(value, DECIMALS);
+    let [i, f = ""] = s.split(".");
+
+    // עד 2 ספרות אחרי הנקודה (אם אי פעם יהיו), ואז מוריד אפסים בסוף
+    f = f.slice(0, 2).replace(/0+$/, "");
+    const intWithCommas = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    return `${intWithCommas}${f ? "." + f : ""} CYCX`;
+  } catch {
+    return "0 CYCX";
   }
+}
+
 
   function formatTime(ts) {
     const n = Number(ts);
