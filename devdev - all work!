@@ -1649,6 +1649,11 @@
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
 
   <script>
+  const CX_DEBUG = false; 
+
+  function cxlog(...args) { if (CX_DEBUG) console.log(...args); }
+  function cxwarn(...args) { if (CX_DEBUG) console.warn(...args); }
+
     // -------- TRANSLATIONS --------
     const translations = {
       en: {
@@ -2402,7 +2407,7 @@ function cxUpdateModalState() {
     const CX_CYCLES_BASE = `${CX_R2_BASE}/cycles/${CX_CURRENT_CYCLE_ID}`;
     const CX_REWARDS_URL = `${CX_CYCLES_BASE}/rewards.json?v=${CX_CURRENT_CYCLE_ID}`;
     const CX_PROOFS_DIR  = `${CX_CYCLES_BASE}/proofs`;
-    console.log("rewards url:", CX_REWARDS_URL);
+    cxlog("rewards url:", CX_REWARDS_URL);
 
     const CX_SHARD_HEX_LEN = 2;
 
@@ -2450,9 +2455,9 @@ function cxUpdateModalState() {
     // 🔹 Preload Merkle data on page load (CRITICAL)
 window.addEventListener("load", async () => {
   try {
-    console.log("🟢 [CycleX] Preloading Merkle data");
+    cxlog("🟢 [CycleX] Preloading Merkle data");
     await cxLoadMerkleData();
-    console.log("🟢 [CycleX] Merkle ready");
+    cxlog("🟢 [CycleX] Merkle ready");
   } catch (e) {
     console.error("🔴 Merkle preload failed", e);
   }
@@ -2513,7 +2518,7 @@ box.innerHTML = `
 async function handleWalletConnected(address) {
   await cxLoadMerkleData(); 
   try {
-    console.log("🟢 [CycleX] Checking eligibility for", address);
+    cxlog("🟢 [CycleX] Checking eligibility for", address);
 
     const alloc = await cxGetUserAllocation(address.toLowerCase());
 
@@ -2560,7 +2565,7 @@ cxEnsureClaimButton();
   }
 
   if (!providerSource) {
-  console.log("[CycleX] No provider yet");
+  cxlog("[CycleX] No provider yet");
   return false; 
 }
 
@@ -2583,7 +2588,7 @@ cxContract = new ethers.Contract(
     cxSigner
   );
 
-  console.log("🟢 [CycleX] Wallet connected:", cxUserAddress);
+  cxlog("🟢 [CycleX] Wallet connected:", cxUserAddress);
   return true;
 }
 
@@ -3010,7 +3015,7 @@ async function pickProvider() {
       _cxRpcProvider = p;
       _cxRpcUrl = url;
 
-      console.log("✅ [CycleX] Using RPC:", url);
+      cxlog("✅ [CycleX] Using RPC:", url);
       return p;
     } catch (e) {
       console.warn("⚠️ [CycleX] RPC failed:", url, e?.message || e);
@@ -3102,7 +3107,7 @@ async function pickProvider() {
 </script>
 
   <script type="module">
-  console.log("🟢 [CycleX] Step 2 module loaded");
+  cxlog("🟢 [CycleX] Step 2 module loaded");
 
   import { createAppKit } from "https://esm.sh/@reown/appkit@1.8.15";
   import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
@@ -3118,7 +3123,7 @@ async function pickProvider() {
   return null;
 }
 
-  console.log("🟢 [CycleX] AppKit imports OK");
+  cxlog("🟢 [CycleX] AppKit imports OK");
 
   const projectId = "7886bcb95105e9e47337cec481d5de75";
 
@@ -3137,8 +3142,8 @@ async function pickProvider() {
 });
 
 window.cxAppKitModal = modal;
-console.log("🟢 [CycleX] AppKit modal exposed globally");
-console.log("🟢 [CycleX] AppKit initialized");
+cxlog("🟢 [CycleX] AppKit modal exposed globally");
+cxlog("🟢 [CycleX] AppKit initialized");
     
 
 
@@ -3168,10 +3173,10 @@ console.log("🟢 [CycleX] AppKit initialized");
   if (!btn) {
     console.error("🔴 [CycleX] btn-connect-wallet NOT FOUND");
   } else {
-    console.log("🟢 [CycleX] btn-connect-wallet found");
+    cxlog("🟢 [CycleX] btn-connect-wallet found");
 
    btn.addEventListener("click", async () => {
-  console.log("🟡 Opening wallet list");
+  cxlog("🟡 Opening wallet list");
 
   
   const box = document.getElementById("claim-status");
@@ -3197,7 +3202,7 @@ console.log("🟢 [CycleX] AppKit initialized");
   const signer = await browserProvider.getSigner();
   const address = await signer.getAddress();
 
-  console.log("🟢 [CycleX] Wallet connected:", address);
+  cxlog("🟢 [CycleX] Wallet connected:", address);
     
 const ok = await window.cxEnsureWeb3?.();
 if (!ok) {
