@@ -2401,8 +2401,8 @@ function cxUpdateModalState() {
 
     // -------- CLAIM MODAL --------
     // -------- CYCLEX MERKLE CLAIM SYSTEM (FRONTEND) --------
-    const CX_CONTRACT_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
-    const CX_CURRENT_CYCLE_ID = 0; 
+    const CX_CONTRACT_ADDRESS = "0x9B9E7a2E9e7D1aA80Ca47892CB4CE30b9C8F47d0";
+    const CX_CURRENT_CYCLE_ID = 1; 
     const CX_R2_BASE = "https://cycles.cyclex.network";
     const CX_CYCLES_BASE = `${CX_R2_BASE}/cycles/${CX_CURRENT_CYCLE_ID}`;
     const CX_REWARDS_URL = `${CX_CYCLES_BASE}/rewards.json?v=${CX_CURRENT_CYCLE_ID}`;
@@ -2950,15 +2950,10 @@ function cxSetClaimUI(state, message) {
 
 
   const RPCS = [
-  "https://bsc-dataseed.binance.org",
-
-  // ✅ BNBChain public seeds
-  "https://bsc-dataseed1.bnbchain.org",
-  "https://bsc-dataseed2.bnbchain.org",
-  "https://bsc-dataseed3.bnbchain.org",
-
-  // ✅ backup
-  "https://bsc-dataseed1.defibit.io",
+  const RPCS = [
+  "https://data-seed-prebsc-1-s1.bnbchain.org:8545",
+  "https://data-seed-prebsc-2-s1.bnbchain.org:8545",
+  "https://bsc-testnet-rpc.publicnode.com"
 ];
 
 
@@ -3008,7 +3003,7 @@ async function pickProvider() {
       await p.getBlockNumber(); 
 
       const net = await p.getNetwork();
-      if (Number(net.chainId) !== 56) {
+      if (Number(net.chainId) !== 97) {
         throw new Error(`Wrong chainId ${net.chainId} on ${url}`);
       }
 
@@ -3111,7 +3106,7 @@ async function pickProvider() {
 
   import { createAppKit } from "https://esm.sh/@reown/appkit@1.8.15";
   import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
-  import { bsc } from "https://esm.sh/@reown/appkit/networks";
+  import { bscTestnet } from "https://esm.sh/@reown/appkit/networks";
 
     async function waitForWalletProvider(timeoutMs = 90000) {
   const start = Date.now();
@@ -3129,8 +3124,8 @@ async function pickProvider() {
 
   const modal = createAppKit({
   adapters: [new EthersAdapter()],
-  networks: [bsc],
-  defaultNetwork: bsc,
+  networks: [bscTestnet],
+  defaultNetwork: [bscTestnet],
   projectId,
   analytics: false,
   metadata: {
