@@ -16,1912 +16,1569 @@
   <link rel="apple-touch-icon" href="/logo.png">
 
   <meta charset="UTF-8" />
-  <title>CycleX – Security Hub</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>CycleX Security Hub</title>
+  <link rel="icon" href="/logo.png" />
   <style>
-    :root {
-      --bg-main: #05060a;
-      --bg-gradient-start: #05060a;
-      --bg-gradient-mid: #1a0d3a;
-      --bg-gradient-end: #003a4c;
-
-      --text-main: #f4f6ff;
-      --text-muted: rgba(244, 246, 255, 0.7);
-
-      --accent-cyan: #00e5ff;
-      --accent-green: #5dffb2;
-      --accent-purple: #7c5cff;
-
-      --card-bg: rgba(255, 255, 255, 0.06);
-      --border-subtle: rgba(255, 255, 255, 0.12);
-
-      --shadow-soft: 0 30px 90px rgba(0, 0, 0, 0.75);
-      --radius-xl: 24px;
-      --transition-fast: 0.18s ease-out;
+    :root{
+      --bg:#060714;
+      --bg2:#0a1630;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.08);
+      --stroke: rgba(255,255,255,.10);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.68);
+      --muted2: rgba(255,255,255,.55);
+      --good: rgba(95,255,190,.9);
+      --warn: rgba(255,209,102,.9);
+      --bad: rgba(255,120,145,.9);
+      --accent: rgba(80,215,255,.95);
+      --accent2: rgba(140,120,255,.95);
+      --shadow: 0 20px 60px rgba(0,0,0,.45);
+      --r: 26px;
+      --r2: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(124, 92, 255, 0.35) 0%, transparent 45%),
-        radial-gradient(circle at top right, rgba(0, 229, 255, 0.35) 0%, transparent 45%),
-        radial-gradient(circle at bottom, rgba(0, 58, 76, 0.55) 0%, transparent 55%),
-        linear-gradient(160deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
-      color: var(--text-main);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-      animation: fadeBody 0.7s ease-out forwards;
-      opacity: 1;
-    }
-    @keyframes fadeBody { from { opacity: 0; } to { opacity: 1; } }
-    a { color: inherit; text-decoration: none; }
-
-    .page-shell { max-width: 1160px; margin: 0 auto; padding: 32px 20px 64px; }
-
-    .top-bar {
-      position: sticky;
-      top: 14px;
-      z-index: 999;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 18px;
-      margin-bottom: 26px;
-      border-radius: 999px;
-      background: rgba(8, 10, 22, 0.55);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        radial-gradient(1200px 500px at 20% 10%, rgba(140,120,255,.22), transparent 60%),
+        radial-gradient(900px 600px at 80% 15%, rgba(80,215,255,.18), transparent 60%),
+        radial-gradient(900px 700px at 50% 90%, rgba(80,255,190,.10), transparent 55%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
+      min-height:100vh;
     }
 
-    .brand { display: flex; align-items: center; gap: 10px; }
-    .brand-logo {
-      width: 44px; height: 44px; border-radius: 16px; object-fit: contain;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
+    .wrap{ max-width: 1200px; margin: 0 auto; padding: 28px 16px 80px; }
+
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 12px; margin-bottom: 18px;
     }
-    .brand-text { display: flex; flex-direction: column; gap: 2px; }
-    .brand-title { font-weight: 700; letter-spacing: 0.05em; font-size: 18px; text-transform: uppercase; }
-    .brand-sub { font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-muted); }
-
-    .lang-switch {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.06);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
-      gap: 2px;
-    }
-    .lang-btn {
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 11px;
-      padding: 5px 8px;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: background var(--transition-fast), color var(--transition-fast);
-    }
-    .lang-btn.active { background: rgba(0, 229, 255, 0.14); color: var(--accent-cyan); }
-
-    body.lang-switching { animation: langFade 0.3s ease-out; }
-    @keyframes langFade { from { opacity: 0.4; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-    .hero {
-      text-align: center;
-      max-width: 920px;
-      margin: 0 auto 22px auto;
-      animation: fadeUp 0.8s ease-out forwards;
-    }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-
-    .hero-kicker { font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-cyan); margin-bottom: 14px; }
-    .hero-title { font-size: clamp(40px, 5vw, 60px); line-height: 1.05; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.02em; }
-    .hero-subtitle { max-width: 720px; margin: 0 auto 18px auto; font-size: 16px; line-height: 1.5; color: var(--text-muted); }
-
-    .hero-actions {
-      display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-bottom: 10px;
-    }
-
-    .btn {
-      border-radius: 999px;
-      border: none;
-      padding: 13px 26px;
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
-    }
-    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent-cyan), #7df2ff);
-      color: #020308;
-      box-shadow: 0 14px 40px rgba(0, 229, 255, 0.4);
-    }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 18px 60px rgba(0, 229, 255, 0.6); }
-
-    .btn-secondary {
-      background: linear-gradient(135deg, var(--accent-green), #b9ffcf);
-      color: #020308;
-      box-shadow: 0 14px 40px rgba(0, 230, 118, 0.4);
-    }
-    .btn-secondary:hover { transform: translateY(-1px); box-shadow: 0 18px 60px rgba(0, 230, 118, 0.7); }
-
-    .btn-ghost {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.16);
-      color: var(--text-main);
-      box-shadow: 0 12px 34px rgba(0,0,0,0.45);
-    }
-    .btn-ghost:hover { transform: translateY(-1px); border-color: rgba(0,229,255,0.26); }
-
-    .section {
-      margin-bottom: 18px;
-      padding: 28px 22px;
-      border-radius: var(--radius-xl);
-      background: rgba(255, 255, 255, 0.04);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-      text-align: left;
-    }
-    .section-head { text-align: center; margin-bottom: 14px; }
-    .section-kicker { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-purple); margin-bottom: 10px; }
-    .section-title { font-size: 30px; font-weight: 800; margin-bottom: 8px; }
-    .section-body { max-width: 900px; margin: 0 auto; font-size: 14px; line-height: 1.6; color: var(--text-muted); }
-
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
-    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 14px; }
-
-    .card {
-      background: var(--card-bg);
-      border-radius: 18px;
-      border: 1px solid var(--border-subtle);
-      padding: 16px;
-      box-shadow: var(--shadow-soft);
-      backdrop-filter: blur(18px);
-      min-width: 0;
-    }
-
-    .card h3 { font-size: 15px; letter-spacing: 0.02em; margin-bottom: 8px; color: var(--text-main); }
-    .muted { color: var(--text-muted); font-size: 13px; line-height: 1.45; }
-
-    .field { margin-top: 10px; }
-    .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(244,246,255,0.75); margin-bottom: 6px; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-
-    input, textarea, select {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.16);
-      background: rgba(5, 7, 18, 0.9);
-      color: var(--text-main);
-      font-size: 13px;
-      outline: none;
-    }
-    textarea { border-radius: 18px; min-height: 92px; resize: vertical; padding: 12px 12px; }
-    input:focus, textarea:focus, select:focus { border-color: var(--accent-cyan); }
-
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.05);
-      color: var(--text-muted);
-      white-space: nowrap;
-    }
-
-    .status {
-      margin-top: 10px;
-      padding: 12px 14px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,0.14);
-      background: rgba(255,255,255,0.04);
-      color: var(--text-main);
-      line-height: 1.5;
-      font-size: 13px;
-      display: none;
-    }
-    .status.ok   { display:block; background: rgba(0, 230, 118, 0.10); border-color: rgba(0,230,118,0.35); color: #78ffbf; }
-    .status.warn { display:block; background: rgba(255, 193, 7, 0.10); border-color: rgba(255,193,7,0.35); color: #ffd166; }
-    .status.bad  { display:block; background: rgba(220, 53, 69, 0.10); border-color: rgba(220,53,69,0.35); color: #ff7a8a; }
-    .status.info { display:block; background: rgba(0, 229, 255, 0.10); border-color: rgba(0,229,255,0.30); color: #7df2ff; }
-
-    .small { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
-
-    .table {
-      margin-top: 10px;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 18px;
-      overflow: hidden;
-    }
-    .trow {
-      display: grid;
-      grid-template-columns: 1.3fr 1.1fr 0.9fr 0.9fr;
-      gap: 10px;
-      padding: 10px 12px;
-      border-top: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.03);
-      align-items: center;
-      font-size: 13px;
-    }
-    .trow.head { border-top: none; background: rgba(255,255,255,0.05); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(244,246,255,0.75); }
-    .trow .cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-    .footer {
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-      margin-top: 28px;
-      padding-top: 16px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .footer-tagline { color: var(--accent-cyan); font-weight: 500; }
-
-    /* V2: toggle style */
-    .toggle{
+    .brand{
       display:flex; align-items:center; gap:10px;
-      padding:10px 12px;
-      border:1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.04);
-      border-radius: 14px;
-      cursor:pointer;
       user-select:none;
-      width: 100%;
     }
-    .toggle input{ width:auto; }
+    .brand img{ width:34px; height:34px; border-radius: 10px; }
+    .brand .t1{ font-weight:800; letter-spacing:.2px; }
+    .brand .t2{ font-size:12px; color: var(--muted); margin-top:2px; }
 
-    @media (max-width: 980px) {
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
-      .trow { grid-template-columns: 1.2fr 1fr 0.9fr; }
-      .trow .hide-sm { display: none; }
+    .navbtns{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      text-decoration:none;
+      font-weight:700;
+      letter-spacing:.2px;
+      cursor:pointer;
+      transition: transform .08s ease, background .15s ease, border-color .15s ease;
+      user-select:none;
+      gap:8px;
     }
+    .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); }
+    .btn.primary{
+      background: linear-gradient(90deg, rgba(80,215,255,.95), rgba(95,255,190,.85));
+      color: rgba(0,0,0,.85);
+      border-color: transparent;
+    }
+    .btn.ghost{
+      background: rgba(255,255,255,.04);
+    }
+    .btn.small{ padding: 8px 12px; font-size: 13px; }
+    .pill{
+      font-size: 12px; color: rgba(0,0,0,.75);
+      padding: 5px 10px; border-radius: 999px;
+      background: rgba(255,255,255,.85);
+      font-weight: 800;
+      letter-spacing:.2px;
+    }
+
+    .hero{
+      margin-top: 12px;
+      padding: 30px 24px;
+      border-radius: var(--r);
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      position:relative;
+      overflow:hidden;
+    }
+    .hero:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(800px 240px at 30% 0%, rgba(80,215,255,.18), transparent 60%),
+        radial-gradient(700px 260px at 70% 0%, rgba(140,120,255,.18), transparent 60%);
+      pointer-events:none;
+    }
+    .hero .kicker{
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      font-size: 12px;
+      color: rgba(180,160,255,.75);
+      position:relative;
+      text-align:center;
+      margin-bottom: 10px;
+    }
+    .hero h1{
+      position:relative;
+      margin: 0;
+      text-align:center;
+      font-size: 44px;
+      line-height: 1.05;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+    .hero p{
+      position:relative;
+      margin: 10px auto 0;
+      max-width: 820px;
+      text-align:center;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .grid{ display:grid; grid-template-columns: 1fr; gap: 18px; margin-top: 18px; }
+    @media(min-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border-radius: var(--r);
+      border: 1px solid rgba(255,255,255,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .card .head{
+      padding: 18px 18px 10px;
+      display:flex; align-items:flex-end; justify-content:space-between; gap: 10px;
+    }
+    .head .title{
+      font-weight: 900;
+      letter-spacing: -.2px;
+      font-size: 24px;
+      margin: 0;
+    }
+    .head .sub{
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+    .card .body{ padding: 14px 18px 18px; }
+
+    .two{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media(min-width: 980px){
+      .two{ grid-template-columns: 1fr 1fr; }
+    }
+    .panel{
+      border-radius: var(--r2);
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      padding: 14px;
+    }
+
+    label{ display:block; font-size: 12px; color: var(--muted2); letter-spacing: .16em; text-transform:uppercase; margin: 0 0 8px; }
+    input, textarea, select{
+      width:100%;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.35);
+      color: var(--text);
+      padding: 12px 14px;
+      outline:none;
+      font-size: 14px;
+    }
+    textarea{
+      border-radius: 16px;
+      min-height: 110px;
+      font-family: var(--mono);
+      resize: vertical;
+    }
+    .row{ display:flex; gap: 10px; flex-wrap:wrap; align-items:center; }
+    .row > *{ flex:1; min-width: 180px; }
+
+    .hint{ margin-top: 10px; color: var(--muted2); font-size: 13px; line-height: 1.45; }
+    .muted{ color: var(--muted); }
+
+    .statusBox{
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.28);
+      padding: 12px 12px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .dot{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: rgba(255,255,255,.35);
+      box-shadow: 0 0 20px rgba(255,255,255,.25);
+    }
+    .dot.good{ background: var(--good); box-shadow: 0 0 18px rgba(95,255,190,.35); }
+    .dot.warn{ background: var(--warn); box-shadow: 0 0 18px rgba(255,209,102,.35); }
+    .dot.bad{ background: var(--bad); box-shadow: 0 0 18px rgba(255,120,145,.35); }
+
+    .siglist{ margin-top: 12px; display:grid; gap: 8px; }
+    .sig{
+      display:flex; align-items:flex-start; gap:10px;
+      padding: 10px 10px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+    }
+    .sig .icon{ width: 18px; text-align:center; margin-top: 1px; }
+    .sig .txt{ flex:1; }
+    .sig .t{ font-weight: 800; }
+    .sig .d{ color: var(--muted); font-size: 13px; margin-top: 2px; line-height:1.35; }
+    .sig.good{ border-color: rgba(95,255,190,.25); }
+    .sig.warn{ border-color: rgba(255,209,102,.25); }
+    .sig.bad{ border-color: rgba(255,120,145,.25); }
+
+    .codebox{
+      font-family: var(--mono);
+      background: rgba(0,0,0,.40);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 12px;
+      overflow:auto;
+      max-height: 160px;
+      white-space: pre;
+      font-size: 12.5px;
+      line-height: 1.35;
+    }
+
+    table{
+      width:100%;
+      border-collapse: collapse;
+      overflow:hidden;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+    }
+    th, td{
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      font-size: 13px;
+      text-align:left;
+      color: var(--text);
+    }
+    th{ color: var(--muted); font-weight: 800; letter-spacing:.08em; text-transform:uppercase; font-size: 11px; }
+    tr:last-child td{ border-bottom:none; }
+
+    .tag{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      gap:6px;
+      white-space:nowrap;
+    }
+
+    .footer{
+      margin-top: 18px;
+      color: rgba(255,255,255,.55);
+      font-size: 12.5px;
+      text-align:center;
+    }
+    .footer a{ color: rgba(255,255,255,.75); }
   </style>
+
+  <!-- ethers v6 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
 </head>
-
 <body>
-  <div class="page-shell">
-    <header class="top-bar">
-      <a class="brand" href="/" title="Back to CycleX">
-        <img src="/logo.png" alt="CycleX logo" class="brand-logo" />
-        <div class="brand-text">
-          <div class="brand-title">CYCLEX</div>
-          <div class="brand-sub" data-i18n="brand_sub">On-Chain Security & Rewards</div>
-        </div>
-      </a>
+  <div class="wrap">
 
-      <div class="lang-switch" aria-label="Language selector">
-        <button class="lang-btn active" data-lang="en">🇺🇸 EN</button>
-        <button class="lang-btn" data-lang="zh">🇨🇳 中文</button>
-        <button class="lang-btn" data-lang="ar">🇸🇦 عربي</button>
-        <button class="lang-btn" data-lang="ru">🇷🇺 RU</button>
+    <div class="topbar">
+      <div class="brand">
+        <img src="/logo.png" alt="CycleX" />
+        <div>
+          <div class="t1">CycleX Security Hub</div>
+          <div class="t2">On-chain hygiene checks • shareable scan links • safer swaps</div>
+        </div>
       </div>
-    </header>
+      <div class="navbtns">
+        <a class="btn ghost" href="/" title="Back to main site">← Main site</a>
+        <button class="btn" id="btnShareXTop">Share hub on X</button>
+        <span class="pill" id="netPill">BSC</span>
+      </div>
+    </div>
 
-    <main>
-      <section class="hero">
-        <div class="hero-kicker" data-i18n="hero_kicker">Security Hub</div>
-        <h1 class="hero-title" data-i18n="hero_title">CycleX Security Tools</h1>
-        <p class="hero-subtitle" data-i18n="hero_subtitle">
-          A lightweight, client-side toolkit for safer swaps, approvals hygiene, DEX redirects, and RPC health checks.
-        </p>
+    <div class="hero">
+      <div class="kicker">SAFE SWAP GATE</div>
+      <h1>Check token basics before you swap</h1>
+      <p>
+        Enter a token address on BSC. We’ll read on-chain metadata, owner/proxy hints,
+        multi-DEX liquidity signals, and generate shareable outputs.
+        <span class="muted">Not a honeypot guarantee — just solid hygiene checks.</span>
+      </p>
+    </div>
 
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="/" data-i18n="btn_back">Back to Site</a>
-          <button class="btn btn-secondary" id="btn-connect" data-i18n="btn_connect">Connect Wallet (optional)</button>
-          <button class="btn btn-ghost" id="btn-run-all" data-i18n="btn_run_all">Run Quick Scan</button>
-        </div>
-
-        <div class="small" style="margin-top:10px" data-i18n="hero_note">
-          Note: These checks are informational and do not guarantee safety. Always verify independently.
-        </div>
-      </section>
-
-      <!-- 1) SafeSwap Gate -->
-      <section class="section" id="safeswap">
-        <div class="section-head">
-          <div class="section-kicker" data-i18n="ss_kicker">SafeSwap Gate</div>
-          <div class="section-title" data-i18n="ss_title">Check token basics before you swap</div>
-          <div class="section-body" data-i18n="ss_sub">
-            Enter a token address on BSC. We’ll read on-chain metadata, owner/proxy hints, and multi-DEX liquidity signals — then generate shareable outputs.
+    <!-- 1) SafeSwap Gate -->
+    <div class="grid">
+      <div class="card" id="cardScan">
+        <div class="head">
+          <div>
+            <div class="title">SafeSwap Gate</div>
+            <div class="sub">Token scanner • Verified / Owner / Proxy hints • Liquidity signals • Share + X</div>
+          </div>
+          <div class="row" style="max-width:520px">
+            <button class="btn small" id="btnCopyShare">Copy share link</button>
+            <button class="btn small" id="btnCopyJson">Copy JSON report</button>
+            <button class="btn small" id="btnShareX">Share on X</button>
           </div>
         </div>
 
-        <div class="grid-2">
-          <div class="card">
-            <h3 data-i18n="ss_input_title">Token Address</h3>
+        <div class="body">
+          <div class="two">
+            <div class="panel">
+              <label>Token Address (BSC)</label>
+              <input id="tokenAddr" placeholder="0x..." spellcheck="false" />
 
-            <div class="field">
-              <div class="label" data-i18n="ss_token_label">Token contract (BSC)</div>
-              <input id="ss-token" class="mono" placeholder="0x..." />
-              <div class="small" style="margin-top:8px" data-i18n="ss_tip">
-                Tip: You can open this page with <span class="mono">?token=0x...</span> and it will auto-run.
-              </div>
-            </div>
-
-            <div class="field">
-              <div class="label" data-i18n="ss_actions_label">Actions</div>
-              <div class="row">
-                <button class="btn btn-primary" id="ss-scan" data-i18n="ss_scan">Scan</button>
-                <button class="btn btn-ghost" id="ss-share" data-i18n="ss_share">Copy Share Link</button>
-                <button class="btn btn-ghost" id="ss-copy-json" data-i18n="ss_copy_json">Copy JSON report</button>
-                <a class="btn btn-ghost" id="ss-pcs" href="#" target="_blank" rel="noopener">PancakeSwap</a>
-                <a class="btn btn-ghost" id="ss-bsc" href="#" target="_blank" rel="noopener">BscScan</a>
-              </div>
-            </div>
-
-            <div class="field">
-              <div class="label" data-i18n="ss_options_label">Options</div>
-
-              <label class="toggle">
-                <input type="checkbox" id="ss-require-liq">
-                <span data-i18n="ss_require_liq">Require liquidity (production)</span>
-              </label>
-
-              <div class="small" style="margin-top:8px" data-i18n="ss_require_liq_tip">
-                When enabled, “No DEX pair” becomes Red. When disabled, it’s treated as “Not listed yet”.
+              <div class="row" style="margin-top:12px">
+                <div>
+                  <label>Open swap</label>
+                  <select id="dexSelect"></select>
+                </div>
+                <div>
+                  <label>Base</label>
+                  <select id="baseSelect"></select>
+                </div>
               </div>
 
               <div class="row" style="margin-top:12px">
-                <select id="ss-dex-select"></select>
-                <select id="ss-base-select"></select>
-                <button class="btn btn-ghost" id="ss-open-manual" data-i18n="ss_open_swap">Open Swap</button>
+                <button class="btn primary" id="btnScan">Scan</button>
+                <button class="btn" id="btnOpenDex">Open DEX</button>
+                <button class="btn" id="btnOpenBscscan">BscScan</button>
+              </div>
+
+              <div class="row" style="margin-top:12px">
+                <label style="flex:1; margin:0; display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:0;">
+                  <input type="checkbox" id="chkRequireLiq" style="width:18px; height:18px; accent-color: rgba(95,255,190,.85);" />
+                  Require liquidity (production)
+                </label>
+
+                <label style="flex:1; margin:0; display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:0;">
+                  <input type="checkbox" id="chkAutoRun" style="width:18px; height:18px; accent-color: rgba(80,215,255,.85);" />
+                  Auto-run when opened with ?token=
+                </label>
+              </div>
+
+              <div class="panel" style="margin-top:12px">
+                <div class="row">
+                  <div style="flex:2">
+                    <label>BscScan API key (optional)</label>
+                    <input id="bscscanKey" placeholder="(optional) for Verified / Creation / Proxy hints" spellcheck="false" />
+                  </div>
+                  <div style="flex:1; min-width:160px">
+                    <label>&nbsp;</label>
+                    <button class="btn" id="btnSaveKey">Save</button>
+                  </div>
+                </div>
+                <div class="hint">
+                  If you leave this empty, the scan still works. With a key we can additionally check <b>Verified source</b> via BscScan API.
+                  The key is saved in <b>localStorage</b> (your browser only).
+                </div>
+              </div>
+
+              <div class="hint">
+                Tip: open directly with <span class="tag">/security/?token=0x…</span> and it will auto-run (if enabled).
               </div>
             </div>
 
-            <div id="ss-status" class="status info"></div>
-          </div>
+            <div class="panel">
+              <div class="statusBox" id="statusBox">
+                <div class="dot" id="statusDot"></div>
+                <div>
+                  <div style="font-weight:900" id="statusTitle">Ready</div>
+                  <div class="muted" id="statusSub">Paste a token address and press Scan.</div>
+                </div>
+              </div>
 
-          <div class="card">
-            <h3 data-i18n="ss_results_title">Results</h3>
-            <div class="small" data-i18n="ss_results_hint">
-              We score signals as Green / Yellow / Red. This is not a honeypot guarantee — just solid on-chain hygiene checks.
+              <div class="siglist" id="siglist"></div>
+
+              <div style="margin-top:12px" class="muted">
+                Last report timestamp: <span id="ts">—</span>
+              </div>
             </div>
-
-            <div id="ss-out" class="status info" style="display:block; margin-top:10px;">
-              <strong>Ready.</strong><br>
-              Paste a token address and click <b>Scan</b>.
-            </div>
-
-            <div id="ss-links" style="margin-top:12px;"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 2) Approvals Guardian -->
-      <section class="section" id="approvals">
-        <div class="section-head">
-          <div class="section-kicker" data-i18n="ap_kicker">Approvals Guardian</div>
-          <div class="section-title" data-i18n="ap_title">Check and revoke ERC-20 allowances</div>
-          <div class="section-body" data-i18n="ap_sub">
-            This tool is targeted: you provide token(s) and spender. We read <span class="mono">allowance(owner, spender)</span> and can revoke by sending <span class="mono">approve(spender, 0)</span>.
           </div>
         </div>
+      </div>
 
-        <div class="grid-2">
-          <div class="card">
-            <h3 data-i18n="ap_owner">Owner wallet</h3>
-            <div class="row" style="justify-content:space-between">
-              <div class="pill"><span data-i18n="ap_connected">Connected:</span> <span id="ap-address" class="mono">—</span></div>
-              <button class="btn btn-secondary" id="ap-connect" data-i18n="ap_connect">Connect / Refresh</button>
+      <!-- 2) Approvals -->
+      <div class="card" id="cardApprovals">
+        <div class="head">
+          <div>
+            <div class="kicker" style="text-align:left; margin:0; color: rgba(95,255,190,.65);">APPROVALS GUARDIAN</div>
+            <div class="title">Check and revoke ERC-20 allowances</div>
+            <div class="sub">
+              Targeted tool: you provide token(s) + spender.
+              We read <span class="tag">allowance(owner, spender)</span> and can revoke via <span class="tag">approve(spender, 0)</span>.
             </div>
+          </div>
+          <div class="row" style="max-width:360px">
+            <a class="btn small" href="https://revoke.cash/" target="_blank" rel="noopener">Open revoke.cash</a>
+            <button class="btn small" id="btnCopyOwnerLink">Copy BscScan approvals link</button>
+          </div>
+        </div>
 
-            <div class="field">
-              <div class="label" data-i18n="ap_spender_label">Spender</div>
+        <div class="body">
+          <div class="two">
+            <div class="panel">
               <div class="row">
-                <select id="ap-spender-preset">
-                  <option value="pcs_router">PancakeSwap Router (V2)</option>
-                  <option value="custom">Custom…</option>
-                </select>
-                <input id="ap-spender" class="mono" placeholder="0x spender..." />
+                <div style="flex:2">
+                  <label>Owner wallet</label>
+                  <input id="ownerAddr" placeholder="Connected wallet address (or paste)" spellcheck="false" />
+                </div>
+                <div style="flex:1; min-width:200px">
+                  <label>&nbsp;</label>
+                  <button class="btn primary" id="btnConnect">CONNECT / REFRESH</button>
+                </div>
               </div>
-              <div class="small" style="margin-top:8px" data-i18n="ap_spender_tip">
-                If you’re unsure: start with PancakeSwap Router preset.
+
+              <div class="row" style="margin-top:12px">
+                <div style="flex:1">
+                  <label>Spender preset</label>
+                  <select id="spenderPreset"></select>
+                </div>
+                <div style="flex:1">
+                  <label>Spender (address)</label>
+                  <input id="spenderAddr" placeholder="0x..." spellcheck="false" />
+                </div>
+              </div>
+
+              <div style="margin-top:12px">
+                <label>Token list (one per line)</label>
+                <textarea id="tokenList" placeholder="0x...&#10;0x..."></textarea>
+              </div>
+
+              <div class="row" style="margin-top:12px">
+                <button class="btn" id="btnUseScannedToken">Use scanned token</button>
+                <button class="btn" id="btnCheckAllow">Check allowances</button>
+                <button class="btn" id="btnRevokeAll">Revoke all (non-zero)</button>
+              </div>
+
+              <div class="hint">
+                Note: this cannot automatically enumerate every approval in your wallet. For a full indexed view, use revoke.cash or BscScan approvals page.
+              </div>
+
+              <div class="statusBox" style="margin-top:12px">
+                <div class="dot" id="apprDot"></div>
+                <div>
+                  <div style="font-weight:900" id="apprTitle">Disconnected</div>
+                  <div class="muted" id="apprSub">Connect your wallet to check/revoke.</div>
+                </div>
               </div>
             </div>
 
-            <div class="field">
-              <div class="label" data-i18n="ap_tokens_label">Token list (one per line)</div>
-              <textarea id="ap-tokens" class="mono" placeholder="0x...\n0x...\n0x..."></textarea>
+            <div class="panel">
+              <label>Allowances</label>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Token</th>
+                    <th>Symbol</th>
+                    <th>Allowance</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="allowTbody">
+                  <tr><td class="muted">—</td><td class="muted">—</td><td class="muted">—</td><td class="muted">—</td></tr>
+                </tbody>
+              </table>
+              <div class="hint" id="apprHint"></div>
             </div>
-
-            <div class="field">
-              <div class="row">
-                <button class="btn btn-primary" id="ap-check" data-i18n="ap_check">Check Allowances</button>
-                <button class="btn btn-ghost" id="ap-revoke-all" data-i18n="ap_revoke_all">Revoke All (non-zero)</button>
-              </div>
-            </div>
-
-            <div id="ap-status" class="status info"></div>
           </div>
+        </div>
+      </div>
 
-          <div class="card">
-            <h3 data-i18n="ap_results">Allowances</h3>
-            <div class="small" data-i18n="ap_results_hint">
-              If allowance is “infinite”, revoke is recommended unless you fully trust the spender.
+      <!-- 3) Bookmarklet -->
+      <div class="card" id="cardBookmarklet">
+        <div class="head">
+          <div>
+            <div class="kicker" style="text-align:left; margin:0;">DEX GUARD</div>
+            <div class="title">Bookmarklet redirect to your security page</div>
+            <div class="sub">Save a bookmark that extracts token params from DEX pages and opens this hub with <span class="tag">?token=</span>.</div>
+          </div>
+          <div class="row" style="max-width:380px">
+            <button class="btn small" id="btnCopyBm">Copy bookmarklet</button>
+            <button class="btn small" id="btnCopyBmCode">Copy code</button>
+          </div>
+        </div>
+
+        <div class="body">
+          <div class="two">
+            <div class="panel">
+              <label>Security hub URL (used by the bookmarklet)</label>
+              <input id="hubUrl" spellcheck="false" />
+              <div class="hint">Set this to your production URL (recommended): <span class="tag">https://cyclex.network/security/</span></div>
+
+              <div style="margin-top:12px">
+                <label>Drag to bookmarks bar</label>
+                <a class="btn primary" id="bmDrag" href="#">DEX GUARD → CYCLEX SCAN</a>
+              </div>
+
+              <div class="hint">
+                On desktop: drag the button into your bookmarks bar. If drag-drop is blocked, create a bookmark and paste the code (right panel) into the URL field.
+              </div>
             </div>
 
-            <div id="ap-table" class="table" style="margin-top:12px;">
-              <div class="trow head">
-                <div class="cell">Token</div>
-                <div class="cell">Allowance</div>
-                <div class="cell hide-sm">Symbol</div>
-                <div class="cell">Action</div>
-              </div>
-              <div class="trow">
-                <div class="cell muted">—</div>
-                <div class="cell muted">—</div>
-                <div class="cell muted hide-sm">—</div>
-                <div class="cell muted">—</div>
+            <div class="panel">
+              <label>Bookmarklet code</label>
+              <div class="codebox" id="bmCode"></div>
+              <div class="hint">
+                It extracts an address from URL params like <span class="tag">outputCurrency / token / address</span>,
+                or prompts you if none is found — then redirects to your hub.
               </div>
             </div>
           </div>
         </div>
-      </section>
-
-      <!-- 3) DEX Guard Bookmarklet -->
-      <section class="section" id="bookmarklet">
-        <div class="section-head">
-          <div class="section-kicker" data-i18n="bm_kicker">DEX Guard</div>
-          <div class="section-title" data-i18n="bm_title">Bookmarklet redirect to your security page</div>
-          <div class="section-body" data-i18n="bm_sub">
-            Save a bookmark that extracts token params from DEX pages and opens this Security Hub with <span class="mono">?token=</span>.
-          </div>
-        </div>
-
-        <div class="grid-2">
-          <div class="card">
-            <h3 data-i18n="bm_drag">Drag to bookmarks bar</h3>
-            <div class="small" data-i18n="bm_drag_tip">
-              On desktop: drag this button into your bookmarks bar.
-            </div>
-
-            <div class="field">
-              <a id="bm-link" class="btn btn-primary" href="#">DEX Guard → CycleX Scan</a>
-            </div>
-
-            <div class="small" style="margin-top:10px" data-i18n="bm_note">
-              Works best when a DEX URL includes <span class="mono">outputCurrency / inputCurrency</span> (or similar).
-            </div>
-          </div>
-
-          <div class="card">
-            <h3 data-i18n="bm_code">Bookmarklet code</h3>
-            <div class="small" data-i18n="bm_code_tip">If your browser blocks drag-drop, create a bookmark and paste this into the URL field:</div>
-            <textarea id="bm-code" class="mono" readonly></textarea>
-          </div>
-        </div>
-      </section>
+      </div>
 
       <!-- 4) RPC Checker -->
-      <section class="section" id="rpc">
-        <div class="section-head">
-          <div class="section-kicker" data-i18n="rpc_kicker">RPC Checker</div>
-          <div class="section-title" data-i18n="rpc_title">Find the fastest working BSC RPC</div>
-          <div class="section-body" data-i18n="rpc_sub">
-            We measure response time using <span class="mono">eth_blockNumber</span> via ethers. Fastest result is highlighted.
+      <div class="card" id="cardRpc">
+        <div class="head">
+          <div>
+            <div class="kicker" style="text-align:left; margin:0;">RPC CHECKER</div>
+            <div class="title">Find the fastest working BSC RPC</div>
+            <div class="sub">We measure response time using <span class="tag">eth_blockNumber</span> via ethers. Fastest result is highlighted.</div>
+          </div>
+          <div class="row" style="max-width:360px">
+            <button class="btn small" id="btnTestRpcs">Test RPCs</button>
+            <button class="btn small" id="btnCopyBestRpc">Copy best RPC</button>
           </div>
         </div>
 
-        <div class="grid-2">
-          <div class="card">
-            <h3 data-i18n="rpc_list">Endpoints</h3>
-
-            <div class="field">
-              <div class="label" data-i18n="rpc_custom_label">Optional custom RPC</div>
-              <input id="rpc-custom" class="mono" placeholder="https://..." />
-            </div>
-
-            <div class="field">
-              <div class="row">
-                <button class="btn btn-primary" id="rpc-test" data-i18n="rpc_test">Test RPCs</button>
-                <button class="btn btn-ghost" id="rpc-copy-best" data-i18n="rpc_copy_best">Copy Best RPC</button>
+        <div class="body">
+          <div class="two">
+            <div class="panel">
+              <label>Endpoints</label>
+              <label style="margin-top:0">Optional custom RPC</label>
+              <input id="customRpc" placeholder="https://..." spellcheck="false" />
+              <div class="hint">
+                Browser tests are limited by CORS. If a node blocks browser calls, it will show as failed here even if it works on servers/scripts.
               </div>
-            </div>
 
-            <div id="rpc-status" class="status info"></div>
-          </div>
-
-          <div class="card">
-            <h3 data-i18n="rpc_results">Results</h3>
-
-            <div id="rpc-table" class="table">
-              <div class="trow head">
-                <div class="cell">RPC</div>
-                <div class="cell">Latency</div>
-                <div class="cell hide-sm">Block</div>
-                <div class="cell">Status</div>
+              <div style="margin-top:12px" class="statusBox">
+                <div class="dot" id="rpcDot"></div>
+                <div>
+                  <div style="font-weight:900" id="rpcTitle">Ready</div>
+                  <div class="muted" id="rpcSub">Press “Test RPCs”.</div>
+                </div>
               </div>
+
+              <div class="hint" id="bestRpcLine" style="margin-top:12px"></div>
             </div>
 
-            <div class="small" style="margin-top:10px" data-i18n="rpc_tip">
-              Tip: If one RPC fails due to CORS/timeout, try another — we auto-fallback in CycleX anyway.
+            <div class="panel">
+              <label>Results</label>
+              <table>
+                <thead>
+                  <tr>
+                    <th>RPC</th>
+                    <th>Latency</th>
+                    <th>Block</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="rpcTbody">
+                  <tr><td class="muted">—</td><td class="muted">—</td><td class="muted">—</td><td class="muted">—</td><td class="muted">—</td></tr>
+                </tbody>
+              </table>
+              <div class="hint">Tip: if one RPC fails due to CORS/timeout, try another — CycleX can still auto-fallback in scripts.</div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <footer class="footer">
-        <div data-i18n="footer_left">
-          CycleX Security Hub runs client-side and reads public on-chain data.
-        </div>
-        <div class="footer-tagline" data-i18n="footer_tagline">
-          Verify twice. Connect only when you trust the page.
-        </div>
-      </footer>
-    </main>
+      <div class="footer">
+        This hub performs best-effort checks. Always validate with multiple sources before swapping.
+        • <a href="https://bscscan.com/" target="_blank" rel="noopener">BscScan</a>
+        • <a href="https://revoke.cash/" target="_blank" rel="noopener">revoke.cash</a>
+      </div>
+    </div>
   </div>
 
-  <!-- Load ethers.js -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
-
   <script>
-    // ====== i18n ======
-    const translations = {
-      en: {
-        brand_sub: "On-Chain Security & Rewards",
-        hero_kicker: "Security Hub",
-        hero_title: "CycleX Security Tools",
-        hero_subtitle: "A lightweight, client-side toolkit for safer swaps, approvals hygiene, DEX redirects, and RPC health checks.",
-        btn_back: "Back to Site",
-        btn_connect: "Connect Wallet (optional)",
-        btn_run_all: "Run Quick Scan",
-        hero_note: "Note: These checks are informational and do not guarantee safety. Always verify independently.",
+    const { ethers } = window;
 
-        ss_kicker: "SafeSwap Gate",
-        ss_title: "Check token basics before you swap",
-        ss_sub: "Enter a token address on BSC. We’ll read on-chain metadata, owner/proxy hints, and multi-DEX liquidity signals — then generate shareable outputs.",
-        ss_input_title: "Token Address",
-        ss_token_label: "Token contract (BSC)",
-        ss_tip: "Tip: You can open this page with ?token=0x... and it will auto-run.",
-        ss_actions_label: "Actions",
-        ss_scan: "Scan",
-        ss_share: "Copy Share Link",
-        ss_copy_json: "Copy JSON report",
-        ss_options_label: "Options",
-        ss_require_liq: "Require liquidity (production)",
-        ss_require_liq_tip: "When enabled, “No DEX pair” becomes Red. When disabled, it’s treated as “Not listed yet”.",
-        ss_open_swap: "Open Swap",
-        ss_results_title: "Results",
-        ss_results_hint: "We score signals as Green / Yellow / Red. This is not a honeypot guarantee — just solid on-chain hygiene checks.",
-
-        ap_kicker: "Approvals Guardian",
-        ap_title: "Check and revoke ERC-20 allowances",
-        ap_sub: "This tool is targeted: you provide token(s) and spender. We read allowance(owner, spender) and can revoke by sending approve(spender, 0).",
-        ap_owner: "Owner wallet",
-        ap_connected: "Connected:",
-        ap_connect: "Connect / Refresh",
-        ap_spender_label: "Spender",
-        ap_spender_tip: "If you’re unsure: start with PancakeSwap Router preset.",
-        ap_tokens_label: "Token list (one per line)",
-        ap_check: "Check Allowances",
-        ap_revoke_all: "Revoke All (non-zero)",
-        ap_results: "Allowances",
-        ap_results_hint: "If allowance is “infinite”, revoke is recommended unless you fully trust the spender.",
-
-        bm_kicker: "DEX Guard",
-        bm_title: "Bookmarklet redirect to your security page",
-        bm_sub: "Save a bookmark that extracts token params from DEX pages and opens this Security Hub with ?token=.",
-        bm_drag: "Drag to bookmarks bar",
-        bm_drag_tip: "On desktop: drag this button into your bookmarks bar.",
-        bm_note: "Works best when a DEX URL includes outputCurrency / inputCurrency (or similar).",
-        bm_code: "Bookmarklet code",
-        bm_code_tip: "If your browser blocks drag-drop, create a bookmark and paste this into the URL field:",
-
-        rpc_kicker: "RPC Checker",
-        rpc_title: "Find the fastest working BSC RPC",
-        rpc_sub: "We measure response time using eth_blockNumber via ethers. Fastest result is highlighted.",
-        rpc_list: "Endpoints",
-        rpc_custom_label: "Optional custom RPC",
-        rpc_test: "Test RPCs",
-        rpc_copy_best: "Copy Best RPC",
-        rpc_results: "Results",
-        rpc_tip: "Tip: If one RPC fails due to CORS/timeout, try another — we auto-fallback in CycleX anyway.",
-
-        footer_left: "CycleX Security Hub runs client-side and reads public on-chain data.",
-        footer_tagline: "Verify twice. Connect only when you trust the page."
+    // =========================
+    // Network + Constants (BSC)
+    // =========================
+    const BSC = {
+      chainId: 56,
+      name: "BSC",
+      tokens: {
+        WBNB: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+        USDT: "0x55d398326f99059ff775485246999027b3197955",
+        USDC: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+        BUSD: "0xe9e7cea3dedca5984780bafc599bd69add087d56",
       },
-      zh: {
-        brand_sub: "链上安全与奖励机制",
-        hero_kicker: "安全中心",
-        hero_title: "CycleX 安全工具",
-        hero_subtitle: "轻量级客户端工具：换币前检查、授权管理、DEX 跳转与 RPC 体检。",
-        btn_back: "返回网站",
-        btn_connect: "连接钱包（可选）",
-        btn_run_all: "快速扫描",
-        hero_note: "提示：这些检查仅供参考，不保证安全，请自行二次验证。",
-
-        ss_kicker: "SafeSwap Gate",
-        ss_title: "换币前先做基础检查",
-        ss_sub: "输入 BSC 代币地址，读取链上信息、owner/proxy 线索与多 DEX 流动性信号，并生成可分享结果。",
-        ss_input_title: "代币地址",
-        ss_token_label: "代币合约（BSC）",
-        ss_tip: "提示：可以用 ?token=0x... 打开本页并自动扫描。",
-        ss_actions_label: "操作",
-        ss_scan: "扫描",
-        ss_share: "复制分享链接",
-        ss_copy_json: "复制 JSON 报告",
-        ss_options_label: "选项",
-        ss_require_liq: "强制要求流动性（生产模式）",
-        ss_require_liq_tip: "开启后：没有 DEX Pair 会变红；关闭则视为“尚未上架”。",
-        ss_open_swap: "打开兑换",
-        ss_results_title: "结果",
-        ss_results_hint: "用绿/黄/红信号评分。这不是蜜罐保证，只是链上基础安全检查。",
-
-        ap_kicker: "授权守卫",
-        ap_title: "检查并撤销 ERC-20 授权",
-        ap_sub: "定向工具：输入代币与 spender，读取 allowance，可通过 approve(spender, 0) 撤销。",
-        ap_owner: "钱包地址",
-        ap_connected: "已连接：",
-        ap_connect: "连接 / 刷新",
-        ap_spender_label: "Spender",
-        ap_spender_tip: "不确定的话：先选 PancakeSwap Router 预设。",
-        ap_tokens_label: "代币列表（每行一个）",
-        ap_check: "检查授权",
-        ap_revoke_all: "撤销全部（非零）",
-        ap_results: "授权结果",
-        ap_results_hint: "若授权为“无限”，除非完全信任，否则建议撤销。",
-
-        bm_kicker: "DEX Guard",
-        bm_title: "书签脚本：从 DEX 一键跳转扫描",
-        bm_sub: "保存书签，从 DEX URL 提取 token 参数并打开本页扫描。",
-        bm_drag: "拖到书签栏",
-        bm_drag_tip: "桌面端：把按钮拖到书签栏即可。",
-        bm_note: "当 DEX URL 含 outputCurrency / inputCurrency（或类似）时效果最佳。",
-        bm_code: "书签代码",
-        bm_code_tip: "若浏览器阻止拖拽，请创建书签并把以下内容粘贴到 URL：",
-
-        rpc_kicker: "RPC 体检",
-        rpc_title: "找出最快可用的 BSC RPC",
-        rpc_sub: "通过 ethers 调用 eth_blockNumber 测量延迟，最快的会高亮。",
-        rpc_list: "节点列表",
-        rpc_custom_label: "可选：自定义 RPC",
-        rpc_test: "测试 RPC",
-        rpc_copy_best: "复制最佳 RPC",
-        rpc_results: "结果",
-        rpc_tip: "提示：如果某个 RPC 因 CORS/超时失败，换一个即可，我们也会自动 fallback。",
-
-        footer_left: "CycleX 安全中心在本地运行，读取公开链上数据。",
-        footer_tagline: "多验证一次，只在你信任时连接钱包。"
+      chainlink: {
+        // BNB / USD feed on BSC
+        BNBUSD: "0x0567F2323251f0Aab15c8dFb1967E4e8A7D42aeE",
       },
-      ar: {
-        brand_sub: "أمن ومكافآت على السلسلة",
-        hero_kicker: "مركز الأمان",
-        hero_title: "أدوات الأمان من CycleX",
-        hero_subtitle: "أدوات خفيفة على المتصفح: فحص قبل الشراء، إدارة الموافقات، إعادة توجيه DEX، وفحص RPC.",
-        btn_back: "العودة للموقع",
-        btn_connect: "اتصال المحفظة (اختياري)",
-        btn_run_all: "فحص سريع",
-        hero_note: "ملاحظة: هذه الفحوصات معلوماتية ولا تضمن الأمان. تحقق دائماً بنفسك.",
-
-        ss_kicker: "SafeSwap Gate",
-        ss_title: "تحقق من أساسيات التوكن قبل المبادلة",
-        ss_sub: "أدخل عنوان توكن على BSC ونقرأ البيانات والإشارات (owner/proxy) وسيولة متعددة DEX وننشئ مخرجات قابلة للمشاركة.",
-        ss_input_title: "عنوان التوكن",
-        ss_token_label: "عقد التوكن (BSC)",
-        ss_tip: "نصيحة: افتح الصفحة مع ?token=0x... وسيبدأ الفحص تلقائياً.",
-        ss_actions_label: "الإجراءات",
-        ss_scan: "فحص",
-        ss_share: "نسخ رابط المشاركة",
-        ss_copy_json: "نسخ تقرير JSON",
-        ss_options_label: "الخيارات",
-        ss_require_liq: "اشتراط السيولة (وضع الإنتاج)",
-        ss_require_liq_tip: "عند التفعيل: عدم وجود Pair يصبح أحمر. عند التعطيل: يُعتبر (غير مُدرج بعد).",
-        ss_open_swap: "فتح المبادلة",
-        ss_results_title: "النتائج",
-        ss_results_hint: "إشارات أخضر/أصفر/أحمر. هذا ليس ضماناً ضد honeypot — فقط فحوصات أساسية على السلسلة.",
-
-        ap_kicker: "حارس الموافقات",
-        ap_title: "فحص وإلغاء سماحيات ERC-20",
-        ap_sub: "أداة موجهة: تُدخل التوكنات والـ spender. نقرأ allowance ويمكن الإلغاء عبر approve(spender, 0).",
-        ap_owner: "محفظة المالك",
-        ap_connected: "متصل:",
-        ap_connect: "اتصال / تحديث",
-        ap_spender_label: "Spender",
-        ap_spender_tip: "إذا لم تكن متأكداً: ابدأ بمُسبق PancakeSwap Router.",
-        ap_tokens_label: "قائمة التوكنات (كل سطر توكن)",
-        ap_check: "فحص السماحيات",
-        ap_revoke_all: "إلغاء الكل (غير صفر)",
-        ap_results: "السماحيات",
-        ap_results_hint: "إذا كانت السماحية “لا نهائية”، يوصى بالإلغاء إلا إذا كنت تثق تماماً بالـ spender.",
-
-        bm_kicker: "DEX Guard",
-        bm_title: "Bookmarklet لإعادة التوجيه للفحص",
-        bm_sub: "احفظ Bookmark يستخرج معاملات التوكن من صفحات DEX ويفتح هذا المركز مع ?token=.",
-        bm_drag: "اسحب إلى شريط المفضلة",
-        bm_drag_tip: "على سطح المكتب: اسحب الزر إلى شريط المفضلة.",
-        bm_note: "يعمل أفضل عندما يحتوي الرابط على outputCurrency / inputCurrency (أو ما شابه).",
-        bm_code: "كود الـ Bookmarklet",
-        bm_code_tip: "إذا منع المتصفح السحب، أنشئ Bookmark والصق هذا في خانة URL:",
-
-        rpc_kicker: "فحص RPC",
-        rpc_title: "اعثر على أسرع RPC يعمل على BSC",
-        rpc_sub: "نقيس زمن الاستجابة عبر ethers و eth_blockNumber. الأسرع سيظهر مميزاً.",
-        rpc_list: "النقاط",
-        rpc_custom_label: "اختياري: RPC مخصص",
-        rpc_test: "اختبار RPC",
-        rpc_copy_best: "نسخ أفضل RPC",
-        rpc_results: "النتائج",
-        rpc_tip: "نصيحة: إذا فشل RPC بسبب CORS/timeout جرّب غيره — لدينا fallback أيضاً.",
-
-        footer_left: "مركز أمان CycleX يعمل على المتصفح ويقرأ بيانات عامة على السلسلة.",
-        footer_tagline: "تحقق مرتين. لا تتصل إلا إذا كنت تثق بالصفحة."
-      },
-      ru: {
-        brand_sub: "Ончейн-безопасность и вознаграждения",
-        hero_kicker: "Центр безопасности",
-        hero_title: "Инструменты безопасности CycleX",
-        hero_subtitle: "Лёгкий набор инструментов в браузере: проверка перед свопом, гигиена approvals, DEX-редирект и проверка RPC.",
-        btn_back: "Назад на сайт",
-        btn_connect: "Подключить кошелёк (опционально)",
-        btn_run_all: "Быстрая проверка",
-        hero_note: "Примечание: проверки носят информационный характер и не гарантируют безопасность. Всегда проверяйте дополнительно.",
-
-        ss_kicker: "SafeSwap Gate",
-        ss_title: "Проверь токен перед свопом",
-        ss_sub: "Введите адрес токена в BSC. Мы прочитаем on-chain метаданные, owner/proxy подсказки и сигналы ликвидности в нескольких DEX — и подготовим удобные результаты.",
-        ss_input_title: "Адрес токена",
-        ss_token_label: "Контракт токена (BSC)",
-        ss_tip: "Совет: открой страницу с ?token=0x... и проверка запустится автоматически.",
-        ss_actions_label: "Действия",
-        ss_scan: "Сканировать",
-        ss_share: "Копировать ссылку",
-        ss_copy_json: "Копировать JSON отчёт",
-        ss_options_label: "Опции",
-        ss_require_liq: "Требовать ликвидность (production)",
-        ss_require_liq_tip: "Вкл.: отсутствие Pair станет красным. Выкл.: это “ещё не залистили”.",
-        ss_open_swap: "Открыть своп",
-        ss_results_title: "Результаты",
-        ss_results_hint: "Сигналы: зелёный/жёлтый/красный. Это не гарантия от honeypot — только базовые on-chain проверки.",
-
-        ap_kicker: "Approvals Guardian",
-        ap_title: "Проверка и отзыв ERC-20 разрешений",
-        ap_sub: "Точечный инструмент: вы задаёте токены и spender. Мы читаем allowance и можем отозвать через approve(spender, 0).",
-        ap_owner: "Кошелёк владельца",
-        ap_connected: "Подключено:",
-        ap_connect: "Подключить / обновить",
-        ap_spender_label: "Spender",
-        ap_spender_tip: "Если не уверены: начните с пресета PancakeSwap Router.",
-        ap_tokens_label: "Список токенов (по одному в строке)",
-        ap_check: "Проверить allowance",
-        ap_revoke_all: "Отозвать все (ненулевые)",
-        ap_results: "Allowances",
-        ap_results_hint: "Если allowance “бесконечный”, отзыв рекомендуется, если вы не доверяете spender на 100%.",
-
-        bm_kicker: "DEX Guard",
-        bm_title: "Bookmarklet: редирект на проверку",
-        bm_sub: "Сохраните закладку, которая вытаскивает token-параметры из DEX URL и открывает этот центр с ?token=.",
-        bm_drag: "Перетащите в панель закладок",
-        bm_drag_tip: "На десктопе: перетащите кнопку в панель закладок.",
-        bm_note: "Лучше всего работает, если URL содержит outputCurrency / inputCurrency (или подобное).",
-        bm_code: "Код bookmarklet",
-        bm_code_tip: "Если браузер блокирует drag&drop — создайте закладку и вставьте это в поле URL:",
-
-        rpc_kicker: "RPC Checker",
-        rpc_title: "Найдите самый быстрый RPC для BSC",
-        rpc_sub: "Измеряем задержку через ethers и eth_blockNumber. Самый быстрый будет подсвечен.",
-        rpc_list: "Эндпоинты",
-        rpc_custom_label: "Опционально: свой RPC",
-        rpc_test: "Тест RPC",
-        rpc_copy_best: "Скопировать лучший RPC",
-        rpc_results: "Результаты",
-        rpc_tip: "Совет: если RPC падает из-за CORS/timeout — выберите другой, у нас также есть fallback.",
-
-        footer_left: "CycleX Security Hub работает на клиенте и читает публичные on-chain данные.",
-        footer_tagline: "Проверяйте дважды. Подключайте кошелёк только если доверяете странице."
+      explorer: {
+        token: (a) => `https://bscscan.com/token/${a}`,
+        address: (a) => `https://bscscan.com/address/${a}`,
+        approvals: (owner) => `https://bscscan.com/tokenapprovalchecker?search=${owner}`,
       }
     };
 
-    function setLanguage(lang) {
-      const dict = translations[lang] || translations.en;
-
-      document.body.classList.add("lang-switching");
-
-      document.querySelectorAll("[data-i18n]").forEach((el) => {
-        const key = el.getAttribute("data-i18n");
-        const val = (dict[key] !== undefined) ? dict[key] : translations.en[key];
-        if (val !== undefined) el.innerHTML = val;
-      });
-
-      document.querySelectorAll(".lang-btn").forEach((btn) => {
-        btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
-      });
-
-      document.documentElement.dir = (lang === "ar") ? "rtl" : "ltr";
-      setTimeout(() => document.body.classList.remove("lang-switching"), 250);
-    }
-
-    document.querySelectorAll(".lang-btn").forEach((btn) => {
-      btn.addEventListener("click", () => setLanguage(btn.getAttribute("data-lang")));
-    });
-    setLanguage("en");
-
-    // ====== Shared helpers ======
-    const CX_DEBUG = false;
-    function cxlog(...a){ if(CX_DEBUG) console.log(...a); }
-
-    const RPCS_DEFAULT = [
-      "https://bsc-dataseed.binance.org",
-      "https://bsc-dataseed1.bnbchain.org",
-      "https://bsc-dataseed2.bnbchain.org",
-      "https://bsc-dataseed3.bnbchain.org",
-      "https://bsc-dataseed1.defibit.io",
-    ];
-
-    // Core tokens (BSC)
-    const WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
-    const USDT = "0x55d398326f99059fF775485246999027B3197955";
-    const USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
-    const BUSD = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
-
-    // DEX Routers (BSC) — used for swap links + (best-effort) factory() discovery
+    // DEX Routers (used for spender presets + factory() discovery)
     const DEXES = [
       {
-        key: "pancake",
-        name: "PancakeSwap V2",
+        id: "pancake",
+        name: "PancakeSwap",
         router: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-        swap: (tokenIn, tokenOut) => `https://pancakeswap.finance/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
+        buildSwapUrl: ({ token, base }) => `https://pancakeswap.finance/swap?outputCurrency=${token}&inputCurrency=${base}`
       },
       {
-        key: "apeswap",
-        name: "ApeSwap",
-        router: "0xC0788A3aD43d79aa53B09c2EaCc313A787d1d607",
-        swap: (tokenIn, tokenOut) => `https://apeswap.finance/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
-      },
-      {
-        key: "biswap",
+        id: "biswap",
         name: "BiSwap",
-        router: "0xE97E2787C9C8d63bFF482Fa3fdc212BbD547aE98",
-        swap: (tokenIn, tokenOut) => `https://exchange.biswap.org/#/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
+        router: "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8",
+        buildSwapUrl: ({ token, base }) => `https://exchange.biswap.org/#/swap?outputCurrency=${token}&inputCurrency=${base}`
       },
       {
-        key: "mdex",
+        id: "apeswap",
+        name: "ApeSwap",
+        router: "0x3b0C2151549714109Ce035BB648A41144f2ea720",
+        buildSwapUrl: ({ token, base }) => `https://apeswap.finance/swap?outputCurrency=${token}&inputCurrency=${base}`
+      },
+      {
+        id: "mdex",
         name: "MDEX (BSC)",
         router: "0x7DAe51BD3E3376B8c7c4900E9107f12Be3AF1bA8",
-        swap: (tokenIn, tokenOut) => `https://bscr.mdex.com/#/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
+        buildSwapUrl: ({ token, base }) => `https://bsc.mdex.com/#/swap?outputCurrency=${token}&inputCurrency=${base}`
       },
       {
-        key: "bakery",
+        id: "bakery",
         name: "BakerySwap",
-        router: "0x824C9364A6CF8f5EB542ad2ca8F5705561C8b1db",
-        swap: (tokenIn, tokenOut) => `https://www.bakeryswap.org/#/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
+        router: "0x6BFeA2BD40A41eF7E431aC1f452B51E72Bfc7059",
+        buildSwapUrl: ({ token, base }) => `https://www.bakeryswap.org/#/swap?outputCurrency=${token}&inputCurrency=${base}`
       },
       {
-        key: "babyswap",
+        id: "babyswap",
         name: "BabySwap",
-        router: "0xC085fDA7Dc3c1A1611f3Ae421e2BD3c75b3a6943",
-        swap: (tokenIn, tokenOut) => `https://exchange.babyswap.finance/#/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
-      }
+        router: "0x169a490C385c5eeac12acc3999f4bC9605cD3aC5",
+        buildSwapUrl: ({ token, base }) => `https://exchange.babyswap.finance/#/swap?outputCurrency=${token}&inputCurrency=${base}`
+      },
     ];
 
-    const BASES = [
-      { key: "WBNB", name: "WBNB", addr: WBNB, kind: "bnb" },
-      { key: "USDT", name: "USDT", addr: USDT, kind: "stable" },
-      { key: "USDC", name: "USDC", addr: USDC, kind: "stable" },
-      { key: "BUSD", name: "BUSD", addr: BUSD, kind: "stable" }
+    // Browser-friendly public RPCs (some may fail due to CORS)
+    const DEFAULT_RPCS = [
+      { url: "https://bsc-dataseed.binance.org", note: "BNBChain (public)" },
+      { url: "https://bsc-dataseed1.bnbchain.org", note: "BNBChain mirror" },
+      { url: "https://bsc-dataseed2.bnbchain.org", note: "BNBChain mirror" },
+      { url: "https://bsc-dataseed3.bnbchain.org", note: "BNBChain mirror" },
+      { url: "https://bsc-dataseed4.bnbchain.org", note: "BNBChain mirror" },
+
+      { url: "https://bsc-dataseed1.defibit.io", note: "Defibit mirror" },
+      { url: "https://bsc-dataseed2.defibit.io", note: "Defibit mirror" },
+      { url: "https://bsc-dataseed3.defibit.io", note: "Defibit mirror" },
+      { url: "https://bsc-dataseed4.defibit.io", note: "Defibit mirror" },
+
+      { url: "https://rpc.ankr.com/bsc", note: "Ankr (public)" },
+      { url: "https://bsc.blockpi.network/v1/rpc/public", note: "BlockPI (public)" },
+      { url: "https://bsc-rpc.publicnode.com", note: "PublicNode (public)" },
+      { url: "https://bsc.drpc.org", note: "dRPC (public)" },
+      { url: "https://bsc.llamarpc.com", note: "LlamaRPC (public)" },
+      { url: "https://1rpc.io/bnb", note: "1RPC (public)" },
     ];
 
-    // Pancake factory (for fallback price via WBNB/USDT)
-    const PCS_FACTORY = "0xca143ce32fe78f1f7019d7d551a6402fc5350c73";
-
-    // Chainlink BNB/USD feed on BSC
-    const CHAINLINK_BNBUSD = "0x0567F2323251f0Aab15c8DfB1967E4e8A7D42aeE";
-
-    let _rpcProvider = null;
-    let _rpcUrl = "";
-    let _bestRpc = "";
-    let ssLastReport = null;
-
-    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-    async function pickProvider(customList) {
-      if (_rpcProvider) return _rpcProvider;
-
-      const list = Array.isArray(customList) && customList.length ? customList : RPCS_DEFAULT;
-
-      for (const url of list) {
-        try {
-          const p = new ethers.JsonRpcProvider(url);
-          const bn = await p.getBlockNumber();
-          const net = await p.getNetwork();
-          if (Number(net.chainId) !== 56) throw new Error("Wrong chainId");
-
-          _rpcProvider = p;
-          _rpcUrl = url;
-          cxlog("✅ RPC:", url, "block:", bn);
-          return p;
-        } catch (e) {
-          cxlog("⚠️ RPC fail:", url, e?.message || e);
-        }
-      }
-      throw new Error("All RPCs failed");
-    }
-
-    function isHexAddr(x){ return typeof x === "string" && /^0x[0-9a-fA-F]{40}$/.test(x.trim()); }
-    function toChecksum(x){ return ethers.getAddress(x.trim()); }
-
-    async function copyText(text){
-      try {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } catch {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        ta.remove();
-        return true;
-      }
-    }
-
-    function setStatus(el, kind, html){
-      el.className = "status " + (kind || "info");
-      el.innerHTML = html || "";
-      el.style.display = "block";
-    }
-
-    function fmtAddr(a){
-      try {
-        const x = toChecksum(a);
-        return x.slice(0, 6) + "…" + x.slice(-4);
-      } catch { return a; }
-    }
-
-    function fmtBigintUnits(v, decimals){
-      try {
-        const s = ethers.formatUnits(v, decimals);
-        const [i, f=""] = s.split(".");
-        const intWithCommas = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        const ff = f.slice(0, 6).replace(/0+$/, "");
-        return intWithCommas + (ff ? "." + ff : "");
-      } catch {
-        return String(v);
-      }
-    }
-
-    function fmtUsd(x){
-      if (!Number.isFinite(x)) return "—";
-      if (x >= 1_000_000_000) return "$" + (x/1_000_000_000).toFixed(2) + "B";
-      if (x >= 1_000_000) return "$" + (x/1_000_000).toFixed(2) + "M";
-      if (x >= 1_000) return "$" + (x/1_000).toFixed(2) + "K";
-      return "$" + x.toFixed(2);
-    }
-
-    // ====== ABIs ======
-    const ERC20_ABI = [
+    // =========
+    // ABIs
+    // =========
+    const ABI_ERC20 = [
       "function name() view returns (string)",
       "function symbol() view returns (string)",
       "function decimals() view returns (uint8)",
       "function totalSupply() view returns (uint256)",
+      "function balanceOf(address) view returns (uint256)",
       "function owner() view returns (address)",
       "function getOwner() view returns (address)",
       "function admin() view returns (address)",
+      "function implementation() view returns (address)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function approve(address spender, uint256 amount) returns (bool)",
     ];
 
-    const FACTORY_ABI = [
-      "function getPair(address tokenA, address tokenB) external view returns (address pair)"
-    ];
-
-    const ROUTER_ABI = [
+    const ABI_ROUTER = [
       "function factory() view returns (address)",
       "function WETH() view returns (address)"
     ];
 
-    const PAIR_ABI = [
-      "function token0() view returns (address)",
-      "function token1() view returns (address)",
-      "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)"
+    const ABI_FACTORY = [
+      "function getPair(address tokenA, address tokenB) view returns (address pair)"
     ];
 
-    const LP_ABI = [
+    const ABI_PAIR = [
+      "function token0() view returns (address)",
+      "function token1() view returns (address)",
+      "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)",
       "function totalSupply() view returns (uint256)",
       "function balanceOf(address) view returns (uint256)"
     ];
 
-    const CL_ABI = [
-      "function decimals() view returns (uint8)",
-      "function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)"
+    const ABI_CHAINLINK = [
+      "function latestRoundData() view returns (uint80, int256, uint256, uint256, uint80)",
+      "function decimals() view returns (uint8)"
     ];
 
-    // ====== Proxy detection (EIP-1967) ======
-    const EIP1967_IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-    const EIP1967_ADMIN_SLOT = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103";
+    // =========================
+    // Small helpers
+    // =========================
+    const $ = (id) => document.getElementById(id);
 
-    function slotToAddress(storageHex){
-      if (!storageHex || storageHex === "0x") return null;
-      const h = storageHex.toLowerCase().replace(/^0x/,"").padStart(64,"0");
-      const addr = "0x" + h.slice(24);
-      if (/^0x0{40}$/.test(addr)) return null;
-      try { return toChecksum(addr); } catch { return null; }
+    function nowIso(){ return new Date().toISOString(); }
+
+    async function copyText(text){
+      await navigator.clipboard.writeText(text);
     }
 
-    async function detectProxy(provider, token){
-      try {
-        const implRaw = await provider.getStorage(token, EIP1967_IMPL_SLOT);
-        const impl = slotToAddress(implRaw);
-        const adminRaw = await provider.getStorage(token, EIP1967_ADMIN_SLOT);
-        const admin = slotToAddress(adminRaw);
-        if (impl) return { isProxy: true, impl, admin };
-        return { isProxy: false, impl: null, admin: admin || null };
-      } catch {
-        return { isProxy: false, impl: null, admin: null };
-      }
+    function shortAddr(a){
+      if(!a) return "—";
+      return a.slice(0,6) + "…" + a.slice(-4);
     }
 
-    // ====== BNB/USD oracle (Chainlink + fallback) ======
-    let _bnbUsdCache = null;
-
-    async function getBnbUsd(provider){
-      if (_bnbUsdCache && (Date.now() - _bnbUsdCache.t) < 60_000) return _bnbUsdCache;
-
-      // 1) Chainlink
-      try {
-        const feed = new ethers.Contract(CHAINLINK_BNBUSD, CL_ABI, provider);
-        const dec = Number(await feed.decimals());
-        const rd = await feed.latestRoundData();
-        const ans = Number(rd[1]);
-        if (Number.isFinite(ans) && ans > 0) {
-          const px = ans / (10 ** dec);
-          _bnbUsdCache = { px, source: "Chainlink", t: Date.now() };
-          return _bnbUsdCache;
-        }
-      } catch {}
-
-      // 2) Fallback: WBNB/USDT reserves on Pancake factory
-      try {
-        const f = new ethers.Contract(PCS_FACTORY, FACTORY_ABI, provider);
-        let pair = await f.getPair(WBNB, USDT);
-        pair = toChecksum(String(pair));
-        if (pair && !/^0x0{40}$/i.test(pair)) {
-          const p = new ethers.Contract(pair, PAIR_ABI, provider);
-          const t0 = toChecksum(await p.token0());
-          const r = await p.getReserves();
-          const r0 = BigInt(r[0]);
-          const r1 = BigInt(r[1]);
-
-          // USDT on BSC is 18 decimals (common). We'll treat as 18.
-          const wbnbRes = (t0 === toChecksum(WBNB)) ? r0 : r1;
-          const usdtRes = (t0 === toChecksum(WBNB)) ? r1 : r0;
-
-          const wbnbF = Number(ethers.formatUnits(wbnbRes, 18));
-          const usdtF = Number(ethers.formatUnits(usdtRes, 18));
-          if (wbnbF > 0 && usdtF > 0) {
-            const px = usdtF / wbnbF;
-            _bnbUsdCache = { px, source: "On-chain (WBNB/USDT)", t: Date.now() };
-            return _bnbUsdCache;
-          }
-        }
-      } catch {}
-
-      _bnbUsdCache = { px: NaN, source: "Unavailable", t: Date.now() };
-      return _bnbUsdCache;
+    function safeJson(obj){
+      return JSON.stringify(obj, (_, v) => typeof v === "bigint" ? v.toString() : v, 2);
     }
 
-    // ====== UI init for dropdowns ======
-    function initDexBaseDropdowns(){
-      const dexSel = document.getElementById("ss-dex-select");
-      const baseSel = document.getElementById("ss-base-select");
-
-      dexSel.innerHTML = DEXES.map(d => `<option value="${d.key}">${d.name}</option>`).join("");
-      baseSel.innerHTML = BASES.map(b => `<option value="${b.key}">${b.name}</option>`).join("");
-
-      // default: Pancake + WBNB
-      dexSel.value = "pancake";
-      baseSel.value = "WBNB";
+    function setDot(dotEl, state){
+      dotEl.classList.remove("good","warn","bad");
+      if(state) dotEl.classList.add(state);
     }
 
-    // ====== SafeSwap V2 scan ======
-    async function getDexFactory(provider, dex){
-      try {
-        const r = new ethers.Contract(dex.router, ROUTER_ABI, provider);
-        const f = await r.factory();
-        return toChecksum(String(f));
-      } catch {
-        return null;
-      }
-    }
-
-    async function scanOnePair(provider, token, base, dex, factoryAddr){
-      if (!factoryAddr) return null;
-
-      // getPair(token, base)
-      try {
-        const f = new ethers.Contract(factoryAddr, FACTORY_ABI, provider);
-        let pair = await f.getPair(token, base.addr);
-        pair = toChecksum(String(pair));
-        if (/^0x0{40}$/i.test(pair)) return null;
-
-        const p = new ethers.Contract(pair, PAIR_ABI, provider);
-        const t0 = toChecksum(await p.token0());
-        const r = await p.getReserves();
-        const r0 = BigInt(r[0]);
-        const r1 = BigInt(r[1]);
-
-        const baseRes = (t0 === toChecksum(base.addr)) ? r0 : r1;
-        const tokenRes = (t0 === toChecksum(base.addr)) ? r1 : r0;
-
-        // LP burn basic
-        let burnPct = null;
-        try {
-          const lp = new ethers.Contract(pair, LP_ABI, provider);
-          const ts = BigInt(await lp.totalSupply());
-          if (ts > 0n) {
-            const z = BigInt(await lp.balanceOf("0x0000000000000000000000000000000000000000"));
-            const d = BigInt(await lp.balanceOf("0x000000000000000000000000000000000000dEaD"));
-            const burned = z + d;
-            burnPct = Number((burned * 10000n) / ts) / 100; // 2 decimals
-          }
-        } catch {}
-
-        return {
-          dexKey: dex.key,
-          dexName: dex.name,
-          router: dex.router,
-          factory: factoryAddr,
-          baseKey: base.key,
-          baseName: base.name,
-          baseAddr: base.addr,
-          pair,
-          baseReserve: baseRes,
-          tokenReserve: tokenRes,
-          burnPct
-        };
-      } catch {
-        return null;
-      }
-    }
-
-    function ssBuildShareLink(paramsObj){
-      const u = new URL(window.location.href);
-      // clear known params first
-      ["token","tokenIn","tokenOut","requireLiq","dex","base"].forEach(k => u.searchParams.delete(k));
-
-      if (paramsObj?.token) u.searchParams.set("token", paramsObj.token);
-      if (paramsObj?.tokenIn) u.searchParams.set("tokenIn", paramsObj.tokenIn);
-      if (paramsObj?.requireLiq) u.searchParams.set("requireLiq", "1");
-      return u.toString();
-    }
-
-    function ssRenderLinks(pairs, token, tokenInHint){
-      const wrap = document.getElementById("ss-links");
-      if (!pairs?.length) {
-        wrap.innerHTML = "";
-        return;
-      }
-
-      const best = pairs[0];
-      const tokenIn = tokenInHint && isHexAddr(tokenInHint) ? toChecksum(tokenInHint) : best.baseAddr;
-
-      const btns = pairs.slice(0, 6).map(p => {
-        const dex = DEXES.find(d => d.key === p.dexKey);
-        const url = dex ? dex.swap(tokenIn, token) : "#";
-        const liq = (p.liqUsdApprox != null) ? fmtUsd(p.liqUsdApprox) : "—";
-        const burn = (p.burnPct != null) ? `${p.burnPct.toFixed(2)}%` : "—";
-        return `
-          <div class="card" style="padding:12px; margin-top:10px;">
-            <div class="row" style="justify-content:space-between; gap:8px;">
-              <div class="pill"><b>${p.dexName}</b> • ${p.baseName}</div>
-              <a class="btn btn-ghost" href="${url}" target="_blank" rel="noopener" style="padding:10px 14px; font-size:12px;">Open Swap</a>
-            </div>
-            <div class="small" style="margin-top:8px">
-              <b>Pair:</b> <span class="mono">${p.pair}</span><br>
-              <b>Liquidity (approx):</b> ${liq}<br>
-              <b>LP Burn:</b> ${burn}
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      wrap.innerHTML = btns;
-    }
-
-    async function ssScanV2() {
-      const input = document.getElementById("ss-token");
-      const out = document.getElementById("ss-out");
-      const status = document.getElementById("ss-status");
-      const requireLiq = !!document.getElementById("ss-require-liq").checked;
-
-      let addrRaw = (input.value || "").trim();
-      if (!addrRaw) {
-        setStatus(status, "warn", "<strong>⚠️ Missing token address.</strong><br>Paste a token and try again.");
-        return;
-      }
-      if (!isHexAddr(addrRaw)) {
-        setStatus(status, "bad", "<strong>❌ Invalid address format.</strong><br>Expected 0x + 40 hex chars.");
-        return;
-      }
-      const token = toChecksum(addrRaw);
-
-      // tokenIn hint from query (DEX Guard)
-      let tokenInHint = null;
-      try {
-        const u = new URL(window.location.href);
-        const ti = u.searchParams.get("tokenIn");
-        if (ti && isHexAddr(ti)) tokenInHint = toChecksum(ti);
-      } catch {}
-
-      // update external links
-      document.getElementById("ss-pcs").href = `https://pancakeswap.finance/swap?outputCurrency=${token}`;
-      document.getElementById("ss-bsc").href = `https://bscscan.com/address/${token}`;
-
-      setStatus(status, "info", "<strong>⏳ Scanning…</strong><br>Reading metadata, proxy/owner hints, and multi-DEX liquidity.");
-      setStatus(out, "info", "<strong>⏳ Working…</strong>");
-      document.getElementById("ss-links").innerHTML = "";
-      ssLastReport = null;
-
-      try {
-        const provider = await pickProvider();
-
-        // basic: contract code
-        const code = await provider.getCode(token);
-        const isContract = code && code !== "0x";
-        if (!isContract) {
-          setStatus(out, "bad", `<strong>❌ Not a contract.</strong><br>${token} has no bytecode on BSC.`);
-          setStatus(status, "bad", "<strong>❌ Scan finished:</strong> address is not a token contract.");
-          return;
-        }
-
-        const c = new ethers.Contract(token, ERC20_ABI, provider);
-
-        // metadata (best-effort)
-        let name = "—", symbol = "—", decimals = 18, supply = 0n;
-        try { name = await c.name(); } catch {}
-        try { symbol = await c.symbol(); } catch {}
-        try { decimals = Number(await c.decimals()); } catch { decimals = 18; }
-        try { supply = BigInt(await c.totalSupply()); } catch { supply = 0n; }
-
-        // owner hint (try several patterns)
-        let owner = null;
-        for (const fn of ["owner", "getOwner", "admin"]) {
-          try {
-            const o = await c[fn]();
-            if (o && isHexAddr(String(o))) { owner = toChecksum(String(o)); break; }
-          } catch {}
-        }
-        const ownerRenounced = owner ? (owner === "0x0000000000000000000000000000000000000000") : null;
-
-        // proxy detection
-        const proxy = await detectProxy(provider, token);
-
-        // multi-DEX / multi-base scan
-        const bnbUsd = await getBnbUsd(provider);
-        const pairsFound = [];
-
-        for (const dex of DEXES) {
-          // skip invalid router addresses
-          if (!isHexAddr(dex.router)) continue;
-
-          const factory = await getDexFactory(provider, dex);
-          if (!factory) continue;
-
-          for (const base of BASES) {
-            const res = await scanOnePair(provider, token, base, dex, factory);
-            if (!res) continue;
-
-            // liquidity approximation in USD:
-            // - stable: 2 * reserveStable
-            // - WBNB: 2 * reserveWBNB * bnbUsd
-            let liqUsdApprox = null;
-            try {
-              const baseAmt = Number(ethers.formatUnits(res.baseReserve, 18));
-              if (base.kind === "stable") {
-                liqUsdApprox = baseAmt * 2;
-              } else if (base.kind === "bnb") {
-                liqUsdApprox = (Number.isFinite(bnbUsd.px) ? baseAmt * bnbUsd.px * 2 : null);
-              }
-            } catch {}
-
-            pairsFound.push({ ...res, liqUsdApprox });
-          }
-        }
-
-        // Sort by liquidity (desc)
-        pairsFound.sort((a,b) => (b.liqUsdApprox || 0) - (a.liqUsdApprox || 0));
-
-        // scoring
-        let score = 0;
-        const notes = [];
-
-        notes.push(`✅ Contract bytecode found`);
-
-        if (!name || name === "—") { score += 1; notes.push(`⚠️ Token name unreadable (non-standard)`); }
-        if (!symbol || symbol === "—") { score += 1; notes.push(`⚠️ Symbol unreadable (non-standard)`); }
-
-        if (proxy?.isProxy && proxy.impl) {
-          notes.push(`ℹ️ Proxy detected (EIP-1967). Implementation: ${proxy.impl}`);
-          if (proxy.admin) notes.push(`ℹ️ Proxy admin slot: ${proxy.admin}`);
-        }
-
-        if (!owner) {
-          score += 1; notes.push(`⚠️ Owner not detectable (may be fine, but less transparent)`);
-        } else if (ownerRenounced) {
-          notes.push(`✅ Ownership appears renounced (owner=0x0)`);
-        } else {
-          score += 1;
-          notes.push(`⚠️ Owner detected: ${owner} (not renounced)`);
-        }
-
-        if (!pairsFound.length) {
-          if (requireLiq) {
-            score += 4;
-            notes.push(`❌ No DEX pair found (require-liquidity enabled)`);
-          } else {
-            score += 1;
-            notes.push(`ℹ️ No DEX pair found (may be “Not listed yet”)`);
-          }
-        } else {
-          const best = pairsFound[0];
-          notes.push(`✅ Best liquidity pair: ${best.dexName} • ${best.baseName} • ${best.pair}`);
-
-          if (best.liqUsdApprox != null) {
-            notes.push(`ℹ️ Liquidity (approx): ${fmtUsd(best.liqUsdApprox)} (method: 2×base side)`);
-            if (best.baseKey === "WBNB" && Number.isFinite(bnbUsd.px)) {
-              notes.push(`ℹ️ BNB/USD: ${bnbUsd.px.toFixed(2)} (${bnbUsd.source})`);
-            }
-            if (best.liqUsdApprox < 25_000) { score += 2; notes.push(`⚠️ Low liquidity signal (< $25k approx)`); }
-          }
-
-          if (best.burnPct != null) {
-            if (best.burnPct >= 50) notes.push(`✅ LP burn seems high: ${best.burnPct.toFixed(2)}%`);
-            else { score += 1; notes.push(`⚠️ LP burn seems low/unknown: ${best.burnPct.toFixed(2)}%`); }
-          }
-        }
-
-        let badge = "info";
-        let headline = "ℹ️ Informational";
-        if (score <= 1) { badge = "ok"; headline = "✅ Looks OK (basic checks)"; }
-        else if (score <= 4) { badge = "warn"; headline = "⚠️ Caution (some risk signals)"; }
-        else { badge = "bad"; headline = "❌ High risk signals"; }
-
-        const supplyHuman = supply ? fmtBigintUnits(supply, decimals) : "—";
-
-        // build report
-        ssLastReport = {
-          token,
-          name,
-          symbol,
-          decimals,
-          totalSupply: supply ? supply.toString() : null,
-          owner: owner || null,
-          ownerRenounced: ownerRenounced === null ? null : ownerRenounced,
-          proxy,
-          requireLiquidity: requireLiq,
-          bnbUsd: Number.isFinite(bnbUsd.px) ? { price: bnbUsd.px, source: bnbUsd.source } : null,
-          pairs: pairsFound.slice(0, 20).map(p => ({
-            dex: p.dexName,
-            router: p.router,
-            factory: p.factory,
-            base: p.baseName,
-            baseAddr: p.baseAddr,
-            pair: p.pair,
-            liquidityUsdApprox: (p.liqUsdApprox != null) ? Number(p.liqUsdApprox) : null,
-            lpBurnPct: (p.burnPct != null) ? Number(p.burnPct) : null
-          })),
-          score,
-          headline,
-          generatedAt: new Date().toISOString(),
-          rpc: _rpcUrl || "auto"
-        };
-
-        // render main output
-        const html = `
-          <strong>${headline}</strong><br><br>
-          <div class="pill">Token: <span class="mono">${token}</span></div>
-          <div style="margin-top:10px" class="small">
-            <b>Name:</b> ${String(name).replace(/</g,"&lt;")}<br>
-            <b>Symbol:</b> ${String(symbol).replace(/</g,"&lt;")}<br>
-            <b>Decimals:</b> ${decimals}<br>
-            <b>Total supply:</b> ${supply ? supplyHuman : "—"}
-          </div>
-          <div style="margin-top:12px" class="small">
-            <b>Signals:</b><br>
-            ${notes.map(n => "• " + n).join("<br>")}
-          </div>
-          <div style="margin-top:12px" class="small">
-            <b>Next:</b> Open a DEX only if you trust the token. Consider external audits / community sources.
-          </div>
-        `;
-
-        setStatus(out, badge, html);
-        setStatus(status, badge, `<strong>Done.</strong> Score: ${score} (lower is better). RPC: <span class="mono">${_rpcUrl || "auto"}</span>`);
-
-        // render DEX buttons/cards
-        ssRenderLinks(pairsFound, token, tokenInHint);
-
-      } catch (e) {
-        console.error(e);
-        setStatus(out, "bad", `<strong>❌ Scan failed.</strong><br>${(e?.message || e || "Unknown error").toString()}`);
-        setStatus(status, "bad", "<strong>❌ Scan failed.</strong> Try again or test RPCs below.");
-      }
-    }
-
-    async function ssCopyShare() {
-      const input = document.getElementById("ss-token");
-      const status = document.getElementById("ss-status");
-      const raw = (input.value || "").trim();
-      if (!raw || !isHexAddr(raw)) {
-        setStatus(status, "warn", "<strong>⚠️ Paste a valid token address first.</strong>");
-        return;
-      }
-      const token = toChecksum(raw);
-      const requireLiq = !!document.getElementById("ss-require-liq").checked;
-
-      let tokenIn = null;
-      try {
-        const u = new URL(window.location.href);
-        const ti = u.searchParams.get("tokenIn");
-        if (ti && isHexAddr(ti)) tokenIn = toChecksum(ti);
-      } catch {}
-
-      const link = ssBuildShareLink({ token, tokenIn, requireLiq });
-      await copyText(link);
-      setStatus(status, "ok", `<strong>✅ Share link copied.</strong><br><span class="mono">${link}</span>`);
-    }
-
-    async function ssCopyJsonReport(){
-      const status = document.getElementById("ss-status");
-      if (!ssLastReport) {
-        setStatus(status, "warn", "<strong>⚠️ No report yet.</strong><br>Run Scan first.");
-        return;
-      }
-      const json = JSON.stringify(ssLastReport, null, 2);
-      await copyText(json);
-      setStatus(status, "ok", "<strong>✅ JSON report copied.</strong>");
-    }
-
-    async function ssOpenManualSwap(){
-      const tokenRaw = (document.getElementById("ss-token").value || "").trim();
-      if (!isHexAddr(tokenRaw)) {
-        setStatus(document.getElementById("ss-status"), "warn", "<strong>⚠️ Paste a valid token address first.</strong>");
-        return;
-      }
-      const token = toChecksum(tokenRaw);
-
-      const dexKey = document.getElementById("ss-dex-select").value;
-      const baseKey = document.getElementById("ss-base-select").value;
-
-      const dex = DEXES.find(d => d.key === dexKey);
-      const base = BASES.find(b => b.key === baseKey);
-
-      if (!dex || !base) return;
-
-      // tokenIn from query if exists, else base
-      let tokenIn = base.addr;
-      try {
-        const u = new URL(window.location.href);
-        const ti = u.searchParams.get("tokenIn");
-        if (ti && isHexAddr(ti)) tokenIn = toChecksum(ti);
-      } catch {}
-
-      const url = dex.swap(tokenIn, token);
-      window.open(url, "_blank", "noopener");
-    }
-
-    // auto-run from ?token=
-    function ssAutoFromQuery(){
-      try {
-        const u = new URL(window.location.href);
-        const t = u.searchParams.get("token");
-        const req = u.searchParams.get("requireLiq");
-        if (req === "1") document.getElementById("ss-require-liq").checked = true;
-        if (t && isHexAddr(t)) {
-          document.getElementById("ss-token").value = toChecksum(t);
-          ssScanV2();
-        }
-      } catch {}
-    }
-
-    document.getElementById("ss-scan").addEventListener("click", ssScanV2);
-    document.getElementById("ss-share").addEventListener("click", ssCopyShare);
-    document.getElementById("ss-copy-json").addEventListener("click", ssCopyJsonReport);
-    document.getElementById("ss-open-manual").addEventListener("click", ssOpenManualSwap);
-
-    // ====== 2) Approvals Guardian ======
-    // IMPORTANT: keep modal in window (fixes module scope issues)
-    window.cxAppKitModal = null;
-
-    let apSigner = null;
-    let apOwner = null;
-
-    const ALLOW_ABI = [
-      "function allowance(address owner, address spender) view returns (uint256)",
-      "function approve(address spender, uint256 value) returns (bool)",
-      "function decimals() view returns (uint8)",
-      "function symbol() view returns (string)"
-    ];
-
-    const MAX_UINT = (1n << 256n) - 1n;
-
-    function apSetStatus(kind, html){
-      setStatus(document.getElementById("ap-status"), kind, html);
-    }
-
-    function apGetSpender(){
-      const preset = document.getElementById("ap-spender-preset").value;
-      const input = document.getElementById("ap-spender").value.trim();
-      if (preset === "pcs_router") return DEXES.find(d=>d.key==="pancake")?.router || input;
-      if (preset === "custom") return input;
-      return input;
-    }
-
-    function apParseTokens(){
-      const raw = document.getElementById("ap-tokens").value || "";
-      return raw
-        .split(/\r?\n/)
-        .map(x => x.trim())
-        .filter(Boolean)
-        .filter(isHexAddr)
-        .map(toChecksum);
-    }
-
-    function apRenderRows(rows){
-      const table = document.getElementById("ap-table");
-      const head = table.querySelector(".trow.head");
-      table.innerHTML = "";
-      table.appendChild(head);
-
-      if (!rows.length) {
-        const row = document.createElement("div");
-        row.className = "trow";
-        row.innerHTML = `<div class="cell muted">—</div><div class="cell muted">—</div><div class="cell muted hide-sm">—</div><div class="cell muted">—</div>`;
-        table.appendChild(row);
-        return;
-      }
-
-      for (const r of rows) {
-        const row = document.createElement("div");
-        row.className = "trow";
-        const allowanceStr = r.allowanceInf ? "∞ (infinite)" : r.allowanceHuman;
-
-        row.innerHTML = `
-          <div class="cell mono" title="${r.token}">${r.token}</div>
-          <div class="cell">${allowanceStr}</div>
-          <div class="cell hide-sm">${r.symbol || "—"}</div>
-          <div class="cell">
-            <button class="btn btn-ghost" data-token="${r.token}" ${(!r.canRevoke ? "disabled" : "")} style="padding:10px 14px; font-size:12px;">
-              Revoke
-            </button>
-          </div>
-        `;
-        table.appendChild(row);
-      }
-
-      table.querySelectorAll("button[data-token]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const token = btn.getAttribute("data-token");
-          await apRevokeOne(token);
-        });
-      });
-    }
-
-    async function apEnsureConnected() {
-      const modal = window.cxAppKitModal;
-      if (!modal?.open) {
-        apSetStatus("warn", "<strong>⚠️ Wallet modal not ready yet.</strong><br>Wait a second and try again.");
-        return false;
-      }
-
-      apSetStatus("info", "<strong>⏳ Connecting wallet…</strong>");
-      await modal.open({ view: "ConnectWallet" });
-
-      const start = Date.now();
-      while (Date.now() - start < 90000) {
-        const p = modal.getWalletProvider?.();
-        if (p) {
-          const bp = new ethers.BrowserProvider(p);
-          apSigner = await bp.getSigner();
-          apOwner = await apSigner.getAddress();
-          document.getElementById("ap-address").textContent = apOwner;
-          apSetStatus("ok", "<strong>✅ Wallet connected.</strong>");
-          return true;
-        }
-        await sleep(250);
-      }
-
-      apSetStatus("warn", "<strong>⚠️ Connection timeout.</strong><br>Please try again.");
-      return false;
-    }
-
-    async function apCheck() {
-      const ok = apOwner ? true : await apEnsureConnected();
-      if (!ok) return;
-
-      const spenderRaw = apGetSpender();
-      if (!isHexAddr(spenderRaw)) {
-        apSetStatus("bad", "<strong>❌ Invalid spender address.</strong>");
-        return;
-      }
-      const spender = toChecksum(spenderRaw);
-
-      const tokens = apParseTokens();
-      if (!tokens.length) {
-        apSetStatus("warn", "<strong>⚠️ No valid token addresses.</strong><br>Paste at least one token address (one per line).");
-        return;
-      }
-
-      apSetStatus("info", `<strong>⏳ Checking allowances…</strong><br>Owner: <span class="mono">${fmtAddr(apOwner)}</span> • Spender: <span class="mono">${fmtAddr(spender)}</span>`);
-
-      const rows = [];
-      for (const t of tokens) {
-        try {
-          const c = new ethers.Contract(t, ALLOW_ABI, apSigner);
-          let sym = "—", dec = 18;
-          try { sym = await c.symbol(); } catch {}
-          try { dec = Number(await c.decimals()); } catch { dec = 18; }
-
-          const a = BigInt(await c.allowance(apOwner, spender));
-          const isInf = (a > (MAX_UINT / 2n));
-          const human = isInf ? "∞" : (a === 0n ? "0" : fmtBigintUnits(a, dec));
-
-          rows.push({
-            token: t,
-            symbol: sym,
-            allowance: a,
-            allowanceInf: isInf,
-            allowanceHuman: human,
-            canRevoke: (a > 0n)
-          });
-        } catch {
-          rows.push({
-            token: t,
-            symbol: "—",
-            allowance: 0n,
-            allowanceInf: false,
-            allowanceHuman: "error",
-            canRevoke: false
-          });
-        }
-      }
-
-      apRenderRows(rows);
-
-      const nonZero = rows.filter(r => r.allowance > 0n).length;
-      apSetStatus(nonZero ? "warn" : "ok",
-        `<strong>Done.</strong><br>Checked ${rows.length} token(s). Non-zero: ${nonZero}.`);
-    }
-
-    async function apRevokeOne(tokenAddr) {
-      const spenderRaw = apGetSpender();
-      if (!apOwner || !apSigner) {
-        apSetStatus("warn", "<strong>⚠️ Connect wallet first.</strong>");
-        return;
-      }
-      if (!isHexAddr(spenderRaw)) {
-        apSetStatus("bad", "<strong>❌ Invalid spender address.</strong>");
-        return;
-      }
-      const spender = toChecksum(spenderRaw);
-      const token = toChecksum(tokenAddr);
-
-      apSetStatus("info", `<strong>⏳ Revoking…</strong><br>Token: <span class="mono">${fmtAddr(token)}</span> • Spender: <span class="mono">${fmtAddr(spender)}</span>`);
-
-      try {
-        const c = new ethers.Contract(token, ALLOW_ABI, apSigner);
-        const tx = await c.approve(spender, 0);
-        apSetStatus("info", `<strong>⏳ Pending…</strong><br><span class="mono">${tx.hash}</span>`);
-        await tx.wait();
-        apSetStatus("ok", "<strong>✅ Revoke successful.</strong>");
-        await apCheck();
-      } catch (e) {
-        console.error(e);
-        apSetStatus("bad", `<strong>❌ Revoke failed.</strong><br>${(e?.message || e).toString()}`);
-      }
-    }
-
-    async function apRevokeAllNonZero() {
-      const ok = apOwner ? true : await apEnsureConnected();
-      if (!ok) return;
-
-      const tokens = apParseTokens();
-      if (!tokens.length) {
-        apSetStatus("warn", "<strong>⚠️ No valid token addresses.</strong>");
-        return;
-      }
-
-      await apCheck();
-
-      const rows = [];
-      document.querySelectorAll("#ap-table button[data-token]").forEach(btn => {
-        if (!btn.disabled) rows.push(btn.getAttribute("data-token"));
-      });
-
-      if (!rows.length) {
-        apSetStatus("ok", "<strong>✅ Nothing to revoke.</strong>");
-        return;
-      }
-
-      apSetStatus("warn", `<strong>⏳ Revoking ${rows.length} token(s)…</strong><br>This will send multiple transactions.`);
-      for (const t of rows) {
-        await apRevokeOne(t);
-        await sleep(500);
-      }
-      apSetStatus("ok", "<strong>✅ Revoke batch finished.</strong>");
-    }
-
-    document.getElementById("ap-spender-preset").addEventListener("change", () => {
-      const preset = document.getElementById("ap-spender-preset").value;
-      const input = document.getElementById("ap-spender");
-      if (preset === "pcs_router") {
-        input.value = DEXES.find(d=>d.key==="pancake")?.router || "";
-        input.disabled = true;
-      } else {
-        input.value = "";
-        input.disabled = false;
-      }
-    });
-
-    document.getElementById("ap-spender").value = DEXES.find(d=>d.key==="pancake")?.router || "";
-    document.getElementById("ap-spender").disabled = true;
-
-    document.getElementById("ap-connect").addEventListener("click", apEnsureConnected);
-    document.getElementById("ap-check").addEventListener("click", apCheck);
-    document.getElementById("ap-revoke-all").addEventListener("click", apRevokeAllNonZero);
-
-    // ====== 3) Bookmarklet (multi-DEX param extraction) ======
-    function buildSecurityBase(){
-      const u = new URL(window.location.href);
-      return u.origin + "/security/";
-    }
-
-    const bookmarklet = `javascript:(function(){try{var u=new URL(location.href);var get=function(k){return u.searchParams.get(k)||'';};var tokenOut=get('outputCurrency')||get('tokenOut')||get('out')||get('currency')||get('address')||get('token')||'';var tokenIn=get('inputCurrency')||get('tokenIn')||get('in')||'';if(!tokenOut){tokenOut=prompt('Paste token address (BSC):');}if(!tokenOut){return;}var dest='${buildSecurityBase()}?token='+encodeURIComponent(tokenOut.trim());if(tokenIn){dest += '&tokenIn='+encodeURIComponent(tokenIn.trim());}window.open(dest,'_blank');}catch(e){alert('DEX Guard error: '+e.message);}})();`;
-
-    document.getElementById("bm-link").href = bookmarklet;
-    document.getElementById("bm-code").value = bookmarklet;
-
-    // ====== 4) RPC Checker ======
-    function rpcRow(url, latency, block, ok){
-      const table = document.getElementById("rpc-table");
-      const row = document.createElement("div");
-      row.className = "trow";
-
-      const tag = ok ? "✅ OK" : "❌ Fail";
-      const lat = ok ? (latency.toFixed(0) + " ms") : "—";
-      const blockStr = ok ? String(block) : "—";
-
-      row.innerHTML = `
-        <div class="cell mono" title="${url}">${url}</div>
-        <div class="cell">${lat}</div>
-        <div class="cell hide-sm">${blockStr}</div>
-        <div class="cell">${tag}</div>
-      `;
-
-      if (ok && url === _bestRpc) {
-        row.style.background = "rgba(0,230,118,0.10)";
-        row.style.borderTopColor = "rgba(0,230,118,0.20)";
-      }
-
-      table.appendChild(row);
-    }
-
-    async function rpcTestAll(){
-      const status = document.getElementById("rpc-status");
-      const custom = (document.getElementById("rpc-custom").value || "").trim();
-
-      const list = [...RPCS_DEFAULT];
-      if (custom) list.unshift(custom);
-
-      const table = document.getElementById("rpc-table");
-      table.innerHTML = `
-        <div class="trow head">
-          <div class="cell">RPC</div>
-          <div class="cell">Latency</div>
-          <div class="cell hide-sm">Block</div>
-          <div class="cell">Status</div>
+    function addSignal({ level, title, desc }){
+      const wrap = document.createElement("div");
+      wrap.className = `sig ${level}`;
+      wrap.innerHTML = `
+        <div class="icon">${level==="good"?"✅":level==="warn"?"⚠️":"🛑"}</div>
+        <div class="txt">
+          <div class="t">${title}</div>
+          <div class="d">${desc}</div>
         </div>
       `;
-
-      setStatus(status, "info", `<strong>⏳ Testing ${list.length} RPC(s)…</strong>`);
-      _bestRpc = "";
-      let bestMs = Infinity;
-
-      for (const url of list) {
-        let ok = false;
-        let ms = 0;
-        let block = 0;
-
-        try {
-          const p = new ethers.JsonRpcProvider(url);
-          const t0 = performance.now();
-          block = await p.getBlockNumber();
-          const net = await p.getNetwork();
-          const t1 = performance.now();
-          ms = (t1 - t0);
-
-          if (Number(net.chainId) !== 56) throw new Error("Wrong chainId");
-          ok = true;
-
-          if (ms < bestMs) {
-            bestMs = ms;
-            _bestRpc = url;
-          }
-        } catch {
-          ok = false;
-        }
-
-        rpcRow(url, ms, block, ok);
-        await sleep(120);
-      }
-
-      if (_bestRpc) {
-        setStatus(status, "ok", `<strong>✅ Best RPC:</strong> <span class="mono">${_bestRpc}</span>`);
-      } else {
-        setStatus(status, "bad", "<strong>❌ All RPC tests failed.</strong><br>Try a different custom RPC.");
-      }
+      $("siglist").appendChild(wrap);
     }
 
-    async function rpcCopyBest(){
-      const status = document.getElementById("rpc-status");
-      if (!_bestRpc) {
-        setStatus(status, "warn", "<strong>⚠️ No best RPC yet.</strong><br>Run Test RPCs first.");
+    function clearSignals(){
+      $("siglist").innerHTML = "";
+    }
+
+    function parseTokenFromUrl(){
+      const u = new URL(window.location.href);
+      const tok = u.searchParams.get("token");
+      if(tok && /^0x[a-fA-F0-9]{40}$/.test(tok.trim())) return tok.trim();
+      return "";
+    }
+
+    // =========================
+    // Provider selection
+    // =========================
+    let _activeRpc = localStorage.getItem("cx_best_rpc") || DEFAULT_RPCS[0].url;
+
+    function makeProvider(rpcUrl){
+      return new ethers.JsonRpcProvider(rpcUrl, BSC.chainId, { staticNetwork: true });
+    }
+
+    async function pickWorkingProvider(preferredList){
+      // Try cached first, then list
+      const tryList = [ _activeRpc, ...preferredList.filter(x => x !== _activeRpc) ];
+
+      for(const url of tryList){
+        try{
+          const p = makeProvider(url);
+          await Promise.race([
+            p.getBlockNumber(),
+            new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")), 4500))
+          ]);
+          _activeRpc = url;
+          localStorage.setItem("cx_best_rpc", url);
+          return p;
+        }catch(e){}
+      }
+
+      // last resort
+      return makeProvider(DEFAULT_RPCS[0].url);
+    }
+
+    // =========================
+    // Base / DEX selectors
+    // =========================
+    const BASES = [
+      { id:"BNB", label:"BNB", value:"BNB" },
+      { id:"WBNB", label:"WBNB", value: BSC.tokens.WBNB },
+      { id:"USDT", label:"USDT", value: BSC.tokens.USDT },
+      { id:"USDC", label:"USDC", value: BSC.tokens.USDC },
+      { id:"BUSD", label:"BUSD", value: BSC.tokens.BUSD },
+    ];
+
+    function initSelectors(){
+      const dexSel = $("dexSelect");
+      dexSel.innerHTML = DEXES.map(d => `<option value="${d.id}">${d.name}</option>`).join("");
+
+      const baseSel = $("baseSelect");
+      baseSel.innerHTML = BASES.map(b => `<option value="${b.value}">${b.label}</option>`).join("");
+
+      // presets for approvals spender
+      const spenderPreset = $("spenderPreset");
+      spenderPreset.innerHTML =
+        `<option value="">(choose preset)</option>` +
+        DEXES.map(d => `<option value="${d.router}">${d.name} Router</option>`).join("");
+
+      spenderPreset.addEventListener("change", ()=>{
+        $("spenderAddr").value = spenderPreset.value || "";
+      });
+    }
+
+    // =========================
+    // Bookmarklet generator
+    // =========================
+    function extractFirstAddress(str){
+      const m = (str || "").match(/0x[a-fA-F0-9]{40}/);
+      return m ? m[0] : "";
+    }
+
+    function makeBookmarklet(hubUrl){
+      const base = (hubUrl || "").trim() || (window.location.origin + "/security/");
+      const js = `(function(){try{var hub="${base.replace(/"/g,'\\"')}";var href=String(location.href||"");var u;try{u=new URL(href);}catch(e){u=null;}var cand="";function pick(v){if(!cand&&v&&/0x[a-fA-F0-9]{40}/.test(v))cand=v.match(/0x[a-fA-F0-9]{40}/)[0];}
+if(u){var sp=u.searchParams;["outputCurrency","inputCurrency","token","tokenIn","tokenOut","address","contractAddress","currency","fromToken","toToken"].forEach(function(k){pick(sp.get(k)||"");});pick(u.hash||"");pick(u.pathname||"");}
+pick(href);
+if(!cand){cand=prompt("Paste token address (BSC):","");}
+if(!cand){return;}
+cand=cand.trim();
+if(!/^0x[a-fA-F0-9]{40}$/.test(cand)){alert("Invalid address");return;}
+var dest=hub+(hub.indexOf("?")>-1?"&":"?")+"token="+encodeURIComponent(cand);
+location.href=dest;}catch(e){alert("Bookmarklet error: "+(e&&e.message?e.message:e));}})();`;
+      const href = "javascript:" + js;
+      return { href, js };
+    }
+
+    function updateBookmarklet(){
+      const hubUrl = $("hubUrl").value.trim();
+      localStorage.setItem("cx_hub_url", hubUrl);
+
+      const bm = makeBookmarklet(hubUrl);
+      $("bmDrag").setAttribute("href", bm.href);
+      $("bmCode").textContent = bm.href;
+    }
+
+    // =========================
+    // BscScan optional
+    // =========================
+    function getBscscanKey(){
+      return ($("bscscanKey").value || "").trim();
+    }
+    async function bscscanGetSource(addr){
+      const key = getBscscanKey();
+      if(!key) return { ok:false, reason:"no_key" };
+
+      const url = `https://api.bscscan.com/api?module=contract&action=getsourcecode&address=${addr}&apikey=${encodeURIComponent(key)}`;
+      const r = await fetch(url);
+      const j = await r.json();
+      if(j && j.status === "1" && Array.isArray(j.result) && j.result[0]){
+        return { ok:true, data: j.result[0] };
+      }
+      return { ok:false, reason:"api_fail", raw:j };
+    }
+
+    // =========================
+    // Scan logic
+    // =========================
+    let lastReport = null;
+
+    function setStatus(level, title, sub){
+      setDot($("statusDot"), level);
+      $("statusTitle").textContent = title;
+      $("statusSub").textContent = sub;
+    }
+
+    async function tryCall(fn){
+      try{ return await fn(); }catch(e){ return null; }
+    }
+
+    function isZeroAddr(a){
+      return !a || /^0x0{40}$/.test(a.toLowerCase());
+    }
+    function isDeadAddr(a){
+      if(!a) return false;
+      const x = a.toLowerCase();
+      return x === "0x000000000000000000000000000000000000dead" || isZeroAddr(x);
+    }
+
+    async function getOwnerLike(contract){
+      const candidates = [
+        () => contract.owner(),
+        () => contract.getOwner(),
+        () => contract.admin(),
+      ];
+      for(const c of candidates){
+        const v = await tryCall(c);
+        if(v && /^0x[a-fA-F0-9]{40}$/.test(v)) return v;
+      }
+      return null;
+    }
+
+    async function getEip1967(provider, addr){
+      // EIP-1967 implementation slot: 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
+      // admin slot: 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103
+      const implSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+      const admSlot  = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103";
+      const [implRaw, admRaw] = await Promise.all([
+        provider.getStorage(addr, implSlot).catch(()=> "0x"),
+        provider.getStorage(addr, admSlot).catch(()=> "0x"),
+      ]);
+
+      function slotToAddr(hex){
+        if(!hex || hex === "0x") return null;
+        const h = hex.replace(/^0x/,"").padStart(64,"0");
+        const a = "0x" + h.slice(24);
+        if(/^0x0{40}$/.test(a.toLowerCase())) return null;
+        try{ return ethers.getAddress(a); }catch(e){ return null; }
+      }
+
+      return {
+        implementation: slotToAddr(implRaw),
+        admin: slotToAddr(admRaw)
+      };
+    }
+
+    async function getBnbUsd(provider){
+      const feed = new ethers.Contract(BSC.chainlink.BNBUSD, ABI_CHAINLINK, provider);
+      const dec = await feed.decimals().catch(()=> 8);
+      const rd = await feed.latestRoundData();
+      const price = Number(rd[1]) / (10 ** Number(dec)); // int256
+      return price;
+    }
+
+    async function findLiquiditySignals(provider, tokenAddr){
+      // Multi-DEX, multi-base:
+      // We'll discover each DEX factory via router.factory(), then check getPair(token, base)
+      const bases = [
+        { symbol:"WBNB", addr: BSC.tokens.WBNB, usdType:"bnb" },
+        { symbol:"USDT", addr: BSC.tokens.USDT, usdType:"stable" },
+        { symbol:"USDC", addr: BSC.tokens.USDC, usdType:"stable" },
+        { symbol:"BUSD", addr: BSC.tokens.BUSD, usdType:"stable" },
+      ];
+
+      let bnbUsd = null;
+      try{ bnbUsd = await getBnbUsd(provider); }catch(e){ bnbUsd = null; }
+
+      const results = [];
+
+      for(const dex of DEXES){
+        const router = new ethers.Contract(dex.router, ABI_ROUTER, provider);
+        const factoryAddr = await tryCall(()=>router.factory());
+        if(!factoryAddr) continue;
+
+        const factory = new ethers.Contract(factoryAddr, ABI_FACTORY, provider);
+
+        for(const b of bases){
+          const pair = await tryCall(()=>factory.getPair(tokenAddr, b.addr));
+          if(!pair || isZeroAddr(pair)) continue;
+
+          const pairC = new ethers.Contract(pair, ABI_PAIR, provider);
+          const [t0,t1,res,ts,deadBal,zeroBal] = await Promise.all([
+            pairC.token0().catch(()=> null),
+            pairC.token1().catch(()=> null),
+            pairC.getReserves().catch(()=> null),
+            pairC.totalSupply().catch(()=> null),
+            pairC.balanceOf("0x000000000000000000000000000000000000dEaD").catch(()=> 0n),
+            pairC.balanceOf("0x0000000000000000000000000000000000000000").catch(()=> 0n),
+          ]);
+
+          if(!t0 || !t1 || !res) continue;
+
+          const reserve0 = BigInt(res[0]);
+          const reserve1 = BigInt(res[1]);
+
+          const baseIs0 = (t0.toLowerCase() === b.addr.toLowerCase());
+          const baseReserve = baseIs0 ? reserve0 : reserve1;
+
+          // LP burn %
+          let lpBurnPct = null;
+          if(ts && ts > 0n){
+            const burned = deadBal + zeroBal;
+            lpBurnPct = Number((burned * 10000n) / ts) / 100; // 2 decimals
+          }
+
+          // USD liquidity estimate: base side * 2 (rough)
+          let usd = null;
+          try{
+            if(b.usdType === "stable"){
+              // stable has 18 for BUSD, 18 for USDT on BSC, 18? USDC is 18 on BSC.
+              // We'll assume 18 to avoid calling decimals for base tokens (fast). It's fine for signal.
+              const baseAmt = Number(baseReserve) / 1e18;
+              usd = baseAmt * 2;
+            }else if(b.usdType === "bnb" && bnbUsd){
+              const baseAmt = Number(baseReserve) / 1e18;
+              usd = baseAmt * bnbUsd * 2;
+            }
+          }catch(e){ usd = null; }
+
+          results.push({
+            dex: dex.name,
+            dexId: dex.id,
+            pair,
+            base: b.symbol,
+            baseReserve: baseReserve.toString(),
+            approxUsdLiquidity: usd,
+            lpBurnPct,
+          });
+        }
+      }
+
+      // sort best USD
+      results.sort((a,b)=>(b.approxUsdLiquidity||0)-(a.approxUsdLiquidity||0));
+      return { results, bnbUsd };
+    }
+
+    async function runScan(){
+      const raw = $("tokenAddr").value.trim();
+      clearSignals();
+      lastReport = null;
+
+      let tokenAddr;
+      try{ tokenAddr = ethers.getAddress(raw); }
+      catch(e){
+        setStatus("bad","Invalid address","Please paste a valid 0x… token contract address.");
+        addSignal({ level:"bad", title:"Invalid address", desc:"The input is not a valid EVM address." });
         return;
       }
-      await copyText(_bestRpc);
-      setStatus(status, "ok", `<strong>✅ Copied:</strong> <span class="mono">${_bestRpc}</span>`);
+
+      setStatus("warn","Scanning…","Reading on-chain data (metadata, owner/proxy hints, liquidity).");
+      $("ts").textContent = nowIso();
+
+      const provider = await pickWorkingProvider(DEFAULT_RPCS.map(x=>x.url));
+
+      const code = await provider.getCode(tokenAddr);
+      if(!code || code === "0x"){
+        setStatus("bad","No contract bytecode","This address has no contract code on BSC.");
+        addSignal({ level:"bad", title:"Contract bytecode not found", desc:"No contract deployed at this address (on BSC)." });
+        lastReport = { token: tokenAddr, ok:false, reason:"no_code", rpc:_activeRpc, ts: nowIso() };
+        return;
+      }
+
+      const token = new ethers.Contract(tokenAddr, ABI_ERC20, provider);
+
+      // Basic metadata
+      const [name, symbol, decimals, totalSupply] = await Promise.all([
+        tryCall(()=>token.name()),
+        tryCall(()=>token.symbol()),
+        tryCall(()=>token.decimals()),
+        tryCall(()=>token.totalSupply()),
+      ]);
+
+      if(name && symbol){
+        addSignal({ level:"good", title:`${name} (${symbol})`, desc:`Decimals: ${decimals ?? "?"} • Total supply: ${totalSupply ? totalSupply.toString() : "?"}` });
+      }else{
+        addSignal({ level:"warn", title:"Metadata partially unavailable", desc:"Could not read name/symbol/decimals reliably. (May still be a valid token.)" });
+      }
+
+      addSignal({ level:"good", title:"Contract bytecode found", desc:"The address has deployed bytecode on BSC." });
+
+      // Owner / Proxy hints
+      const ownerLike = await getOwnerLike(token);
+      const eip1967 = await getEip1967(provider, tokenAddr);
+      const implFn = await tryCall(()=>token.implementation());
+      const proxyImpl = implFn || eip1967.implementation;
+
+      let ownerRisk = 0;
+      if(ownerLike){
+        if(isDeadAddr(ownerLike)){
+          addSignal({ level:"good", title:"Owner appears renounced", desc:`Owner-like address: ${ownerLike}` });
+        }else{
+          ownerRisk += 1;
+          addSignal({ level:"warn", title:"Owner not renounced", desc:`Owner-like address detected: ${ownerLike}` });
+        }
+      }else{
+        addSignal({ level:"warn", title:"Owner not detected", desc:"Could not read owner/getOwner/admin from common patterns." });
+      }
+
+      let proxyRisk = 0;
+      if(proxyImpl){
+        proxyRisk += 1;
+        addSignal({ level:"warn", title:"Proxy hint detected", desc:`Implementation: ${proxyImpl} (EIP-1967/implementation() hint)` });
+      }else{
+        addSignal({ level:"good", title:"No obvious proxy hint", desc:"No EIP-1967 implementation detected (best-effort)." });
+      }
+
+      // Owner balance concentration
+      let ownerBalPct = null;
+      if(ownerLike && totalSupply && !isDeadAddr(ownerLike)){
+        const bal = await tryCall(()=>token.balanceOf(ownerLike));
+        if(bal != null){
+          try{
+            ownerBalPct = Number((BigInt(bal) * 10000n) / BigInt(totalSupply)) / 100; // 2dp
+            if(ownerBalPct >= 20){
+              ownerRisk += 2;
+              addSignal({ level:"bad", title:"High owner concentration", desc:`Owner holds ~${ownerBalPct}% of total supply.` });
+            }else if(ownerBalPct >= 5){
+              ownerRisk += 1;
+              addSignal({ level:"warn", title:"Owner concentration", desc:`Owner holds ~${ownerBalPct}% of total supply.` });
+            }else{
+              addSignal({ level:"good", title:"Owner concentration looks lower", desc:`Owner holds ~${ownerBalPct}% of total supply.` });
+            }
+          }catch(e){}
+        }
+      }
+
+      // Liquidity signals across DEXs
+      const { results: liq, bnbUsd } = await findLiquiditySignals(provider, tokenAddr);
+
+      const requireLiq = $("chkRequireLiq").checked;
+      if(liq.length === 0){
+        if(requireLiq){
+          addSignal({ level:"bad", title:"No DEX pair found (required)", desc:"No pair found on checked DEX factories for WBNB/USDT/USDC/BUSD." });
+        }else{
+          addSignal({ level:"warn", title:"No DEX pair found", desc:"May be not listed yet. Liquidity checks are informational unless ‘Require liquidity’ is enabled." });
+        }
+      }else{
+        const best = liq[0];
+        const usd = best.approxUsdLiquidity ? `$${best.approxUsdLiquidity.toFixed(0)}` : "—";
+        const burn = (best.lpBurnPct == null) ? "—" : `${best.lpBurnPct.toFixed(2)}%`;
+        addSignal({
+          level: (best.approxUsdLiquidity && best.approxUsdLiquidity >= 10000) ? "good" : "warn",
+          title: `Liquidity detected (${best.dex} / ${best.base})`,
+          desc: `Pair: ${best.pair} • Est. liquidity: ${usd} • LP burned (0x0 + dead): ${burn}`
+        });
+
+        // Also show additional pairs (compact)
+        if(liq.length > 1){
+          const extra = liq.slice(1,4).map(x=>{
+            const u = x.approxUsdLiquidity ? `$${x.approxUsdLiquidity.toFixed(0)}` : "—";
+            return `${x.dex}(${x.base}) ${u}`;
+          }).join(" • ");
+          addSignal({ level:"good", title:"More liquidity signals", desc: extra });
+        }
+
+        if(bnbUsd){
+          addSignal({ level:"good", title:"BNB/USD oracle read", desc:`Chainlink BNB/USD ≈ ${bnbUsd.toFixed(2)}` });
+        }
+      }
+
+      // Optional: Verified source via BscScan
+      let verified = null;
+      const bscRes = await bscscanGetSource(tokenAddr);
+      if(bscRes.ok){
+        const sc = bscRes.data;
+        verified = (sc.ABI && sc.ABI !== "Contract source code not verified") ? true : false;
+        if(verified){
+          addSignal({ level:"good", title:"BscScan: Verified source", desc:"Contract source appears verified on BscScan." });
+        }else{
+          addSignal({ level:"warn", title:"BscScan: Not verified", desc:"BscScan API indicates source is not verified." });
+        }
+        if(sc.Proxy && sc.Proxy !== "0"){
+          addSignal({ level:"warn", title:"BscScan: Proxy flagged", desc:`BscScan reports Proxy=${sc.Proxy}. Implementation: ${sc.Implementation || "—"}` });
+          proxyRisk += 1;
+        }
+      }else{
+        addSignal({ level:"warn", title:"Verified status: unknown", desc:"Add an optional BscScan API key to check if the contract is verified." });
+      }
+
+      // Final rating
+      let risk = ownerRisk + proxyRisk;
+
+      // if requireLiq and none found -> heavy risk
+      if(requireLiq && liq.length === 0) risk += 3;
+
+      let level = "good";
+      let title = "Looks OK (basic hygiene)";
+      let sub = "No critical red flags detected by these checks.";
+      if(risk >= 4){
+        level = "bad";
+        title = "High caution";
+        sub = "Multiple risk signals detected. Verify carefully before swapping.";
+      }else if(risk >= 2){
+        level = "warn";
+        title = "Caution (some risk signals)";
+        sub = "Some signals need attention (owner/proxy/liquidity/verification).";
+      }
+      setStatus(level, title, sub);
+
+      lastReport = {
+        ok: true,
+        token: tokenAddr,
+        name: name || null,
+        symbol: symbol || null,
+        decimals: decimals ?? null,
+        totalSupply: totalSupply ? totalSupply.toString() : null,
+        ownerLike: ownerLike || null,
+        ownerBalPct,
+        proxyImpl: proxyImpl || null,
+        liquidity: liq,
+        requireLiquidity: requireLiq,
+        rpc: _activeRpc,
+        ts: nowIso(),
+      };
     }
 
-    document.getElementById("rpc-test").addEventListener("click", rpcTestAll);
-    document.getElementById("rpc-copy-best").addEventListener("click", rpcCopyBest);
+    // =========================
+    // Buttons
+    // =========================
+    $("btnScan").addEventListener("click", runScan);
 
-    document.getElementById("btn-run-all").addEventListener("click", async () => {
-      await ssScanV2();
-      await rpcTestAll();
+    $("btnOpenBscscan").addEventListener("click", ()=>{
+      const a = $("tokenAddr").value.trim();
+      const tok = extractFirstAddress(a);
+      if(!tok) return alert("Paste token address first.");
+      window.open(BSC.explorer.token(tok), "_blank", "noopener");
     });
 
-    document.getElementById("btn-connect").addEventListener("click", apEnsureConnected);
+    $("btnOpenDex").addEventListener("click", ()=>{
+      const a = $("tokenAddr").value.trim();
+      const tok = extractFirstAddress(a);
+      if(!tok) return alert("Paste token address first.");
+      const dexId = $("dexSelect").value;
+      const base = $("baseSelect").value;
+      const dex = DEXES.find(d=>d.id===dexId) || DEXES[0];
+      const url = dex.buildSwapUrl({ token: tok, base });
+      window.open(url, "_blank", "noopener");
+    });
 
-    // init dropdowns + autorun
-    initDexBaseDropdowns();
-    ssAutoFromQuery();
-  </script>
+    $("btnCopyShare").addEventListener("click", async ()=>{
+      const a = $("tokenAddr").value.trim();
+      const tok = extractFirstAddress(a);
+      if(!tok) return alert("Paste token address first.");
+      const share = `${window.location.origin}/security/?token=${encodeURIComponent(tok)}`;
+      await copyText(share);
+      alert("Share link copied.");
+    });
 
-  <!-- AppKit (wallet list) -->
-  <script type="module">
-    import { createAppKit } from "https://esm.sh/@reown/appkit@1.8.15";
-    import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
-    import { bsc } from "https://esm.sh/@reown/appkit/networks";
+    $("btnCopyJson").addEventListener("click", async ()=>{
+      if(!lastReport) return alert("Run Scan first.");
+      await copyText(safeJson(lastReport));
+      alert("JSON report copied.");
+    });
 
-    const projectId = "7886bcb95105e9e47337cec481d5de75";
+    function openXIntent(text, url){
+      const u = new URL("https://twitter.com/intent/tweet");
+      u.searchParams.set("text", text);
+      if(url) u.searchParams.set("url", url);
+      window.open(u.toString(), "_blank", "noopener");
+    }
 
-    const modal = createAppKit({
-      adapters: [new EthersAdapter()],
-      networks: [bsc],
-      defaultNetwork: bsc,
-      projectId,
-      analytics: false,
-      metadata: {
-        name: "CycleX",
-        description: "CycleX Security Hub",
-        url: window.location.origin,
-        icons: [`${window.location.origin}/logo.png`]
+    $("btnShareX").addEventListener("click", ()=>{
+      const a = $("tokenAddr").value.trim();
+      const tok = extractFirstAddress(a);
+      if(!tok) return alert("Paste token address first.");
+      const share = `${window.location.origin}/security/?token=${encodeURIComponent(tok)}`;
+      const title = lastReport?.ok ? (lastReport.symbol ? `${lastReport.symbol} scan` : "Token scan") : "Token scan";
+      const text =
+        `CycleX Security Hub • ${title}\n` +
+        `Token: ${tok}\n` +
+        `Run basic checks (owner/proxy/liquidity) before swapping.`;
+      openXIntent(text, share);
+    });
+
+    $("btnShareXTop").addEventListener("click", ()=>{
+      const share = `${window.location.origin}/security/`;
+      openXIntent("CycleX Security Hub • on-chain hygiene checks before swapping.", share);
+    });
+
+    $("btnSaveKey").addEventListener("click", ()=>{
+      localStorage.setItem("cx_bscscan_key", getBscscanKey());
+      alert("Saved (local browser).");
+    });
+
+    // =========================
+    // Approvals tool
+    // =========================
+    let apprProvider = null;
+    let apprSigner = null;
+
+    function setAppr(level, title, sub){
+      setDot($("apprDot"), level);
+      $("apprTitle").textContent = title;
+      $("apprSub").textContent = sub;
+    }
+
+    async function connectWallet(){
+      if(!window.ethereum){
+        setAppr("bad","No wallet detected","Install MetaMask / a Web3 wallet.");
+        return;
+      }
+      setAppr("warn","Connecting…","Waiting for wallet approval.");
+      const bp = new ethers.BrowserProvider(window.ethereum, "any");
+      await bp.send("eth_requestAccounts", []);
+      const signer = await bp.getSigner();
+      const addr = await signer.getAddress();
+      apprProvider = bp;
+      apprSigner = signer;
+      $("ownerAddr").value = addr;
+      setAppr("good","Connected", `Wallet: ${addr}`);
+    }
+
+    $("btnConnect").addEventListener("click", connectWallet);
+
+    $("btnUseScannedToken").addEventListener("click", ()=>{
+      const a = $("tokenAddr").value.trim();
+      const tok = extractFirstAddress(a);
+      if(!tok) return alert("No scanned token.");
+      const cur = $("tokenList").value.trim();
+      $("tokenList").value = cur ? (cur + "\n" + tok) : tok;
+    });
+
+    $("btnCopyOwnerLink").addEventListener("click", async ()=>{
+      const owner = extractFirstAddress($("ownerAddr").value.trim());
+      if(!owner) return alert("Paste/Connect owner wallet first.");
+      const link = BSC.explorer.approvals(owner);
+      await copyText(link);
+      alert("BscScan approvals link copied.");
+    });
+
+    async function readTokenMeta(p, tokenAddr){
+      const c = new ethers.Contract(tokenAddr, ABI_ERC20, p);
+      const [sym, dec] = await Promise.all([
+        tryCall(()=>c.symbol()),
+        tryCall(()=>c.decimals()),
+      ]);
+      return { sym: sym || "?", dec: (dec == null ? 18 : Number(dec)) };
+    }
+
+    function parseTokenLines(){
+      return $("tokenList").value
+        .split(/\r?\n/)
+        .map(x=>x.trim())
+        .filter(Boolean)
+        .map(extractFirstAddress)
+        .filter(x=>/^0x[a-fA-F0-9]{40}$/.test(x));
+    }
+
+    $("btnCheckAllow").addEventListener("click", async ()=>{
+      const owner = extractFirstAddress($("ownerAddr").value.trim());
+      const spender = extractFirstAddress($("spenderAddr").value.trim());
+      const tokens = parseTokenLines();
+
+      if(!owner || !spender) return alert("Owner + Spender are required.");
+      if(tokens.length === 0) return alert("Paste at least 1 token address.");
+
+      if(!apprProvider) await connectWallet();
+      if(!apprProvider) return;
+
+      setAppr("warn","Checking…",`Reading allowances for ${tokens.length} token(s).`);
+      $("allowTbody").innerHTML = "";
+
+      for(const t of tokens){
+        const meta = await readTokenMeta(apprProvider, t);
+        const c = new ethers.Contract(t, ABI_ERC20, apprProvider);
+        const alw = await tryCall(()=>c.allowance(owner, spender));
+        const pretty = (alw == null) ? "—" : ethers.formatUnits(alw, meta.dec);
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><span class="tag">${shortAddr(t)}</span></td>
+          <td>${meta.sym}</td>
+          <td>${pretty}</td>
+          <td><button class="btn small" data-revoke="${t}">Revoke</button></td>
+        `;
+        $("allowTbody").appendChild(tr);
+      }
+
+      $("allowTbody").querySelectorAll("button[data-revoke]").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          if(!apprSigner) return alert("Connect wallet first.");
+          const t = btn.getAttribute("data-revoke");
+          await revokeOne(t);
+        });
+      });
+
+      setAppr("good","Done","Allowances loaded.");
+      $("apprHint").textContent = "If allowance is large/infinite for a spender you don’t trust, revoke it.";
+    });
+
+    async function revokeOne(tokenAddr){
+      const spender = extractFirstAddress($("spenderAddr").value.trim());
+      if(!spender) return alert("Spender is required.");
+      setAppr("warn","Revoking…",`Sending approve(spender, 0) for ${shortAddr(tokenAddr)}…`);
+
+      const c = new ethers.Contract(tokenAddr, ABI_ERC20, apprSigner);
+      const tx = await c.approve(spender, 0);
+      await tx.wait();
+      setAppr("good","Revoked","Transaction confirmed.");
+    }
+
+    $("btnRevokeAll").addEventListener("click", async ()=>{
+      const owner = extractFirstAddress($("ownerAddr").value.trim());
+      const spender = extractFirstAddress($("spenderAddr").value.trim());
+      const tokens = parseTokenLines();
+
+      if(!owner || !spender) return alert("Owner + Spender are required.");
+      if(tokens.length === 0) return alert("Paste at least 1 token address.");
+      if(!apprProvider) await connectWallet();
+      if(!apprSigner) return;
+
+      setAppr("warn","Scanning allowances…","Will revoke only non-zero allowances.");
+
+      for(const t of tokens){
+        const meta = await readTokenMeta(apprProvider, t);
+        const cRead = new ethers.Contract(t, ABI_ERC20, apprProvider);
+        const alw = await tryCall(()=>cRead.allowance(owner, spender));
+        if(alw == null || BigInt(alw) === 0n) continue;
+
+        setAppr("warn","Revoking…",`${shortAddr(t)} (${meta.sym})`);
+        const c = new ethers.Contract(t, ABI_ERC20, apprSigner);
+        const tx = await c.approve(spender, 0);
+        await tx.wait();
+      }
+
+      setAppr("good","Finished","All non-zero allowances revoked (for the chosen spender).");
+    });
+
+    // =========================
+    // Bookmarklet buttons
+    // =========================
+    $("btnCopyBm").addEventListener("click", async ()=>{
+      await copyText($("bmDrag").getAttribute("href"));
+      alert("Bookmarklet copied.");
+    });
+    $("btnCopyBmCode").addEventListener("click", async ()=>{
+      await copyText($("bmCode").textContent);
+      alert("Code copied.");
+    });
+
+    // =========================
+    // RPC Checker
+    // =========================
+    function setRpc(level, title, sub){
+      setDot($("rpcDot"), level);
+      $("rpcTitle").textContent = title;
+      $("rpcSub").textContent = sub;
+    }
+
+    async function testOneRpc(url){
+      const p = makeProvider(url);
+      const t0 = performance.now();
+      const block = await Promise.race([
+        p.getBlockNumber(),
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")), 4500))
+      ]);
+      const t1 = performance.now();
+      return { url, ms: Math.round(t1 - t0), block };
+    }
+
+    $("btnTestRpcs").addEventListener("click", async ()=>{
+      setRpc("warn","Testing…","Measuring latency. (CORS/timeouts may fail in browser)");
+      $("rpcTbody").innerHTML = "";
+
+      const list = [...DEFAULT_RPCS];
+      const custom = $("customRpc").value.trim();
+      if(custom) list.unshift({ url: custom, note: "Custom" });
+
+      const rows = [];
+      for(const r of list){
+        try{
+          const res = await testOneRpc(r.url);
+          rows.push({ ...res, ok:true, note:r.note });
+        }catch(e){
+          rows.push({ url:r.url, ok:false, ms:null, block:null, note:r.note });
+        }
+      }
+
+      // choose best
+      const okRows = rows.filter(x=>x.ok).sort((a,b)=>a.ms-b.ms);
+      const best = okRows[0] || null;
+      if(best){
+        _activeRpc = best.url;
+        localStorage.setItem("cx_best_rpc", best.url);
+        $("bestRpcLine").innerHTML = `<span class="tag">Best RPC: ${best.url}</span>`;
+        setRpc("good","Done",`Best: ${best.url} (${best.ms} ms)`);
+      }else{
+        $("bestRpcLine").innerHTML = `<span class="tag">No working RPC found</span>`;
+        setRpc("bad","No working RPCs","Try another network / disable extensions / check CORS.");
+      }
+
+      // render table
+      for(const r of rows){
+        const tr = document.createElement("tr");
+        const status = r.ok ? `<span class="tag">✅ OK</span>` : `<span class="tag">❌ FAIL</span>`;
+        const ms = r.ok ? `${r.ms} ms` : "—";
+        const block = r.ok ? String(r.block) : "—";
+        const isBest = best && r.url === best.url;
+        tr.style.background = isBest ? "rgba(95,255,190,.10)" : "transparent";
+        tr.innerHTML = `
+          <td style="max-width:420px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${r.url}
+          </td>
+          <td>${ms}</td>
+          <td>${block}</td>
+          <td>${status}</td>
+          <td>${r.note || ""}</td>
+        `;
+        $("rpcTbody").appendChild(tr);
       }
     });
 
-    // IMPORTANT: set modal globally (non-module script reads it from window)
-    window.cxAppKitModal = modal;
+    $("btnCopyBestRpc").addEventListener("click", async ()=>{
+      const best = localStorage.getItem("cx_best_rpc") || _activeRpc;
+      await copyText(best);
+      alert("Best RPC copied.");
+    });
+
+    // =========================
+    // Init
+    // =========================
+    (function init(){
+      initSelectors();
+
+      // load saved bscscan key
+      const k = localStorage.getItem("cx_bscscan_key") || "";
+      $("bscscanKey").value = k;
+
+      // hub url for bookmarklet
+      const savedHub = localStorage.getItem("cx_hub_url");
+      $("hubUrl").value = savedHub || (window.location.origin + "/security/");
+      $("hubUrl").addEventListener("input", updateBookmarklet);
+      updateBookmarklet();
+
+      // auto token
+      const tok = parseTokenFromUrl();
+      if(tok) $("tokenAddr").value = tok;
+
+      // auto-run preference
+      const ar = localStorage.getItem("cx_autorun") === "1";
+      $("chkAutoRun").checked = ar;
+      $("chkAutoRun").addEventListener("change", ()=>{
+        localStorage.setItem("cx_autorun", $("chkAutoRun").checked ? "1" : "0");
+      });
+
+      const rl = localStorage.getItem("cx_require_liq") === "1";
+      $("chkRequireLiq").checked = rl;
+      $("chkRequireLiq").addEventListener("change", ()=>{
+        localStorage.setItem("cx_require_liq", $("chkRequireLiq").checked ? "1" : "0");
+      });
+
+      // approvals default
+      setAppr(null,"Disconnected","Connect your wallet to check/revoke.");
+      setRpc(null,"Ready","Press “Test RPCs”.");
+
+      // if token present + autorun -> scan
+      if(tok && $("chkAutoRun").checked){
+        runScan();
+      }
+    })();
   </script>
 </body>
 </html>
