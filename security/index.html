@@ -19,516 +19,437 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CycleX Security Hub</title>
   <link rel="icon" href="/logo.png">
-  <style>
-    :root{
-      --bg-main:#05060a;
-      --bg-gradient-start:#05060a;
-      --bg-gradient-mid:#1a0d3a;
-      --bg-gradient-end:#003a4c;
 
-      --text-main:#f4f6ff;
-      --text-muted:rgba(244,246,255,.72);
+   <style>
+  :root{
+    --bg-main:#05060a;
+    --bg-gradient-start:#05060a;
+    --bg-gradient-mid:#1a0d3a;
+    --bg-gradient-end:#003a4c;
 
-      --accent-cyan:#00e5ff;
-      --accent-green:#00ffa8;
-      --accent-purple:#b46bff;
+    --text-main:#f4f6ff;
+    --text-muted:rgba(244,246,255,.72);
 
-      --card-bg:rgba(255,255,255,.06);
-      --card-border:rgba(255,255,255,.12);
-      --shadow:0 18px 60px rgba(0,0,0,.45);
-      --radius:18px;
-      --radius-sm:14px;
-      --maxw:1150px;
-      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-      --sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
-    }
+    --accent-cyan:#00e5ff;
+    --accent-green:#00ffa8;
+    --accent-purple:#b46bff;
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family:var(--sans);
-      color:var(--text-main);
-      background:
-        radial-gradient(900px 600px at 20% 10%, rgba(180,107,255,.22), transparent 55%),
-        radial-gradient(900px 600px at 80% 20%, rgba(0,229,255,.18), transparent 55%),
-        radial-gradient(900px 600px at 60% 90%, rgba(0,255,168,.12), transparent 55%),
-        linear-gradient(135deg,var(--bg-gradient-start),var(--bg-gradient-mid) 45%,var(--bg-gradient-end));
-      overflow-x:hidden;
-    }
+    --card-bg:rgba(255,255,255,.055);
+    --card-border:rgba(255,255,255,.12);
+    --shadow:0 18px 60px rgba(0,0,0,.45);
 
-    .cxx-wrap{max-width:var(--maxw); margin:0 auto; padding:0 16px 70px}
-    .cxx-top{
-      position:sticky; top:0; z-index:9;
-      backdrop-filter: blur(12px);
-      background: linear-gradient(180deg, rgba(5,6,10,.92), rgba(5,6,10,.55));
-      border-bottom:1px solid rgba(255,255,255,.08);
-    }
-    .cxx-top-in{
-      max-width:var(--maxw); margin:0 auto; padding:12px 16px;
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-    }
-    .cxx-brand{display:flex; align-items:center; gap:10px; min-width:0}
-    .cxx-logo{
-      width:34px;height:34px;border-radius:12px;
-      background: conic-gradient(from 220deg, var(--accent-cyan), var(--accent-purple), var(--accent-green), var(--accent-cyan));
-      box-shadow:0 0 20px rgba(0,229,255,.14);
-      border:1px solid rgba(255,255,255,.16);
-    }
-    .cxx-brand h1{
-      font-size:14px; margin:0; letter-spacing:.4px; font-weight:800;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .cxx-brand p{
-      margin:0; font-size:12px; color:var(--text-muted);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
+    --radius:18px;
+    --radius-sm:14px;
+    --maxw:1150px;
 
-    .cxx-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end}
-    .cxx-btn{
-      appearance:none; border:1px solid rgba(255,255,255,.15);
-      background: rgba(255,255,255,.06);
-      color:var(--text-main);
-      border-radius:14px;
-      padding:10px 12px;
-      font-weight:700;
-      cursor:pointer;
-      transition: transform .08s ease, background .18s ease, border-color .18s ease;
-      text-decoration:none;
-      display:inline-flex; align-items:center; gap:8px;
-    }
-    .cxx-btn:hover{background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.26)}
-    .cxx-btn:active{transform: scale(.98)}
-    .cxx-btn.primary{
-      border-color: rgba(0,229,255,.38);
-      background: linear-gradient(135deg, rgba(0,229,255,.14), rgba(180,107,255,.10));
-      box-shadow: 0 12px 45px rgba(0,229,255,.08);
-    }
+    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
+  }
 
-    select.cxx-select{
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      color:var(--text-main);
-      border-radius:14px;
-      padding:10px 12px;
-      font-weight:700;
-      outline:none;
-    }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--text-main);
+    background:
+      radial-gradient(900px 560px at 18% 8%, rgba(180,107,255,.22), transparent 60%),
+      radial-gradient(900px 560px at 82% 18%, rgba(0,229,255,.18), transparent 60%),
+      radial-gradient(900px 560px at 60% 92%, rgba(0,255,168,.12), transparent 60%),
+      linear-gradient(135deg,var(--bg-gradient-start),var(--bg-gradient-mid) 45%,var(--bg-gradient-end));
+    overflow-x:hidden;
+  }
 
-    .cxx-hero{padding:26px 0 14px}
-    .cxx-kicker{
-      display:inline-flex; align-items:center; gap:10px;
-      padding:9px 12px; border-radius:999px;
-      background: rgba(255,255,255,.07);
-      border:1px solid rgba(255,255,255,.12);
-      color:var(--text-muted);
-      font-weight:700;
-      font-size:12px;
-      box-shadow: var(--shadow);
-    }
-    .cxx-dot{
-      width:8px;height:8px;border-radius:50%;
-      background:var(--accent-green);
-      box-shadow: 0 0 14px rgba(0,255,168,.55);
-    }
-    .cxx-hero h2{
-      margin:14px 0 6px;
-      font-size:36px;
-      line-height:1.08;
-      letter-spacing:-.6px;
-    }
-    .cxx-hero p{
-      margin:0;
-      max-width:820px;
-      color:var(--text-muted);
-      font-size:15px;
-      line-height:1.55;
-    }
+  /* Subtle grid/noise overlay (premium feel) */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    opacity:.22;
+    background:
+      linear-gradient(to right, rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.03) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(60% 55% at 50% 18%, #000 60%, transparent 100%);
+  }
 
-    .cxx-grid{
-      display:grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap:14px;
-      margin-top:18px;
-    }
-    .cxx-card{
-      grid-column: span 4;
-      background: var(--card-bg);
-      border:1px solid var(--card-border);
-      border-radius: var(--radius);
-      padding:16px;
-      box-shadow: var(--shadow);
-      position:relative;
-      overflow:hidden;
-    }
-    .cxx-card::before{
-      content:"";
-      position:absolute; inset:-1px;
-      background: radial-gradient(500px 140px at 25% -10%, rgba(0,229,255,.18), transparent 60%),
-                  radial-gradient(500px 140px at 80% 0%, rgba(180,107,255,.16), transparent 60%);
-      pointer-events:none;
-    }
-    .cxx-card > *{position:relative}
-    .cxx-card h3{margin:0 0 6px; font-size:16px; letter-spacing:.2px}
-    .cxx-card p{margin:0 0 12px; font-size:13px; color:var(--text-muted); line-height:1.45}
-    .cxx-card .cxx-btn{width:100%; justify-content:center}
+  /* ====== Layout ====== */
+  .cxx-wrap{max-width:var(--maxw); margin:0 auto; padding:0 16px 74px}
 
-    @media (max-width: 980px){
-      .cxx-card{grid-column: span 6}
-      .cxx-hero h2{font-size:32px}
-    }
-    @media (max-width: 640px){
-      .cxx-card{grid-column: span 12}
-      .cxx-hero h2{font-size:28px}
-    }
+  /* ====== Top Bar ====== */
+  .cxx-top{
+    position:sticky;
+    top:0;
+    z-index:20;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    background: linear-gradient(180deg, rgba(5,6,10,.92), rgba(5,6,10,.62));
+    border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .cxx-top-in{
+    max-width:var(--maxw);
+    margin:0 auto;
+    padding:12px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+  }
 
-    .cxx-panel{
-      margin-top:16px;
-      background: rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.11);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .cxx-panel-hd{
-      padding:14px 16px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-    }
-    .cxx-panel-hd h4{margin:0; font-size:14px; letter-spacing:.2px}
-    .cxx-panel-bd{padding:16px}
+  .cxx-brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+    flex: 1 1 320px;
+  }
 
-    .cxx-row{display:grid; grid-template-columns: 1.2fr .8fr; gap:12px}
-    @media (max-width: 820px){ .cxx-row{grid-template-columns:1fr} }
+  /* Use your actual logo to match the main site */
+  .cxx-logo{
+    width:36px;height:36px;border-radius:12px;
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow: 0 0 24px rgba(0,229,255,.12);
+    background:
+      radial-gradient(12px 12px at 30% 25%, rgba(255,255,255,.18), transparent 60%),
+      conic-gradient(from 220deg, rgba(0,229,255,.7), rgba(180,107,255,.7), rgba(0,255,168,.65), rgba(0,229,255,.7));
+    position:relative;
+    overflow:hidden;
+  }
+  .cxx-logo::after{
+    content:"";
+    position:absolute;
+    inset:2px;
+    border-radius:10px;
+    background: url("/logo.png") center/cover no-repeat;
+    opacity:.92;
+    mix-blend-mode: screen;
+    filter: saturate(1.05) contrast(1.05);
+  }
 
-    .cxx-field{display:flex; flex-direction:column; gap:8px}
-    .cxx-label{font-size:12px; color:var(--text-muted); font-weight:700}
-    .cxx-input, .cxx-textarea{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.20);
-      color:var(--text-main);
-      border-radius:14px;
-      padding:12px 12px;
-      outline:none;
-      font-family:var(--mono);
-      font-size:12.5px;
-    }
-    .cxx-textarea{min-height:120px; resize:vertical; font-family:var(--mono)}
-    .cxx-help{font-size:12px; color:var(--text-muted); line-height:1.45}
+  .cxx-brand h1{
+    font-size:14px;
+    margin:0;
+    letter-spacing:.4px;
+    font-weight:850;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .cxx-brand p{
+    margin:0;
+    font-size:12px;
+    color:var(--text-muted);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
 
-    .cxx-flex{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-    .cxx-pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.05);
-      font-size:12px; color:var(--text-muted); font-weight:700;
-    }
-    .cxx-mono{font-family:var(--mono)}
-    .cxx-sep{height:1px; background:rgba(255,255,255,.08); margin:14px 0}
+  .cxx-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    flex: 0 1 auto;
+  }
 
-    .cxx-status{
-      margin-top:10px;
-      padding:12px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.18);
-      font-size:12.5px;
-      color:var(--text-muted);
-      white-space:pre-wrap;
-      line-height:1.5;
-      font-family:var(--mono);
-    }
-    .cxx-status.ok{border-color: rgba(0,255,168,.28); background: rgba(0,255,168,.05); color: rgba(244,246,255,.92)}
-    .cxx-status.warn{border-color: rgba(255,186,0,.30); background: rgba(255,186,0,.05); color: rgba(244,246,255,.92)}
-    .cxx-status.bad{border-color: rgba(255,80,80,.34); background: rgba(255,80,80,.06); color: rgba(244,246,255,.92)}
+  .cxx-btn{
+    appearance:none;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    color:var(--text-main);
+    border-radius:14px;
+    padding:10px 12px;
+    font-weight:800;
+    cursor:pointer;
+    transition: transform .08s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    touch-action:manipulation;
+    user-select:none;
+  }
+  .cxx-btn:hover{
+    background: rgba(255,255,255,.10);
+    border-color: rgba(255,255,255,.24);
+  }
+  .cxx-btn:active{transform: scale(.98)}
+  .cxx-btn:focus-visible{
+    outline:none;
+    box-shadow: 0 0 0 3px rgba(0,229,255,.18);
+    border-color: rgba(0,229,255,.35);
+  }
 
-    .cxx-table{width:100%; border-collapse:collapse; font-size:12.5px}
-    .cxx-table th,.cxx-table td{border-bottom:1px solid rgba(255,255,255,.08); padding:10px 8px; text-align:left; vertical-align:top}
-    .cxx-table th{color:var(--text-muted); font-weight:800; font-size:12px}
-    .cxx-table td{color:rgba(244,246,255,.88)}
-    .cxx-small{font-size:12px; color:var(--text-muted)}
-    .cxx-foot{margin-top:22px; text-align:center; color:var(--text-muted); font-size:12px}
-    a{color:var(--accent-cyan); text-decoration:none}
-    a:hover{text-decoration:underline}
+  .cxx-btn.primary{
+    border-color: rgba(0,229,255,.35);
+    background:
+      radial-gradient(120px 60px at 20% 20%, rgba(0,229,255,.20), transparent 60%),
+      linear-gradient(135deg, rgba(0,229,255,.15), rgba(180,107,255,.10));
+    box-shadow: 0 14px 50px rgba(0,229,255,.10);
+  }
+  .cxx-btn.primary:hover{
+    border-color: rgba(0,229,255,.48);
+    box-shadow: 0 18px 60px rgba(0,229,255,.14);
+  }
 
-    .cxx-hidden{display:none !important}
-  </style>
-</head>
-<body>
-  <div class="cxx-top">
-    <div class="cxx-top-in">
-      <div class="cxx-brand">
-        <div class="cxx-logo" aria-hidden="true"></div>
-        <div style="min-width:0">
-          <h1 id="cxx_t_brand">CycleX Security Hub</h1>
-          <p id="cxx_t_sub">On-chain tools to validate contracts, approvals, pools & infrastructure.</p>
-        </div>
-      </div>
+  select.cxx-select{
+    appearance:none;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06);
+    color:var(--text-main);
+    border-radius:14px;
+    padding:10px 38px 10px 12px;
+    font-weight:800;
+    outline:none;
+    cursor:pointer;
+    background-image:
+      linear-gradient(45deg, transparent 50%, rgba(244,246,255,.75) 50%),
+      linear-gradient(135deg, rgba(244,246,255,.75) 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) 55%,
+      calc(100% - 12px) 55%;
+    background-size:6px 6px, 6px 6px;
+    background-repeat:no-repeat;
+  }
+  select.cxx-select:focus-visible{
+    box-shadow: 0 0 0 3px rgba(0,229,255,.18);
+    border-color: rgba(0,229,255,.35);
+  }
 
-      <div class="cxx-actions">
-        <a class="cxx-btn" href="/" id="cxx_t_back">← Back to CycleX</a>
-        <select class="cxx-select" id="cxx_lang">
-          <option value="en">EN</option>
-          <option value="zh">中文</option>
-          <option value="ar">AR</option>
-          <option value="ru">RU</option>
-        </select>
-        <button class="cxx-btn primary" id="cxx_connect">Connect wallet</button>
-      </div>
-    </div>
-  </div>
+  /* ====== Hero ====== */
+  .cxx-hero{padding:26px 0 14px}
 
-  <div class="cxx-wrap">
-    <section class="cxx-hero">
-      <div class="cxx-kicker"><span class="cxx-dot"></span><span id="cxx_t_kicker">Security isn’t a feature — it’s a discipline.</span></div>
-      <h2 id="cxx_t_title">Tools you actually rely on</h2>
-      <p id="cxx_t_desc">
-        Run fast, on-chain checks before interacting with any contract. No hype, no fluff — just concrete signals you can verify.
-      </p>
+  .cxx-kicker{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 12px;
+    border-radius:999px;
+    background: rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.12);
+    color:var(--text-muted);
+    font-weight:850;
+    font-size:12px;
+    box-shadow: 0 14px 50px rgba(0,0,0,.25);
+  }
+  .cxx-dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--accent-green);
+    box-shadow: 0 0 14px rgba(0,255,168,.55);
+  }
 
-      <div class="cxx-grid" style="margin-top:18px">
-        <div class="cxx-card">
-          <h3 id="cxx_t_tile1">Token Safety + Liquidity Scan</h3>
-          <p id="cxx_t_tile1d">Contract checks + V2/V3 pool detection vs wrapped native & stables. Approx liquidity, proxy hints, risk flags.</p>
-          <button class="cxx-btn" data-cxx-tool="score" id="cxx_t_open1">Open tool</button>
-        </div>
-        <div class="cxx-card">
-          <h3 id="cxx_t_tile2">Approval Guardian</h3>
-          <p id="cxx_t_tile2d">Review allowances and revoke risky approvals (approve → 0) directly from your wallet.</p>
-          <button class="cxx-btn" data-cxx-tool="approvals" id="cxx_t_open2">Open tool</button>
-        </div>
-        <div class="cxx-card">
-          <h3 id="cxx_t_tile3">Transaction Decoder</h3>
-          <p id="cxx_t_tile3d">Decode calldata + show key events (Transfer / Approval / Swap) from the receipt.</p>
-          <button class="cxx-btn" data-cxx-tool="tx" id="cxx_t_open3">Open tool</button>
-        </div>
-        <div class="cxx-card">
-          <h3 id="cxx_t_tile4">Watchlist</h3>
-          <p id="cxx_t_tile4d">Save addresses, notes and quick jump to tools. Local-only storage.</p>
-          <button class="cxx-btn" data-cxx-tool="watch" id="cxx_t_open4">Open tool</button>
-        </div>
-        <div class="cxx-card">
-          <h3 id="cxx_t_tile5">RPC Health Checker</h3>
-          <p id="cxx_t_tile5d">Test multiple RPC endpoints: latency + block height. Great for avoiding flaky providers.</p>
-          <button class="cxx-btn" data-cxx-tool="rpc" id="cxx_t_open5">Open tool</button>
-        </div>
-        <div class="cxx-card">
-          <h3 id="cxx_t_tile6">Quick Scan</h3>
-          <p id="cxx_t_tile6d">Paste a token + run Safety + Liquidity + a fast RPC check in one click.</p>
-          <button class="cxx-btn" data-cxx-tool="quick" id="cxx_t_open6">Run</button>
-        </div>
-      </div>
-    </section>
+  .cxx-hero h2{
+    margin:14px 0 8px;
+    font-size:42px;
+    line-height:1.08;
+    letter-spacing:-.8px;
+  }
+  .cxx-hero p{
+    margin:0;
+    max-width:860px;
+    color:var(--text-muted);
+    font-size:15.5px;
+    line-height:1.6;
+  }
 
-    <!-- SCORE TOOL -->
-    <section class="cxx-panel cxx-hidden" id="cxx_tool_score">
-      <div class="cxx-panel-hd">
-        <h4 id="cxx_t_score_title">Token Safety + Liquidity Scan</h4>
-        <div class="cxx-flex">
-          <span class="cxx-pill"><span id="cxx_t_net">Network</span>: <span class="cxx-mono" id="cxx_score_net_label">BSC</span></span>
-          <button class="cxx-btn" data-cxx-close id="cxx_t_close1">Close</button>
-        </div>
-      </div>
-      <div class="cxx-panel-bd">
-        <div class="cxx-row">
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_token_addr">Token contract address</div>
-            <input class="cxx-input" id="cxx_score_addr" placeholder="0x..." />
-            <div class="cxx-help" id="cxx_t_score_help">
-              Checks: code exists, proxy hints, owner/renounce (if available), and common risk-function selectors. Then scans V2 + V3 pools vs wrapped native & stables.
-            </div>
-          </div>
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_score_netpick">Scan network</div>
-            <select class="cxx-select" id="cxx_score_net">
-              <option value="bsc">BSC (BNB Chain)</option>
-              <option value="eth">Ethereum</option>
-            </select>
-            <div class="cxx-flex" style="margin-top:10px">
-              <label class="cxx-pill" style="cursor:pointer">
-                <input type="checkbox" id="cxx_score_v3" checked style="accent-color: var(--accent-cyan);"/>
-                <span id="cxx_t_score_v3">Include V3 pools</span>
-              </label>
-              <label class="cxx-pill" style="cursor:pointer">
-                <input type="checkbox" id="cxx_score_stables" checked style="accent-color: var(--accent-cyan);"/>
-                <span id="cxx_t_score_stables">Include stables</span>
-              </label>
-            </div>
-            <button class="cxx-btn primary" id="cxx_score_run" style="margin-top:12px">Run scan</button>
-          </div>
-        </div>
+  /* ====== Tiles Grid ====== */
+  .cxx-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap:14px;
+    margin-top:18px;
+  }
 
-        <div class="cxx-status" id="cxx_score_status">—</div>
+  .cxx-card{
+    background: var(--card-bg);
+    border:1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding:16px;
+    box-shadow: var(--shadow);
+    position:relative;
+    overflow:hidden;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    transition: transform .14s ease, border-color .18s ease, background .18s ease;
+    min-height: 168px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  }
+  .cxx-card::before{
+    content:"";
+    position:absolute; inset:-1px;
+    background:
+      radial-gradient(560px 180px at 20% -10%, rgba(0,229,255,.18), transparent 60%),
+      radial-gradient(560px 180px at 85% 0%, rgba(180,107,255,.16), transparent 60%),
+      radial-gradient(560px 180px at 60% 120%, rgba(0,255,168,.10), transparent 60%);
+    pointer-events:none;
+    opacity:.9;
+  }
+  .cxx-card > *{position:relative}
+  .cxx-card:hover{
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,.20);
+    background: rgba(255,255,255,.07);
+  }
 
-        <div class="cxx-sep"></div>
-        <div class="cxx-small" id="cxx_t_score_note">
-          Notes: “Approx liquidity” is computed from on-chain balances/reserves and a wrapped-native USD estimate (from the highest-liquidity native/stable V2 pool on the selected network).
-          It’s a signal, not a guarantee.
-        </div>
-      </div>
-    </section>
+  .cxx-card h3{
+    margin:0 0 6px;
+    font-size:16px;
+    letter-spacing:.2px;
+    font-weight:900;
+  }
+  .cxx-card p{
+    margin:0 0 12px;
+    font-size:13px;
+    color:var(--text-muted);
+    line-height:1.45;
+  }
+  .cxx-card .cxx-btn{
+    width:100%;
+    justify-content:center;
+  }
 
-    <!-- APPROVALS TOOL -->
-    <section class="cxx-panel cxx-hidden" id="cxx_tool_approvals">
-      <div class="cxx-panel-hd">
-        <h4 id="cxx_t_app_title">Approval Guardian</h4>
-        <div class="cxx-flex">
-          <span class="cxx-pill"><span id="cxx_t_wallet">Wallet</span>: <span class="cxx-mono" id="cxx_wallet_label">not connected</span></span>
-          <button class="cxx-btn" data-cxx-close id="cxx_t_close2">Close</button>
-        </div>
-      </div>
-      <div class="cxx-panel-bd">
-        <div class="cxx-row">
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_spenders">Spender addresses (one per line)</div>
-            <textarea class="cxx-textarea" id="cxx_spenders" spellcheck="false"></textarea>
-            <div class="cxx-help" id="cxx_t_spenders_help">Tip: include DEX routers you used. You can add more later.</div>
-          </div>
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_tokens">Token addresses (one per line)</div>
-            <textarea class="cxx-textarea" id="cxx_tokens" spellcheck="false"></textarea>
-            <div class="cxx-help" id="cxx_t_tokens_help">
-              This tool reads allowances from your wallet to each spender. You can revoke by sending approve(spender, 0).
-            </div>
-            <div class="cxx-flex" style="margin-top:10px">
-              <button class="cxx-btn primary" id="cxx_allowances_run">Check allowances</button>
-              <button class="cxx-btn" id="cxx_allowances_seed">Seed common spenders/tokens (BSC)</button>
-            </div>
-          </div>
-        </div>
+  /* ====== Panels ====== */
+  .cxx-panel{
+    margin-top:16px;
+    background: rgba(255,255,255,.045);
+    border:1px solid rgba(255,255,255,.11);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
 
-        <div class="cxx-status" id="cxx_allowances_status">—</div>
-        <div class="cxx-sep"></div>
-        <div id="cxx_allowances_table_wrap" class="cxx-hidden"></div>
-      </div>
-    </section>
+  .cxx-panel-hd{
+    padding:14px 16px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    background:
+      radial-gradient(220px 80px at 18% 0%, rgba(0,229,255,.10), transparent 60%),
+      radial-gradient(220px 80px at 85% 0%, rgba(180,107,255,.10), transparent 60%),
+      linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  }
+  .cxx-panel-hd h4{
+    margin:0;
+    font-size:14px;
+    letter-spacing:.2px;
+    font-weight:900;
+  }
+  .cxx-panel-bd{padding:16px}
 
-    <!-- TX TOOL -->
-    <section class="cxx-panel cxx-hidden" id="cxx_tool_tx">
-      <div class="cxx-panel-hd">
-        <h4 id="cxx_t_tx_title">Transaction Decoder</h4>
-        <div class="cxx-flex">
-          <span class="cxx-pill"><span id="cxx_t_tx_net">Network</span>: <span class="cxx-mono" id="cxx_tx_net_label">BSC</span></span>
-          <button class="cxx-btn" data-cxx-close id="cxx_t_close3">Close</button>
-        </div>
-      </div>
-      <div class="cxx-panel-bd">
-        <div class="cxx-row">
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_tx_hash">Transaction hash</div>
-            <input class="cxx-input" id="cxx_tx_hash_in" placeholder="0x..." />
-            <div class="cxx-help" id="cxx_t_tx_help">
-              Decodes calldata using public 4byte signatures and prints key receipt events (Transfer / Approval / Swap).
-            </div>
-          </div>
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_tx_netpick">Decode network</div>
-            <select class="cxx-select" id="cxx_tx_net">
-              <option value="bsc">BSC (BNB Chain)</option>
-              <option value="eth">Ethereum</option>
-            </select>
-            <button class="cxx-btn primary" id="cxx_tx_run" style="margin-top:12px">Decode</button>
-          </div>
-        </div>
+  .cxx-row{
+    display:grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap:12px;
+  }
+  @media (max-width: 860px){
+    .cxx-row{grid-template-columns:1fr}
+  }
 
-        <div class="cxx-status" id="cxx_tx_status">—</div>
-      </div>
-    </section>
+  /* ====== Inputs ====== */
+  .cxx-field{display:flex; flex-direction:column; gap:8px}
+  .cxx-label{font-size:12px; color:var(--text-muted); font-weight:850}
 
-    <!-- WATCHLIST TOOL -->
-    <section class="cxx-panel cxx-hidden" id="cxx_tool_watch">
-      <div class="cxx-panel-hd">
-        <h4 id="cxx_t_watch_title">Watchlist</h4>
-        <div class="cxx-flex">
-          <span class="cxx-pill"><span id="cxx_t_items">Items</span>: <span class="cxx-mono" id="cxx_watch_count">0</span></span>
-          <button class="cxx-btn" data-cxx-close id="cxx_t_close4">Close</button>
-        </div>
-      </div>
-      <div class="cxx-panel-bd">
-        <div class="cxx-row">
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_watch_addr">Address</div>
-            <input class="cxx-input" id="cxx_watch_addr" placeholder="0x..." />
-            <div class="cxx-label" style="margin-top:10px" id="cxx_t_watch_note">Note</div>
-            <input class="cxx-input" id="cxx_watch_note" placeholder="why saved, risk notes, etc." />
-            <button class="cxx-btn primary" id="cxx_watch_add" style="margin-top:12px">Add to watchlist</button>
-            <div class="cxx-help" id="cxx_t_watch_help">Stored locally in your browser (localStorage).</div>
-          </div>
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_watch_list">Saved items</div>
-            <div id="cxx_watch_list" class="cxx-status" style="min-height:180px">—</div>
-          </div>
-        </div>
-      </div>
-    </section>
+  .cxx-input, .cxx-textarea{
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.20);
+    color:var(--text-main);
+    border-radius:14px;
+    padding:12px 12px;
+    outline:none;
+    font-family:var(--mono);
+    font-size:12.5px;
+  }
+  .cxx-input::placeholder,.cxx-textarea::placeholder{color: rgba(244,246,255,.40)}
+  .cxx-input:focus, .cxx-textarea:focus{
+    border-color: rgba(0,229,255,.35);
+    box-shadow: 0 0 0 3px rgba(0,229,255,.12);
+  }
+  .cxx-textarea{min-height:120px; resize:vertical}
 
-    <!-- RPC TOOL -->
-    <section class="cxx-panel cxx-hidden" id="cxx_tool_rpc">
-      <div class="cxx-panel-hd">
-        <h4 id="cxx_t_rpc_title">RPC Health Checker</h4>
-        <div class="cxx-flex">
-          <span class="cxx-pill"><span id="cxx_t_rpc_chain">Chain</span>: <span class="cxx-mono" id="cxx_rpc_chain_label">BSC</span></span>
-          <button class="cxx-btn" data-cxx-close id="cxx_t_close5">Close</button>
-        </div>
-      </div>
-      <div class="cxx-panel-bd">
-        <div class="cxx-row">
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_rpc_list">RPC endpoints (one per line)</div>
-            <textarea class="cxx-textarea" id="cxx_rpc_list_in" spellcheck="false"></textarea>
-            <div class="cxx-help" id="cxx_t_rpc_help">We’ll call eth_blockNumber and measure latency.</div>
-          </div>
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_rpc_netpick">Test chain</div>
-            <select class="cxx-select" id="cxx_rpc_net">
-              <option value="bsc">BSC (BNB Chain)</option>
-              <option value="eth">Ethereum</option>
-            </select>
-            <div class="cxx-flex" style="margin-top:10px">
-              <button class="cxx-btn primary" id="cxx_rpc_run">Run tests</button>
-              <button class="cxx-btn" id="cxx_rpc_seed">Seed defaults</button>
-            </div>
-            <div class="cxx-status" id="cxx_rpc_status" style="margin-top:12px">—</div>
-          </div>
-        </div>
-      </div>
-    </section>
+  .cxx-help{font-size:12px; color:var(--text-muted); line-height:1.45}
 
-    <!-- QUICK TOOL (just triggers actions) -->
-    <section class="cxx-panel cxx-hidden" id="cxx_tool_quick">
-      <div class="cxx-panel-hd">
-        <h4 id="cxx_t_quick_title">Quick Scan</h4>
-        <div class="cxx-flex">
-          <button class="cxx-btn" data-cxx-close id="cxx_t_close6">Close</button>
-        </div>
-      </div>
-      <div class="cxx-panel-bd">
-        <div class="cxx-row">
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_quick_addr">Token address</div>
-            <input class="cxx-input" id="cxx_quick_addr" placeholder="0x..." />
-            <div class="cxx-help" id="cxx_t_quick_help">Runs: Safety + Liquidity + fast RPC check (defaults).</div>
-          </div>
-          <div class="cxx-field">
-            <div class="cxx-label" id="cxx_t_quick_net">Network</div>
-            <select class="cxx-select" id="cxx_quick_net">
-              <option value="bsc">BSC (BNB Chain)</option>
-              <option value="eth">Ethereum</option>
-            </select>
-            <button class="cxx-btn primary" id="cxx_quick_run" style="margin-top:12px">Run quick scan</button>
-            <div class="cxx-status" id="cxx_quick_status" style="margin-top:12px">—</div>
-          </div>
-        </div>
-      </div>
-    </section>
+  /* ====== Pills / Status ====== */
+  .cxx-flex{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  .cxx-pill{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 10px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.05);
+    font-size:12px; color:var(--text-muted); font-weight:850;
+  }
+  .cxx-mono{font-family:var(--mono)}
+  .cxx-sep{height:1px; background:rgba(255,255,255,.08); margin:14px 0}
 
-    <div class="cxx-foot">
-      <div id="cxx_t_footer">Educational tooling only. Always verify on-chain and use caution.</div>
-    </div>
-  </div>
+  .cxx-status{
+    margin-top:10px;
+    padding:12px 12px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.18);
+    font-size:12.5px;
+    color:var(--text-muted);
+    white-space:pre-wrap;
+    line-height:1.5;
+    font-family:var(--mono);
+  }
+  .cxx-status.ok{border-color: rgba(0,255,168,.28); background: rgba(0,255,168,.05); color: rgba(244,246,255,.92)}
+  .cxx-status.warn{border-color: rgba(255,186,0,.30); background: rgba(255,186,0,.05); color: rgba(244,246,255,.92)}
+  .cxx-status.bad{border-color: rgba(255,80,80,.34); background: rgba(255,80,80,.06); color: rgba(244,246,255,.92)}
+
+  .cxx-table{width:100%; border-collapse:collapse; font-size:12.5px}
+  .cxx-table th,.cxx-table td{
+    border-bottom:1px solid rgba(255,255,255,.08);
+    padding:10px 8px;
+    text-align:left;
+    vertical-align:top
+  }
+  .cxx-table th{color:var(--text-muted); font-weight:900; font-size:12px}
+  .cxx-table td{color:rgba(244,246,255,.88)}
+  .cxx-small{font-size:12px; color:var(--text-muted)}
+
+  .cxx-foot{
+    margin-top:22px;
+    text-align:center;
+    color:var(--text-muted);
+    font-size:12px;
+  }
+
+  /* Scope link style to our page only */
+  .cxx-wrap a{color:var(--accent-cyan); text-decoration:none}
+  .cxx-wrap a:hover{text-decoration:underline}
+
+  .cxx-hidden{display:none !important}
+
+  /* ====== Mobile polish ====== */
+  @media (max-width: 820px){
+    .cxx-top-in{flex-wrap:wrap}
+    .cxx-actions{width:100%; justify-content:space-between}
+    .cxx-hero h2{font-size:34px}
+  }
+  @media (max-width: 520px){
+    .cxx-actions{gap:8px}
+    .cxx-btn{padding:10px 10px}
+    select.cxx-select{padding:10px 34px 10px 12px}
+    #cxx_connect{width:100%}
+    .cxx-hero h2{font-size:30px}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .cxx-card, .cxx-btn{transition:none !important}
+    .cxx-card:hover{transform:none}
+  }
+</style>
+
 
   <!-- libs -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
