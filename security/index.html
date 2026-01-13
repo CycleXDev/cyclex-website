@@ -449,6 +449,301 @@
     .cxx-card:hover{transform:none}
   }
 </style>
+  <div class="cxx-top">
+  <div class="cxx-top-in">
+    <div class="cxx-brand">
+      <div class="cxx-logo" aria-hidden="true"></div>
+      <div style="min-width:0">
+        <h1 id="cxx_t_brand">CycleX Security Hub</h1>
+        <p id="cxx_t_sub">On-chain tools to validate contracts, approvals, pools & infrastructure.</p>
+      </div>
+    </div>
+
+    <div class="cxx-actions">
+      <a class="cxx-btn" href="/" id="cxx_t_back">← Back to CycleX</a>
+
+      <select class="cxx-select" id="cxx_lang" aria-label="Language">
+        <option value="en">EN</option>
+        <option value="zh">中文</option>
+        <option value="ar">AR</option>
+        <option value="ru">RU</option>
+      </select>
+
+      <button class="cxx-btn primary" id="cxx_connect">Connect wallet</button>
+    </div>
+  </div>
+</div>
+
+<div class="cxx-wrap">
+  <section class="cxx-hero">
+    <div class="cxx-kicker">
+      <span class="cxx-dot"></span>
+      <span id="cxx_t_kicker">Security isn’t a feature — it’s a discipline.</span>
+    </div>
+
+    <h2 id="cxx_t_title">Tools you actually rely on</h2>
+    <p id="cxx_t_desc">
+      Run fast, on-chain checks before interacting with any contract. No hype, no fluff — just concrete signals you can verify.
+    </p>
+
+    <div class="cxx-grid" style="margin-top:18px">
+      <div class="cxx-card">
+        <div>
+          <h3 id="cxx_t_tile1">Token Safety + Liquidity Scan</h3>
+          <p id="cxx_t_tile1d">Contract checks + V2/V3 pool detection vs wrapped native & stables. Approx liquidity, proxy hints, risk flags.</p>
+        </div>
+        <button class="cxx-btn primary" data-cxx-tool="score" id="cxx_t_open1">Open tool</button>
+      </div>
+
+      <div class="cxx-card">
+        <div>
+          <h3 id="cxx_t_tile2">Approval Guardian</h3>
+          <p id="cxx_t_tile2d">Review allowances and revoke risky approvals (approve → 0) directly from your wallet.</p>
+        </div>
+        <button class="cxx-btn primary" data-cxx-tool="approvals" id="cxx_t_open2">Open tool</button>
+      </div>
+
+      <div class="cxx-card">
+        <div>
+          <h3 id="cxx_t_tile3">Transaction Decoder</h3>
+          <p id="cxx_t_tile3d">Decode calldata + show key events (Transfer / Approval / Swap) from the receipt.</p>
+        </div>
+        <button class="cxx-btn primary" data-cxx-tool="tx" id="cxx_t_open3">Open tool</button>
+      </div>
+
+      <div class="cxx-card">
+        <div>
+          <h3 id="cxx_t_tile4">Watchlist</h3>
+          <p id="cxx_t_tile4d">Save addresses, notes and quick jump to tools. Local-only storage.</p>
+        </div>
+        <button class="cxx-btn" data-cxx-tool="watch" id="cxx_t_open4">Open tool</button>
+      </div>
+
+      <div class="cxx-card">
+        <div>
+          <h3 id="cxx_t_tile5">RPC Health Checker</h3>
+          <p id="cxx_t_tile5d">Test multiple RPC endpoints: latency + block height. Great for avoiding flaky providers.</p>
+        </div>
+        <button class="cxx-btn" data-cxx-tool="rpc" id="cxx_t_open5">Open tool</button>
+      </div>
+
+      <div class="cxx-card">
+        <div>
+          <h3 id="cxx_t_tile6">Quick Scan</h3>
+          <p id="cxx_t_tile6d">Paste a token + run Safety + Liquidity + a fast RPC check in one click.</p>
+        </div>
+        <button class="cxx-btn" data-cxx-tool="quick" id="cxx_t_open6">Run</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCORE TOOL -->
+  <section class="cxx-panel cxx-hidden" id="cxx_tool_score">
+    <div class="cxx-panel-hd">
+      <h4 id="cxx_t_score_title">Token Safety + Liquidity Scan</h4>
+      <div class="cxx-flex">
+        <span class="cxx-pill"><span id="cxx_t_net">Network</span>: <span class="cxx-mono" id="cxx_score_net_label">BSC</span></span>
+        <button class="cxx-btn" data-cxx-close id="cxx_t_close1">Close</button>
+      </div>
+    </div>
+    <div class="cxx-panel-bd">
+      <div class="cxx-row">
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_token_addr">Token contract address</div>
+          <input class="cxx-input" id="cxx_score_addr" placeholder="0x..." />
+          <div class="cxx-help" id="cxx_t_score_help">
+            Checks: code exists, proxy hints, owner/renounce (if available), and common risk-function selectors. Then scans V2 + V3 pools vs wrapped native & stables.
+          </div>
+        </div>
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_score_netpick">Scan network</div>
+          <select class="cxx-select" id="cxx_score_net">
+            <option value="bsc">BSC (BNB Chain)</option>
+            <option value="eth">Ethereum</option>
+          </select>
+          <div class="cxx-flex" style="margin-top:10px">
+            <label class="cxx-pill" style="cursor:pointer">
+              <input type="checkbox" id="cxx_score_v3" checked style="accent-color: var(--accent-cyan);"/>
+              <span id="cxx_t_score_v3">Include V3 pools</span>
+            </label>
+            <label class="cxx-pill" style="cursor:pointer">
+              <input type="checkbox" id="cxx_score_stables" checked style="accent-color: var(--accent-cyan);"/>
+              <span id="cxx_t_score_stables">Include stables</span>
+            </label>
+          </div>
+          <button class="cxx-btn primary" id="cxx_score_run" style="margin-top:12px">Run scan</button>
+        </div>
+      </div>
+
+      <div class="cxx-status" id="cxx_score_status">—</div>
+
+      <div class="cxx-sep"></div>
+      <div class="cxx-small" id="cxx_t_score_note">
+        Notes: “Approx liquidity” is computed from on-chain balances/reserves and a wrapped-native USD estimate (from the highest-liquidity native/stable V2 pool on the selected network).
+        It’s a signal, not a guarantee.
+      </div>
+    </div>
+  </section>
+
+  <!-- APPROVALS TOOL -->
+  <section class="cxx-panel cxx-hidden" id="cxx_tool_approvals">
+    <div class="cxx-panel-hd">
+      <h4 id="cxx_t_app_title">Approval Guardian</h4>
+      <div class="cxx-flex">
+        <span class="cxx-pill"><span id="cxx_t_wallet">Wallet</span>: <span class="cxx-mono" id="cxx_wallet_label">not connected</span></span>
+        <button class="cxx-btn" data-cxx-close id="cxx_t_close2">Close</button>
+      </div>
+    </div>
+    <div class="cxx-panel-bd">
+      <div class="cxx-row">
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_spenders">Spender addresses (one per line)</div>
+          <textarea class="cxx-textarea" id="cxx_spenders" spellcheck="false"></textarea>
+          <div class="cxx-help" id="cxx_t_spenders_help">Tip: include DEX routers you used. You can add more later.</div>
+        </div>
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_tokens">Token addresses (one per line)</div>
+          <textarea class="cxx-textarea" id="cxx_tokens" spellcheck="false"></textarea>
+          <div class="cxx-help" id="cxx_t_tokens_help">
+            This tool reads allowances from your wallet to each spender. You can revoke by sending approve(spender, 0).
+          </div>
+          <div class="cxx-flex" style="margin-top:10px">
+            <button class="cxx-btn primary" id="cxx_allowances_run">Check allowances</button>
+            <button class="cxx-btn" id="cxx_allowances_seed">Seed common spenders/tokens (BSC)</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cxx-status" id="cxx_allowances_status">—</div>
+      <div class="cxx-sep"></div>
+      <div id="cxx_allowances_table_wrap" class="cxx-hidden"></div>
+    </div>
+  </section>
+
+  <!-- TX TOOL -->
+  <section class="cxx-panel cxx-hidden" id="cxx_tool_tx">
+    <div class="cxx-panel-hd">
+      <h4 id="cxx_t_tx_title">Transaction Decoder</h4>
+      <div class="cxx-flex">
+        <span class="cxx-pill"><span id="cxx_t_tx_net">Network</span>: <span class="cxx-mono" id="cxx_tx_net_label">BSC</span></span>
+        <button class="cxx-btn" data-cxx-close id="cxx_t_close3">Close</button>
+      </div>
+    </div>
+    <div class="cxx-panel-bd">
+      <div class="cxx-row">
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_tx_hash">Transaction hash</div>
+          <input class="cxx-input" id="cxx_tx_hash_in" placeholder="0x..." />
+          <div class="cxx-help" id="cxx_t_tx_help">
+            Decodes calldata using public 4byte signatures and prints key receipt events (Transfer / Approval / Swap).
+          </div>
+        </div>
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_tx_netpick">Decode network</div>
+          <select class="cxx-select" id="cxx_tx_net">
+            <option value="bsc">BSC (BNB Chain)</option>
+            <option value="eth">Ethereum</option>
+          </select>
+          <button class="cxx-btn primary" id="cxx_tx_run" style="margin-top:12px">Decode</button>
+        </div>
+      </div>
+
+      <div class="cxx-status" id="cxx_tx_status">—</div>
+    </div>
+  </section>
+
+  <!-- WATCHLIST TOOL -->
+  <section class="cxx-panel cxx-hidden" id="cxx_tool_watch">
+    <div class="cxx-panel-hd">
+      <h4 id="cxx_t_watch_title">Watchlist</h4>
+      <div class="cxx-flex">
+        <span class="cxx-pill"><span id="cxx_t_items">Items</span>: <span class="cxx-mono" id="cxx_watch_count">0</span></span>
+        <button class="cxx-btn" data-cxx-close id="cxx_t_close4">Close</button>
+      </div>
+    </div>
+    <div class="cxx-panel-bd">
+      <div class="cxx-row">
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_watch_addr">Address</div>
+          <input class="cxx-input" id="cxx_watch_addr" placeholder="0x..." />
+          <div class="cxx-label" style="margin-top:10px" id="cxx_t_watch_note">Note</div>
+          <input class="cxx-input" id="cxx_watch_note" placeholder="why saved, risk notes, etc." />
+          <button class="cxx-btn primary" id="cxx_watch_add" style="margin-top:12px">Add to watchlist</button>
+          <div class="cxx-help" id="cxx_t_watch_help">Stored locally in your browser (localStorage).</div>
+        </div>
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_watch_list">Saved items</div>
+          <div id="cxx_watch_list" class="cxx-status" style="min-height:180px">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RPC TOOL -->
+  <section class="cxx-panel cxx-hidden" id="cxx_tool_rpc">
+    <div class="cxx-panel-hd">
+      <h4 id="cxx_t_rpc_title">RPC Health Checker</h4>
+      <div class="cxx-flex">
+        <span class="cxx-pill"><span id="cxx_t_rpc_chain">Chain</span>: <span class="cxx-mono" id="cxx_rpc_chain_label">BSC</span></span>
+        <button class="cxx-btn" data-cxx-close id="cxx_t_close5">Close</button>
+      </div>
+    </div>
+    <div class="cxx-panel-bd">
+      <div class="cxx-row">
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_rpc_list">RPC endpoints (one per line)</div>
+          <textarea class="cxx-textarea" id="cxx_rpc_list_in" spellcheck="false"></textarea>
+          <div class="cxx-help" id="cxx_t_rpc_help">We’ll call eth_blockNumber and measure latency.</div>
+        </div>
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_rpc_netpick">Test chain</div>
+          <select class="cxx-select" id="cxx_rpc_net">
+            <option value="bsc">BSC (BNB Chain)</option>
+            <option value="eth">Ethereum</option>
+          </select>
+          <div class="cxx-flex" style="margin-top:10px">
+            <button class="cxx-btn primary" id="cxx_rpc_run">Run tests</button>
+            <button class="cxx-btn" id="cxx_rpc_seed">Seed defaults</button>
+          </div>
+          <div class="cxx-status" id="cxx_rpc_status" style="margin-top:12px">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUICK TOOL -->
+  <section class="cxx-panel cxx-hidden" id="cxx_tool_quick">
+    <div class="cxx-panel-hd">
+      <h4 id="cxx_t_quick_title">Quick Scan</h4>
+      <div class="cxx-flex">
+        <button class="cxx-btn" data-cxx-close id="cxx_t_close6">Close</button>
+      </div>
+    </div>
+    <div class="cxx-panel-bd">
+      <div class="cxx-row">
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_quick_addr">Token address</div>
+          <input class="cxx-input" id="cxx_quick_addr" placeholder="0x..." />
+          <div class="cxx-help" id="cxx_t_quick_help">Runs: Safety + Liquidity + fast RPC check (defaults).</div>
+        </div>
+        <div class="cxx-field">
+          <div class="cxx-label" id="cxx_t_quick_net">Network</div>
+          <select class="cxx-select" id="cxx_quick_net">
+            <option value="bsc">BSC (BNB Chain)</option>
+            <option value="eth">Ethereum</option>
+          </select>
+          <button class="cxx-btn primary" id="cxx_quick_run" style="margin-top:12px">Run quick scan</button>
+          <div class="cxx-status" id="cxx_quick_status" style="margin-top:12px">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="cxx-foot">
+    <div id="cxx_t_footer">Educational tooling only. Always verify on-chain and use caution.</div>
+  </div>
+</div>
+
 
 
   <!-- libs -->
