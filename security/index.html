@@ -1,3 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (GA4) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BXDFXJWCNQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-BXDFXJWCNQ');
+  </script>
+
+  <link rel="icon" href="/logo.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="apple-touch-icon" href="/logo.png">
+
+  <meta charset="UTF-8" />
+  <title>CycleX – Security Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg-main: #05060a;
+      --bg-gradient-start: #05060a;
+      --bg-gradient-mid: #1a0d3a;
+      --bg-gradient-end: #003a4c;
+
+      --text-main: #f4f6ff;
+      --text-muted: rgba(244, 246, 255, 0.7);
+
+      --accent-cyan: #00e5ff;
+      --accent-green: #5dffb2;
+      --accent-purple: #7c5cff;
+
+      --card-bg: rgba(255, 255, 255, 0.06);
+      --border-subtle: rgba(255, 255, 255, 0.12);
+
+      --shadow-soft: 0 30px 90px rgba(0, 0, 0, 0.75);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --transition-fast: 0.18s ease-out;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      --maxw: 1160px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--sans);
+      background:
+        radial-gradient(circle at top left, rgba(124, 92, 255, 0.35) 0%, transparent 45%),
+        radial-gradient(circle at top right, rgba(0, 229, 255, 0.35) 0%, transparent 45%),
+        radial-gradient(circle at bottom, rgba(0, 58, 76, 0.55) 0%, transparent 55%),
+        linear-gradient(160deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
+      color: var(--text-main);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      animation: fadeBody 0.7s ease-out forwards;
+      opacity: 1;
+      overflow-x: hidden;
+    }
+    @keyframes fadeBody { from { opacity: 0; } to { opacity: 1; } }
+    a { color: inherit; text-decoration: none; }
+
+    .page-shell { max-width: var(--maxw); margin: 0 auto; padding: 32px 20px 72px; }
+
+    /* Top bar */
+    .top-bar {
+      position: sticky;
+      top: 14px;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 18px;
+      margin-bottom: 26px;
+      border-radius: 999px;
+      background: rgba(8, 10, 22, 0.55);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-logo {
+      width: 44px; height: 44px; border-radius: 16px; object-fit: contain;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
+      flex: 0 0 auto;
+    }
+    .brand-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .brand-title {
+      font-weight: 800; letter-spacing: 0.05em; font-size: 18px; text-transform: uppercase;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .brand-sub {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+      gap: 2px;
+      flex: 0 0 auto;
+    }
+    .lang-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+      user-select: none;
+      white-space: nowrap;
+    }
+    .lang-btn:hover { transform: translateY(-1px); }
+    .lang-btn.active { background: rgba(0, 229, 255, 0.14); color: var(--accent-cyan); }
+
+    body.lang-switching { animation: langFade 0.28s ease-out; }
+    @keyframes langFade { from { opacity: 0.5; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      max-width: 980px;
+      margin: 0 auto 18px auto;
+      animation: fadeUp 0.8s ease-out forwards;
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+    .hero-kicker { font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-cyan); margin-bottom: 14px; }
+    .hero-title { font-size: clamp(40px, 5vw, 60px); line-height: 1.05; font-weight: 900; margin-bottom: 14px; letter-spacing: -0.02em; }
+    .hero-subtitle { max-width: 760px; margin: 0 auto 18px auto; font-size: 16px; line-height: 1.5; color: var(--text-muted); }
+
+    .hero-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 13px 26px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+      user-select: none;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), #7df2ff);
+      color: #020308;
+      box-shadow: 0 14px 40px rgba(0, 229, 255, 0.4);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 18px 60px rgba(0, 229, 255, 0.6); }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--accent-green), #b9ffcf);
+      color: #020308;
+      box-shadow: 0 14px 40px rgba(0, 230, 118, 0.4);
+    }
+    .btn-secondary:hover { transform: translateY(-1px); box-shadow: 0 18px 60px rgba(0, 230, 118, 0.7); }
+
+    .btn-ghost {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.16);
+      color: var(--text-main);
+      box-shadow: 0 12px 34px rgba(0,0,0,0.45);
+    }
+    .btn-ghost:hover { transform: translateY(-1px); border-color: rgba(0,229,255,0.26); }
+
+    .note-line {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Tool cubes */
+    .tool-grid-wrap { max-width: var(--maxw); margin: 0 auto 14px; }
+    .tool-grid-title {
+      text-align: center;
+      margin: 14px 0 8px;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(244,246,255,0.72);
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+      margin-top: 10px;
+    }
+    .tool-card {
+      grid-column: span 4;
+      background: rgba(255,255,255,0.05);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 16px 16px 14px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+      min-width: 0;
+    }
+    .tool-card::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(520px 160px at 18% -5%, rgba(0,229,255,.16), transparent 60%),
+        radial-gradient(520px 160px at 85% 0%, rgba(124,92,255,.16), transparent 60%);
+      pointer-events:none;
+      opacity: .9;
+    }
+    .tool-card > * { position: relative; }
+
+    .tool-card:hover { transform: translateY(-2px); border-color: rgba(0,229,255,0.26); background: rgba(255,255,255,0.06); }
+    .tool-card.active { border-color: rgba(0,229,255,0.38); background: rgba(0,229,255,0.06); }
+
+    .tool-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .tool-name { font-size: 15px; font-weight: 900; letter-spacing: 0.01em; line-height: 1.25; }
+    .tool-desc { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+
+    .badge-row { display:flex; flex-wrap:wrap; gap:8px; margin-top: 12px; }
+    .badge {
+      display:inline-flex; align-items:center; gap:8px;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .badge strong { color: rgba(244,246,255,0.92); font-weight: 800; }
+    .badge.beta { border-color: rgba(255,193,7,0.25); background: rgba(255,193,7,0.08); color: rgba(244,246,255,0.92); }
+
+    /* Panels */
+    .panel-shell {
+      margin-top: 14px;
+      padding: 22px 20px;
+      border-radius: var(--radius-xl);
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    .panel-shell.hidden { display: none; }
+
+    .panel-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 12px;
+    }
+    .panel-kicker {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-purple);
+      margin-bottom: 8px;
+    }
+    .panel-title { font-size: 28px; font-weight: 900; letter-spacing: -0.01em; line-height: 1.12; }
+    .panel-sub { margin-top: 8px; max-width: 900px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
+
+    .panel-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      padding: 16px;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(18px);
+      min-width: 0;
+    }
+    .card h3 { font-size: 15px; letter-spacing: 0.02em; margin-bottom: 8px; color: var(--text-main); }
+    .muted { color: var(--text-muted); font-size: 13px; line-height: 1.45; }
+
+    .field { margin-top: 10px; }
+    .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(244,246,255,0.75); margin-bottom: 6px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(5, 7, 18, 0.9);
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+    }
+    textarea { border-radius: 18px; min-height: 96px; resize: vertical; padding: 12px 12px; }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent-cyan); }
+    .mono { font-family: var(--mono); }
+
+    .toggle{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      user-select:none;
+      width: 100%;
+    }
+    .toggle input{ width:auto; accent-color: var(--accent-cyan); }
+
+    .status {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-main);
+      line-height: 1.5;
+      font-size: 13px;
+      display: none;
+      overflow-wrap: anywhere;
+    }
+    .status.ok   { display:block; background: rgba(0, 230, 118, 0.10); border-color: rgba(0,230,118,0.35); color: #78ffbf; }
+    .status.warn { display:block; background: rgba(255, 193, 7, 0.10); border-color: rgba(255,193,7,0.35); color: #ffd166; }
+    .status.bad  { display:block; background: rgba(220, 53, 69, 0.10); border-color: rgba(220,53,69,0.35); color: #ff7a8a; }
+    .status.info { display:block; background: rgba(0, 229, 255, 0.10); border-color: rgba(0,229,255,0.30); color: #7df2ff; }
+
+    .small { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+
+    .table {
+      margin-top: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .trow {
+      display: grid;
+      grid-template-columns: 1.3fr 1.1fr 0.9fr 0.9fr;
+      gap: 10px;
+      padding: 10px 12px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.03);
+      align-items: center;
+      font-size: 13px;
+    }
+    .trow.head {
+      border-top: none;
+      background: rgba(255,255,255,0.05);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(244,246,255,0.75);
+    }
+    .trow .cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .trow .cell.wrap { white-space: normal; overflow: visible; }
+    .trow .cell .mini { font-size: 12px; color: rgba(244,246,255,0.82); }
+    .trow.highlight { background: rgba(0,230,118,0.10); border-top-color: rgba(0,230,118,0.20); }
+
+    .chips { display:flex; flex-wrap:wrap; gap:10px; margin-top: 10px; }
+    .chip {
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: rgba(244,246,255,0.88);
+      cursor: pointer;
+      user-select: none;
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+      font-size: 12px;
+    }
+    .chip:hover { transform: translateY(-1px); border-color: rgba(0,229,255,0.26); }
+    .chip .x { opacity: .85; color: var(--text-muted); }
+
+    .share-row { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin-top: 20px;
+      padding-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .footer-tagline { color: var(--accent-cyan); font-weight: 700; }
+
+    /* RTL tweaks */
+    html[dir="rtl"] body { direction: rtl; }
+    html[dir="rtl"] .top-bar { flex-direction: row-reverse; }
+    html[dir="rtl"] .brand { flex-direction: row-reverse; }
+    html[dir="rtl"] .panel-head { flex-direction: row-reverse; }
+    html[dir="rtl"] .row { flex-direction: row-reverse; }
+    html[dir="rtl"] .panel-actions { justify-content: flex-start; }
+
+    /* Responsiveness */
+    @media (max-width: 980px) {
+      .tool-card { grid-column: span 6; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .trow { grid-template-columns: 1.2fr 1fr 0.9fr; }
+      .trow .hide-sm { display: none; }
+      .panel-title { font-size: 24px; }
+    }
+    @media (max-width: 640px) {
+      .tool-card { grid-column: span 12; }
+      .top-bar { top: 10px; padding: 10px 12px; }
+      .brand-logo { width: 40px; height: 40px; border-radius: 14px; }
+      .btn { padding: 12px 18px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="top-bar">
+      <a class="brand" href="/" title="Back to CycleX">
+        <img src="/logo.png" alt="CycleX logo" class="brand-logo" />
+        <div class="brand-text">
+          <div class="brand-title">CYCLEX</div>
+          <div class="brand-sub" data-i18n="brand_sub">On-Chain Security & Rewards</div>
+        </div>
+      </a>
+
+      <div class="lang-switch" aria-label="Language selector">
+        <button class="lang-btn active" data-lang="en">🇺🇸 EN</button>
+        <button class="lang-btn" data-lang="zh">🇨🇳 中文</button>
+        <button class="lang-btn" data-lang="ar">🇸🇦 عربي</button>
+        <button class="lang-btn" data-lang="ru">🇷🇺 RU</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-kicker" data-i18n="hero_kicker">Security Hub</div>
+        <h1 class="hero-title" data-i18n="hero_title">CycleX Security Tools</h1>
+        <p class="hero-subtitle" data-i18n="hero_subtitle">
+          A lightweight, client-side toolkit for safer swaps, approvals hygiene, and RPC health checks across BSC + Ethereum.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="/" data-i18n="btn_back">Back to Site</a>
+          <button class="btn btn-secondary" id="btn-connect" data-i18n="btn_connect">Connect Wallet (optional)</button>
+          <button class="btn btn-ghost" id="btn-quick" data-i18n="btn_quick">Run Quick Scan</button>
+        </div>
+
+        <div class="note-line" data-i18n="hero_note">
+          Note: These checks are informational and do not guarantee safety. Always verify independently.
+        </div>
+      </section>
+
+      <section class="tool-grid-wrap">
+        <div class="tool-grid-title" data-i18n="tools_kicker">CHOOSE A TOOL</div>
+
+        <div class="tool-grid" id="toolGrid">
+          <!-- 1) QUICK -->
+          <div class="tool-card active" data-tool="quick">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_quick_title">Quick Scan</div>
+              <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_quick_desc">
+              Fast token sanity-check: contract, metadata, owner/proxy hints, and shareable report.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_fast">Fast</strong></div>
+              <div class="badge"><strong data-i18n="badge_history">History</strong></div>
+              <div class="badge"><strong data-i18n="badge_share">Share</strong></div>
+            </div>
+          </div>
+
+          <!-- 2) APPROVALS -->
+          <div class="tool-card" data-tool="approvals">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_approvals_title">Approval Guardian</div>
+              <div class="badge"><strong data-i18n="badge_wallet">Wallet</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_approvals_desc">
+              Check and revoke ERC-20 allowances safely (approve → 0) with a clean, pro UX.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
+              <div class="badge"><strong data-i18n="badge_revoke">Revoke</strong></div>
+            </div>
+          </div>
+
+          <!-- 3) RPC -->
+          <div class="tool-card" data-tool="rpc">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_rpc_title">RPC Health Checker</div>
+              <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_rpc_desc">
+              Test endpoints, show latency + block height, then copy the best RPC instantly.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_table">Table</strong></div>
+              <div class="badge"><strong data-i18n="badge_copy">Copy</strong></div>
+            </div>
+          </div>
+
+          <!-- 4) MONITOR -->
+          <div class="tool-card" data-tool="monitor">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_monitor_title">Contract Diff / Upgrade Monitor</div>
+              <div class="badge"><strong data-i18n="badge_watch">Watch</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_monitor_desc">
+              Save contracts locally, detect bytecode changes and proxy implementation upgrades over time.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_local">Local</strong></div>
+              <div class="badge"><strong data-i18n="badge_changes">Changes</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANELS -->
+      <section class="panel-shell" id="panel-quick">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_quick_kicker">Quick Scan</div>
+            <div class="panel-title" data-i18n="p_quick_title">Score a token in seconds</div>
+            <div class="panel-sub" data-i18n="p_quick_sub">
+              Paste a token address, choose network, run scan. We save history locally and generate shareable outputs.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <div class="pill"><span data-i18n="pill_wallet">Wallet</span>: <span class="mono" id="walletLabel">not connected</span></div>
+            <button class="btn btn-ghost" id="btnCloseQuick" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="quick_input_title">Token Input</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="qs-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="addr_label">Token contract</div>
+              <input id="qs-token" class="mono" placeholder="0x..." />
+              <div class="small" style="margin-top:8px" data-i18n="qs_tip">
+                Tip: open with <span class="mono">?tool=quick&net=bsc&token=0x...</span> to auto-run.
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="options_label">Options</div>
+              <label class="toggle">
+                <input type="checkbox" id="qs-require-liq">
+                <span data-i18n="opt_require_liq">Require liquidity (stricter score)</span>
+              </label>
+              <label class="toggle" style="margin-top:10px">
+                <input type="checkbox" id="qs-show-json" checked>
+                <span data-i18n="opt_show_json">Enable JSON report (copy)</span>
+              </label>
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="qs-run" data-i18n="btn_scan">Scan</button>
+                <button class="btn btn-ghost" id="qs-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
+                <button class="btn btn-ghost" id="qs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="history_label">History</div>
+              <div class="chips" id="qs-history"></div>
+              <div class="small" style="margin-top:8px" data-i18n="history_tip">
+                Click an item to re-run quickly. Stored locally only.
+              </div>
+            </div>
+
+            <div class="share-row">
+              <button class="btn btn-ghost" id="qs-share-x">Share to X</button>
+              <button class="btn btn-ghost" id="qs-share-tg">Share to Telegram</button>
+            </div>
+
+            <div id="qs-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="results_title">Results</h3>
+            <div class="small" data-i18n="results_hint">
+              Green / Yellow / Red signals. Not a guarantee — just verifiable on-chain checks.
+            </div>
+
+            <div id="qs-out" class="status info" style="display:block; margin-top:10px;">
+              <strong>Ready.</strong><br>
+              Paste a token address and click <b>Scan</b>.
+            </div>
+
+            <div id="qs-pairsWrap" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-approvals">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_app_kicker">Approval Guardian</div>
+            <div class="panel-title" data-i18n="p_app_title">Check and revoke allowances</div>
+            <div class="panel-sub" data-i18n="p_app_sub">
+              Provide spender + tokens (or seed common tokens). We read allowance(owner, spender) and revoke with approve(spender, 0).
+            </div>
+          </div>
+          <div class="panel-actions">
+            <div class="pill"><span data-i18n="pill_wallet">Wallet</span>: <span class="mono" id="ap-wallet">not connected</span></div>
+            <button class="btn btn-ghost" id="btnCloseApprovals" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="ap_settings_title">Settings</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="ap-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="row" style="justify-content:space-between">
+                <div class="pill"><span data-i18n="ap_connected">Connected:</span> <span id="ap-address" class="mono">—</span></div>
+                <button class="btn btn-secondary" id="ap-connect" data-i18n="ap_connect">Connect / Refresh</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="ap_spender_label">Spender preset</div>
+              <div class="row">
+                <select id="ap-spender-preset">
+                  <option value="pcs_router">PancakeSwap Router (BSC)</option>
+                  <option value="uni_router">Uniswap V2 Router (ETH)</option>
+                  <option value="custom">Custom…</option>
+                </select>
+                <input id="ap-spender" class="mono" placeholder="0x spender..." />
+              </div>
+              <div class="small" style="margin-top:8px" data-i18n="ap_spender_tip">
+                Start with a router preset, then add tokens you want to clean up.
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="ap_tokens_label">Token list (one per line)</div>
+              <textarea id="ap-tokens" class="mono" placeholder="0x...\n0x...\n0x..."></textarea>
+              <div class="row" style="margin-top:10px">
+                <button class="btn btn-ghost" id="ap-seed-common" data-i18n="ap_seed">Seed common tokens</button>
+                <button class="btn btn-ghost" id="ap-seed-history" data-i18n="ap_seed_history">Use scan history</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="ap-check" data-i18n="ap_check">Check Allowances</button>
+                <button class="btn btn-ghost" id="ap-revoke-all" data-i18n="ap_revoke_all">Revoke All (non-zero)</button>
+              </div>
+            </div>
+
+            <div id="ap-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="ap_results">Allowances</h3>
+            <div class="small" data-i18n="ap_results_hint">
+              If allowance is “infinite”, revoke is recommended unless you fully trust the spender.
+            </div>
+
+            <div id="ap-table" class="table" style="margin-top:12px;">
+              <div class="trow head">
+                <div class="cell">Token</div>
+                <div class="cell">Allowance</div>
+                <div class="cell hide-sm">Symbol</div>
+                <div class="cell">Action</div>
+              </div>
+              <div class="trow">
+                <div class="cell muted">—</div>
+                <div class="cell muted">—</div>
+                <div class="cell muted hide-sm">—</div>
+                <div class="cell muted">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-rpc">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_rpc_kicker">RPC Health Checker</div>
+            <div class="panel-title" data-i18n="p_rpc_title">Find the best endpoint</div>
+            <div class="panel-sub" data-i18n="p_rpc_sub">
+              We test RPC endpoints with eth_blockNumber and measure latency. Best result is highlighted and ready to copy.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="btnCloseRpc" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="rpc_inputs">Inputs</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="rpc-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="rpc_custom_label">Optional custom RPC (top priority)</div>
+              <input id="rpc-custom" class="mono" placeholder="https://..." />
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="rpc-test" data-i18n="rpc_test">Test RPCs</button>
+                <button class="btn btn-ghost" id="rpc-copy-best" data-i18n="rpc_copy_best">Copy Best RPC</button>
+                <button class="btn btn-ghost" id="rpc-copy-json">Copy JSON list</button>
+              </div>
+            </div>
+
+            <div id="rpc-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="rpc_results">Results</h3>
+
+            <div id="rpc-table" class="table">
+              <div class="trow head">
+                <div class="cell">RPC</div>
+                <div class="cell">Latency</div>
+                <div class="cell hide-sm">Block</div>
+                <div class="cell">Status</div>
+              </div>
+            </div>
+
+            <div class="small" style="margin-top:10px" data-i18n="rpc_tip">
+              Tip: Some RPCs fail due to CORS/timeouts. Run the test and pick the stable fastest.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-monitor">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_mon_kicker">Contract Monitor</div>
+            <div class="panel-title" data-i18n="p_mon_title">Detect upgrades & bytecode changes</div>
+            <div class="panel-sub" data-i18n="p_mon_sub">
+              Save contracts locally. We store code hash + proxy implementation. Re-check later to detect changes.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="btnCloseMonitor" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="mon_add_title">Add to watchlist</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="mon-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="addr_label">Contract address</div>
+              <input id="mon-addr" class="mono" placeholder="0x..." />
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="mon-add" data-i18n="mon_add">Add</button>
+                <button class="btn btn-ghost" id="mon-check" data-i18n="mon_check">Check all</button>
+                <button class="btn btn-ghost" id="mon-export">Export JSON</button>
+              </div>
+            </div>
+
+            <div id="mon-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="mon_list_title">Watchlist</h3>
+            <div class="small" data-i18n="mon_list_hint">Stored locally only. No server tracking.</div>
+
+            <div id="mon-table" class="table" style="margin-top:12px;">
+              <div class="trow head">
+                <div class="cell">Contract</div>
+                <div class="cell">Network</div>
+                <div class="cell hide-sm">Last seen</div>
+                <div class="cell">Status</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div data-i18n="footer_left">
+          CycleX Security Hub runs client-side and reads public on-chain data.
+        </div>
+        <div class="footer-tagline" data-i18n="footer_tagline">
+          Verify twice. Connect only when you trust the page.
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Libraries (ORDER MATTERS) -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
+
+  <!-- Reown AppKit (WalletConnect modal) -->
+  <script src="https://unpkg.com/@reown/appkit@1.6.3/dist/appkit.umd.js"></script>
+  <script src="https://unpkg.com/@reown/appkit-adapter-ethers@1.6.3/dist/ethers.umd.js"></script>
+
+  <!-- ✅ Paste Part 3 (JS) below -->
 <script>
 (() => {
   "use strict";
@@ -1191,8 +2064,8 @@
   async function ensureConnected(preferredNet="bsc"){
     const status = document.getElementById("ap-status");
 
-    if (String(WALLETCONNECT_PROJECT_ID || "").includes("7886bcb95105e9e47337cec481d5de75")) {
-      setStatus(status, "warn", "<strong>⚠️ WalletConnect Project ID .</strong><br>-Project ID -JS (WALLETCONNECT_PROJECT_ID).");
+    if (String(WALLETCONNECT_PROJECT_ID || "").includes("PASTE_YOUR_WC_PROJECT_ID_HERE")) {
+      setStatus(status, "warn", "<strong>⚠️ WalletConnect Project ID חסר.</strong><br>תדביק את ה-Project ID שלך ב-JS (WALLETCONNECT_PROJECT_ID).");
       return false;
     }
 
