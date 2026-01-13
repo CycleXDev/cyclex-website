@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google tag (optional, same as main site) -->
+  <!-- Google tag (GA4) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-BXDFXJWCNQ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -14,2100 +14,973 @@
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/logo.png">
   <link rel="apple-touch-icon" href="/logo.png">
-  
+
   <meta charset="UTF-8" />
+  <title>CycleX – Security Hub</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CycleX Security Hub</title>
-  <link rel="icon" href="/logo.png">
 
-   <style>
-  :root{
-    --bg-main:#05060a;
-    --bg-gradient-start:#05060a;
-    --bg-gradient-mid:#1a0d3a;
-    --bg-gradient-end:#003a4c;
+  <style>
+    :root {
+      --bg-main: #05060a;
+      --bg-gradient-start: #05060a;
+      --bg-gradient-mid: #1a0d3a;
+      --bg-gradient-end: #003a4c;
 
-    --text-main:#f4f6ff;
-    --text-muted:rgba(244,246,255,.72);
+      --text-main: #f4f6ff;
+      --text-muted: rgba(244, 246, 255, 0.7);
 
-    --accent-cyan:#00e5ff;
-    --accent-green:#00ffa8;
-    --accent-purple:#b46bff;
+      --accent-cyan: #00e5ff;
+      --accent-green: #5dffb2;
+      --accent-purple: #7c5cff;
 
-    --card-bg:rgba(255,255,255,.055);
-    --card-border:rgba(255,255,255,.12);
-    --shadow:0 18px 60px rgba(0,0,0,.45);
+      --card-bg: rgba(255, 255, 255, 0.06);
+      --border-subtle: rgba(255, 255, 255, 0.12);
 
-    --radius:18px;
-    --radius-sm:14px;
-    --maxw:1150px;
+      --shadow-soft: 0 30px 90px rgba(0, 0, 0, 0.75);
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --transition-fast: 0.18s ease-out;
 
-    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-    --sans:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
-  }
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      --maxw: 1160px;
+    }
 
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0;
-    font-family:var(--sans);
-    color:var(--text-main);
-    background:
-      radial-gradient(900px 560px at 18% 8%, rgba(180,107,255,.22), transparent 60%),
-      radial-gradient(900px 560px at 82% 18%, rgba(0,229,255,.18), transparent 60%),
-      radial-gradient(900px 560px at 60% 92%, rgba(0,255,168,.12), transparent 60%),
-      linear-gradient(135deg,var(--bg-gradient-start),var(--bg-gradient-mid) 45%,var(--bg-gradient-end));
-    overflow-x:hidden;
-  }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--sans);
+      background:
+        radial-gradient(circle at top left, rgba(124, 92, 255, 0.35) 0%, transparent 45%),
+        radial-gradient(circle at top right, rgba(0, 229, 255, 0.35) 0%, transparent 45%),
+        radial-gradient(circle at bottom, rgba(0, 58, 76, 0.55) 0%, transparent 55%),
+        linear-gradient(160deg, var(--bg-gradient-start), var(--bg-gradient-mid), var(--bg-gradient-end));
+      color: var(--text-main);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      animation: fadeBody 0.7s ease-out forwards;
+      opacity: 1;
+      overflow-x: hidden;
+    }
+    @keyframes fadeBody { from { opacity: 0; } to { opacity: 1; } }
+    a { color: inherit; text-decoration: none; }
 
-  /* Subtle grid/noise overlay (premium feel) */
-  body::before{
-    content:"";
-    position:fixed;
-    inset:0;
-    pointer-events:none;
-    opacity:.22;
-    background:
-      linear-gradient(to right, rgba(255,255,255,.04) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255,255,255,.03) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(60% 55% at 50% 18%, #000 60%, transparent 100%);
-  }
+    .page-shell { max-width: var(--maxw); margin: 0 auto; padding: 32px 20px 72px; }
 
-  /* ====== Layout ====== */
-  .cxx-wrap{max-width:var(--maxw); margin:0 auto; padding:0 16px 74px}
+    /* Top bar */
+    .top-bar {
+      position: sticky;
+      top: 14px;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 18px;
+      margin-bottom: 26px;
+      border-radius: 999px;
+      background: rgba(8, 10, 22, 0.55);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-logo {
+      width: 44px; height: 44px; border-radius: 16px; object-fit: contain;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
+      flex: 0 0 auto;
+    }
+    .brand-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .brand-title {
+      font-weight: 800; letter-spacing: 0.05em; font-size: 18px; text-transform: uppercase;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .brand-sub {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
 
-  /* ====== Top Bar ====== */
-  .cxx-top{
-    position:sticky;
-    top:0;
-    z-index:20;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    background: linear-gradient(180deg, rgba(5,6,10,.92), rgba(5,6,10,.62));
-    border-bottom:1px solid rgba(255,255,255,.08);
-  }
-  .cxx-top-in{
-    max-width:var(--maxw);
-    margin:0 auto;
-    padding:12px 16px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-  }
+    .lang-switch {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+      gap: 2px;
+      flex: 0 0 auto;
+    }
+    .lang-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
+      user-select: none;
+      white-space: nowrap;
+    }
+    .lang-btn:hover { transform: translateY(-1px); }
+    .lang-btn.active { background: rgba(0, 229, 255, 0.14); color: var(--accent-cyan); }
 
-  .cxx-brand{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    min-width:0;
-    flex: 1 1 320px;
-  }
+    body.lang-switching { animation: langFade 0.28s ease-out; }
+    @keyframes langFade { from { opacity: 0.5; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-  /* Use your actual logo to match the main site */
-  .cxx-logo{
-    width:36px;height:36px;border-radius:12px;
-    border:1px solid rgba(255,255,255,.16);
-    box-shadow: 0 0 24px rgba(0,229,255,.12);
-    background:
-      radial-gradient(12px 12px at 30% 25%, rgba(255,255,255,.18), transparent 60%),
-      conic-gradient(from 220deg, rgba(0,229,255,.7), rgba(180,107,255,.7), rgba(0,255,168,.65), rgba(0,229,255,.7));
-    position:relative;
-    overflow:hidden;
-  }
-  .cxx-logo::after{
-    content:"";
-    position:absolute;
-    inset:2px;
-    border-radius:10px;
-    background: url("/logo.png") center/cover no-repeat;
-    opacity:.92;
-    mix-blend-mode: screen;
-    filter: saturate(1.05) contrast(1.05);
-  }
+    /* Hero */
+    .hero {
+      text-align: center;
+      max-width: 980px;
+      margin: 0 auto 18px auto;
+      animation: fadeUp 0.8s ease-out forwards;
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 
-  .cxx-brand h1{
-    font-size:14px;
-    margin:0;
-    letter-spacing:.4px;
-    font-weight:850;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  .cxx-brand p{
-    margin:0;
-    font-size:12px;
-    color:var(--text-muted);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
+    .hero-kicker { font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent-cyan); margin-bottom: 14px; }
+    .hero-title { font-size: clamp(40px, 5vw, 60px); line-height: 1.05; font-weight: 900; margin-bottom: 14px; letter-spacing: -0.02em; }
+    .hero-subtitle { max-width: 760px; margin: 0 auto 18px auto; font-size: 16px; line-height: 1.5; color: var(--text-muted); }
 
-  .cxx-actions{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    flex-wrap:wrap;
-    justify-content:flex-end;
-    flex: 0 1 auto;
-  }
+    .hero-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
 
-  .cxx-btn{
-    appearance:none;
-    border:1px solid rgba(255,255,255,.14);
-    background: rgba(255,255,255,.06);
-    color:var(--text-main);
-    border-radius:14px;
-    padding:10px 12px;
-    font-weight:800;
-    cursor:pointer;
-    transition: transform .08s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:8px;
-    touch-action:manipulation;
-    user-select:none;
-  }
-  .cxx-btn:hover{
-    background: rgba(255,255,255,.10);
-    border-color: rgba(255,255,255,.24);
-  }
-  .cxx-btn:active{transform: scale(.98)}
-  .cxx-btn:focus-visible{
-    outline:none;
-    box-shadow: 0 0 0 3px rgba(0,229,255,.18);
-    border-color: rgba(0,229,255,.35);
-  }
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 13px 26px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+      user-select: none;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-  .cxx-btn.primary{
-    border-color: rgba(0,229,255,.35);
-    background:
-      radial-gradient(120px 60px at 20% 20%, rgba(0,229,255,.20), transparent 60%),
-      linear-gradient(135deg, rgba(0,229,255,.15), rgba(180,107,255,.10));
-    box-shadow: 0 14px 50px rgba(0,229,255,.10);
-  }
-  .cxx-btn.primary:hover{
-    border-color: rgba(0,229,255,.48);
-    box-shadow: 0 18px 60px rgba(0,229,255,.14);
-  }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), #7df2ff);
+      color: #020308;
+      box-shadow: 0 14px 40px rgba(0, 229, 255, 0.4);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 18px 60px rgba(0, 229, 255, 0.6); }
 
-  select.cxx-select{
-    appearance:none;
-    border:1px solid rgba(255,255,255,.14);
-    background: rgba(255,255,255,.06);
-    color:var(--text-main);
-    border-radius:14px;
-    padding:10px 38px 10px 12px;
-    font-weight:800;
-    outline:none;
-    cursor:pointer;
-    background-image:
-      linear-gradient(45deg, transparent 50%, rgba(244,246,255,.75) 50%),
-      linear-gradient(135deg, rgba(244,246,255,.75) 50%, transparent 50%);
-    background-position:
-      calc(100% - 18px) 55%,
-      calc(100% - 12px) 55%;
-    background-size:6px 6px, 6px 6px;
-    background-repeat:no-repeat;
-  }
-  select.cxx-select:focus-visible{
-    box-shadow: 0 0 0 3px rgba(0,229,255,.18);
-    border-color: rgba(0,229,255,.35);
-  }
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--accent-green), #b9ffcf);
+      color: #020308;
+      box-shadow: 0 14px 40px rgba(0, 230, 118, 0.4);
+    }
+    .btn-secondary:hover { transform: translateY(-1px); box-shadow: 0 18px 60px rgba(0, 230, 118, 0.7); }
 
-  /* ====== Hero ====== */
-  .cxx-hero{padding:26px 0 14px}
+    .btn-ghost {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.16);
+      color: var(--text-main);
+      box-shadow: 0 12px 34px rgba(0,0,0,0.45);
+    }
+    .btn-ghost:hover { transform: translateY(-1px); border-color: rgba(0,229,255,0.26); }
 
-  .cxx-kicker{
-    display:inline-flex;
-    align-items:center;
-    gap:10px;
-    padding:9px 12px;
-    border-radius:999px;
-    background: rgba(255,255,255,.07);
-    border:1px solid rgba(255,255,255,.12);
-    color:var(--text-muted);
-    font-weight:850;
-    font-size:12px;
-    box-shadow: 0 14px 50px rgba(0,0,0,.25);
-  }
-  .cxx-dot{
-    width:8px;height:8px;border-radius:50%;
-    background:var(--accent-green);
-    box-shadow: 0 0 14px rgba(0,255,168,.55);
-  }
+    .note-line {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
 
-  .cxx-hero h2{
-    margin:14px 0 8px;
-    font-size:42px;
-    line-height:1.08;
-    letter-spacing:-.8px;
-  }
-  .cxx-hero p{
-    margin:0;
-    max-width:860px;
-    color:var(--text-muted);
-    font-size:15.5px;
-    line-height:1.6;
-  }
+    /* Tool cubes */
+    .tool-grid-wrap { max-width: var(--maxw); margin: 0 auto 14px; }
+    .tool-grid-title {
+      text-align: center;
+      margin: 14px 0 8px;
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(244,246,255,0.72);
+    }
 
-  /* ====== Tiles Grid ====== */
-  .cxx-grid{
-    display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap:14px;
-    margin-top:18px;
-  }
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+      margin-top: 10px;
+    }
+    .tool-card {
+      grid-column: span 4;
+      background: rgba(255,255,255,0.05);
+      border-radius: var(--radius-xl);
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 16px 16px 14px;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+      min-width: 0;
+    }
+    .tool-card::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(520px 160px at 18% -5%, rgba(0,229,255,.16), transparent 60%),
+        radial-gradient(520px 160px at 85% 0%, rgba(124,92,255,.16), transparent 60%);
+      pointer-events:none;
+      opacity: .9;
+    }
+    .tool-card > * { position: relative; }
 
-  .cxx-card{
-    background: var(--card-bg);
-    border:1px solid var(--card-border);
-    border-radius: var(--radius);
-    padding:16px;
-    box-shadow: var(--shadow);
-    position:relative;
-    overflow:hidden;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    transition: transform .14s ease, border-color .18s ease, background .18s ease;
-    min-height: 168px;
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-  }
-  .cxx-card::before{
-    content:"";
-    position:absolute; inset:-1px;
-    background:
-      radial-gradient(560px 180px at 20% -10%, rgba(0,229,255,.18), transparent 60%),
-      radial-gradient(560px 180px at 85% 0%, rgba(180,107,255,.16), transparent 60%),
-      radial-gradient(560px 180px at 60% 120%, rgba(0,255,168,.10), transparent 60%);
-    pointer-events:none;
-    opacity:.9;
-  }
-  .cxx-card > *{position:relative}
-  .cxx-card:hover{
-    transform: translateY(-2px);
-    border-color: rgba(255,255,255,.20);
-    background: rgba(255,255,255,.07);
-  }
+    .tool-card:hover { transform: translateY(-2px); border-color: rgba(0,229,255,0.26); background: rgba(255,255,255,0.06); }
+    .tool-card.active { border-color: rgba(0,229,255,0.38); background: rgba(0,229,255,0.06); }
 
-  .cxx-card h3{
-    margin:0 0 6px;
-    font-size:16px;
-    letter-spacing:.2px;
-    font-weight:900;
-  }
-  .cxx-card p{
-    margin:0 0 12px;
-    font-size:13px;
-    color:var(--text-muted);
-    line-height:1.45;
-  }
-  .cxx-card .cxx-btn{
-    width:100%;
-    justify-content:center;
-  }
+    .tool-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .tool-name { font-size: 15px; font-weight: 900; letter-spacing: 0.01em; line-height: 1.25; }
+    .tool-desc { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
 
-  /* ====== Panels ====== */
-  .cxx-panel{
-    margin-top:16px;
-    background: rgba(255,255,255,.045);
-    border:1px solid rgba(255,255,255,.11);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    overflow:hidden;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
+    .badge-row { display:flex; flex-wrap:wrap; gap:8px; margin-top: 12px; }
+    .badge {
+      display:inline-flex; align-items:center; gap:8px;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      white-space: nowrap;
+      user-select: none;
+    }
+    .badge strong { color: rgba(244,246,255,0.92); font-weight: 800; }
+    .badge.beta { border-color: rgba(255,193,7,0.25); background: rgba(255,193,7,0.08); color: rgba(244,246,255,0.92); }
 
-  .cxx-panel-hd{
-    padding:14px 16px;
-    border-bottom:1px solid rgba(255,255,255,.08);
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:12px;
-    background:
-      radial-gradient(220px 80px at 18% 0%, rgba(0,229,255,.10), transparent 60%),
-      radial-gradient(220px 80px at 85% 0%, rgba(180,107,255,.10), transparent 60%),
-      linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-  }
-  .cxx-panel-hd h4{
-    margin:0;
-    font-size:14px;
-    letter-spacing:.2px;
-    font-weight:900;
-  }
-  .cxx-panel-bd{padding:16px}
+    /* Panels */
+    .panel-shell {
+      margin-top: 14px;
+      padding: 22px 20px;
+      border-radius: var(--radius-xl);
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    .panel-shell.hidden { display: none; }
 
-  .cxx-row{
-    display:grid;
-    grid-template-columns: 1.2fr .8fr;
-    gap:12px;
-  }
-  @media (max-width: 860px){
-    .cxx-row{grid-template-columns:1fr}
-  }
+    .panel-head {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 12px;
+    }
+    .panel-kicker {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-purple);
+      margin-bottom: 8px;
+    }
+    .panel-title { font-size: 28px; font-weight: 900; letter-spacing: -0.01em; line-height: 1.12; }
+    .panel-sub { margin-top: 8px; max-width: 900px; color: var(--text-muted); font-size: 14px; line-height: 1.6; }
 
-  /* ====== Inputs ====== */
-  .cxx-field{display:flex; flex-direction:column; gap:8px}
-  .cxx-label{font-size:12px; color:var(--text-muted); font-weight:850}
+    .panel-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
 
-  .cxx-input, .cxx-textarea{
-    border:1px solid rgba(255,255,255,.12);
-    background: rgba(0,0,0,.20);
-    color:var(--text-main);
-    border-radius:14px;
-    padding:12px 12px;
-    outline:none;
-    font-family:var(--mono);
-    font-size:12.5px;
-  }
-  .cxx-input::placeholder,.cxx-textarea::placeholder{color: rgba(244,246,255,.40)}
-  .cxx-input:focus, .cxx-textarea:focus{
-    border-color: rgba(0,229,255,.35);
-    box-shadow: 0 0 0 3px rgba(0,229,255,.12);
-  }
-  .cxx-textarea{min-height:120px; resize:vertical}
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 14px; }
 
-  .cxx-help{font-size:12px; color:var(--text-muted); line-height:1.45}
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      padding: 16px;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(18px);
+      min-width: 0;
+    }
+    .card h3 { font-size: 15px; letter-spacing: 0.02em; margin-bottom: 8px; color: var(--text-main); }
+    .muted { color: var(--text-muted); font-size: 13px; line-height: 1.45; }
 
-  /* ====== Pills / Status ====== */
-  .cxx-flex{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-  .cxx-pill{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:8px 10px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.12);
-    background: rgba(255,255,255,.05);
-    font-size:12px; color:var(--text-muted); font-weight:850;
-  }
-  .cxx-mono{font-family:var(--mono)}
-  .cxx-sep{height:1px; background:rgba(255,255,255,.08); margin:14px 0}
+    .field { margin-top: 10px; }
+    .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(244,246,255,0.75); margin-bottom: 6px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
-  .cxx-status{
-    margin-top:10px;
-    padding:12px 12px;
-    border-radius:14px;
-    border:1px solid rgba(255,255,255,.12);
-    background: rgba(0,0,0,.18);
-    font-size:12.5px;
-    color:var(--text-muted);
-    white-space:pre-wrap;
-    line-height:1.5;
-    font-family:var(--mono);
-  }
-  .cxx-status.ok{border-color: rgba(0,255,168,.28); background: rgba(0,255,168,.05); color: rgba(244,246,255,.92)}
-  .cxx-status.warn{border-color: rgba(255,186,0,.30); background: rgba(255,186,0,.05); color: rgba(244,246,255,.92)}
-  .cxx-status.bad{border-color: rgba(255,80,80,.34); background: rgba(255,80,80,.06); color: rgba(244,246,255,.92)}
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(5, 7, 18, 0.9);
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+    }
+    textarea { border-radius: 18px; min-height: 96px; resize: vertical; padding: 12px 12px; }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent-cyan); }
+    .mono { font-family: var(--mono); }
 
-  .cxx-table{width:100%; border-collapse:collapse; font-size:12.5px}
-  .cxx-table th,.cxx-table td{
-    border-bottom:1px solid rgba(255,255,255,.08);
-    padding:10px 8px;
-    text-align:left;
-    vertical-align:top
-  }
-  .cxx-table th{color:var(--text-muted); font-weight:900; font-size:12px}
-  .cxx-table td{color:rgba(244,246,255,.88)}
-  .cxx-small{font-size:12px; color:var(--text-muted)}
+    .toggle{
+      display:flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      user-select:none;
+      width: 100%;
+    }
+    .toggle input{ width:auto; accent-color: var(--accent-cyan); }
 
-  .cxx-foot{
-    margin-top:22px;
-    text-align:center;
-    color:var(--text-muted);
-    font-size:12px;
-  }
+    .status {
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-main);
+      line-height: 1.5;
+      font-size: 13px;
+      display: none;
+      overflow-wrap: anywhere;
+    }
+    .status.ok   { display:block; background: rgba(0, 230, 118, 0.10); border-color: rgba(0,230,118,0.35); color: #78ffbf; }
+    .status.warn { display:block; background: rgba(255, 193, 7, 0.10); border-color: rgba(255,193,7,0.35); color: #ffd166; }
+    .status.bad  { display:block; background: rgba(220, 53, 69, 0.10); border-color: rgba(220,53,69,0.35); color: #ff7a8a; }
+    .status.info { display:block; background: rgba(0, 229, 255, 0.10); border-color: rgba(0,229,255,0.30); color: #7df2ff; }
 
-  /* Scope link style to our page only */
-  .cxx-wrap a{color:var(--accent-cyan); text-decoration:none}
-  .cxx-wrap a:hover{text-decoration:underline}
+    .small { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
 
-  .cxx-hidden{display:none !important}
+    .table {
+      margin-top: 10px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .trow {
+      display: grid;
+      grid-template-columns: 1.3fr 1.1fr 0.9fr 0.9fr;
+      gap: 10px;
+      padding: 10px 12px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.03);
+      align-items: center;
+      font-size: 13px;
+    }
+    .trow.head {
+      border-top: none;
+      background: rgba(255,255,255,0.05);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(244,246,255,0.75);
+    }
+    .trow .cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .trow .cell.wrap { white-space: normal; overflow: visible; }
+    .trow .cell .mini { font-size: 12px; color: rgba(244,246,255,0.82); }
+    .trow.highlight { background: rgba(0,230,118,0.10); border-top-color: rgba(0,230,118,0.20); }
 
-  /* ====== Mobile polish ====== */
-  @media (max-width: 820px){
-    .cxx-top-in{flex-wrap:wrap}
-    .cxx-actions{width:100%; justify-content:space-between}
-    .cxx-hero h2{font-size:34px}
-  }
-  @media (max-width: 520px){
-    .cxx-actions{gap:8px}
-    .cxx-btn{padding:10px 10px}
-    select.cxx-select{padding:10px 34px 10px 12px}
-    #cxx_connect{width:100%}
-    .cxx-hero h2{font-size:30px}
-  }
+    .chips { display:flex; flex-wrap:wrap; gap:10px; margin-top: 10px; }
+    .chip {
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: rgba(244,246,255,0.88);
+      cursor: pointer;
+      user-select: none;
+      transition: transform var(--transition-fast), border-color var(--transition-fast);
+      font-size: 12px;
+    }
+    .chip:hover { transform: translateY(-1px); border-color: rgba(0,229,255,0.26); }
+    .chip .x { opacity: .85; color: var(--text-muted); }
 
-  @media (prefers-reduced-motion: reduce){
-    .cxx-card, .cxx-btn{transition:none !important}
-    .cxx-card:hover{transform:none}
-  }
-</style>
-  <div class="cxx-top">
-  <div class="cxx-top-in">
-    <div class="cxx-brand">
-      <div class="cxx-logo" aria-hidden="true"></div>
-      <div style="min-width:0">
-        <h1 id="cxx_t_brand">CycleX Security Hub</h1>
-        <p id="cxx_t_sub">On-chain tools to validate contracts, approvals, pools & infrastructure.</p>
+    .share-row { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin-top: 20px;
+      padding-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .footer-tagline { color: var(--accent-cyan); font-weight: 700; }
+
+    /* Responsiveness */
+    @media (max-width: 980px) {
+      .tool-card { grid-column: span 6; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .trow { grid-template-columns: 1.2fr 1fr 0.9fr; }
+      .trow .hide-sm { display: none; }
+      .panel-title { font-size: 24px; }
+    }
+    @media (max-width: 640px) {
+      .tool-card { grid-column: span 12; }
+      .top-bar { top: 10px; padding: 10px 12px; }
+      .brand-logo { width: 40px; height: 40px; border-radius: 14px; }
+      .btn { padding: 12px 18px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="top-bar">
+      <a class="brand" href="/" title="Back to CycleX">
+        <img src="/logo.png" alt="CycleX logo" class="brand-logo" />
+        <div class="brand-text">
+          <div class="brand-title">CYCLEX</div>
+          <div class="brand-sub" data-i18n="brand_sub">On-Chain Security & Rewards</div>
+        </div>
+      </a>
+
+      <div class="lang-switch" aria-label="Language selector">
+        <button class="lang-btn active" data-lang="en">🇺🇸 EN</button>
+        <button class="lang-btn" data-lang="zh">🇨🇳 中文</button>
+        <button class="lang-btn" data-lang="ar">🇸🇦 عربي</button>
+        <button class="lang-btn" data-lang="ru">🇷🇺 RU</button>
       </div>
-    </div>
+    </header>
 
-    <div class="cxx-actions">
-      <a class="cxx-btn" href="/" id="cxx_t_back">← Back to CycleX</a>
+    <main>
+      <section class="hero">
+        <div class="hero-kicker" data-i18n="hero_kicker">Security Hub</div>
+        <h1 class="hero-title" data-i18n="hero_title">CycleX Security Tools</h1>
+        <p class="hero-subtitle" data-i18n="hero_subtitle">
+          A lightweight, client-side toolkit for safer swaps, approvals hygiene, and RPC health checks across BSC + Ethereum.
+        </p>
 
-      <select class="cxx-select" id="cxx_lang" aria-label="Language">
-        <option value="en">EN</option>
-        <option value="zh">中文</option>
-        <option value="ar">AR</option>
-        <option value="ru">RU</option>
-      </select>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="/" data-i18n="btn_back">Back to Site</a>
+          <button class="btn btn-secondary" id="btn-connect" data-i18n="btn_connect">Connect Wallet (optional)</button>
+          <button class="btn btn-ghost" id="btn-quick" data-i18n="btn_quick">Run Quick Scan</button>
+        </div>
 
-      <button class="cxx-btn primary" id="cxx_connect">Connect wallet</button>
-    </div>
+        <div class="note-line" data-i18n="hero_note">
+          Note: These checks are informational and do not guarantee safety. Always verify independently.
+        </div>
+      </section>
+
+      <section class="tool-grid-wrap">
+        <div class="tool-grid-title" data-i18n="tools_kicker">CHOOSE A TOOL</div>
+
+        <div class="tool-grid" id="toolGrid">
+          <div class="tool-card active" data-tool="quick">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_quick_title">Quick Scan</div>
+              <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_quick_desc">
+              Paste a token, get a practical score + warnings, save history, and share results.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_fast">Fast</strong></div>
+              <div class="badge"><strong data-i18n="badge_history">History</strong></div>
+              <div class="badge"><strong data-i18n="badge_share">Share</strong></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="deep">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_deep_title">Token Safety + Liquidity</div>
+              <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_deep_desc">
+              Deeper scan: proxy hints, ownership hints, bytecode fingerprint, liquidity pairs & LP burn signal.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_deeper">Deeper</strong></div>
+              <div class="badge"><strong data-i18n="badge_pairs">Pairs</strong></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="honeypot">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_honey_title">Honeypot / Sell Signals</div>
+              <div class="badge beta"><strong data-i18n="badge_beta">Beta</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_honey_desc">
+              Best-effort “sell risk” signals from on-chain patterns + suspicious bytecode keywords.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_signals">Signals</strong></div>
+              <div class="badge"><strong data-i18n="badge_keywords">Keywords</strong></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="approvals">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_approvals_title">Approval Guardian</div>
+              <div class="badge"><strong data-i18n="badge_wallet">Wallet</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_approvals_desc">
+              Check and revoke ERC-20 allowances safely (approve → 0) with a clean, pro UX.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
+              <div class="badge"><strong data-i18n="badge_revoke">Revoke</strong></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="rpc">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_rpc_title">RPC Health Checker</div>
+              <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_rpc_desc">
+              Test endpoints, show latency + block height, then copy the best RPC instantly.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_table">Table</strong></div>
+              <div class="badge"><strong data-i18n="badge_copy">Copy</strong></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="monitor">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_monitor_title">Contract Diff / Upgrade Monitor</div>
+              <div class="badge"><strong data-i18n="badge_watch">Watch</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_monitor_desc">
+              Save contracts locally, detect bytecode changes and proxy implementation upgrades over time.
+            </div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_local">Local</strong></div>
+              <div class="badge"><strong data-i18n="badge_changes">Changes</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANELS (open below cubes) -->
+      <section class="panel-shell" id="panel-quick">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_quick_kicker">Quick Scan</div>
+            <div class="panel-title" data-i18n="p_quick_title">Score a token in seconds</div>
+            <div class="panel-sub" data-i18n="p_quick_sub">
+              Paste a token address, choose network, run scan. We save history locally and generate shareable outputs.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <div class="pill"><span data-i18n="pill_wallet">Wallet</span>: <span class="mono" id="walletLabel">not connected</span></div>
+            <button class="btn btn-ghost" id="btnCloseQuick" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="quick_input_title">Token Input</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="qs-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="addr_label">Token contract</div>
+              <input id="qs-token" class="mono" placeholder="0x..." />
+              <div class="small" style="margin-top:8px" data-i18n="qs_tip">
+                Tip: open with <span class="mono">?token=0x...</span> to auto-run.
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="options_label">Options</div>
+              <label class="toggle">
+                <input type="checkbox" id="qs-require-liq">
+                <span data-i18n="opt_require_liq">Require liquidity (stricter score)</span>
+              </label>
+              <label class="toggle" style="margin-top:10px">
+                <input type="checkbox" id="qs-show-json" checked>
+                <span data-i18n="opt_show_json">Enable JSON report (copy)</span>
+              </label>
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="qs-run" data-i18n="btn_scan">Scan</button>
+                <button class="btn btn-ghost" id="qs-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
+                <button class="btn btn-ghost" id="qs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="history_label">History</div>
+              <div class="chips" id="qs-history"></div>
+              <div class="small" style="margin-top:8px" data-i18n="history_tip">
+                Click an item to re-run quickly. Stored locally only.
+              </div>
+            </div>
+
+            <div class="share-row">
+              <button class="btn btn-ghost" id="qs-share-x">Share to X</button>
+              <button class="btn btn-ghost" id="qs-share-tg">Share to Telegram</button>
+            </div>
+
+            <div id="qs-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="results_title">Results</h3>
+            <div class="small" data-i18n="results_hint">
+              Green / Yellow / Red signals. Not a guarantee — just verifiable on-chain checks.
+            </div>
+
+            <div id="qs-out" class="status info" style="display:block; margin-top:10px;">
+              <strong>Ready.</strong><br>
+              Paste a token address and click <b>Scan</b>.
+            </div>
+
+            <div id="qs-pairsWrap" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-deep">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_deep_kicker">Token Safety + Liquidity</div>
+            <div class="panel-title" data-i18n="p_deep_title">Deeper on-chain breakdown</div>
+            <div class="panel-sub" data-i18n="p_deep_sub">
+              Same scan, but expanded: bytecode fingerprint, proxy details, liquidity pairs, LP burn signal, and keyword hints.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="btnCloseDeep" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="deep_input_title">Run Deep Scan</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="ds-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="addr_label">Token contract</div>
+              <input id="ds-token" class="mono" placeholder="0x..." />
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="ds-run" data-i18n="btn_scan">Scan</button>
+                <button class="btn btn-ghost" id="ds-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
+              </div>
+            </div>
+
+            <div id="ds-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="deep_results_title">Detailed Report</h3>
+            <div id="ds-out" class="status info" style="display:block; margin-top:10px;">—</div>
+            <div id="ds-tableWrap" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-honeypot">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_honey_kicker">Honeypot / Sell Signals</div>
+            <div class="panel-title" data-i18n="p_honey_title">Best-effort “sell risk” signals</div>
+            <div class="panel-sub" data-i18n="p_honey_sub">
+              We cannot guarantee honeypot detection client-side. This panel surfaces risk patterns you can verify (ownership, proxy, liquidity, keyword hints).
+            </div>
+          </div>
+          <div class="panel-actions">
+            <div class="pill"><span data-i18n="pill_mode">Mode</span>: <span class="mono">Beta</span></div>
+            <button class="btn btn-ghost" id="btnCloseHoney" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="honey_input_title">Token</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="hs-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="addr_label">Token contract</div>
+              <input id="hs-token" class="mono" placeholder="0x..." />
+            </div>
+
+            <div class="field">
+              <label class="toggle">
+                <input type="checkbox" id="hs-strict" checked>
+                <span data-i18n="honey_strict">Strict warnings (better safe)</span>
+              </label>
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="hs-run" data-i18n="btn_scan">Scan</button>
+                <button class="btn btn-ghost" id="hs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
+              </div>
+            </div>
+
+            <div id="hs-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="honey_results_title">Signals</h3>
+            <div id="hs-out" class="status info" style="display:block; margin-top:10px;">—</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-approvals">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_app_kicker">Approval Guardian</div>
+            <div class="panel-title" data-i18n="p_app_title">Check and revoke allowances</div>
+            <div class="panel-sub" data-i18n="p_app_sub">
+              For privacy + reliability, you provide spender + tokens (or seed common tokens). We read allowance(owner, spender) and revoke with approve(spender, 0).
+            </div>
+          </div>
+          <div class="panel-actions">
+            <div class="pill"><span data-i18n="pill_wallet">Wallet</span>: <span class="mono" id="ap-wallet">not connected</span></div>
+            <button class="btn btn-ghost" id="btnCloseApprovals" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="ap_settings_title">Settings</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="ap-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="row" style="justify-content:space-between">
+                <div class="pill"><span data-i18n="ap_connected">Connected:</span> <span id="ap-address" class="mono">—</span></div>
+                <button class="btn btn-secondary" id="ap-connect" data-i18n="ap_connect">Connect / Refresh</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="ap_spender_label">Spender preset</div>
+              <div class="row">
+                <select id="ap-spender-preset">
+                  <option value="pcs_router">PancakeSwap Router (BSC)</option>
+                  <option value="uni_router">Uniswap V2 Router (ETH)</option>
+                  <option value="custom">Custom…</option>
+                </select>
+                <input id="ap-spender" class="mono" placeholder="0x spender..." />
+              </div>
+              <div class="small" style="margin-top:8px" data-i18n="ap_spender_tip">
+                Start with a router preset, then add tokens you want to clean up.
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="ap_tokens_label">Token list (one per line)</div>
+              <textarea id="ap-tokens" class="mono" placeholder="0x...\n0x...\n0x..."></textarea>
+              <div class="row" style="margin-top:10px">
+                <button class="btn btn-ghost" id="ap-seed-common" data-i18n="ap_seed">Seed common tokens</button>
+                <button class="btn btn-ghost" id="ap-seed-history" data-i18n="ap_seed_history">Use scan history</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="ap-check" data-i18n="ap_check">Check Allowances</button>
+                <button class="btn btn-ghost" id="ap-revoke-all" data-i18n="ap_revoke_all">Revoke All (non-zero)</button>
+              </div>
+            </div>
+
+            <div id="ap-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="ap_results">Allowances</h3>
+            <div class="small" data-i18n="ap_results_hint">
+              If allowance is “infinite”, revoke is recommended unless you fully trust the spender.
+            </div>
+
+            <div id="ap-table" class="table" style="margin-top:12px;">
+              <div class="trow head">
+                <div class="cell">Token</div>
+                <div class="cell">Allowance</div>
+                <div class="cell hide-sm">Symbol</div>
+                <div class="cell">Action</div>
+              </div>
+              <div class="trow">
+                <div class="cell muted">—</div>
+                <div class="cell muted">—</div>
+                <div class="cell muted hide-sm">—</div>
+                <div class="cell muted">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-rpc">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_rpc_kicker">RPC Health Checker</div>
+            <div class="panel-title" data-i18n="p_rpc_title">Find the best endpoint</div>
+            <div class="panel-sub" data-i18n="p_rpc_sub">
+              We test RPC endpoints with eth_blockNumber and measure latency. Best result is highlighted and ready to copy.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="btnCloseRpc" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="rpc_inputs">Inputs</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="rpc-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="rpc_custom_label">Optional custom RPC (top priority)</div>
+              <input id="rpc-custom" class="mono" placeholder="https://..." />
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="rpc-test" data-i18n="rpc_test">Test RPCs</button>
+                <button class="btn btn-ghost" id="rpc-copy-best" data-i18n="rpc_copy_best">Copy Best RPC</button>
+                <button class="btn btn-ghost" id="rpc-copy-json">Copy JSON list</button>
+              </div>
+            </div>
+
+            <div id="rpc-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="rpc_results">Results</h3>
+
+            <div id="rpc-table" class="table">
+              <div class="trow head">
+                <div class="cell">RPC</div>
+                <div class="cell">Latency</div>
+                <div class="cell hide-sm">Block</div>
+                <div class="cell">Status</div>
+              </div>
+            </div>
+
+            <div class="small" style="margin-top:10px" data-i18n="rpc_tip">
+              Tip: Some RPCs fail due to CORS/timeouts. Run the test and pick the stable fastest.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-monitor">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_mon_kicker">Contract Monitor</div>
+            <div class="panel-title" data-i18n="p_mon_title">Detect upgrades & bytecode changes</div>
+            <div class="panel-sub" data-i18n="p_mon_sub">
+              Save contracts locally. We store code hash + proxy implementation. Re-check later to detect changes.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="btnCloseMonitor" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="mon_add_title">Add to watchlist</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="mon-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="addr_label">Contract address</div>
+              <input id="mon-addr" class="mono" placeholder="0x..." />
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="mon-add" data-i18n="mon_add">Add</button>
+                <button class="btn btn-ghost" id="mon-check" data-i18n="mon_check">Check all</button>
+                <button class="btn btn-ghost" id="mon-export">Export JSON</button>
+              </div>
+            </div>
+
+            <div id="mon-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="mon_list_title">Watchlist</h3>
+            <div class="small" data-i18n="mon_list_hint">Stored locally only. No server tracking.</div>
+
+            <div id="mon-table" class="table" style="margin-top:12px;">
+              <div class="trow head">
+                <div class="cell">Contract</div>
+                <div class="cell">Network</div>
+                <div class="cell hide-sm">Last seen</div>
+                <div class="cell">Status</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div data-i18n="footer_left">
+          CycleX Security Hub runs client-side and reads public on-chain data.
+        </div>
+        <div class="footer-tagline" data-i18n="footer_tagline">
+          Verify twice. Connect only when you trust the page.
+        </div>
+      </footer>
+    </main>
   </div>
-</div>
-
-<div class="cxx-wrap">
-  <section class="cxx-hero">
-    <div class="cxx-kicker">
-      <span class="cxx-dot"></span>
-      <span id="cxx_t_kicker">Security isn’t a feature — it’s a discipline.</span>
-    </div>
-
-    <h2 id="cxx_t_title">Tools you actually rely on</h2>
-    <p id="cxx_t_desc">
-      Run fast, on-chain checks before interacting with any contract. No hype, no fluff — just concrete signals you can verify.
-    </p>
-
-    <div class="cxx-grid" style="margin-top:18px">
-      <div class="cxx-card">
-        <div>
-          <h3 id="cxx_t_tile1">Token Safety + Liquidity Scan</h3>
-          <p id="cxx_t_tile1d">Contract checks + V2/V3 pool detection vs wrapped native & stables. Approx liquidity, proxy hints, risk flags.</p>
-        </div>
-        <button class="cxx-btn primary" data-cxx-tool="score" id="cxx_t_open1">Open tool</button>
-      </div>
-
-      <div class="cxx-card">
-        <div>
-          <h3 id="cxx_t_tile2">Approval Guardian</h3>
-          <p id="cxx_t_tile2d">Review allowances and revoke risky approvals (approve → 0) directly from your wallet.</p>
-        </div>
-        <button class="cxx-btn primary" data-cxx-tool="approvals" id="cxx_t_open2">Open tool</button>
-      </div>
-
-      <div class="cxx-card">
-        <div>
-          <h3 id="cxx_t_tile3">Transaction Decoder</h3>
-          <p id="cxx_t_tile3d">Decode calldata + show key events (Transfer / Approval / Swap) from the receipt.</p>
-        </div>
-        <button class="cxx-btn primary" data-cxx-tool="tx" id="cxx_t_open3">Open tool</button>
-      </div>
-
-      <div class="cxx-card">
-        <div>
-          <h3 id="cxx_t_tile4">Watchlist</h3>
-          <p id="cxx_t_tile4d">Save addresses, notes and quick jump to tools. Local-only storage.</p>
-        </div>
-        <button class="cxx-btn" data-cxx-tool="watch" id="cxx_t_open4">Open tool</button>
-      </div>
-
-      <div class="cxx-card">
-        <div>
-          <h3 id="cxx_t_tile5">RPC Health Checker</h3>
-          <p id="cxx_t_tile5d">Test multiple RPC endpoints: latency + block height. Great for avoiding flaky providers.</p>
-        </div>
-        <button class="cxx-btn" data-cxx-tool="rpc" id="cxx_t_open5">Open tool</button>
-      </div>
-
-      <div class="cxx-card">
-        <div>
-          <h3 id="cxx_t_tile6">Quick Scan</h3>
-          <p id="cxx_t_tile6d">Paste a token + run Safety + Liquidity + a fast RPC check in one click.</p>
-        </div>
-        <button class="cxx-btn" data-cxx-tool="quick" id="cxx_t_open6">Run</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- SCORE TOOL -->
-  <section class="cxx-panel cxx-hidden" id="cxx_tool_score">
-    <div class="cxx-panel-hd">
-      <h4 id="cxx_t_score_title">Token Safety + Liquidity Scan</h4>
-      <div class="cxx-flex">
-        <span class="cxx-pill"><span id="cxx_t_net">Network</span>: <span class="cxx-mono" id="cxx_score_net_label">BSC</span></span>
-        <button class="cxx-btn" data-cxx-close id="cxx_t_close1">Close</button>
-      </div>
-    </div>
-    <div class="cxx-panel-bd">
-      <div class="cxx-row">
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_token_addr">Token contract address</div>
-          <input class="cxx-input" id="cxx_score_addr" placeholder="0x..." />
-          <div class="cxx-help" id="cxx_t_score_help">
-            Checks: code exists, proxy hints, owner/renounce (if available), and common risk-function selectors. Then scans V2 + V3 pools vs wrapped native & stables.
-          </div>
-        </div>
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_score_netpick">Scan network</div>
-          <select class="cxx-select" id="cxx_score_net">
-            <option value="bsc">BSC (BNB Chain)</option>
-            <option value="eth">Ethereum</option>
-          </select>
-          <div class="cxx-flex" style="margin-top:10px">
-            <label class="cxx-pill" style="cursor:pointer">
-              <input type="checkbox" id="cxx_score_v3" checked style="accent-color: var(--accent-cyan);"/>
-              <span id="cxx_t_score_v3">Include V3 pools</span>
-            </label>
-            <label class="cxx-pill" style="cursor:pointer">
-              <input type="checkbox" id="cxx_score_stables" checked style="accent-color: var(--accent-cyan);"/>
-              <span id="cxx_t_score_stables">Include stables</span>
-            </label>
-          </div>
-          <button class="cxx-btn primary" id="cxx_score_run" style="margin-top:12px">Run scan</button>
-        </div>
-      </div>
-
-      <div class="cxx-status" id="cxx_score_status">—</div>
-
-      <div class="cxx-sep"></div>
-      <div class="cxx-small" id="cxx_t_score_note">
-        Notes: “Approx liquidity” is computed from on-chain balances/reserves and a wrapped-native USD estimate (from the highest-liquidity native/stable V2 pool on the selected network).
-        It’s a signal, not a guarantee.
-      </div>
-    </div>
-  </section>
-
-  <!-- APPROVALS TOOL -->
-  <section class="cxx-panel cxx-hidden" id="cxx_tool_approvals">
-    <div class="cxx-panel-hd">
-      <h4 id="cxx_t_app_title">Approval Guardian</h4>
-      <div class="cxx-flex">
-        <span class="cxx-pill"><span id="cxx_t_wallet">Wallet</span>: <span class="cxx-mono" id="cxx_wallet_label">not connected</span></span>
-        <button class="cxx-btn" data-cxx-close id="cxx_t_close2">Close</button>
-      </div>
-    </div>
-    <div class="cxx-panel-bd">
-      <div class="cxx-row">
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_spenders">Spender addresses (one per line)</div>
-          <textarea class="cxx-textarea" id="cxx_spenders" spellcheck="false"></textarea>
-          <div class="cxx-help" id="cxx_t_spenders_help">Tip: include DEX routers you used. You can add more later.</div>
-        </div>
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_tokens">Token addresses (one per line)</div>
-          <textarea class="cxx-textarea" id="cxx_tokens" spellcheck="false"></textarea>
-          <div class="cxx-help" id="cxx_t_tokens_help">
-            This tool reads allowances from your wallet to each spender. You can revoke by sending approve(spender, 0).
-          </div>
-          <div class="cxx-flex" style="margin-top:10px">
-            <button class="cxx-btn primary" id="cxx_allowances_run">Check allowances</button>
-            <button class="cxx-btn" id="cxx_allowances_seed">Seed common spenders/tokens (BSC)</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="cxx-status" id="cxx_allowances_status">—</div>
-      <div class="cxx-sep"></div>
-      <div id="cxx_allowances_table_wrap" class="cxx-hidden"></div>
-    </div>
-  </section>
-
-  <!-- TX TOOL -->
-  <section class="cxx-panel cxx-hidden" id="cxx_tool_tx">
-    <div class="cxx-panel-hd">
-      <h4 id="cxx_t_tx_title">Transaction Decoder</h4>
-      <div class="cxx-flex">
-        <span class="cxx-pill"><span id="cxx_t_tx_net">Network</span>: <span class="cxx-mono" id="cxx_tx_net_label">BSC</span></span>
-        <button class="cxx-btn" data-cxx-close id="cxx_t_close3">Close</button>
-      </div>
-    </div>
-    <div class="cxx-panel-bd">
-      <div class="cxx-row">
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_tx_hash">Transaction hash</div>
-          <input class="cxx-input" id="cxx_tx_hash_in" placeholder="0x..." />
-          <div class="cxx-help" id="cxx_t_tx_help">
-            Decodes calldata using public 4byte signatures and prints key receipt events (Transfer / Approval / Swap).
-          </div>
-        </div>
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_tx_netpick">Decode network</div>
-          <select class="cxx-select" id="cxx_tx_net">
-            <option value="bsc">BSC (BNB Chain)</option>
-            <option value="eth">Ethereum</option>
-          </select>
-          <button class="cxx-btn primary" id="cxx_tx_run" style="margin-top:12px">Decode</button>
-        </div>
-      </div>
-
-      <div class="cxx-status" id="cxx_tx_status">—</div>
-    </div>
-  </section>
-
-  <!-- WATCHLIST TOOL -->
-  <section class="cxx-panel cxx-hidden" id="cxx_tool_watch">
-    <div class="cxx-panel-hd">
-      <h4 id="cxx_t_watch_title">Watchlist</h4>
-      <div class="cxx-flex">
-        <span class="cxx-pill"><span id="cxx_t_items">Items</span>: <span class="cxx-mono" id="cxx_watch_count">0</span></span>
-        <button class="cxx-btn" data-cxx-close id="cxx_t_close4">Close</button>
-      </div>
-    </div>
-    <div class="cxx-panel-bd">
-      <div class="cxx-row">
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_watch_addr">Address</div>
-          <input class="cxx-input" id="cxx_watch_addr" placeholder="0x..." />
-          <div class="cxx-label" style="margin-top:10px" id="cxx_t_watch_note">Note</div>
-          <input class="cxx-input" id="cxx_watch_note" placeholder="why saved, risk notes, etc." />
-          <button class="cxx-btn primary" id="cxx_watch_add" style="margin-top:12px">Add to watchlist</button>
-          <div class="cxx-help" id="cxx_t_watch_help">Stored locally in your browser (localStorage).</div>
-        </div>
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_watch_list">Saved items</div>
-          <div id="cxx_watch_list" class="cxx-status" style="min-height:180px">—</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- RPC TOOL -->
-  <section class="cxx-panel cxx-hidden" id="cxx_tool_rpc">
-    <div class="cxx-panel-hd">
-      <h4 id="cxx_t_rpc_title">RPC Health Checker</h4>
-      <div class="cxx-flex">
-        <span class="cxx-pill"><span id="cxx_t_rpc_chain">Chain</span>: <span class="cxx-mono" id="cxx_rpc_chain_label">BSC</span></span>
-        <button class="cxx-btn" data-cxx-close id="cxx_t_close5">Close</button>
-      </div>
-    </div>
-    <div class="cxx-panel-bd">
-      <div class="cxx-row">
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_rpc_list">RPC endpoints (one per line)</div>
-          <textarea class="cxx-textarea" id="cxx_rpc_list_in" spellcheck="false"></textarea>
-          <div class="cxx-help" id="cxx_t_rpc_help">We’ll call eth_blockNumber and measure latency.</div>
-        </div>
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_rpc_netpick">Test chain</div>
-          <select class="cxx-select" id="cxx_rpc_net">
-            <option value="bsc">BSC (BNB Chain)</option>
-            <option value="eth">Ethereum</option>
-          </select>
-          <div class="cxx-flex" style="margin-top:10px">
-            <button class="cxx-btn primary" id="cxx_rpc_run">Run tests</button>
-            <button class="cxx-btn" id="cxx_rpc_seed">Seed defaults</button>
-          </div>
-          <div class="cxx-status" id="cxx_rpc_status" style="margin-top:12px">—</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- QUICK TOOL -->
-  <section class="cxx-panel cxx-hidden" id="cxx_tool_quick">
-    <div class="cxx-panel-hd">
-      <h4 id="cxx_t_quick_title">Quick Scan</h4>
-      <div class="cxx-flex">
-        <button class="cxx-btn" data-cxx-close id="cxx_t_close6">Close</button>
-      </div>
-    </div>
-    <div class="cxx-panel-bd">
-      <div class="cxx-row">
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_quick_addr">Token address</div>
-          <input class="cxx-input" id="cxx_quick_addr" placeholder="0x..." />
-          <div class="cxx-help" id="cxx_t_quick_help">Runs: Safety + Liquidity + fast RPC check (defaults).</div>
-        </div>
-        <div class="cxx-field">
-          <div class="cxx-label" id="cxx_t_quick_net">Network</div>
-          <select class="cxx-select" id="cxx_quick_net">
-            <option value="bsc">BSC (BNB Chain)</option>
-            <option value="eth">Ethereum</option>
-          </select>
-          <button class="cxx-btn primary" id="cxx_quick_run" style="margin-top:12px">Run quick scan</button>
-          <div class="cxx-status" id="cxx_quick_status" style="margin-top:12px">—</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <div class="cxx-foot">
-    <div id="cxx_t_footer">Educational tooling only. Always verify on-chain and use caution.</div>
-  </div>
-</div>
-
-
-
-  <!-- libs -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
-  <script src="https://unpkg.com/@reown/appkit@1.6.3/dist/appkit.umd.js"></script>
-  <script src="https://unpkg.com/@reown/appkit-adapter-ethers@1.6.3/dist/ethers.umd.js"></script>
-
-  <script>
-      // ==========================================================
-  //  CycleX Security Hub (CXX) — Single-file, paste-ready
-  //  Update: CXX_WC_PROJECT_ID if you use WalletConnect/AppKit
-  // ==========================================================
-
-  const CXX_WC_PROJECT_ID = "7886bcb95105e9e47337cec481d5de75"; 
-
-  // ---------- i18n ----------
-  const CXX_I18N = {
-    en: {
-      brand: "CycleX Security Hub",
-      sub: "On-chain tools to validate contracts, approvals, pools & infrastructure.",
-      back: "← Back to CycleX",
-      connect: "Connect wallet",
-      kicker: "Security isn’t a feature — it’s a discipline.",
-      title: "Tools you actually rely on",
-      desc: "Run fast, on-chain checks before interacting with any contract. No hype, no fluff — just concrete signals you can verify.",
-
-      tile1:"Token Safety + Liquidity Scan",
-      tile1d:"Contract checks + V2/V3 pool detection vs wrapped native & stables. Approx liquidity, proxy hints, risk flags.",
-      tile2:"Approval Guardian",
-      tile2d:"Review allowances and revoke risky approvals (approve → 0) directly from your wallet.",
-      tile3:"Transaction Decoder",
-      tile3d:"Decode calldata + show key events (Transfer / Approval / Swap) from the receipt.",
-      tile4:"Watchlist",
-      tile4d:"Save addresses, notes and quick jump to tools. Local-only storage.",
-      tile5:"RPC Health Checker",
-      tile5d:"Test multiple RPC endpoints: latency + block height. Great for avoiding flaky providers.",
-      tile6:"Quick Scan",
-      tile6d:"Paste a token + run Safety + Liquidity + a fast RPC check in one click.",
-      open:"Open tool",
-      run:"Run",
-      close:"Close",
-
-      net:"Network",
-      wallet:"Wallet",
-      items:"Items",
-      chain:"Chain",
-
-      score_title:"Token Safety + Liquidity Scan",
-      token_addr:"Token contract address",
-      score_help:"Checks: code exists, proxy hints, owner/renounce (if available), and common risk-function selectors. Then scans V2 + V3 pools vs wrapped native & stables.",
-      score_netpick:"Scan network",
-      score_v3:"Include V3 pools",
-      score_stables:"Include stables",
-      run_scan:"Run scan",
-      score_note:"Notes: “Approx liquidity” is computed from on-chain balances/reserves and a wrapped-native USD estimate (from the highest-liquidity native/stable V2 pool on the selected network). It’s a signal, not a guarantee.",
-
-      app_title:"Approval Guardian",
-      spenders:"Spender addresses (one per line)",
-      spenders_help:"Tip: include DEX routers you used. You can add more later.",
-      tokens:"Token addresses (one per line)",
-      tokens_help:"This tool reads allowances from your wallet to each spender. You can revoke by sending approve(spender, 0).",
-      check_allow:"Check allowances",
-      seed_common:"Seed common spenders/tokens (BSC)",
-
-      tx_title:"Transaction Decoder",
-      tx_hash:"Transaction hash",
-      tx_help:"Decodes calldata using public 4byte signatures and prints key receipt events (Transfer / Approval / Swap).",
-      tx_netpick:"Decode network",
-      decode:"Decode",
-
-      watch_title:"Watchlist",
-      watch_addr:"Address",
-      watch_note:"Note",
-      add_watch:"Add to watchlist",
-      watch_help:"Stored locally in your browser (localStorage).",
-      watch_list:"Saved items",
-
-      rpc_title:"RPC Health Checker",
-      rpc_list:"RPC endpoints (one per line)",
-      rpc_help:"We’ll call eth_blockNumber and measure latency.",
-      rpc_netpick:"Test chain",
-      rpc_run:"Run tests",
-      rpc_seed:"Seed defaults",
-
-      quick_title:"Quick Scan",
-      quick_addr:"Token address",
-      quick_help:"Runs: Safety + Liquidity + fast RPC check (defaults).",
-      quick_net:"Network",
-      quick_run:"Run quick scan",
-
-      footer:"Educational tooling only. Always verify on-chain and use caution.",
-    },
-
-    zh: {
-      brand:"CycleX 安全中心",
-      sub:"链上工具：验证合约、授权、池子与基础设施。",
-      back:"← 返回 CycleX",
-      connect:"连接钱包",
-      kicker:"安全不是功能，而是一种纪律。",
-      title:"你真正会依赖的工具",
-      desc:"在与任何合约交互前做快速链上检查。不炒作、不花哨，只给可验证信号。",
-
-      tile1:"代币安全 + 流动性扫描",
-      tile1d:"合约检查 + V2/V3 池子检测（对 WBNB/WETH 与稳定币）。大致流动性、代理提示、风险标记。",
-      tile2:"授权守护",
-      tile2d:"查看 allowance，并可直接撤销危险授权（approve → 0）。",
-      tile3:"交易解码器",
-      tile3d:"解码 calldata，并展示关键事件（Transfer / Approval / Swap）。",
-      tile4:"观察列表",
-      tile4d:"保存地址与备注，快速跳转工具。本地存储。",
-      tile5:"RPC 健康检查",
-      tile5d:"测试多个 RPC：延迟 + 区块高度。避免不稳定节点。",
-      tile6:"快速扫描",
-      tile6d:"粘贴代币地址，一键跑安全 + 流动性 + 快速 RPC 检查。",
-      open:"打开工具",
-      run:"运行",
-      close:"关闭",
-
-      net:"网络",
-      wallet:"钱包",
-      items:"条目",
-      chain:"链",
-
-      score_title:"代币安全 + 流动性扫描",
-      token_addr:"代币合约地址",
-      score_help:"检查：合约代码、代理提示、owner/放弃所有权（如可读取）、常见风险函数选择器；然后扫描 V2 + V3 池子。",
-      score_netpick:"扫描网络",
-      score_v3:"包含 V3 池子",
-      score_stables:"包含稳定币",
-      run_scan:"开始扫描",
-      score_note:"说明：大致流动性来自链上余额/储备与“原生币 USD 估值”（取该网络原生币/稳定币 V2 池子中流动性最高者）。仅为信号。",
-
-      app_title:"授权守护",
-      spenders:"Spender 地址（每行一个）",
-      spenders_help:"提示：填入你用过的 DEX Router。之后可再加。",
-      tokens:"Token 地址（每行一个）",
-      tokens_help:"从你的钱包读取 allowance，并可通过 approve(spender, 0) 撤销。",
-      check_allow:"检查授权",
-      seed_common:"填入常见地址（BSC）",
-
-      tx_title:"交易解码器",
-      tx_hash:"交易哈希",
-      tx_help:"使用公开 4byte 签名解码 calldata，并输出关键事件。",
-      tx_netpick:"解码网络",
-      decode:"解码",
-
-      watch_title:"观察列表",
-      watch_addr:"地址",
-      watch_note:"备注",
-      add_watch:"加入观察",
-      watch_help:"仅保存在浏览器本地（localStorage）。",
-      watch_list:"已保存",
-
-      rpc_title:"RPC 健康检查",
-      rpc_list:"RPC 列表（每行一个）",
-      rpc_help:"调用 eth_blockNumber 并测量延迟。",
-      rpc_netpick:"测试链",
-      rpc_run:"开始测试",
-      rpc_seed:"填入默认",
-
-      quick_title:"快速扫描",
-      quick_addr:"代币地址",
-      quick_help:"运行：安全 + 流动性 + 快速 RPC 检查。",
-      quick_net:"网络",
-      quick_run:"开始快速扫描",
-
-      footer:"仅用于教育与辅助。请始终链上核验并谨慎操作。",
-    },
-
-    ar: {
-      brand:"CycleX مركز الأمان",
-      sub:"أدوات على السلسلة لفحص العقود، الصلاحيات، السيولة و RPC.",
-      back:"← العودة إلى CycleX",
-      connect:"ربط المحفظة",
-      kicker:"الأمان ليس ميزة — بل انضباط.",
-      title:"أدوات ستعتمد عليها فعلاً",
-      desc:"افحص بسرعة قبل التفاعل مع أي عقد. بدون ضجيج — إشارات يمكن التحقق منها على السلسلة.",
-
-      tile1:"أمان التوكن + فحص السيولة",
-      tile1d:"فحص العقد + اكتشاف مجمّعات V2/V3 مقابل العملة المغلّفة والستيبلكوين. سيولة تقريبية + مؤشرات بروكسي + أعلام مخاطر.",
-      tile2:"حارس الصلاحيات",
-      tile2d:"راجع allowances وقم بإلغاء الصلاحيات الخطرة (approve → 0) من محفظتك.",
-      tile3:"فك تشفير المعاملة",
-      tile3d:"فك calldata + عرض أحداث مهمة (Transfer / Approval / Swap).",
-      tile4:"قائمة مراقبة",
-      tile4d:"احفظ العناوين والملاحظات. تخزين محلي فقط.",
-      tile5:"فحص صحة RPC",
-      tile5d:"اختبر عدة RPC: زمن استجابة + رقم البلوك.",
-      tile6:"فحص سريع",
-      tile6d:"الصق عنوان توكن ثم شغّل فحص الأمان + السيولة + RPC بنقرة واحدة.",
-      open:"فتح الأداة",
-      run:"تشغيل",
-      close:"إغلاق",
-
-      net:"الشبكة",
-      wallet:"المحفظة",
-      items:"العناصر",
-      chain:"السلسلة",
-
-      score_title:"أمان التوكن + فحص السيولة",
-      token_addr:"عنوان عقد التوكن",
-      score_help:"يفحص: وجود الكود، مؤشرات بروكسي، المالك/التنازل إن أمكن، ومؤشرات دوال خطرة. ثم يمسح مجمّعات V2 + V3.",
-      score_netpick:"شبكة الفحص",
-      score_v3:"تضمين مجمّعات V3",
-      score_stables:"تضمين Stablecoins",
-      run_scan:"ابدأ الفحص",
-      score_note:"ملاحظة: السيولة 'التقريبية' تُحسب من الأرصدة/الاحتياطات على السلسلة وسعر تقريبي للعملة المغلّفة مقابل الستيبلكوين (أعلى سيولة V2).",
-
-      app_title:"حارس الصلاحيات",
-      spenders:"عناوين Spender (سطر لكل عنوان)",
-      spenders_help:"نصيحة: أضف Routers التي استخدمتها. يمكنك إضافة المزيد لاحقاً.",
-      tokens:"عناوين Tokens (سطر لكل عنوان)",
-      tokens_help:"يقرأ allowances من محفظتك لكل Spender. يمكنك الإلغاء عبر approve(spender, 0).",
-      check_allow:"فحص الصلاحيات",
-      seed_common:"إضافة عناوين شائعة (BSC)",
-
-      tx_title:"فك تشفير المعاملة",
-      tx_hash:"هاش المعاملة",
-      tx_help:"يفك calldata باستخدام 4byte العامة ويعرض أحداث مهمة من الإيصال.",
-      tx_netpick:"شبكة التحليل",
-      decode:"تحليل",
-
-      watch_title:"قائمة مراقبة",
-      watch_addr:"العنوان",
-      watch_note:"ملاحظة",
-      add_watch:"إضافة",
-      watch_help:"محفوظ محلياً في المتصفح (localStorage).",
-      watch_list:"العناصر المحفوظة",
-
-      rpc_title:"فحص صحة RPC",
-      rpc_list:"قائمة RPC (سطر لكل رابط)",
-      rpc_help:"سنستدعي eth_blockNumber ونقيس الزمن.",
-      rpc_netpick:"شبكة الاختبار",
-      rpc_run:"ابدأ الاختبار",
-      rpc_seed:"إضافة افتراضي",
-
-      quick_title:"فحص سريع",
-      quick_addr:"عنوان التوكن",
-      quick_help:"يشغّل: الأمان + السيولة + فحص RPC سريع.",
-      quick_net:"الشبكة",
-      quick_run:"تشغيل",
-
-      footer:"أداة تعليمية فقط. تحقّق دائماً على السلسلة وتصرف بحذر.",
-    },
-
-    ru: {
-      brand:"CycleX Security Hub",
-      sub:"Ончейн-инструменты для проверки контрактов, approvals, пулов и RPC.",
-      back:"← Назад к CycleX",
-      connect:"Подключить кошелёк",
-      kicker:"Безопасность — это не фича, а дисциплина.",
-      title:"Инструменты, на которые реально опираются",
-      desc:"Быстрые ончейн-проверки перед любым взаимодействием. Без хайпа — только проверяемые сигналы.",
-
-      tile1:"Безопасность токена + Ликвидность",
-      tile1d:"Проверки контракта + поиск пулов V2/V3 против WBNB/WETH и стейблов. Примерная ликвидность, proxy-сигналы, risk-флаги.",
-      tile2:"Approval Guardian",
-      tile2d:"Проверь allowances и отзови опасные approvals (approve → 0) прямо из кошелька.",
-      tile3:"Декодер транзакций",
-      tile3d:"Декод calldata + ключевые события (Transfer / Approval / Swap) из receipt.",
-      tile4:"Watchlist",
-      tile4d:"Сохраняй адреса и заметки. Только локальное хранение.",
-      tile5:"RPC Health Checker",
-      tile5d:"Тест нескольких RPC: задержка + высота блока.",
-      tile6:"Быстрый скан",
-      tile6d:"Вставь адрес токена и запусти Safety + Liquidity + быстрый RPC тест одним кликом.",
-      open:"Открыть",
-      run:"Запуск",
-      close:"Закрыть",
-
-      net:"Сеть",
-      wallet:"Кошелёк",
-      items:"Элементы",
-      chain:"Цепь",
-
-      score_title:"Безопасность токена + Ликвидность",
-      token_addr:"Адрес контракта токена",
-      score_help:"Проверяет: наличие кода, proxy-подсказки, owner/renounce (если доступно), и типовые риск-селекторы. Затем сканирует пулы V2 + V3.",
-      score_netpick:"Сеть скана",
-      score_v3:"Включить V3 пулы",
-      score_stables:"Включить стейблы",
-      run_scan:"Запустить скан",
-      score_note:"Примечание: “примерная ликвидность” считается по ончейн балансам/резервам и оценке цены wrapped-native к стейблу (самый ликвидный V2 пул). Это сигнал, не гарантия.",
-
-      app_title:"Approval Guardian",
-      spenders:"Spender адреса (по одному на строку)",
-      spenders_help:"Совет: добавь DEX роутеры, которыми пользовался.",
-      tokens:"Token адреса (по одному на строку)",
-      tokens_help:"Считывает allowances из твоего кошелька к каждому spender. Отзыв через approve(spender, 0).",
-      check_allow:"Проверить allowances",
-      seed_common:"Подставить популярные (BSC)",
-
-      tx_title:"Декодер транзакций",
-      tx_hash:"Хеш транзакции",
-      tx_help:"Декод calldata через публичные 4byte подписи и вывод ключевых событий из receipt.",
-      tx_netpick:"Сеть декода",
-      decode:"Декод",
-
-      watch_title:"Watchlist",
-      watch_addr:"Адрес",
-      watch_note:"Заметка",
-      add_watch:"Добавить",
-      watch_help:"Хранится локально в браузере (localStorage).",
-      watch_list:"Сохранённые",
-
-      rpc_title:"RPC Health Checker",
-      rpc_list:"RPC endpoints (по одному на строку)",
-      rpc_help:"Вызов eth_blockNumber + измерение задержки.",
-      rpc_netpick:"Сеть теста",
-      rpc_run:"Запустить тесты",
-      rpc_seed:"Подставить дефолт",
-
-      quick_title:"Быстрый скан",
-      quick_addr:"Адрес токена",
-      quick_help:"Запускает: Safety + Liquidity + быстрый RPC тест.",
-      quick_net:"Сеть",
-      quick_run:"Запуск",
-
-      footer:"Только для обучения. Всегда проверяй ончейн и действуй осторожно.",
-    }
-  };
-
-  const CXX_STATE = {
-    lang: "en",
-    appkit: null,
-    walletProvider: null,
-    walletSigner: null,
-    walletAddress: null,
-  };
-
-  const CXX_NETWORKS = {
-    bsc: {
-      label: "BSC",
-      chainId: 56,
-      wrappedNative: { symbol:"WBNB", address:"0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", decimals:18 },
-      stables: [
-        { symbol:"USDT", address:"0x55d398326f99059fF775485246999027B3197955", decimals:18 },
-        { symbol:"USDC", address:"0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals:18 },
-        { symbol:"BUSD", address:"0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56", decimals:18 }
-      ],
-      rpcs: [
-        "https://bsc-dataseed.binance.org",
-        "https://bsc-dataseed1.bnbchain.org",
-        "https://bsc-dataseed2.bnbchain.org",
-        "https://bsc-dataseed1.defibit.io"
-      ],
-      factoriesV2: [
-        { name:"PancakeSwap V2", address:"0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73" }
-      ],
-      factoriesV3: [
-        { name:"PancakeSwap V3", address:"0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865" }
-      ]
-    },
-    eth: {
-      label: "ETH",
-      chainId: 1,
-      wrappedNative: { symbol:"WETH", address:"0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", decimals:18 },
-      stables: [
-        { symbol:"USDT", address:"0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals:6 },
-        { symbol:"USDC", address:"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals:6 }
-      ],
-      rpcs: [
-        "https://cloudflare-eth.com",
-        "https://rpc.ankr.com/eth",
-        "https://eth.llamarpc.com"
-      ],
-      factoriesV2: [
-        { name:"Uniswap V2", address:"0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f" },
-        { name:"SushiSwap", address:"0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac" }
-      ],
-      factoriesV3: [
-        { name:"Uniswap V3", address:"0x1F98431c8aD98523631AE4a59f267346ea31F984" }
-      ]
-    }
-  };
-
-  const CXX_ABI = {
-    ERC20: [
-      "function name() view returns (string)",
-      "function symbol() view returns (string)",
-      "function decimals() view returns (uint8)",
-      "function totalSupply() view returns (uint256)",
-      "function balanceOf(address) view returns (uint256)",
-      "function allowance(address,address) view returns (uint256)",
-      "function approve(address,uint256) returns (bool)"
-    ],
-    OWNABLE: ["function owner() view returns (address)"],
-    V2_FACTORY: ["function getPair(address,address) view returns (address)"],
-    V2_PAIR: [
-      "function getReserves() view returns (uint112,uint112,uint32)",
-      "function token0() view returns (address)",
-      "function token1() view returns (address)",
-      "function totalSupply() view returns (uint256)",
-      "function balanceOf(address) view returns (uint256)"
-    ],
-    V3_FACTORY: ["function getPool(address,address,uint24) view returns (address)"],
-    V3_POOL: [
-      "function token0() view returns (address)",
-      "function token1() view returns (address)",
-      "function fee() view returns (uint24)",
-      "function liquidity() view returns (uint128)",
-      "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16,uint16,uint16,uint8,bool)"
-    ]
-  };
-
-  const CXX_V3_FEES = [100, 500, 2500, 3000, 10000];
-
-  const CXX_PROXY_SLOTS = {
-    impl: "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
-    admin:"0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103",
-    beacon:"0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50"
-  };
-
-  const CXX_RISK_SIGNATURES = [
-    {label:"mint(address,uint256)", sig:"mint(address,uint256)", w:20},
-    {label:"pause()", sig:"pause()", w:12},
-    {label:"unpause()", sig:"unpause()", w:8},
-    {label:"setBlacklist(address,bool)", sig:"setBlacklist(address,bool)", w:12},
-    {label:"blacklist(address)", sig:"blacklist(address)", w:10},
-    {label:"setTax(uint256)", sig:"setTax(uint256)", w:10},
-    {label:"setFee(uint256)", sig:"setFee(uint256)", w:10},
-    {label:"setFees(uint256,uint256)", sig:"setFees(uint256,uint256)", w:10},
-    {label:"setBuyFee(uint256)", sig:"setBuyFee(uint256)", w:10},
-    {label:"setSellFee(uint256)", sig:"setSellFee(uint256)", w:10},
-    {label:"enableTrading()", sig:"enableTrading()", w:6},
-    {label:"setTradingEnabled(bool)", sig:"setTradingEnabled(bool)", w:6},
-    {label:"excludeFromFee(address)", sig:"excludeFromFee(address)", w:6},
-    {label:"setIsExcludedFromFee(address,bool)", sig:"setIsExcludedFromFee(address,bool)", w:6},
-  ];
-
-  function cxx$(id){ return document.getElementById(id); }
-  function cxxText(id, txt){ const el=cxx$(id); if(el) el.textContent = txt; }
-
-  function cxxIsAddr(a){ try{ return ethers.isAddress(a); }catch(e){ return false; } }
-  function cxxNorm(a){ return ethers.getAddress(a); }
-  function cxxShort(a){ try{ a=cxxNorm(a); return a.slice(0,6)+"…"+a.slice(-4);}catch(e){ return a; } }
-  function cxxFmt(n, d=2){
-    try{
-      const x = Number(n);
-      if(!isFinite(x)) return String(n);
-      return x.toLocaleString(undefined,{maximumFractionDigits:d});
-    }catch(e){ return String(n); }
-  }
-  function cxxHexToAddr(hex32){
-    if(!hex32 || hex32 === "0x") return null;
-    const h = hex32.toLowerCase().replace(/^0x/,"").padStart(64,"0");
-    const addr = "0x"+h.slice(24);
-    if(cxxIsAddr(addr) && addr !== "0x0000000000000000000000000000000000000000") return ethers.getAddress(addr);
-    return null;
-  }
-
-  function cxxSetStatus(el, msg, type){
-    const box = typeof el === "string" ? cxx$(el) : el;
-    if(!box) return;
-    box.classList.remove("ok","warn","bad");
-    if(type) box.classList.add(type);
-    box.textContent = msg;
-  }
-
-  function cxxApplyLang(lang){
-    CXX_STATE.lang = lang;
-    const t = CXX_I18N[lang] || CXX_I18N.en;
-
-    cxxText("cxx_t_brand", t.brand);
-    cxxText("cxx_t_sub", t.sub);
-    cxxText("cxx_t_back", t.back);
-    cxxText("cxx_connect", t.connect);
-    cxxText("cxx_t_kicker", t.kicker);
-    cxxText("cxx_t_title", t.title);
-    cxxText("cxx_t_desc", t.desc);
-
-    cxxText("cxx_t_tile1", t.tile1); cxxText("cxx_t_tile1d", t.tile1d); cxxText("cxx_t_open1", t.open);
-    cxxText("cxx_t_tile2", t.tile2); cxxText("cxx_t_tile2d", t.tile2d); cxxText("cxx_t_open2", t.open);
-    cxxText("cxx_t_tile3", t.tile3); cxxText("cxx_t_tile3d", t.tile3d); cxxText("cxx_t_open3", t.open);
-    cxxText("cxx_t_tile4", t.tile4); cxxText("cxx_t_tile4d", t.tile4d); cxxText("cxx_t_open4", t.open);
-    cxxText("cxx_t_tile5", t.tile5); cxxText("cxx_t_tile5d", t.tile5d); cxxText("cxx_t_open5", t.open);
-    cxxText("cxx_t_tile6", t.tile6); cxxText("cxx_t_tile6d", t.tile6d); cxxText("cxx_t_open6", t.run);
-
-    cxxText("cxx_t_close1", t.close);
-    cxxText("cxx_t_close2", t.close);
-    cxxText("cxx_t_close3", t.close);
-    cxxText("cxx_t_close4", t.close);
-    cxxText("cxx_t_close5", t.close);
-    cxxText("cxx_t_close6", t.close);
-
-    cxxText("cxx_t_net", t.net);
-    cxxText("cxx_t_wallet", t.wallet);
-    cxxText("cxx_t_items", t.items);
-    cxxText("cxx_t_rpc_chain", t.chain);
-
-    cxxText("cxx_t_score_title", t.score_title);
-    cxxText("cxx_t_token_addr", t.token_addr);
-    cxxText("cxx_t_score_help", t.score_help);
-    cxxText("cxx_t_score_netpick", t.score_netpick);
-    cxxText("cxx_t_score_v3", t.score_v3);
-    cxxText("cxx_t_score_stables", t.score_stables);
-    cxxText("cxx_score_run", t.run_scan);
-    cxxText("cxx_t_score_note", t.score_note);
-
-    cxxText("cxx_t_app_title", t.app_title);
-    cxxText("cxx_t_spenders", t.spenders);
-    cxxText("cxx_t_spenders_help", t.spenders_help);
-    cxxText("cxx_t_tokens", t.tokens);
-    cxxText("cxx_t_tokens_help", t.tokens_help);
-    cxxText("cxx_allowances_run", t.check_allow);
-    cxxText("cxx_allowances_seed", t.seed_common);
-
-    cxxText("cxx_t_tx_title", t.tx_title);
-    cxxText("cxx_t_tx_hash", t.tx_hash);
-    cxxText("cxx_t_tx_help", t.tx_help);
-    cxxText("cxx_t_tx_netpick", t.tx_netpick);
-    cxxText("cxx_tx_run", t.decode);
-    cxxText("cxx_t_tx_net", t.net);
-
-    cxxText("cxx_t_watch_title", t.watch_title);
-    cxxText("cxx_t_watch_addr", t.watch_addr);
-    cxxText("cxx_t_watch_note", t.watch_note);
-    cxxText("cxx_watch_add", t.add_watch);
-    cxxText("cxx_t_watch_help", t.watch_help);
-    cxxText("cxx_t_watch_list", t.watch_list);
-
-    cxxText("cxx_t_rpc_title", t.rpc_title);
-    cxxText("cxx_t_rpc_list", t.rpc_list);
-    cxxText("cxx_t_rpc_help", t.rpc_help);
-    cxxText("cxx_t_rpc_netpick", t.rpc_netpick);
-    cxxText("cxx_rpc_run", t.rpc_run);
-    cxxText("cxx_rpc_seed", t.rpc_seed);
-
-    cxxText("cxx_t_quick_title", t.quick_title);
-    cxxText("cxx_t_quick_addr", t.quick_addr);
-    cxxText("cxx_t_quick_help", t.quick_help);
-    cxxText("cxx_t_quick_net", t.quick_net);
-    cxxText("cxx_quick_run", t.quick_run);
-
-    cxxText("cxx_t_footer", t.footer);
-
-    document.documentElement.lang = lang === "zh" ? "zh" : (lang === "ar" ? "ar" : "en");
-    document.documentElement.dir = (lang === "ar") ? "rtl" : "ltr";
-  }
-
-  function cxxDetectLang(){
-    const saved = localStorage.getItem("cxx_lang");
-    if(saved && CXX_I18N[saved]) return saved;
-    const nav = (navigator.language||"en").slice(0,2).toLowerCase();
-    if(nav === "zh") return "zh";
-    if(nav === "ar") return "ar";
-    if(nav === "ru") return "ru";
-    return "en";
-  }
-
-  function cxxShowTool(key){
-    const map = {
-      score: "cxx_tool_score",
-      approvals: "cxx_tool_approvals",
-      tx: "cxx_tool_tx",
-      watch: "cxx_tool_watch",
-      rpc: "cxx_tool_rpc",
-      quick: "cxx_tool_quick"
-    };
-    Object.values(map).forEach(id => cxx$(id).classList.add("cxx-hidden"));
-    const id = map[key];
-    if(id) cxx$(id).classList.remove("cxx-hidden");
-
-    if(key) location.hash = "#"+key;
-    window.scrollTo({top: 0, behavior: "smooth"});
-  }
-
-  async function cxxProviderForUrl(netKey, url){
-    const net = CXX_NETWORKS[netKey];
-    return new ethers.JsonRpcProvider(url, net.chainId);
-  }
-
-  async function cxxCallWithTimeout(promise, ms, label="timeout"){
-    let to;
-    const t = new Promise((_,rej)=>{ to=setTimeout(()=>rej(new Error(label)), ms); });
-    try{ return await Promise.race([promise, t]); } finally{ clearTimeout(to); }
-  }
-
-  async function cxxTryAllRpcs(netKey, fn, timeoutMs=9000){
-    const net = CXX_NETWORKS[netKey];
-    let lastErr = null;
-    for(const url of net.rpcs){
-      try{
-        const p = await cxxProviderForUrl(netKey, url);
-        return await cxxCallWithTimeout(fn(p, url), timeoutMs, "rpc_timeout");
-      }catch(e){
-        lastErr = e;
-      }
-    }
-    throw lastErr || new Error("all RPCs failed");
-  }
-
-  async function cxxReadSafe(call, fallback=null){
-    try{ return await call(); }catch(e){ return fallback; }
-  }
-
-  async function cxxGetTokenMeta(provider, token){
-    const c = new ethers.Contract(token, CXX_ABI.ERC20, provider);
-    const [name,symbol,decimals,totalSupply] = await Promise.all([
-      cxxReadSafe(()=>c.name(),""),
-      cxxReadSafe(()=>c.symbol(),""),
-      cxxReadSafe(()=>c.decimals(),18),
-      cxxReadSafe(()=>c.totalSupply(),0n)
-    ]);
-    return {name, symbol, decimals:Number(decimals), totalSupply: BigInt(totalSupply||0)};
-  }
-
-  function cxxBnToNum(bn, decimals){
-    try{ return Number(ethers.formatUnits(bn, decimals)); }catch(e){ return NaN; }
-  }
-
-  async function cxxDetectProxy(provider, token){
-    const out = {isProxy:false, implementation:null, admin:null, beacon:null};
-    const [implRaw, adminRaw, beaconRaw] = await Promise.all([
-      cxxReadSafe(()=>provider.getStorage(token, CXX_PROXY_SLOTS.impl), "0x"),
-      cxxReadSafe(()=>provider.getStorage(token, CXX_PROXY_SLOTS.admin),"0x"),
-      cxxReadSafe(()=>provider.getStorage(token, CXX_PROXY_SLOTS.beacon),"0x")
-    ]);
-    out.implementation = cxxHexToAddr(implRaw);
-    out.admin = cxxHexToAddr(adminRaw);
-    out.beacon = cxxHexToAddr(beaconRaw);
-    out.isProxy = !!out.implementation || !!out.admin || !!out.beacon;
-    return out;
-  }
-
-  async function cxxBytecodeRiskFlags(codeHex){
-    const code = (codeHex||"").toLowerCase().replace(/^0x/,"");
-    const hits = [];
-    for(const it of CXX_RISK_SIGNATURES){
-      const selector = ethers.id(it.sig).slice(2,10);
-      const patt = "63"+selector;
-      if(code.includes(patt)){
-        hits.push({label: it.label, sig: it.sig, w: it.w, selector:"0x"+selector});
-      }
-    }
-    return hits;
-  }
-
-  async function cxxFindNativeUsdPriceV2(provider, netKey){
-    const net = CXX_NETWORKS[netKey];
-    const w = net.wrappedNative;
-    const stables = net.stables;
-    let best = null;
-
-    for(const f of net.factoriesV2){
-      const fac = new ethers.Contract(f.address, CXX_ABI.V2_FACTORY, provider);
-      for(const s of stables){
-        const pair = await cxxReadSafe(()=>fac.getPair(w.address, s.address), ethers.ZeroAddress);
-        if(!pair || pair === ethers.ZeroAddress) continue;
-        const p = new ethers.Contract(pair, CXX_ABI.V2_PAIR, provider);
-        const [r, t0, t1] = await Promise.all([
-          cxxReadSafe(()=>p.getReserves(), null),
-          cxxReadSafe(()=>p.token0(), null),
-          cxxReadSafe(()=>p.token1(), null)
-        ]);
-        if(!r || !t0 || !t1) continue;
-
-        const r0 = BigInt(r[0]), r1 = BigInt(r[1]);
-        const isW0 = t0.toLowerCase() === w.address.toLowerCase();
-        const nativeRes = isW0 ? r0 : r1;
-        const stableRes = isW0 ? r1 : r0;
-
-        const nativeAmt = cxxBnToNum(nativeRes, w.decimals);
-        const stableAmt = cxxBnToNum(stableRes, s.decimals);
-        if(!nativeAmt || !stableAmt || nativeAmt<=0 || stableAmt<=0) continue;
-
-        const price = stableAmt / nativeAmt;
-        if(!best || stableAmt > best.stableLiquidity){
-          best = { price, stableLiquidity: stableAmt, pair, dex:f.name, stable:s.symbol };
-        }
-      }
-    }
-    return best;
-  }
-
-  async function cxxScanV2Pools(provider, netKey, token, includeStables=true){
-    const net = CXX_NETWORKS[netKey];
-    const bases = [net.wrappedNative, ...(includeStables ? net.stables : [])];
-
-    const pools = [];
-    for(const f of net.factoriesV2){
-      const fac = new ethers.Contract(f.address, CXX_ABI.V2_FACTORY, provider);
-      for(const b of bases){
-        const pair = await cxxReadSafe(()=>fac.getPair(token, b.address), ethers.ZeroAddress);
-        if(!pair || pair === ethers.ZeroAddress) continue;
-
-        const pairC = new ethers.Contract(pair, CXX_ABI.V2_PAIR, provider);
-        const [t0, t1, res] = await Promise.all([
-          cxxReadSafe(()=>pairC.token0(), null),
-          cxxReadSafe(()=>pairC.token1(), null),
-          cxxReadSafe(()=>pairC.getReserves(), null)
-        ]);
-        if(!t0 || !t1 || !res) continue;
-
-        const r0 = BigInt(res[0]), r1 = BigInt(res[1]);
-        const baseIs0 = t0.toLowerCase() === b.address.toLowerCase();
-        const baseRes = baseIs0 ? r0 : r1;
-        const tokRes  = baseIs0 ? r1 : r0;
-
-        pools.push({
-          dex: f.name,
-          type: "V2",
-          pair,
-          baseSymbol: b.symbol,
-          baseAddr: b.address,
-          baseDecimals: b.decimals,
-          baseRes,
-          tokenRes: tokRes
-        });
-      }
-    }
-    return pools;
-  }
-
-  async function cxxScanV3Pools(provider, netKey, token, includeStables=true){
-    const net = CXX_NETWORKS[netKey];
-    const bases = [net.wrappedNative, ...(includeStables ? net.stables : [])];
-    const pools = [];
-
-    for(const f of net.factoriesV3){
-      const fac = new ethers.Contract(f.address, CXX_ABI.V3_FACTORY, provider);
-      for(const b of bases){
-        for(const fee of CXX_V3_FEES){
-          const pool = await cxxReadSafe(()=>fac.getPool(token, b.address, fee), ethers.ZeroAddress);
-          if(!pool || pool === ethers.ZeroAddress) continue;
-
-          const erc = new ethers.Contract(token, CXX_ABI.ERC20, provider);
-          const baseErc = new ethers.Contract(b.address, CXX_ABI.ERC20, provider);
-
-          const [tokBal, baseBal] = await Promise.all([
-            cxxReadSafe(()=>erc.balanceOf(pool), 0n),
-            cxxReadSafe(()=>baseErc.balanceOf(pool), 0n)
-          ]);
-
-          pools.push({
-            dex: f.name,
-            type:"V3",
-            pair: pool,
-            fee,
-            baseSymbol: b.symbol,
-            baseAddr: b.address,
-            baseDecimals: b.decimals,
-            baseRes: BigInt(baseBal||0),
-            tokenRes: BigInt(tokBal||0)
-          });
-        }
-      }
-    }
-    return pools;
-  }
-
-      async function cxxBurnedLpShareV2(provider, pairAddr){
-    const dead = "0x000000000000000000000000000000000000dEaD";
-    const zero = "0x0000000000000000000000000000000000000000";
-    const p = new ethers.Contract(pairAddr, CXX_ABI.V2_PAIR, provider);
-    const [ts, b0, bd] = await Promise.all([
-      cxxReadSafe(()=>p.totalSupply(), 0n),
-      cxxReadSafe(()=>p.balanceOf(zero), 0n),
-      cxxReadSafe(()=>p.balanceOf(dead), 0n)
-    ]);
-    const total = BigInt(ts||0);
-    if(total === 0n) return {burnedPct:0};
-    const burned = BigInt(b0||0) + BigInt(bd||0);
-    const burnedPct = Number((burned * 10000n) / total) / 100;
-    return {burnedPct};
-  }
-
-  function cxxPickBestPool(pools){
-    if(!pools.length) return null;
-    return pools.reduce((a,b)=> (b.baseRes > a.baseRes ? b : a), pools[0]);
-  }
-
-  async function cxxComputeApproxLiquidityUsd(netKey, pool, nativePrice){
-    const net = CXX_NETWORKS[netKey];
-    const baseIsNative = pool.baseAddr.toLowerCase() === net.wrappedNative.address.toLowerCase();
-    const baseAmt = cxxBnToNum(pool.baseRes, pool.baseDecimals);
-    if(!baseAmt || baseAmt<=0) return {usd:0, baseAmt:0};
-    if(!baseIsNative) return { usd: baseAmt * 2, baseAmt };
-    const px = nativePrice?.price || 0;
-    return { usd: baseAmt * 2 * px, baseAmt };
-  }
-
-  function cxxRiskBucket(score){
-    if(score <= 25) return {label:"Low", cls:"ok"};
-    if(score <= 55) return {label:"Medium", cls:"warn"};
-    return {label:"High", cls:"bad"};
-  }
-
-  async function cxxRunScore(){
-    const addrRaw = (cxx$("cxx_score_addr").value||"").trim();
-    const netKey = cxx$("cxx_score_net").value;
-    const includeV3 = !!cxx$("cxx_score_v3").checked;
-    const includeStables = !!cxx$("cxx_score_stables").checked;
-
-    cxxText("cxx_score_net_label", CXX_NETWORKS[netKey].label);
-
-    if(!cxxIsAddr(addrRaw)){
-      cxxSetStatus("cxx_score_status","Invalid address.","bad"); return;
-    }
-    const token = cxxNorm(addrRaw);
-
-    cxxSetStatus("cxx_score_status","Running on-chain checks...","");
-
-    try{
-      const res = await cxxTryAllRpcs(netKey, async (provider, rpcUrl) => {
-        const code = await provider.getCode(token);
-        if(!code || code === "0x") throw new Error("No contract code at address.");
-
-        const proxy = await cxxDetectProxy(provider, token);
-        const analysisCode = proxy.implementation ? await cxxReadSafe(()=>provider.getCode(proxy.implementation), code) : code;
-
-        const meta = await cxxGetTokenMeta(provider, token).catch(()=>({name:"",symbol:"",decimals:18,totalSupply:0n}));
-
-        let owner = null;
-        try{
-          const own = new ethers.Contract(token, CXX_ABI.OWNABLE, provider);
-          owner = await own.owner();
-          if(owner) owner = cxxNorm(owner);
-        }catch(e){ owner = null; }
-
-        const renounced = owner && (owner.toLowerCase()==="0x0000000000000000000000000000000000000000" || owner.toLowerCase()==="0x000000000000000000000000000000000000dead");
-        const byteHits = await cxxBytecodeRiskFlags(analysisCode);
-
-        const nativePx = await cxxFindNativeUsdPriceV2(provider, netKey).catch(()=>null);
-
-        const v2Pools = await cxxScanV2Pools(provider, netKey, token, includeStables);
-        const v3Pools = includeV3 ? await cxxScanV3Pools(provider, netKey, token, includeStables) : [];
-
-        const bestV2 = cxxPickBestPool(v2Pools);
-        const bestV3 = cxxPickBestPool(v3Pools);
-        const best = (!bestV2 && bestV3) ? bestV3 :
-                     (!bestV3 && bestV2) ? bestV2 :
-                     (bestV2 && bestV3) ? (bestV2.baseRes >= bestV3.baseRes ? bestV2 : bestV3) :
-                     null;
-
-        let bestUsd = 0;
-        let lpBurnedPct = null;
-        if(best){
-          const approx = await cxxComputeApproxLiquidityUsd(netKey, best, nativePx);
-          bestUsd = approx.usd || 0;
-          if(best.type === "V2"){
-            lpBurnedPct = (await cxxBurnedLpShareV2(provider, best.pair)).burnedPct;
-          }
-        }
-
-        let score = 0;
-        const riskNotes = [];
-
-        if(proxy.isProxy){
-          score += 18;
-          riskNotes.push(`Proxy hints detected (EIP-1967). Implementation: ${proxy.implementation || "unknown"}`);
-        }
-        if(owner && !renounced){
-          score += 12;
-          riskNotes.push(`Owner() present: ${owner}`);
-        }else if(owner && renounced){
-          riskNotes.push(`Ownership looks renounced: ${owner}`);
-        }else{
-          riskNotes.push(`Owner() not detected (may be non-Ownable or hidden).`);
-        }
-
-        if(byteHits.length){
-          const hitScore = Math.min(35, byteHits.reduce((s,x)=>s+x.w,0));
-          score += hitScore;
-          riskNotes.push(`Risk selectors found in bytecode: ${byteHits.map(h=>h.label).join(", ")}`);
-        }else{
-          riskNotes.push("No common risk selectors detected (heuristic).");
-        }
-
-        if(!best){
-          score += 18;
-          riskNotes.push("No V2/V3 pools found against selected bases (low trust / may be new).");
-        }else{
-          if(bestUsd < 10_000) score += 18;
-          else if(bestUsd < 50_000) score += 10;
-          else if(bestUsd < 200_000) score += 4;
-
-          riskNotes.push(`Best pool: ${best.type} ${best.dex} ${best.baseSymbol} @ ${best.pair}${best.type==="V3" ? ` (fee ${best.fee})` : ""}`);
-          if(nativePx && best.baseSymbol === CXX_NETWORKS[netKey].wrappedNative.symbol){
-            riskNotes.push(`Native price estimate: 1 ${CXX_NETWORKS[netKey].wrappedNative.symbol} ≈ $${cxxFmt(nativePx.price,2)} (from ${nativePx.dex} ${nativePx.stable} pool)`);
-          }
-          if(best.type==="V2" && typeof lpBurnedPct === "number"){
-            riskNotes.push(`LP burned (dead+zero) ≈ ${cxxFmt(lpBurnedPct,2)}% (V2 only, heuristic)`);
-          }else if(best.type==="V3"){
-            riskNotes.push("V3 LP lock/burn is NFT-based; lock status not inferred here.");
-          }
-        }
-
-        score = Math.max(0, Math.min(100, score));
-        const bucket = cxxRiskBucket(score);
-
-        const supplyNum = meta.totalSupply ? cxxFmt(cxxBnToNum(meta.totalSupply, meta.decimals), 2) : "—";
-        const bestUsdFmt = best ? `$${cxxFmt(bestUsd, 0)}` : "—";
-
-        const report =
-`RPC: ${rpcUrl}
-Token: ${token}
-${meta.symbol ? `Symbol: ${meta.symbol}` : ""}${meta.name ? ` | Name: ${meta.name}` : ""}
-Decimals: ${meta.decimals ?? "—"}
-Total supply: ${supplyNum}
-
-Proxy: ${proxy.isProxy ? "YES" : "no"}${proxy.implementation ? ` | impl: ${proxy.implementation}` : ""}
-Owner: ${owner || "unknown"}${owner ? ` | renounced: ${renounced ? "YES" : "no"}` : ""}
-
-Pools found: V2=${v2Pools.length} | V3=${v3Pools.length}
-Best pool: ${best ? `${best.type} ${best.dex} vs ${best.baseSymbol}` : "none"}
-Approx liquidity (USD): ${bestUsdFmt}
-
-Risk score: ${score}/100 (${bucket.label})
-Signals:
-- ${riskNotes.join("\n- ")}`;
-
-        return {report, cls: bucket.cls};
-      });
-
-      cxxSetStatus("cxx_score_status", res.report, res.cls);
-    }catch(e){
-      cxxSetStatus("cxx_score_status", `Scan failed: ${e?.message || e}`, "bad");
-    }
-  }
-
-  function cxxParseLines(txt){
-    return (txt||"").split("\n").map(s=>s.trim()).filter(Boolean);
-  }
-  function cxxUnique(arr){
-    const seen=new Set();
-    const out=[];
-    for(const x of arr){
-      const k=x.toLowerCase();
-      if(!seen.has(k)){ seen.add(k); out.push(x); }
-    }
-    return out;
-  }
-
-  function cxxSeedBscCommon(){
-    const spenders = [
-      "0x10ED43C718714eb63d5aA57B78B54704E256024E"
-    ];
-    const tokens = [
-      CXX_NETWORKS.bsc.wrappedNative.address,
-      CXX_NETWORKS.bsc.stables[0].address,
-      CXX_NETWORKS.bsc.stables[1].address,
-      CXX_NETWORKS.bsc.stables[2].address
-    ];
-    cxx$("cxx_spenders").value = spenders.join("\n");
-    cxx$("cxx_tokens").value = tokens.join("\n");
-    cxxSetStatus("cxx_allowances_status","Seeded. Connect wallet → Check allowances.","");
-  }
-
-  async function cxxEnsureWallet(){
-    if(CXX_STATE.walletProvider && CXX_STATE.walletSigner && CXX_STATE.walletAddress) return true;
-    cxxSetStatus("cxx_allowances_status","Connect wallet first (top-right).","warn");
-    return false;
-  }
-
-  async function cxxCheckAllowances(){
-    if(!await cxxEnsureWallet()) return;
-
-    const spenderLines = cxxUnique(cxxParseLines(cxx$("cxx_spenders").value).filter(cxxIsAddr).map(cxxNorm));
-    const tokenLines   = cxxUnique(cxxParseLines(cxx$("cxx_tokens").value).filter(cxxIsAddr).map(cxxNorm));
-
-    if(!spenderLines.length || !tokenLines.length){
-      cxxSetStatus("cxx_allowances_status","Please enter at least 1 token and 1 spender address.","warn");
-      return;
-    }
-
-    cxxSetStatus("cxx_allowances_status","Reading allowances…","");
-
-    try{
-      const provider = CXX_STATE.walletProvider;
-      const owner = CXX_STATE.walletAddress;
-
-      const rows = [];
-      for(const t of tokenLines){
-        const meta = await cxxGetTokenMeta(provider, t).catch(()=>({name:"",symbol:"",decimals:18,totalSupply:0n}));
-        const tok = new ethers.Contract(t, CXX_ABI.ERC20, provider);
-
-        for(const s of spenderLines){
-          const allowance = await cxxReadSafe(()=>tok.allowance(owner, s), 0n);
-          rows.push({token:t, symbol:meta.symbol||"", decimals:meta.decimals||18, spender:s, allowance: BigInt(allowance||0)});
-        }
-      }
-
-      const wrap = cxx$("cxx_allowances_table_wrap");
-      wrap.classList.remove("cxx-hidden");
-
-      const maxUint = (1n<<256n) - 1n;
-
-      let html = `<table class="cxx-table"><thead><tr>
-        <th>Token</th><th>Spender</th><th>Allowance</th><th>Action</th>
-      </tr></thead><tbody>`;
-
-      rows.forEach((r, idx)=>{
-        const isUnlimited = r.allowance === maxUint;
-        const value = isUnlimited ? "UNLIMITED" : cxxFmt(cxxBnToNum(r.allowance, r.decimals), 6);
-        const warn = (isUnlimited || cxxBnToNum(r.allowance, r.decimals) > 0) ? "warn" : "";
-        html += `<tr>
-          <td><div class="cxx-mono">${cxxShort(r.token)}</div><div class="cxx-small">${r.symbol || ""}</div></td>
-          <td class="cxx-mono">${cxxShort(r.spender)}</td>
-          <td class="cxx-mono">${value}</td>
-          <td>
-            <button class="cxx-btn ${warn ? "primary" : ""}" data-cxx-revoke="${idx}">${warn ? "Revoke (approve 0)" : "—"}</button>
-          </td>
-        </tr>`;
-      });
-
-      html += `</tbody></table>`;
-      wrap.innerHTML = html;
-
-      cxxSetStatus("cxx_allowances_status",`Done. Rows: ${rows.length}\nTip: Revoke only if you understand the spender + token.`, "ok");
-
-      wrap.querySelectorAll("[data-cxx-revoke]").forEach(btn=>{
-        btn.addEventListener("click", async ()=>{
-          const i = Number(btn.getAttribute("data-cxx-revoke"));
-          const r = rows[i];
-          if(r.allowance === 0n) return;
-
-          const ok = confirm(`Revoke approval?\nToken: ${r.token}\nSpender: ${r.spender}\nThis will send approve(spender, 0).`);
-          if(!ok) return;
-
-          try{
-            btn.textContent = "Pending…";
-            btn.disabled = true;
-
-            const signer = CXX_STATE.walletSigner;
-            const tok = new ethers.Contract(r.token, CXX_ABI.ERC20, signer);
-            const tx = await tok.approve(r.spender, 0n);
-            cxxSetStatus("cxx_allowances_status",`Sent tx: ${tx.hash}\nWaiting confirmation…`,"warn");
-            await tx.wait();
-            cxxSetStatus("cxx_allowances_status",`Success. Approval revoked.\nTx: ${tx.hash}`,"ok");
-            btn.textContent = "Revoked";
-          }catch(e){
-            cxxSetStatus("cxx_allowances_status",`Revoke failed: ${e?.shortMessage || e?.message || e}`,"bad");
-            btn.textContent = "Revoke (approve 0)";
-            btn.disabled = false;
-          }
-        });
-      });
-
-    }catch(e){
-      cxxSetStatus("cxx_allowances_status",`Failed: ${e?.message || e}`,"bad");
-    }
-  }
-
-  async function cxxFetch4byte(selector){
-    const url = `https://www.4byte.directory/api/v1/signatures/?hex_signature=${selector}`;
-    const r = await fetch(url, {method:"GET"});
-    if(!r.ok) throw new Error(`4byte HTTP ${r.status}`);
-    const j = await r.json();
-    const results = j?.results || [];
-    return results.map(x=>x.text_signature);
-  }
-
-  const CXX_EVENT_SIGS = {
-    Transfer: "Transfer(address,address,uint256)",
-    Approval: "Approval(address,address,uint256)",
-    SwapV2: "Swap(address,uint256,uint256,uint256,uint256,address)",
-    SwapV3: "Swap(address,address,int256,int256,uint160,uint128,int24)"
-  };
-
-  function cxxTopic(sig){ return ethers.id(sig); }
-
-  async function cxxDecodeTx(){
-    const hash = (cxx$("cxx_tx_hash_in").value||"").trim();
-    const netKey = cxx$("cxx_tx_net").value;
-    cxxText("cxx_tx_net_label", CXX_NETWORKS[netKey].label);
-
-    if(!/^0x([A-Fa-f0-9]{64})$/.test(hash)){
-      cxxSetStatus("cxx_tx_status","Invalid transaction hash.","bad"); return;
-    }
-    cxxSetStatus("cxx_tx_status","Fetching transaction…","");
-
-    try{
-      const out = await cxxTryAllRpcs(netKey, async (provider, rpcUrl) => {
-        const tx = await provider.getTransaction(hash);
-        if(!tx) throw new Error("Transaction not found.");
-        const receipt = await provider.getTransactionReceipt(hash);
-        const selector = tx.data?.slice(0,10) || "0x";
-        const sigs = selector.length===10 ? await cxxReadSafe(()=>cxxFetch4byte(selector), []) : [];
-
-        let decoded = "";
-        if(sigs.length){
-          const first = sigs[0];
-          try{
-            const iface = new ethers.Interface([`function ${first}`]);
-            const parsed = iface.parseTransaction({data: tx.data, value: tx.value});
-            decoded = JSON.stringify(parsed?.args, (k,v)=> typeof v==="bigint" ? v.toString() : v, 2);
-          }catch(e){
-            decoded = "(could not decode args for first signature; showing raw calldata)";
-          }
-        }
-
-        const topics = {
-          Transfer: cxxTopic(CXX_EVENT_SIGS.Transfer),
-          Approval: cxxTopic(CXX_EVENT_SIGS.Approval),
-          SwapV2: cxxTopic(CXX_EVENT_SIGS.SwapV2),
-          SwapV3: cxxTopic(CXX_EVENT_SIGS.SwapV3),
-        };
-        const ifaces = {
-          Transfer: new ethers.Interface([`event ${CXX_EVENT_SIGS.Transfer}`]),
-          Approval: new ethers.Interface([`event ${CXX_EVENT_SIGS.Approval}`]),
-          SwapV2: new ethers.Interface([`event ${CXX_EVENT_SIGS.SwapV2}`]),
-          SwapV3: new ethers.Interface([`event ${CXX_EVENT_SIGS.SwapV3}`]),
-        };
-
-        const events = [];
-        for(const log of (receipt?.logs||[])){
-          const t0 = log.topics?.[0];
-          if(!t0) continue;
-
-          let kind=null;
-          if(t0 === topics.Transfer) kind="Transfer";
-          else if(t0 === topics.Approval) kind="Approval";
-          else if(t0 === topics.SwapV2) kind="SwapV2";
-          else if(t0 === topics.SwapV3) kind="SwapV3";
-
-          if(!kind) continue;
-          try{
-            const parsed = ifaces[kind].parseLog({topics: log.topics, data: log.data});
-            events.push({kind, address: log.address, args: parsed?.args});
-          }catch(e){}
-        }
-
-        const eventLines = events.slice(0,50).map(ev=>{
-          const a = ev.args;
-          if(ev.kind==="Transfer"){
-            return `Transfer @ ${cxxShort(ev.address)}: from ${cxxShort(a[0])} → ${cxxShort(a[1])} | value ${a[2].toString()}`;
-          }
-          if(ev.kind==="Approval"){
-            return `Approval @ ${cxxShort(ev.address)}: owner ${cxxShort(a[0])} → spender ${cxxShort(a[1])} | value ${a[2].toString()}`;
-          }
-          if(ev.kind==="SwapV2"){
-            return `Swap(V2) @ ${cxxShort(ev.address)}: in(${a[1].toString()},${a[2].toString()}) out(${a[3].toString()},${a[4].toString()})`;
-          }
-          if(ev.kind==="SwapV3"){
-            return `Swap(V3) @ ${cxxShort(ev.address)}: amount0 ${a[2].toString()} | amount1 ${a[3].toString()} | sqrtP ${a[4].toString()}`;
-          }
-          return `${ev.kind} @ ${cxxShort(ev.address)}`;
-        });
-
-        const msg =
-`RPC: ${rpcUrl}
-Hash: ${hash}
-
-From: ${tx.from}
-To: ${tx.to || "(contract creation)"}
-Value: ${ethers.formatEther(tx.value || 0n)} (native)
-
-Selector: ${selector}
-Signatures (top): ${sigs.slice(0,5).join(" | ") || "—"}
-
-Decoded args:
-${decoded || "—"}
-
-Receipt:
-Status: ${receipt?.status === 1 ? "SUCCESS" : "REVERT"}
-Gas used: ${receipt?.gasUsed?.toString() || "—"}
-Logs decoded: ${eventLines.length}
-
-Events (first 50):
-${eventLines.length ? "- " + eventLines.join("\n- ") : "—"}`;
-
-        return {msg};
-      });
-
-      cxxSetStatus("cxx_tx_status", out.msg, "ok");
-    }catch(e){
-      cxxSetStatus("cxx_tx_status", `Decode failed: ${e?.message || e}`, "bad");
-    }
-  }
-
-  function cxxLoadWatch(){
-    try{ return JSON.parse(localStorage.getItem("cxx_watch")||"[]") || []; }
-    catch(e){ return []; }
-  }
-  function cxxSaveWatch(items){ localStorage.setItem("cxx_watch", JSON.stringify(items)); }
-  function cxxRenderWatch(){
-    const items = cxxLoadWatch();
-    cxxText("cxx_watch_count", String(items.length));
-    if(!items.length){ cxxSetStatus("cxx_watch_list","—",""); return; }
-    const lines = items.map((it, i)=>`${i+1}. ${it.addr}  ${it.note ? "| "+it.note : ""}`);
-    cxxSetStatus("cxx_watch_list", lines.join("\n"), "ok");
-  }
-  function cxxAddWatch(){
-    const a = (cxx$("cxx_watch_addr").value||"").trim();
-    const note = (cxx$("cxx_watch_note").value||"").trim();
-    if(!cxxIsAddr(a)){ cxxSetStatus("cxx_watch_list","Invalid address.","bad"); return; }
-    const addr = cxxNorm(a);
-    const items = cxxLoadWatch();
-    if(items.some(x=>x.addr.toLowerCase()===addr.toLowerCase())){
-      cxxSetStatus("cxx_watch_list","Already in watchlist.","warn"); return;
-    }
-    items.unshift({addr, note, ts: Date.now()});
-    cxxSaveWatch(items.slice(0,150));
-    cxx$("cxx_watch_addr").value = "";
-    cxx$("cxx_watch_note").value = "";
-    cxxRenderWatch();
-  }
-
-  function cxxSeedRpc(netKey){
-    const net = CXX_NETWORKS[netKey];
-    cxx$("cxx_rpc_list_in").value = net.rpcs.join("\n");
-    cxxText("cxx_rpc_chain_label", net.label);
-    cxxSetStatus("cxx_rpc_status","Seeded defaults. Click Run tests.","");
-  }
-
-  async function cxxTestRpcList(){
-    const netKey = cxx$("cxx_rpc_net").value;
-    cxxText("cxx_rpc_chain_label", CXX_NETWORKS[netKey].label);
-
-    const urls = cxxUnique(cxxParseLines(cxx$("cxx_rpc_list_in").value));
-    if(!urls.length){ cxxSetStatus("cxx_rpc_status","Add at least one RPC URL.","warn"); return; }
-
-    cxxSetStatus("cxx_rpc_status","Running tests…","");
-
-    const results = [];
-    for(const url of urls){
-      const started = performance.now();
-      try{
-        const p = await cxxProviderForUrl(netKey, url);
-        const bn = await cxxCallWithTimeout(p.getBlockNumber(), 6000, "timeout");
-        const ms = Math.round(performance.now() - started);
-        results.push({url, ok:true, block:bn, ms});
-      }catch(e){
-        const ms = Math.round(performance.now() - started);
-        results.push({url, ok:false, err:(e?.message||String(e)).slice(0,120), ms});
-      }
-    }
-
-    results.sort((a,b)=> (a.ok===b.ok) ? (a.ms-b.ms) : (a.ok ? -1 : 1));
-
-    const lines = results.map(r=>{
-      if(r.ok) return `✅ ${r.ms}ms | block ${r.block} | ${r.url}`;
-      return `❌ ${r.ms}ms | ${r.err} | ${r.url}`;
-    });
-
-    const okCount = results.filter(r=>r.ok).length;
-    const msg = `Done. OK: ${okCount}/${results.length}\n\n${lines.join("\n")}`;
-    cxxSetStatus("cxx_rpc_status", msg, okCount ? "ok" : "bad");
-  }
-
-  async function cxxRunQuick(){
-    const addr = (cxx$("cxx_quick_addr").value||"").trim();
-    const netKey = cxx$("cxx_quick_net").value;
-
-    if(!cxxIsAddr(addr)){ cxxSetStatus("cxx_quick_status","Invalid token address.","bad"); return; }
-
-    cxxSetStatus("cxx_quick_status","Step 1/2: Running token scan…","");
-
-    cxx$("cxx_score_addr").value = addr;
-    cxx$("cxx_score_net").value = netKey;
-    cxxShowTool("score");
-    await cxxRunScore();
-
-    cxxShowTool("quick");
-    cxxSetStatus("cxx_quick_status","Step 2/2: Running fast RPC test…","");
-
-    cxx$("cxx_rpc_net").value = netKey;
-    cxxSeedRpc(netKey);
-    await cxxTestRpcList();
-
-    cxxSetStatus("cxx_quick_status","Quick scan complete.\nOpen Token Safety or RPC tool tabs to review outputs.","ok");
-  }
-
-  async function cxxInitWallet(){
-    try{
-      if(!window.AppKit || !window.AppKitAdapterEthers) return;
-
-      const metadata = {
-        name: "CycleX Security Hub",
-        description: "On-chain security tooling",
-        url: window.location.origin,
-        icons: [window.location.origin + "/logo.png"]
-      };
-
-      const networks = [
-        { chainId: CXX_NETWORKS.bsc.chainId, name: "BNB Smart Chain", currency: "BNB", explorerUrl: "https://bscscan.com", rpcUrl: CXX_NETWORKS.bsc.rpcs[0] },
-        { chainId: CXX_NETWORKS.eth.chainId, name: "Ethereum", currency: "ETH", explorerUrl: "https://etherscan.io", rpcUrl: CXX_NETWORKS.eth.rpcs[0] }
-      ];
-
-      const ethersAdapter = new AppKitAdapterEthers.EthersAdapter();
-      const appkit = AppKit.createAppKit({
-        adapters: [ethersAdapter],
-        networks,
-        projectId: CXX_WC_PROJECT_ID,
-        metadata
-      });
-
-      CXX_STATE.appkit = appkit;
-
-      cxx$("cxx_connect").addEventListener("click", async ()=>{
-        try{
-          await appkit.open();
-          const provider = await ethersAdapter.getProvider();
-          if(provider){
-            CXX_STATE.walletProvider = new ethers.BrowserProvider(provider);
-            CXX_STATE.walletSigner = await CXX_STATE.walletProvider.getSigner();
-            CXX_STATE.walletAddress = await CXX_STATE.walletSigner.getAddress();
-            cxxText("cxx_wallet_label", cxxShort(CXX_STATE.walletAddress));
-            cxxText("cxx_connect","Connected");
-          }
-        }catch(e){}
-      });
-
-    }catch(e){}
-  }
-
-  function cxxInit(){
-    const lang = cxxDetectLang();
-    cxx$("cxx_lang").value = lang;
-    cxxApplyLang(lang);
-    cxx$("cxx_lang").addEventListener("change", (e)=>{
-      const v = e.target.value;
-      localStorage.setItem("cxx_lang", v);
-      cxxApplyLang(v);
-    });
-
-    document.querySelectorAll("[data-cxx-tool]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        const tool = btn.getAttribute("data-cxx-tool");
-        cxxShowTool(tool);
-      });
-    });
-
-    document.querySelectorAll("[data-cxx-close]").forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        history.replaceState(null,"", location.pathname + location.search);
-        ["cxx_tool_score","cxx_tool_approvals","cxx_tool_tx","cxx_tool_watch","cxx_tool_rpc","cxx_tool_quick"]
-          .forEach(id=>cxx$(id).classList.add("cxx-hidden"));
-      });
-    });
-
-    cxx$("cxx_score_net").addEventListener("change", (e)=>{
-      const k = e.target.value;
-      cxxText("cxx_score_net_label", CXX_NETWORKS[k].label);
-    });
-    cxx$("cxx_score_run").addEventListener("click", cxxRunScore);
-
-    cxx$("cxx_allowances_seed").addEventListener("click", cxxSeedBscCommon);
-    cxx$("cxx_allowances_run").addEventListener("click", cxxCheckAllowances);
-
-    cxx$("cxx_tx_net").addEventListener("change", (e)=>{
-      cxxText("cxx_tx_net_label", CXX_NETWORKS[e.target.value].label);
-    });
-    cxx$("cxx_tx_run").addEventListener("click", cxxDecodeTx);
-
-    cxx$("cxx_watch_add").addEventListener("click", cxxAddWatch);
-    cxxRenderWatch();
-
-    cxx$("cxx_rpc_net").addEventListener("change", (e)=>{ cxxSeedRpc(e.target.value); });
-    cxx$("cxx_rpc_seed").addEventListener("click", ()=>cxxSeedRpc(cxx$("cxx_rpc_net").value));
-    cxx$("cxx_rpc_run").addEventListener("click", cxxTestRpcList);
-    cxxSeedRpc("bsc");
-
-    cxx$("cxx_quick_run").addEventListener("click", cxxRunQuick);
-
-    const hash = (location.hash||"").replace("#","");
-    if(hash) cxxShowTool(hash);
-
-    cxxInitWallet();
-  }
-
-  document.addEventListener("DOMContentLoaded", cxxInit);
-  </script>
-</body>
-</html>
-
