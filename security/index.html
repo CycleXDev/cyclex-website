@@ -1279,3 +1279,619 @@
     return pools;
   }
 
+      async function cxxBurnedLpShareV2(provider, pairAddr){
+    const dead = "0x000000000000000000000000000000000000dEaD";
+    const zero = "0x0000000000000000000000000000000000000000";
+    const p = new ethers.Contract(pairAddr, CXX_ABI.V2_PAIR, provider);
+    const [ts, b0, bd] = await Promise.all([
+      cxxReadSafe(()=>p.totalSupply(), 0n),
+      cxxReadSafe(()=>p.balanceOf(zero), 0n),
+      cxxReadSafe(()=>p.balanceOf(dead), 0n)
+    ]);
+    const total = BigInt(ts||0);
+    if(total === 0n) return {burnedPct:0};
+    const burned = BigInt(b0||0) + BigInt(bd||0);
+    const burnedPct = Number((burned * 10000n) / total) / 100;
+    return {burnedPct};
+  }
+
+  function cxxPickBestPool(pools){
+    if(!pools.length) return null;
+    return pools.reduce((a,b)=> (b.baseRes > a.baseRes ? b : a), pools[0]);
+  }
+
+  async function cxxComputeApproxLiquidityUsd(netKey, pool, nativePrice){
+    const net = CXX_NETWORKS[netKey];
+    const baseIsNative = pool.baseAddr.toLowerCase() === net.wrappedNative.address.toLowerCase();
+    const baseAmt = cxxBnToNum(pool.baseRes, pool.baseDecimals);
+    if(!baseAmt || baseAmt<=0) return {usd:0, baseAmt:0};
+    if(!baseIsNative) return { usd: baseAmt * 2, baseAmt };
+    const px = nativePrice?.price || 0;
+    return { usd: baseAmt * 2 * px, baseAmt };
+  }
+
+  function cxxRiskBucket(score){
+    if(score <= 25) return {label:"Low", cls:"ok"};
+    if(score <= 55) return {label:"Medium", cls:"warn"};
+    return {label:"High", cls:"bad"};
+  }
+
+  async function cxxRunScore(){
+    const addrRaw = (cxx$("cxx_score_addr").value||"").trim();
+    const netKey = cxx$("cxx_score_net").value;
+    const includeV3 = !!cxx$("cxx_score_v3").checked;
+    const includeStables = !!cxx$("cxx_score_stables").checked;
+
+    cxxText("cxx_score_net_label", CXX_NETWORKS[netKey].label);
+
+    if(!cxxIsAddr(addrRaw)){
+      cxxSetStatus("cxx_score_status","Invalid address.","bad"); return;
+    }
+    const token = cxxNorm(addrRaw);
+
+    cxxSetStatus("cxx_score_status","Running on-chain checks...","");
+
+    try{
+      const res = await cxxTryAllRpcs(netKey, async (provider, rpcUrl) => {
+        const code = await provider.getCode(token);
+        if(!code || code === "0x") throw new Error("No contract code at address.");
+
+        const proxy = await cxxDetectProxy(provider, token);
+        const analysisCode = proxy.implementation ? await cxxReadSafe(()=>provider.getCode(proxy.implementation), code) : code;
+
+        const meta = await cxxGetTokenMeta(provider, token).catch(()=>({name:"",symbol:"",decimals:18,totalSupply:0n}));
+
+        let owner = null;
+        try{
+          const own = new ethers.Contract(token, CXX_ABI.OWNABLE, provider);
+          owner = await own.owner();
+          if(owner) owner = cxxNorm(owner);
+        }catch(e){ owner = null; }
+
+        const renounced = owner && (owner.toLowerCase()==="0x0000000000000000000000000000000000000000" || owner.toLowerCase()==="0x000000000000000000000000000000000000dead");
+        const byteHits = await cxxBytecodeRiskFlags(analysisCode);
+
+        const nativePx = await cxxFindNativeUsdPriceV2(provider, netKey).catch(()=>null);
+
+        const v2Pools = await cxxScanV2Pools(provider, netKey, token, includeStables);
+        const v3Pools = includeV3 ? await cxxScanV3Pools(provider, netKey, token, includeStables) : [];
+
+        const bestV2 = cxxPickBestPool(v2Pools);
+        const bestV3 = cxxPickBestPool(v3Pools);
+        const best = (!bestV2 && bestV3) ? bestV3 :
+                     (!bestV3 && bestV2) ? bestV2 :
+                     (bestV2 && bestV3) ? (bestV2.baseRes >= bestV3.baseRes ? bestV2 : bestV3) :
+                     null;
+
+        let bestUsd = 0;
+        let lpBurnedPct = null;
+        if(best){
+          const approx = await cxxComputeApproxLiquidityUsd(netKey, best, nativePx);
+          bestUsd = approx.usd || 0;
+          if(best.type === "V2"){
+            lpBurnedPct = (await cxxBurnedLpShareV2(provider, best.pair)).burnedPct;
+          }
+        }
+
+        let score = 0;
+        const riskNotes = [];
+
+        if(proxy.isProxy){
+          score += 18;
+          riskNotes.push(`Proxy hints detected (EIP-1967). Implementation: ${proxy.implementation || "unknown"}`);
+        }
+        if(owner && !renounced){
+          score += 12;
+          riskNotes.push(`Owner() present: ${owner}`);
+        }else if(owner && renounced){
+          riskNotes.push(`Ownership looks renounced: ${owner}`);
+        }else{
+          riskNotes.push(`Owner() not detected (may be non-Ownable or hidden).`);
+        }
+
+        if(byteHits.length){
+          const hitScore = Math.min(35, byteHits.reduce((s,x)=>s+x.w,0));
+          score += hitScore;
+          riskNotes.push(`Risk selectors found in bytecode: ${byteHits.map(h=>h.label).join(", ")}`);
+        }else{
+          riskNotes.push("No common risk selectors detected (heuristic).");
+        }
+
+        if(!best){
+          score += 18;
+          riskNotes.push("No V2/V3 pools found against selected bases (low trust / may be new).");
+        }else{
+          if(bestUsd < 10_000) score += 18;
+          else if(bestUsd < 50_000) score += 10;
+          else if(bestUsd < 200_000) score += 4;
+
+          riskNotes.push(`Best pool: ${best.type} ${best.dex} ${best.baseSymbol} @ ${best.pair}${best.type==="V3" ? ` (fee ${best.fee})` : ""}`);
+          if(nativePx && best.baseSymbol === CXX_NETWORKS[netKey].wrappedNative.symbol){
+            riskNotes.push(`Native price estimate: 1 ${CXX_NETWORKS[netKey].wrappedNative.symbol} ≈ $${cxxFmt(nativePx.price,2)} (from ${nativePx.dex} ${nativePx.stable} pool)`);
+          }
+          if(best.type==="V2" && typeof lpBurnedPct === "number"){
+            riskNotes.push(`LP burned (dead+zero) ≈ ${cxxFmt(lpBurnedPct,2)}% (V2 only, heuristic)`);
+          }else if(best.type==="V3"){
+            riskNotes.push("V3 LP lock/burn is NFT-based; lock status not inferred here.");
+          }
+        }
+
+        score = Math.max(0, Math.min(100, score));
+        const bucket = cxxRiskBucket(score);
+
+        const supplyNum = meta.totalSupply ? cxxFmt(cxxBnToNum(meta.totalSupply, meta.decimals), 2) : "—";
+        const bestUsdFmt = best ? `$${cxxFmt(bestUsd, 0)}` : "—";
+
+        const report =
+`RPC: ${rpcUrl}
+Token: ${token}
+${meta.symbol ? `Symbol: ${meta.symbol}` : ""}${meta.name ? ` | Name: ${meta.name}` : ""}
+Decimals: ${meta.decimals ?? "—"}
+Total supply: ${supplyNum}
+
+Proxy: ${proxy.isProxy ? "YES" : "no"}${proxy.implementation ? ` | impl: ${proxy.implementation}` : ""}
+Owner: ${owner || "unknown"}${owner ? ` | renounced: ${renounced ? "YES" : "no"}` : ""}
+
+Pools found: V2=${v2Pools.length} | V3=${v3Pools.length}
+Best pool: ${best ? `${best.type} ${best.dex} vs ${best.baseSymbol}` : "none"}
+Approx liquidity (USD): ${bestUsdFmt}
+
+Risk score: ${score}/100 (${bucket.label})
+Signals:
+- ${riskNotes.join("\n- ")}`;
+
+        return {report, cls: bucket.cls};
+      });
+
+      cxxSetStatus("cxx_score_status", res.report, res.cls);
+    }catch(e){
+      cxxSetStatus("cxx_score_status", `Scan failed: ${e?.message || e}`, "bad");
+    }
+  }
+
+  function cxxParseLines(txt){
+    return (txt||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  }
+  function cxxUnique(arr){
+    const seen=new Set();
+    const out=[];
+    for(const x of arr){
+      const k=x.toLowerCase();
+      if(!seen.has(k)){ seen.add(k); out.push(x); }
+    }
+    return out;
+  }
+
+  function cxxSeedBscCommon(){
+    const spenders = [
+      "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+    ];
+    const tokens = [
+      CXX_NETWORKS.bsc.wrappedNative.address,
+      CXX_NETWORKS.bsc.stables[0].address,
+      CXX_NETWORKS.bsc.stables[1].address,
+      CXX_NETWORKS.bsc.stables[2].address
+    ];
+    cxx$("cxx_spenders").value = spenders.join("\n");
+    cxx$("cxx_tokens").value = tokens.join("\n");
+    cxxSetStatus("cxx_allowances_status","Seeded. Connect wallet → Check allowances.","");
+  }
+
+  async function cxxEnsureWallet(){
+    if(CXX_STATE.walletProvider && CXX_STATE.walletSigner && CXX_STATE.walletAddress) return true;
+    cxxSetStatus("cxx_allowances_status","Connect wallet first (top-right).","warn");
+    return false;
+  }
+
+  async function cxxCheckAllowances(){
+    if(!await cxxEnsureWallet()) return;
+
+    const spenderLines = cxxUnique(cxxParseLines(cxx$("cxx_spenders").value).filter(cxxIsAddr).map(cxxNorm));
+    const tokenLines   = cxxUnique(cxxParseLines(cxx$("cxx_tokens").value).filter(cxxIsAddr).map(cxxNorm));
+
+    if(!spenderLines.length || !tokenLines.length){
+      cxxSetStatus("cxx_allowances_status","Please enter at least 1 token and 1 spender address.","warn");
+      return;
+    }
+
+    cxxSetStatus("cxx_allowances_status","Reading allowances…","");
+
+    try{
+      const provider = CXX_STATE.walletProvider;
+      const owner = CXX_STATE.walletAddress;
+
+      const rows = [];
+      for(const t of tokenLines){
+        const meta = await cxxGetTokenMeta(provider, t).catch(()=>({name:"",symbol:"",decimals:18,totalSupply:0n}));
+        const tok = new ethers.Contract(t, CXX_ABI.ERC20, provider);
+
+        for(const s of spenderLines){
+          const allowance = await cxxReadSafe(()=>tok.allowance(owner, s), 0n);
+          rows.push({token:t, symbol:meta.symbol||"", decimals:meta.decimals||18, spender:s, allowance: BigInt(allowance||0)});
+        }
+      }
+
+      const wrap = cxx$("cxx_allowances_table_wrap");
+      wrap.classList.remove("cxx-hidden");
+
+      const maxUint = (1n<<256n) - 1n;
+
+      let html = `<table class="cxx-table"><thead><tr>
+        <th>Token</th><th>Spender</th><th>Allowance</th><th>Action</th>
+      </tr></thead><tbody>`;
+
+      rows.forEach((r, idx)=>{
+        const isUnlimited = r.allowance === maxUint;
+        const value = isUnlimited ? "UNLIMITED" : cxxFmt(cxxBnToNum(r.allowance, r.decimals), 6);
+        const warn = (isUnlimited || cxxBnToNum(r.allowance, r.decimals) > 0) ? "warn" : "";
+        html += `<tr>
+          <td><div class="cxx-mono">${cxxShort(r.token)}</div><div class="cxx-small">${r.symbol || ""}</div></td>
+          <td class="cxx-mono">${cxxShort(r.spender)}</td>
+          <td class="cxx-mono">${value}</td>
+          <td>
+            <button class="cxx-btn ${warn ? "primary" : ""}" data-cxx-revoke="${idx}">${warn ? "Revoke (approve 0)" : "—"}</button>
+          </td>
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+      wrap.innerHTML = html;
+
+      cxxSetStatus("cxx_allowances_status",`Done. Rows: ${rows.length}\nTip: Revoke only if you understand the spender + token.`, "ok");
+
+      wrap.querySelectorAll("[data-cxx-revoke]").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          const i = Number(btn.getAttribute("data-cxx-revoke"));
+          const r = rows[i];
+          if(r.allowance === 0n) return;
+
+          const ok = confirm(`Revoke approval?\nToken: ${r.token}\nSpender: ${r.spender}\nThis will send approve(spender, 0).`);
+          if(!ok) return;
+
+          try{
+            btn.textContent = "Pending…";
+            btn.disabled = true;
+
+            const signer = CXX_STATE.walletSigner;
+            const tok = new ethers.Contract(r.token, CXX_ABI.ERC20, signer);
+            const tx = await tok.approve(r.spender, 0n);
+            cxxSetStatus("cxx_allowances_status",`Sent tx: ${tx.hash}\nWaiting confirmation…`,"warn");
+            await tx.wait();
+            cxxSetStatus("cxx_allowances_status",`Success. Approval revoked.\nTx: ${tx.hash}`,"ok");
+            btn.textContent = "Revoked";
+          }catch(e){
+            cxxSetStatus("cxx_allowances_status",`Revoke failed: ${e?.shortMessage || e?.message || e}`,"bad");
+            btn.textContent = "Revoke (approve 0)";
+            btn.disabled = false;
+          }
+        });
+      });
+
+    }catch(e){
+      cxxSetStatus("cxx_allowances_status",`Failed: ${e?.message || e}`,"bad");
+    }
+  }
+
+  async function cxxFetch4byte(selector){
+    const url = `https://www.4byte.directory/api/v1/signatures/?hex_signature=${selector}`;
+    const r = await fetch(url, {method:"GET"});
+    if(!r.ok) throw new Error(`4byte HTTP ${r.status}`);
+    const j = await r.json();
+    const results = j?.results || [];
+    return results.map(x=>x.text_signature);
+  }
+
+  const CXX_EVENT_SIGS = {
+    Transfer: "Transfer(address,address,uint256)",
+    Approval: "Approval(address,address,uint256)",
+    SwapV2: "Swap(address,uint256,uint256,uint256,uint256,address)",
+    SwapV3: "Swap(address,address,int256,int256,uint160,uint128,int24)"
+  };
+
+  function cxxTopic(sig){ return ethers.id(sig); }
+
+  async function cxxDecodeTx(){
+    const hash = (cxx$("cxx_tx_hash_in").value||"").trim();
+    const netKey = cxx$("cxx_tx_net").value;
+    cxxText("cxx_tx_net_label", CXX_NETWORKS[netKey].label);
+
+    if(!/^0x([A-Fa-f0-9]{64})$/.test(hash)){
+      cxxSetStatus("cxx_tx_status","Invalid transaction hash.","bad"); return;
+    }
+    cxxSetStatus("cxx_tx_status","Fetching transaction…","");
+
+    try{
+      const out = await cxxTryAllRpcs(netKey, async (provider, rpcUrl) => {
+        const tx = await provider.getTransaction(hash);
+        if(!tx) throw new Error("Transaction not found.");
+        const receipt = await provider.getTransactionReceipt(hash);
+        const selector = tx.data?.slice(0,10) || "0x";
+        const sigs = selector.length===10 ? await cxxReadSafe(()=>cxxFetch4byte(selector), []) : [];
+
+        let decoded = "";
+        if(sigs.length){
+          const first = sigs[0];
+          try{
+            const iface = new ethers.Interface([`function ${first}`]);
+            const parsed = iface.parseTransaction({data: tx.data, value: tx.value});
+            decoded = JSON.stringify(parsed?.args, (k,v)=> typeof v==="bigint" ? v.toString() : v, 2);
+          }catch(e){
+            decoded = "(could not decode args for first signature; showing raw calldata)";
+          }
+        }
+
+        const topics = {
+          Transfer: cxxTopic(CXX_EVENT_SIGS.Transfer),
+          Approval: cxxTopic(CXX_EVENT_SIGS.Approval),
+          SwapV2: cxxTopic(CXX_EVENT_SIGS.SwapV2),
+          SwapV3: cxxTopic(CXX_EVENT_SIGS.SwapV3),
+        };
+        const ifaces = {
+          Transfer: new ethers.Interface([`event ${CXX_EVENT_SIGS.Transfer}`]),
+          Approval: new ethers.Interface([`event ${CXX_EVENT_SIGS.Approval}`]),
+          SwapV2: new ethers.Interface([`event ${CXX_EVENT_SIGS.SwapV2}`]),
+          SwapV3: new ethers.Interface([`event ${CXX_EVENT_SIGS.SwapV3}`]),
+        };
+
+        const events = [];
+        for(const log of (receipt?.logs||[])){
+          const t0 = log.topics?.[0];
+          if(!t0) continue;
+
+          let kind=null;
+          if(t0 === topics.Transfer) kind="Transfer";
+          else if(t0 === topics.Approval) kind="Approval";
+          else if(t0 === topics.SwapV2) kind="SwapV2";
+          else if(t0 === topics.SwapV3) kind="SwapV3";
+
+          if(!kind) continue;
+          try{
+            const parsed = ifaces[kind].parseLog({topics: log.topics, data: log.data});
+            events.push({kind, address: log.address, args: parsed?.args});
+          }catch(e){}
+        }
+
+        const eventLines = events.slice(0,50).map(ev=>{
+          const a = ev.args;
+          if(ev.kind==="Transfer"){
+            return `Transfer @ ${cxxShort(ev.address)}: from ${cxxShort(a[0])} → ${cxxShort(a[1])} | value ${a[2].toString()}`;
+          }
+          if(ev.kind==="Approval"){
+            return `Approval @ ${cxxShort(ev.address)}: owner ${cxxShort(a[0])} → spender ${cxxShort(a[1])} | value ${a[2].toString()}`;
+          }
+          if(ev.kind==="SwapV2"){
+            return `Swap(V2) @ ${cxxShort(ev.address)}: in(${a[1].toString()},${a[2].toString()}) out(${a[3].toString()},${a[4].toString()})`;
+          }
+          if(ev.kind==="SwapV3"){
+            return `Swap(V3) @ ${cxxShort(ev.address)}: amount0 ${a[2].toString()} | amount1 ${a[3].toString()} | sqrtP ${a[4].toString()}`;
+          }
+          return `${ev.kind} @ ${cxxShort(ev.address)}`;
+        });
+
+        const msg =
+`RPC: ${rpcUrl}
+Hash: ${hash}
+
+From: ${tx.from}
+To: ${tx.to || "(contract creation)"}
+Value: ${ethers.formatEther(tx.value || 0n)} (native)
+
+Selector: ${selector}
+Signatures (top): ${sigs.slice(0,5).join(" | ") || "—"}
+
+Decoded args:
+${decoded || "—"}
+
+Receipt:
+Status: ${receipt?.status === 1 ? "SUCCESS" : "REVERT"}
+Gas used: ${receipt?.gasUsed?.toString() || "—"}
+Logs decoded: ${eventLines.length}
+
+Events (first 50):
+${eventLines.length ? "- " + eventLines.join("\n- ") : "—"}`;
+
+        return {msg};
+      });
+
+      cxxSetStatus("cxx_tx_status", out.msg, "ok");
+    }catch(e){
+      cxxSetStatus("cxx_tx_status", `Decode failed: ${e?.message || e}`, "bad");
+    }
+  }
+
+  function cxxLoadWatch(){
+    try{ return JSON.parse(localStorage.getItem("cxx_watch")||"[]") || []; }
+    catch(e){ return []; }
+  }
+  function cxxSaveWatch(items){ localStorage.setItem("cxx_watch", JSON.stringify(items)); }
+  function cxxRenderWatch(){
+    const items = cxxLoadWatch();
+    cxxText("cxx_watch_count", String(items.length));
+    if(!items.length){ cxxSetStatus("cxx_watch_list","—",""); return; }
+    const lines = items.map((it, i)=>`${i+1}. ${it.addr}  ${it.note ? "| "+it.note : ""}`);
+    cxxSetStatus("cxx_watch_list", lines.join("\n"), "ok");
+  }
+  function cxxAddWatch(){
+    const a = (cxx$("cxx_watch_addr").value||"").trim();
+    const note = (cxx$("cxx_watch_note").value||"").trim();
+    if(!cxxIsAddr(a)){ cxxSetStatus("cxx_watch_list","Invalid address.","bad"); return; }
+    const addr = cxxNorm(a);
+    const items = cxxLoadWatch();
+    if(items.some(x=>x.addr.toLowerCase()===addr.toLowerCase())){
+      cxxSetStatus("cxx_watch_list","Already in watchlist.","warn"); return;
+    }
+    items.unshift({addr, note, ts: Date.now()});
+    cxxSaveWatch(items.slice(0,150));
+    cxx$("cxx_watch_addr").value = "";
+    cxx$("cxx_watch_note").value = "";
+    cxxRenderWatch();
+  }
+
+  function cxxSeedRpc(netKey){
+    const net = CXX_NETWORKS[netKey];
+    cxx$("cxx_rpc_list_in").value = net.rpcs.join("\n");
+    cxxText("cxx_rpc_chain_label", net.label);
+    cxxSetStatus("cxx_rpc_status","Seeded defaults. Click Run tests.","");
+  }
+
+  async function cxxTestRpcList(){
+    const netKey = cxx$("cxx_rpc_net").value;
+    cxxText("cxx_rpc_chain_label", CXX_NETWORKS[netKey].label);
+
+    const urls = cxxUnique(cxxParseLines(cxx$("cxx_rpc_list_in").value));
+    if(!urls.length){ cxxSetStatus("cxx_rpc_status","Add at least one RPC URL.","warn"); return; }
+
+    cxxSetStatus("cxx_rpc_status","Running tests…","");
+
+    const results = [];
+    for(const url of urls){
+      const started = performance.now();
+      try{
+        const p = await cxxProviderForUrl(netKey, url);
+        const bn = await cxxCallWithTimeout(p.getBlockNumber(), 6000, "timeout");
+        const ms = Math.round(performance.now() - started);
+        results.push({url, ok:true, block:bn, ms});
+      }catch(e){
+        const ms = Math.round(performance.now() - started);
+        results.push({url, ok:false, err:(e?.message||String(e)).slice(0,120), ms});
+      }
+    }
+
+    results.sort((a,b)=> (a.ok===b.ok) ? (a.ms-b.ms) : (a.ok ? -1 : 1));
+
+    const lines = results.map(r=>{
+      if(r.ok) return `✅ ${r.ms}ms | block ${r.block} | ${r.url}`;
+      return `❌ ${r.ms}ms | ${r.err} | ${r.url}`;
+    });
+
+    const okCount = results.filter(r=>r.ok).length;
+    const msg = `Done. OK: ${okCount}/${results.length}\n\n${lines.join("\n")}`;
+    cxxSetStatus("cxx_rpc_status", msg, okCount ? "ok" : "bad");
+  }
+
+  async function cxxRunQuick(){
+    const addr = (cxx$("cxx_quick_addr").value||"").trim();
+    const netKey = cxx$("cxx_quick_net").value;
+
+    if(!cxxIsAddr(addr)){ cxxSetStatus("cxx_quick_status","Invalid token address.","bad"); return; }
+
+    cxxSetStatus("cxx_quick_status","Step 1/2: Running token scan…","");
+
+    cxx$("cxx_score_addr").value = addr;
+    cxx$("cxx_score_net").value = netKey;
+    cxxShowTool("score");
+    await cxxRunScore();
+
+    cxxShowTool("quick");
+    cxxSetStatus("cxx_quick_status","Step 2/2: Running fast RPC test…","");
+
+    cxx$("cxx_rpc_net").value = netKey;
+    cxxSeedRpc(netKey);
+    await cxxTestRpcList();
+
+    cxxSetStatus("cxx_quick_status","Quick scan complete.\nOpen Token Safety or RPC tool tabs to review outputs.","ok");
+  }
+
+  async function cxxInitWallet(){
+    try{
+      if(!window.AppKit || !window.AppKitAdapterEthers) return;
+
+      const metadata = {
+        name: "CycleX Security Hub",
+        description: "On-chain security tooling",
+        url: window.location.origin,
+        icons: [window.location.origin + "/logo.png"]
+      };
+
+      const networks = [
+        { chainId: CXX_NETWORKS.bsc.chainId, name: "BNB Smart Chain", currency: "BNB", explorerUrl: "https://bscscan.com", rpcUrl: CXX_NETWORKS.bsc.rpcs[0] },
+        { chainId: CXX_NETWORKS.eth.chainId, name: "Ethereum", currency: "ETH", explorerUrl: "https://etherscan.io", rpcUrl: CXX_NETWORKS.eth.rpcs[0] }
+      ];
+
+      const ethersAdapter = new AppKitAdapterEthers.EthersAdapter();
+      const appkit = AppKit.createAppKit({
+        adapters: [ethersAdapter],
+        networks,
+        projectId: CXX_WC_PROJECT_ID,
+        metadata
+      });
+
+      CXX_STATE.appkit = appkit;
+
+      cxx$("cxx_connect").addEventListener("click", async ()=>{
+        try{
+          await appkit.open();
+          const provider = await ethersAdapter.getProvider();
+          if(provider){
+            CXX_STATE.walletProvider = new ethers.BrowserProvider(provider);
+            CXX_STATE.walletSigner = await CXX_STATE.walletProvider.getSigner();
+            CXX_STATE.walletAddress = await CXX_STATE.walletSigner.getAddress();
+            cxxText("cxx_wallet_label", cxxShort(CXX_STATE.walletAddress));
+            cxxText("cxx_connect","Connected");
+          }
+        }catch(e){}
+      });
+
+    }catch(e){}
+  }
+
+  function cxxInit(){
+    const lang = cxxDetectLang();
+    cxx$("cxx_lang").value = lang;
+    cxxApplyLang(lang);
+    cxx$("cxx_lang").addEventListener("change", (e)=>{
+      const v = e.target.value;
+      localStorage.setItem("cxx_lang", v);
+      cxxApplyLang(v);
+    });
+
+    document.querySelectorAll("[data-cxx-tool]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const tool = btn.getAttribute("data-cxx-tool");
+        cxxShowTool(tool);
+      });
+    });
+
+    document.querySelectorAll("[data-cxx-close]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        history.replaceState(null,"", location.pathname + location.search);
+        ["cxx_tool_score","cxx_tool_approvals","cxx_tool_tx","cxx_tool_watch","cxx_tool_rpc","cxx_tool_quick"]
+          .forEach(id=>cxx$(id).classList.add("cxx-hidden"));
+      });
+    });
+
+    cxx$("cxx_score_net").addEventListener("change", (e)=>{
+      const k = e.target.value;
+      cxxText("cxx_score_net_label", CXX_NETWORKS[k].label);
+    });
+    cxx$("cxx_score_run").addEventListener("click", cxxRunScore);
+
+    cxx$("cxx_allowances_seed").addEventListener("click", cxxSeedBscCommon);
+    cxx$("cxx_allowances_run").addEventListener("click", cxxCheckAllowances);
+
+    cxx$("cxx_tx_net").addEventListener("change", (e)=>{
+      cxxText("cxx_tx_net_label", CXX_NETWORKS[e.target.value].label);
+    });
+    cxx$("cxx_tx_run").addEventListener("click", cxxDecodeTx);
+
+    cxx$("cxx_watch_add").addEventListener("click", cxxAddWatch);
+    cxxRenderWatch();
+
+    cxx$("cxx_rpc_net").addEventListener("change", (e)=>{ cxxSeedRpc(e.target.value); });
+    cxx$("cxx_rpc_seed").addEventListener("click", ()=>cxxSeedRpc(cxx$("cxx_rpc_net").value));
+    cxx$("cxx_rpc_run").addEventListener("click", cxxTestRpcList);
+    cxxSeedRpc("bsc");
+
+    cxx$("cxx_quick_run").addEventListener("click", cxxRunQuick);
+
+    const hash = (location.hash||"").replace("#","");
+    if(hash) cxxShowTool(hash);
+
+    cxxInitWallet();
+  }
+
+  document.addEventListener("DOMContentLoaded", cxxInit);
+  </script>
+</body>
+</html>
+
