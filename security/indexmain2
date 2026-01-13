@@ -2821,70 +2821,128 @@ function monExport(){
   document.getElementById("ap-check")?.addEventListener("click", apCheck);
   document.getElementById("ap-revoke-all")?.addEventListener("click", apRevokeAllNonZero);
 
-  document.getElementById("ap-spender-preset")?.addEventListener("change", () => {
-    const preset = document.getElementById("ap-spender-preset")?.value;
-    const input = document.getElementById("ap-spender");
-    if (!input) return;
+ document.getElementById("ap-spender-preset")?.addEventListener("change", () => {
+  const preset = document.getElementById("ap-spender-preset")?.value;
+  const input  = document.getElementById("ap-spender");
+  const netSel = document.getElementById("ap-net");
+  if (!input) return;
 
-    if (preset === "pcs_router") {
-      input.value = DEXES_BSC.find(d=>d.key==="pancake")?.router || "";
-      input.disabled = true;
-    } else if (preset === "uni_router") {
-      input.value = UNI_V2_ROUTER_ETH;
-      input.disabled = true;
-    } else {
-      input.value = "";
-      input.disabled = false;
-    }
-  });
+  if (preset === "pcs_router") {
+    input.value = DEXES_BSC.find(d => d.key === "pancake")?.router || "";
+    input.disabled = true;
+    if (netSel) netSel.value = "bsc";
+  } else if (preset === "uni_router") {
+    input.value = UNI_V2_ROUTER_ETH;
+    input.disabled = true;
+    if (netSel) netSel.value = "eth";
+  } else {
+    input.disabled = false;
+    if (preset === "custom") input.value = "";
+  }
+});
 
-  // set default spender
-  const apSpender = document.getElementById("ap-spender");
-  if (apSpender) {
-    apSpender.value = DEXES_BSC.find(d=>d.key==="pancake")?.router || "";
-    apSpender.disabled = true;
+/* ====== Approvals seeds ====== */
+const COMMON_ETH = [
+  "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
+  "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT
+  "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"  // USDC
+];
+
+document.getElementById("ap-seed-common")?.addEventListener("click", () => {
+  const net = (document.getElementById("ap-net")?.value === "eth") ? "eth" : "bsc";
+  const ta = document.getElementById("ap-tokens");
+  if (!ta) return;
+
+  const list = (net === "eth") ? COMMON_ETH : [WBNB, USDT, USDC, BUSD];
+  ta.value = list.join("\n");
+  apSetStatus("ok", "<strong>✅ Seeded common tokens.</strong>");
+});
+
+document.getElementById("ap-seed-history")?.addEventListener("click", () => {
+  const ta = document.getElementById("ap-tokens");
+  if (!ta) return;
+
+  const hist = qsLoadHistory();
+  if (!hist.length) {
+    apSetStatus("warn", "<strong>⚠️ No scan history found.</strong><br>Run a Quick Scan first.");
+    return;
   }
 
-  // rpc buttons
-  document.getElementById("rpc-test")?.addEventListener("click", rpcTestAll);
-  document.getElementById("rpc-copy-best")?.addEventListener("click", rpcCopyBest);
-  document.getElementById("rpc-copy-json")?.addEventListener("click", rpcCopyJson);
+  const uniq = [];
+  for (const it of hist) {
+    if (it?.token && isHexAddr(it.token) && !uniq.includes(it.token)) uniq.push(it.token);
+    if (uniq.length >= 20) break;
+  }
 
-  // monitor buttons
-  document.getElementById("mon-add")?.addEventListener("click", monAdd);
-  document.getElementById("mon-check")?.addEventListener("click", monCheckAll);
-  document.getElementById("mon-export")?.addEventListener("click", monExport);
+  ta.value = uniq.join("\n");
+  apSetStatus("ok", "<strong>✅ Loaded tokens from Quick Scan history.</strong>");
+});
 
-  // init history + monitor
+/* ====== RPC buttons ====== */
+document.getElementById("rpc-test")?.addEventListener("click", rpcTestAll);
+document.getElementById("rpc-copy-best")?.addEventListener("click", rpcCopyBest);
+document.getElementById("rpc-copy-json")?.addEventListener("click", rpcCopyJson);
+
+/* ====== Monitor buttons ====== */
+document.getElementById("mon-add")?.addEventListener("click", monAdd);
+document.getElementById("mon-check")?.addEventListener("click", monCheckAll);
+document.getElementById("mon-export")?.addEventListener("click", monExport);
+
+/* ====== Final boot ====== */
+(function boot() {
+  // make sure history + monitor are ready
   qsRenderHistory();
   monLoad();
   monRender();
 
-  // autoroute via query
+  // ensure spender preset applies to input on load
+  try { document.getElementById("ap-spender-preset")?.dispatchEvent(new Event("change")); } catch {}
+
+  // optional: open tool by URL
   try {
     const u = new URL(window.location.href);
     const tool = u.searchParams.get("tool");
-    const net = u.searchParams.get("net");
+    const net  = u.searchParams.get("net");
     const token = u.searchParams.get("token");
-    const req = u.searchParams.get("requireLiq");
+    const requireLiq = u.searchParams.get("requireLiq") === "1";
 
-    if (tool && TOOL_KEYS.includes(tool)) showTool(tool, {scroll:true});
-    if (token && isHexAddr(token)) {
-      // fill token into relevant panel
-      if (tool === "deep") { document.getElementById("ds-net") && (document.getElementById("ds-net").value = (net==="eth"?"eth":"bsc")); document.getElementById("ds-token") && (document.getElementById("ds-token").value = toChecksum(token)); }
-      else if (tool === "honeypot") { document.getElementById("hs-net") && (document.getElementById("hs-net").value = (net==="eth"?"eth":"bsc")); document.getElementById("hs-token") && (document.getElementById("hs-token").value = toChecksum(token)); }
-      else {
-        document.getElementById("qs-net") && (document.getElementById("qs-net").value = (net==="eth"?"eth":"bsc"));
-        document.getElementById("qs-token") && (document.getElementById("qs-token").value = toChecksum(token));
-        if (req === "1" && document.getElementById("qs-require-liq")) document.getElementById("qs-require-liq").checked = true;
-      }
+    if (tool && TOOL_KEYS.includes(tool)) showTool(tool, { scroll: false });
+
+    // quick auto-run
+    if (tool === "quick" && token && isHexAddr(token)) {
+      const netSel = document.getElementById("qs-net");
+      const tokInp = document.getElementById("qs-token");
+      const reqEl  = document.getElementById("qs-require-liq");
+      if (netSel) netSel.value = (net === "eth") ? "eth" : "bsc";
+      if (tokInp) tokInp.value = toChecksum(token);
+      if (reqEl)  reqEl.checked = !!requireLiq;
+      qsRun();
+    }
+
+    // deep auto-run
+    if (tool === "deep" && token && isHexAddr(token)) {
+      const netSel = document.getElementById("ds-net");
+      const tokInp = document.getElementById("ds-token");
+      if (netSel) netSel.value = (net === "eth") ? "eth" : "bsc";
+      if (tokInp) tokInp.value = toChecksum(token);
+      dsRun();
+    }
+
+    // honeypot auto-run
+    if (tool === "honeypot" && token && isHexAddr(token)) {
+      const netSel = document.getElementById("hs-net");
+      const tokInp = document.getElementById("hs-token");
+      if (netSel) netSel.value = (net === "eth") ? "eth" : "bsc";
+      if (tokInp) tokInp.value = toChecksum(token);
+      hsRun();
     }
   } catch {}
-
-  // default: keep quick visible (your HTML already shows it)
-  showTool("quick", {scroll:false});
 })();
 
+  })();
+  })();
+
+</script>
 
 <!-- AppKit (wallet list) -->
 <script type="module">
@@ -2910,4 +2968,6 @@ function monExport(){
 
   window.cxAppKitModal = modal;
 </script>
+  </body>
+</html>
 
