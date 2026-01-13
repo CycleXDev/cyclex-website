@@ -985,1352 +985,947 @@
     </main>
   </div>
 
-    <!-- Load ethers.js (required) -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
+  <!-- Load ethers.js (required) -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
 
-  <script>
-    // ====== i18n ======
-    const translations = {
-      en: {
-        brand_sub: "On-Chain Security & Rewards",
-        hero_kicker: "Security Hub",
-        hero_title: "CycleX Security Tools",
-        hero_subtitle: "A lightweight, client-side toolkit for safer swaps, approvals hygiene, DEX redirects, and RPC health checks.",
-        btn_back: "Back to Site",
-        btn_connect: "Connect Wallet (optional)",
-        btn_run_all: "Run Quick Scan",
-        hero_note: "Note: These checks are informational and do not guarantee safety. Always verify independently.",
+<script>
+(() => {
+  "use strict";
 
-        ss_kicker: "SafeSwap Gate",
-        ss_title: "Check token basics before you swap",
-        ss_sub: "Enter a token address on BSC. We’ll read on-chain metadata, owner/proxy hints, and multi-DEX liquidity signals — then generate shareable outputs.",
-        ss_input_title: "Token Address",
-        ss_token_label: "Token contract (BSC)",
-        ss_tip: "Tip: You can open this page with ?token=0x... and it will auto-run.",
-        ss_actions_label: "Actions",
-        ss_scan: "Scan",
-        ss_share: "Copy Share Link",
-        ss_copy_json: "Copy JSON report",
-        ss_options_label: "Options",
-        ss_require_liq: "Require liquidity (production)",
-        ss_require_liq_tip: "When enabled, “No DEX pair” becomes Red. When disabled, it’s treated as “Not listed yet”.",
-        ss_open_swap: "Open Swap",
-        ss_results_title: "Results",
-        ss_results_hint: "We score signals as Green / Yellow / Red. This is not a honeypot guarantee — just solid on-chain hygiene checks.",
+  // =========================
+  // i18n (FIXED KEYS)
+  // =========================
+  const translations = {
+    en: {
+      brand_sub: "On-Chain Security & Rewards",
+      hero_kicker: "Security Hub",
+      hero_title: "CycleX Security Tools",
+      hero_subtitle: "A lightweight, client-side toolkit for safer swaps, approvals hygiene, and RPC health checks across BSC + Ethereum.",
+      btn_back: "Back to Site",
+      btn_connect: "Connect Wallet (optional)",
+      btn_quick: "Run Quick Scan",
+      hero_note: "Note: These checks are informational and do not guarantee safety. Always verify independently.",
 
-        ap_kicker: "Approvals Guardian",
-        ap_title: "Check and revoke ERC-20 allowances",
-        ap_sub: "This tool is targeted: you provide token(s) and spender. We read allowance(owner, spender) and can revoke by sending approve(spender, 0).",
-        ap_owner: "Owner wallet",
-        ap_connected: "Connected:",
-        ap_connect: "Connect / Refresh",
-        ap_spender_label: "Spender",
-        ap_spender_tip: "If you’re unsure: start with PancakeSwap Router preset.",
-        ap_tokens_label: "Token list (one per line)",
-        ap_check: "Check Allowances",
-        ap_revoke_all: "Revoke All (non-zero)",
-        ap_results: "Allowances",
-        ap_results_hint: "If allowance is “infinite”, revoke is recommended unless you fully trust the spender.",
+      tools_kicker: "CHOOSE A TOOL",
 
-        bm_kicker: "DEX Guard",
-        bm_title: "Bookmarklet redirect to your security page",
-        bm_sub: "Save a bookmark that extracts token params from DEX pages and opens this Security Hub with ?token=.",
-        bm_drag: "Drag to bookmarks bar",
-        bm_drag_tip: "On desktop: drag this button into your bookmarks bar.",
-        bm_note: "Works best when a DEX URL includes outputCurrency / inputCurrency (or similar).",
-        bm_code: "Bookmarklet code",
-        bm_code_tip: "If your browser blocks drag-drop, create a bookmark and paste this into the URL field:",
+      cube_quick_title: "Quick Scan",
+      cube_quick_desc: "Fast token sanity-check: contract, metadata, owner/proxy hints, and shareable report.",
+      badge_fast: "Fast",
+      badge_history: "History",
+      badge_share: "Share",
 
-        rpc_kicker: "RPC Checker",
-        rpc_title: "Find the fastest working BSC RPC",
-        rpc_sub: "We measure response time using eth_blockNumber via ethers. Fastest result is highlighted.",
-        rpc_list: "Endpoints",
-        rpc_custom_label: "Optional custom RPC",
-        rpc_test: "Test RPCs",
-        rpc_copy_best: "Copy Best RPC",
-        rpc_results: "Results",
-        rpc_tip: "Tip: If one RPC fails due to CORS/timeout, try another — we auto-fallback in CycleX anyway.",
+      cube_deep_title: "Token Safety + Liquidity",
+      cube_deep_desc: "Deeper details: bytecode fingerprint, proxy hints, and extra diagnostics.",
+      badge_deeper: "Deeper",
+      badge_pairs: "Diagnostics",
 
-        footer_left: "CycleX Security Hub runs client-side and reads public on-chain data.",
-        footer_tagline: "Verify twice. Connect only when you trust the page."
-      },
-      zh: {
-        brand_sub: "链上安全与奖励机制",
-        hero_kicker: "安全中心",
-        hero_title: "CycleX 安全工具",
-        hero_subtitle: "轻量级客户端工具：换币前检查、授权管理、DEX 跳转与 RPC 体检。",
-        btn_back: "返回网站",
-        btn_connect: "连接钱包（可选）",
-        btn_run_all: "快速扫描",
-        hero_note: "提示：这些检查仅供参考，不保证安全，请自行二次验证。",
+      cube_honey_title: "Honeypot / Sell Signals",
+      cube_honey_desc: "Best-effort risk hints (informational). No guarantee client-side.",
+      badge_beta: "Beta",
+      badge_signals: "Signals",
+      badge_keywords: "Hints",
 
-        ss_kicker: "SafeSwap Gate",
-        ss_title: "换币前先做基础检查",
-        ss_sub: "输入 BSC 代币地址，读取链上信息、owner/proxy 线索与多 DEX 流动性信号，并生成可分享结果。",
-        ss_input_title: "代币地址",
-        ss_token_label: "代币合约（BSC）",
-        ss_tip: "提示：可以用 ?token=0x... 打开本页并自动扫描。",
-        ss_actions_label: "操作",
-        ss_scan: "扫描",
-        ss_share: "复制分享链接",
-        ss_copy_json: "复制 JSON 报告",
-        ss_options_label: "选项",
-        ss_require_liq: "强制要求流动性（生产模式）",
-        ss_require_liq_tip: "开启后：没有 DEX Pair 会变红；关闭则视为“尚未上架”。",
-        ss_open_swap: "打开兑换",
-        ss_results_title: "结果",
-        ss_results_hint: "用绿/黄/红信号评分。这不是蜜罐保证，只是链上基础安全检查。",
+      cube_approvals_title: "Approval Guardian",
+      cube_approvals_desc: "Connect wallet, review allowances, and revoke approvals safely.",
+      badge_wallet: "Wallet",
+      badge_revoke: "Revoke",
 
-        ap_kicker: "授权守卫",
-        ap_title: "检查并撤销 ERC-20 授权",
-        ap_sub: "定向工具：输入代币与 spender，读取 allowance，可通过 approve(spender, 0) 撤销。",
-        ap_owner: "钱包地址",
-        ap_connected: "已连接：",
-        ap_connect: "连接 / 刷新",
-        ap_spender_label: "Spender",
-        ap_spender_tip: "不确定的话：先选 PancakeSwap Router 预设。",
-        ap_tokens_label: "代币列表（每行一个）",
-        ap_check: "检查授权",
-        ap_revoke_all: "撤销全部（非零）",
-        ap_results: "授权结果",
-        ap_results_hint: "若授权为“无限”，除非完全信任，否则建议撤销。",
+      cube_rpc_title: "RPC Health Checker",
+      cube_rpc_desc: "Test endpoints, measure latency + chain, and copy the best RPC.",
+      badge_table: "Table",
+      badge_copy: "Copy",
 
-        bm_kicker: "DEX Guard",
-        bm_title: "书签脚本：从 DEX 一键跳转扫描",
-        bm_sub: "保存书签，从 DEX URL 提取 token 参数并打开本页扫描。",
-        bm_drag: "拖到书签栏",
-        bm_drag_tip: "桌面端：把按钮拖到书签栏即可。",
-        bm_note: "当 DEX URL 含 outputCurrency / inputCurrency（或类似）时效果最佳。",
-        bm_code: "书签代码",
-        bm_code_tip: "若浏览器阻止拖拽，请创建书签并把以下内容粘贴到 URL：",
+      cube_monitor_title: "Contract Diff / Upgrade Monitor",
+      cube_monitor_desc: "Save contracts locally and detect bytecode changes over time.",
+      badge_watch: "Watch",
+      badge_local: "Local",
+      badge_changes: "Changes",
 
-        rpc_kicker: "RPC 体检",
-        rpc_title: "找出最快可用的 BSC RPC",
-        rpc_sub: "通过 ethers 调用 eth_blockNumber 测量延迟，最快的会高亮。",
-        rpc_list: "节点列表",
-        rpc_custom_label: "可选：自定义 RPC",
-        rpc_test: "测试 RPC",
-        rpc_copy_best: "复制最佳 RPC",
-        rpc_results: "结果",
-        rpc_tip: "提示：如果某个 RPC 因 CORS/超时失败，换一个即可，我们也会自动 fallback。",
+      // Panels
+      p_quick_kicker: "Quick Scan",
+      p_quick_title: "Score a token in seconds",
+      p_quick_sub: "Paste a token address, choose network, run scan. History is stored locally and you can share results.",
+      pill_wallet: "Wallet",
+      btn_close: "Close",
+      quick_input_title: "Token Input",
+      net_label: "Network",
+      addr_label: "Token contract",
+      qs_tip: "Tip: open with ?net=bsc&token=0x... to auto-run.",
+      options_label: "Options",
+      opt_require_liq: "Require liquidity (coming soon)",
+      opt_show_json: "Enable JSON report (copy)",
+      btn_scan: "Scan",
+      btn_copy_link: "Copy Share Link",
+      btn_copy_json: "Copy JSON",
+      history_label: "History",
+      history_tip: "Click an item to re-run quickly. Stored locally only.",
+      results_title: "Results",
+      results_hint: "Informational checks only — always verify independently.",
 
-        footer_left: "CycleX 安全中心在本地运行，读取公开链上数据。",
-        footer_tagline: "多验证一次，只在你信任时连接钱包。"
-      },
-      ar: {
-        brand_sub: "أمن ومكافآت على السلسلة",
-        hero_kicker: "مركز الأمان",
-        hero_title: "أدوات الأمان من CycleX",
-        hero_subtitle: "أدوات خفيفة على المتصفح: فحص قبل الشراء، إدارة الموافقات، إعادة توجيه DEX، وفحص RPC.",
-        btn_back: "العودة للموقع",
-        btn_connect: "اتصال المحفظة (اختياري)",
-        btn_run_all: "فحص سريع",
-        hero_note: "ملاحظة: هذه الفحوصات معلوماتية ولا تضمن الأمان. تحقق دائماً بنفسك.",
+      p_deep_kicker: "Token Safety + Liquidity",
+      p_deep_title: "Deeper on-chain breakdown",
+      p_deep_sub: "Extra diagnostics: bytecode fingerprint, proxy hints, and metadata.",
+      deep_input_title: "Run Deep Scan",
+      deep_results_title: "Detailed Report",
 
-        ss_kicker: "SafeSwap Gate",
-        ss_title: "تحقق من أساسيات التوكن قبل المبادلة",
-        ss_sub: "أدخل عنوان توكن على BSC ونقرأ البيانات والإشارات (owner/proxy) وسيولة متعددة DEX وننشئ مخرجات قابلة للمشاركة.",
-        ss_input_title: "عنوان التوكن",
-        ss_token_label: "عقد التوكن (BSC)",
-        ss_tip: "نصيحة: افتح الصفحة مع ?token=0x... وسيبدأ الفحص تلقائياً.",
-        ss_actions_label: "الإجراءات",
-        ss_scan: "فحص",
-        ss_share: "نسخ رابط المشاركة",
-        ss_copy_json: "نسخ تقرير JSON",
-        ss_options_label: "الخيارات",
-        ss_require_liq: "اشتراط السيولة (وضع الإنتاج)",
-        ss_require_liq_tip: "عند التفعيل: عدم وجود Pair يصبح أحمر. عند التعطيل: يُعتبر (غير مُدرج بعد).",
-        ss_open_swap: "فتح المبادلة",
-        ss_results_title: "النتائج",
-        ss_results_hint: "إشارات أخضر/أصفر/أحمر. هذا ليس ضماناً ضد honeypot — فقط فحوصات أساسية على السلسلة.",
+      p_honey_kicker: "Honeypot / Sell Signals",
+      p_honey_title: "Best-effort “sell risk” hints",
+      p_honey_sub: "Client-side detection is limited. We surface informational patterns only.",
+      pill_mode: "Mode",
+      honey_input_title: "Token",
+      honey_strict: "Strict warnings (safer)",
+      honey_results_title: "Signals",
 
-        ap_kicker: "حارس الموافقات",
-        ap_title: "فحص وإلغاء سماحيات ERC-20",
-        ap_sub: "أداة موجهة: تُدخل التوكنات والـ spender. نقرأ allowance ويمكن الإلغاء عبر approve(spender, 0).",
-        ap_owner: "محفظة المالك",
-        ap_connected: "متصل:",
-        ap_connect: "اتصال / تحديث",
-        ap_spender_label: "Spender",
-        ap_spender_tip: "إذا لم تكن متأكداً: ابدأ بمُسبق PancakeSwap Router.",
-        ap_tokens_label: "قائمة التوكنات (كل سطر توكن)",
-        ap_check: "فحص السماحيات",
-        ap_revoke_all: "إلغاء الكل (غير صفر)",
-        ap_results: "السماحيات",
-        ap_results_hint: "إذا كانت السماحية “لا نهائية”، يوصى بالإلغاء إلا إذا كنت تثق تماماً بالـ spender.",
+      p_app_kicker: "Approval Guardian",
+      p_app_title: "Check and revoke allowances",
+      p_app_sub: "This section is UI-ready. Wallet connect works; allowance scan/revoke can be wired next.",
+      ap_settings_title: "Settings",
+      ap_connected: "Connected:",
+      ap_connect: "Connect / Refresh",
+      ap_spender_label: "Spender preset",
+      ap_spender_tip: "Start with a router preset, then add tokens you want to clean up.",
+      ap_tokens_label: "Token list (one per line)",
+      ap_seed: "Seed common tokens",
+      ap_seed_history: "Use scan history",
+      ap_check: "Check Allowances",
+      ap_revoke_all: "Revoke All (non-zero)",
+      ap_results: "Allowances",
+      ap_results_hint: "If allowance is “infinite”, revoke is recommended unless you fully trust the spender.",
 
-        bm_kicker: "DEX Guard",
-        bm_title: "Bookmarklet لإعادة التوجيه للفحص",
-        bm_sub: "احفظ Bookmark يستخرج معاملات التوكن من صفحات DEX ويفتح هذا المركز مع ?token=.",
-        bm_drag: "اسحب إلى شريط المفضلة",
-        bm_drag_tip: "على سطح المكتب: اسحب الزر إلى شريط المفضلة.",
-        bm_note: "يعمل أفضل عندما يحتوي الرابط على outputCurrency / inputCurrency (أو ما شابه).",
-        bm_code: "كود الـ Bookmarklet",
-        bm_code_tip: "إذا منع المتصفح السحب، أنشئ Bookmark والصق هذا في خانة URL:",
+      p_rpc_kicker: "RPC Health Checker",
+      p_rpc_title: "Find the best endpoint",
+      p_rpc_sub: "We test RPC endpoints with eth_blockNumber and measure latency. Best result is highlighted and ready to copy.",
+      rpc_inputs: "Inputs",
+      rpc_custom_label: "Optional custom RPC (top priority)",
+      rpc_test: "Test RPCs",
+      rpc_copy_best: "Copy Best RPC",
+      rpc_results: "Results",
+      rpc_tip: "Tip: Some RPCs fail due to CORS/timeouts. Run the test and pick the stable fastest.",
 
-        rpc_kicker: "فحص RPC",
-        rpc_title: "اعثر على أسرع RPC يعمل على BSC",
-        rpc_sub: "نقيس زمن الاستجابة عبر ethers و eth_blockNumber. الأسرع سيظهر مميزاً.",
-        rpc_list: "النقاط",
-        rpc_custom_label: "اختياري: RPC مخصص",
-        rpc_test: "اختبار RPC",
-        rpc_copy_best: "نسخ أفضل RPC",
-        rpc_results: "النتائج",
-        rpc_tip: "نصيحة: إذا فشل RPC بسبب CORS/timeout جرّب غيره — لدينا fallback أيضاً.",
+      p_mon_kicker: "Contract Monitor",
+      p_mon_title: "Detect upgrades & bytecode changes",
+      p_mon_sub: "Save contracts locally and re-check later to detect changes.",
+      mon_add_title: "Add to watchlist",
+      mon_add: "Add",
+      mon_check: "Check all",
+      mon_export: "Export JSON",
+      mon_list_title: "Watchlist",
+      mon_list_hint: "Stored locally only. No server tracking.",
 
-        footer_left: "مركز أمان CycleX يعمل على المتصفح ويقرأ بيانات عامة على السلسلة.",
-        footer_tagline: "تحقق مرتين. لا تتصل إلا إذا كنت تثق بالصفحة."
-      },
-      ru: {
-        brand_sub: "Ончейн-безопасность и вознаграждения",
-        hero_kicker: "Центр безопасности",
-        hero_title: "Инструменты безопасности CycleX",
-        hero_subtitle: "Лёгкий набор инструментов в браузере: проверка перед свопом, гигиена approvals, DEX-редирект и проверка RPC.",
-        btn_back: "Назад на сайт",
-        btn_connect: "Подключить кошелёк (опционально)",
-        btn_run_all: "Быстрая проверка",
-        hero_note: "Примечание: проверки носят информационный характер и не гарантируют безопасность. Всегда проверяйте дополнительно.",
+      footer_left: "CycleX Security Hub runs client-side and reads public on-chain data.",
+      footer_tagline: "Verify twice. Connect only when you trust the page."
+    },
 
-        ss_kicker: "SafeSwap Gate",
-        ss_title: "Проверь токен перед свопом",
-        ss_sub: "Введите адрес токена в BSC. Мы прочитаем on-chain метаданные, owner/proxy подсказки и сигналы ликвидности в нескольких DEX — и подготовим удобные результаты.",
-        ss_input_title: "Адрес токена",
-        ss_token_label: "Контракт токена (BSC)",
-        ss_tip: "Совет: открой страницу с ?token=0x... и проверка запустится автоматически.",
-        ss_actions_label: "Действия",
-        ss_scan: "Сканировать",
-        ss_share: "Копировать ссылку",
-        ss_copy_json: "Копировать JSON отчёт",
-        ss_options_label: "Опции",
-        ss_require_liq: "Требовать ликвидность (production)",
-        ss_require_liq_tip: "Вкл.: отсутствие Pair станет красным. Выкл.: это “ещё не залистили”.",
-        ss_open_swap: "Открыть своп",
-        ss_results_title: "Результаты",
-        ss_results_hint: "Сигналы: зелёный/жёлтый/красный. Это не гарантия от honeypot — только базовые on-chain проверки.",
+    zh: {
+      brand_sub: "链上安全与奖励",
+      hero_kicker: "安全中心",
+      hero_title: "CycleX 安全工具",
+      hero_subtitle: "轻量级客户端工具：更安全的 Swap、授权管理与 RPC 健康检查（BSC + 以太坊）。",
+      btn_back: "返回主站",
+      btn_connect: "连接钱包（可选）",
+      btn_quick: "运行快速扫描",
+      hero_note: "提示：这些检查仅供参考，不保证安全，请务必自行二次验证。",
 
-        ap_kicker: "Approvals Guardian",
-        ap_title: "Проверка и отзыв ERC-20 разрешений",
-        ap_sub: "Точечный инструмент: вы задаёте токены и spender. Мы читаем allowance и можем отозвать через approve(spender, 0).",
-        ap_owner: "Кошелёк владельца",
-        ap_connected: "Подключено:",
-        ap_connect: "Подключить / обновить",
-        ap_spender_label: "Spender",
-        ap_spender_tip: "Если не уверены: начните с пресета PancakeSwap Router.",
-        ap_tokens_label: "Список токенов (по одному в строке)",
-        ap_check: "Проверить allowance",
-        ap_revoke_all: "Отозвать все (ненулевые)",
-        ap_results: "Allowances",
-        ap_results_hint: "Если allowance “бесконечный”, отзыв рекомендуется, если вы не доверяете spender на 100%.",
+      tools_kicker: "选择工具",
 
-        bm_kicker: "DEX Guard",
-        bm_title: "Bookmarklet: редирект на проверку",
-        bm_sub: "Сохраните закладку, которая вытаскивает token-параметры из DEX URL и открывает этот центр с ?token=.",
-        bm_drag: "Перетащите в панель закладок",
-        bm_drag_tip: "На десктопе: перетащите кнопку в панель закладок.",
-        bm_note: "Лучше всего работает, если URL содержит outputCurrency / inputCurrency (или подобное).",
-        bm_code: "Код bookmarklet",
-        bm_code_tip: "Если браузер блокирует drag&drop — создайте закладку и вставьте это в поле URL:",
+      cube_quick_title: "快速扫描",
+      cube_quick_desc: "快速基础检查：合约、元数据、owner/proxy 线索，可生成分享报告。",
+      badge_fast: "快速",
+      badge_history: "历史",
+      badge_share: "分享",
 
-        rpc_kicker: "RPC Checker",
-        rpc_title: "Найдите самый быстрый RPC для BSC",
-        rpc_sub: "Измеряем задержку через ethers и eth_blockNumber. Самый быстрый будет подсвечен.",
-        rpc_list: "Эндпоинты",
-        rpc_custom_label: "Опционально: свой RPC",
-        rpc_test: "Тест RPC",
-        rpc_copy_best: "Скопировать лучший RPC",
-        rpc_results: "Результаты",
-        rpc_tip: "Совет: если RPC падает из-за CORS/timeout — выберите другой, у нас также есть fallback.",
+      cube_deep_title: "代币安全 + 诊断",
+      cube_deep_desc: "更深入：字节码指纹、代理线索与更多诊断信息。",
+      badge_deeper: "更深入",
+      badge_pairs: "诊断",
 
-        footer_left: "CycleX Security Hub работает на клиенте и читает публичные on-chain данные.",
-        footer_tagline: "Проверяйте дважды. Подключайте кошелёк только если доверяете странице."
-      }
-    };
+      cube_honey_title: "蜜罐 / 卖出风险",
+      cube_honey_desc: "尽力给出风险提示（信息性质），客户端无法保证。",
+      badge_beta: "测试版",
+      badge_signals: "信号",
+      badge_keywords: "提示",
 
-    function setLanguage(lang) {
-      const dict = translations[lang] || translations.en;
+      cube_approvals_title: "授权守卫",
+      cube_approvals_desc: "连接钱包，查看 allowance，并安全撤销授权。",
+      badge_wallet: "钱包",
+      badge_revoke: "撤销",
 
-      document.body.classList.add("lang-switching");
+      cube_rpc_title: "RPC 健康检查",
+      cube_rpc_desc: "测试节点、测延迟与链信息，一键复制最佳 RPC。",
+      badge_table: "表格",
+      badge_copy: "复制",
 
-      document.querySelectorAll("[data-i18n]").forEach((el) => {
-        const key = el.getAttribute("data-i18n");
-        const val = (dict[key] !== undefined) ? dict[key] : translations.en[key];
-        if (val !== undefined) el.innerHTML = val;
-      });
+      cube_monitor_title: "合约变更监控",
+      cube_monitor_desc: "本地保存并检测字节码变化（信息性质）。",
+      badge_watch: "监控",
+      badge_local: "本地",
+      badge_changes: "变化",
 
-      document.querySelectorAll(".lang-btn").forEach((btn) => {
-        btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
-      });
+      p_quick_kicker: "快速扫描",
+      p_quick_title: "几秒内给代币打分",
+      p_quick_sub: "粘贴代币地址，选择网络，运行扫描。历史仅保存在本地，可分享结果。",
+      pill_wallet: "钱包",
+      btn_close: "关闭",
+      quick_input_title: "代币输入",
+      net_label: "网络",
+      addr_label: "代币合约",
+      qs_tip: "提示：使用 ?net=bsc&token=0x... 打开可自动运行。",
+      options_label: "选项",
+      opt_require_liq: "要求流动性（即将上线）",
+      opt_show_json: "启用 JSON 报告（复制）",
+      btn_scan: "扫描",
+      btn_copy_link: "复制分享链接",
+      btn_copy_json: "复制 JSON",
+      history_label: "历史",
+      history_tip: "点击即可快速重跑。仅本地存储。",
+      results_title: "结果",
+      results_hint: "仅为信息性质检查 — 请务必自行二次验证。",
 
-      document.documentElement.dir = (lang === "ar") ? "rtl" : "ltr";
-      setTimeout(() => document.body.classList.remove("lang-switching"), 250);
+      p_deep_kicker: "代币安全 + 诊断",
+      p_deep_title: "更深入的链上信息",
+      p_deep_sub: "额外诊断：字节码指纹、代理线索与元数据。",
+      deep_input_title: "运行深度扫描",
+      deep_results_title: "详细报告",
+
+      p_honey_kicker: "蜜罐 / 卖出风险",
+      p_honey_title: "尽力提示“卖出风险”",
+      p_honey_sub: "客户端检测有限，仅提供信息性质线索。",
+      pill_mode: "模式",
+      honey_input_title: "代币",
+      honey_strict: "严格警告（更安全）",
+      honey_results_title: "信号",
+
+      p_app_kicker: "授权守卫",
+      p_app_title: "检查并撤销授权",
+      p_app_sub: "此区域 UI 已就绪。钱包连接可用；allowance 扫描/撤销可下一步接线。",
+      ap_settings_title: "设置",
+      ap_connected: "已连接：",
+      ap_connect: "连接 / 刷新",
+      ap_spender_label: "Spender 预设",
+      ap_spender_tip: "先选路由预设，然后添加要清理的代币。",
+      ap_tokens_label: "代币列表（每行一个）",
+      ap_seed: "填充常用代币",
+      ap_seed_history: "使用扫描历史",
+      ap_check: "检查授权",
+      ap_revoke_all: "撤销全部（非零）",
+      ap_results: "授权结果",
+      ap_results_hint: "若授权为“无限”，除非完全信任，否则建议撤销。",
+
+      p_rpc_kicker: "RPC 健康检查",
+      p_rpc_title: "找到最佳节点",
+      p_rpc_sub: "用 eth_blockNumber 测延迟。最佳结果会高亮，可一键复制。",
+      rpc_inputs: "输入",
+      rpc_custom_label: "可选：自定义 RPC（优先）",
+      rpc_test: "测试 RPC",
+      rpc_copy_best: "复制最佳 RPC",
+      rpc_results: "结果",
+      rpc_tip: "提示：部分 RPC 可能因 CORS/超时失败。测试后选择稳定且最快的。",
+
+      p_mon_kicker: "合约监控",
+      p_mon_title: "检测升级与字节码变化",
+      p_mon_sub: "本地保存合约并定期复查以发现变化。",
+      mon_add_title: "添加到监控列表",
+      mon_add: "添加",
+      mon_check: "检查全部",
+      mon_export: "导出 JSON",
+      mon_list_title: "监控列表",
+      mon_list_hint: "仅本地存储，不做服务器跟踪。",
+
+      footer_left: "CycleX 安全中心在本地运行，读取公开链上数据。",
+      footer_tagline: "多验证一次，只在你信任时连接钱包。"
+    },
+
+    ar: {
+      brand_sub: "أمن ومكافآت على السلسلة",
+      hero_kicker: "مركز الأمان",
+      hero_title: "أدوات أمان CycleX",
+      hero_subtitle: "أدوات خفيفة على المتصفح لفحص أمان التوكنات والموافقات وقياس صحة RPC (BSC + Ethereum).",
+      btn_back: "العودة للموقع",
+      btn_connect: "اتصال المحفظة (اختياري)",
+      btn_quick: "فحص سريع",
+      hero_note: "ملاحظة: هذه الفحوصات معلوماتية ولا تضمن الأمان. تحقق دائماً بنفسك.",
+
+      tools_kicker: "اختر أداة",
+
+      cube_quick_title: "فحص سريع",
+      cube_quick_desc: "فحص أساسي سريع: العقد، البيانات، إشارات owner/proxy وتقرير قابل للمشاركة.",
+      badge_fast: "سريع",
+      badge_history: "سجل",
+      badge_share: "مشاركة",
+
+      cube_deep_title: "أمان التوكن + تشخيص",
+      cube_deep_desc: "تفاصيل أعمق: بصمة البايت كود، إشارات البروكسي وتشخيص إضافي.",
+      badge_deeper: "أعمق",
+      badge_pairs: "تشخيص",
+
+      cube_honey_title: "Honeypot / مخاطر البيع",
+      cube_honey_desc: "إشارات مخاطر (معلوماتية). لا ضمان على جهة العميل.",
+      badge_beta: "تجريبي",
+      badge_signals: "إشارات",
+      badge_keywords: "تلميحات",
+
+      cube_approvals_title: "حارس الموافقات",
+      cube_approvals_desc: "اتصل بالمحفظة وراجع/ألغِ الموافقات بأمان.",
+      badge_wallet: "محفظة",
+      badge_revoke: "إلغاء",
+
+      cube_rpc_title: "فحص RPC",
+      cube_rpc_desc: "اختبر النقاط، قِس التأخير، وانسخ أفضل RPC.",
+      badge_table: "جدول",
+      badge_copy: "نسخ",
+
+      cube_monitor_title: "مراقبة تغيّر العقد",
+      cube_monitor_desc: "حفظ محلي وكشف تغيّر البايت كود مع الوقت.",
+      badge_watch: "مراقبة",
+      badge_local: "محلي",
+      badge_changes: "تغييرات",
+
+      p_quick_kicker: "فحص سريع",
+      p_quick_title: "قيّم التوكن خلال ثوانٍ",
+      p_quick_sub: "الصق عنوان التوكن، اختر الشبكة، شغّل الفحص. السجل محلي ويمكن مشاركة النتائج.",
+      pill_wallet: "محفظة",
+      btn_close: "إغلاق",
+      quick_input_title: "إدخال التوكن",
+      net_label: "الشبكة",
+      addr_label: "عقد التوكن",
+      qs_tip: "نصيحة: افتح بـ ?net=bsc&token=0x... للتشغيل التلقائي.",
+      options_label: "الخيارات",
+      opt_require_liq: "اشتراط السيولة (قريباً)",
+      opt_show_json: "تفعيل تقرير JSON (نسخ)",
+      btn_scan: "فحص",
+      btn_copy_link: "نسخ رابط",
+      btn_copy_json: "نسخ JSON",
+      history_label: "السجل",
+      history_tip: "اضغط لإعادة الفحص بسرعة. التخزين محلي فقط.",
+      results_title: "النتائج",
+      results_hint: "فحوصات معلوماتية فقط — تحقق دائماً بنفسك.",
+
+      p_deep_kicker: "أمان التوكن + تشخيص",
+      p_deep_title: "تفاصيل أعمق على السلسلة",
+      p_deep_sub: "تشخيص إضافي: بصمة البايت كود وإشارات البروكسي والبيانات.",
+      deep_input_title: "تشغيل فحص عميق",
+      deep_results_title: "تقرير مفصل",
+
+      p_honey_kicker: "Honeypot / مخاطر البيع",
+      p_honey_title: "تلميحات “مخاطر البيع” (قدر الإمكان)",
+      p_honey_sub: "الكشف على جهة العميل محدود — إشارات معلوماتية فقط.",
+      pill_mode: "وضع",
+      honey_input_title: "توكن",
+      honey_strict: "تحذيرات صارمة (أكثر أماناً)",
+      honey_results_title: "إشارات",
+
+      p_app_kicker: "حارس الموافقات",
+      p_app_title: "فحص وإلغاء الموافقات",
+      p_app_sub: "الواجهة جاهزة. اتصال المحفظة يعمل؛ فحص/إلغاء allowance يمكن ربطه بالخطوة التالية.",
+      ap_settings_title: "إعدادات",
+      ap_connected: "متصل:",
+      ap_connect: "اتصال / تحديث",
+      ap_spender_label: "Spender preset",
+      ap_spender_tip: "ابدأ بمُسبق الراوتر ثم أضف التوكنات التي تريد تنظيفها.",
+      ap_tokens_label: "قائمة التوكنات (كل سطر توكن)",
+      ap_seed: "إضافة توكنات شائعة",
+      ap_seed_history: "استخدام سجل الفحص",
+      ap_check: "فحص Allowances",
+      ap_revoke_all: "إلغاء الكل (غير صفر)",
+      ap_results: "Allowances",
+      ap_results_hint: "إذا كانت “لا نهائية”، يوصى بالإلغاء إلا إذا كنت تثق تماماً.",
+
+      p_rpc_kicker: "فحص RPC",
+      p_rpc_title: "اعثر على أفضل نقطة",
+      p_rpc_sub: "نقيس التأخير عبر eth_blockNumber. الأفضل سيظهر مميزاً ويمكن نسخه.",
+      rpc_inputs: "المدخلات",
+      rpc_custom_label: "اختياري: RPC مخصص (أولوية)",
+      rpc_test: "اختبار RPC",
+      rpc_copy_best: "نسخ أفضل RPC",
+      rpc_results: "النتائج",
+      rpc_tip: "نصيحة: قد تفشل بعض RPC بسبب CORS/timeout. اختبر واختر الأكثر استقراراً.",
+
+      p_mon_kicker: "مراقبة العقد",
+      p_mon_title: "كشف الترقيات وتغيّر البايت كود",
+      p_mon_sub: "احفظ محلياً وأعد الفحص لاحقاً لاكتشاف التغييرات.",
+      mon_add_title: "إضافة للمراقبة",
+      mon_add: "إضافة",
+      mon_check: "فحص الكل",
+      mon_export: "تصدير JSON",
+      mon_list_title: "قائمة المراقبة",
+      mon_list_hint: "محلي فقط. لا يوجد تتبع سيرفر.",
+
+      footer_left: "مركز أمان CycleX يعمل على المتصفح ويقرأ بيانات عامة على السلسلة.",
+      footer_tagline: "تحقق مرتين. لا تتصل إلا إذا كنت تثق بالصفحة."
+    },
+
+    ru: {
+      brand_sub: "Ончейн-безопасность и вознаграждения",
+      hero_kicker: "Центр безопасности",
+      hero_title: "Инструменты безопасности CycleX",
+      hero_subtitle: "Лёгкий набор инструментов в браузере: проверка токенов, approvals и здоровье RPC (BSC + Ethereum).",
+      btn_back: "Назад на сайт",
+      btn_connect: "Подключить кошелёк (опционально)",
+      btn_quick: "Быстрая проверка",
+      hero_note: "Примечание: проверки информационные и не гарантируют безопасность. Всегда перепроверяйте.",
+
+      tools_kicker: "ВЫБЕРИТЕ ИНСТРУМЕНТ",
+
+      cube_quick_title: "Quick Scan",
+      cube_quick_desc: "Быстрая проверка: контракт, метаданные, owner/proxy подсказки и отчёт для шаринга.",
+      badge_fast: "Быстро",
+      badge_history: "История",
+      badge_share: "Шаринг",
+
+      cube_deep_title: "Безопасность + диагностика",
+      cube_deep_desc: "Глубже: отпечаток байткода, proxy подсказки и доп. диагностика.",
+      badge_deeper: "Глубже",
+      badge_pairs: "Диагностика",
+
+      cube_honey_title: "Honeypot / Sell Signals",
+      cube_honey_desc: "Подсказки риска (информативно). На клиенте без гарантий.",
+      badge_beta: "Бета",
+      badge_signals: "Сигналы",
+      badge_keywords: "Подсказки",
+
+      cube_approvals_title: "Approvals Guardian",
+      cube_approvals_desc: "Подключите кошелёк, проверьте allowances и отзовите approvals.",
+      badge_wallet: "Кошелёк",
+      badge_revoke: "Отозвать",
+
+      cube_rpc_title: "RPC Health Checker",
+      cube_rpc_desc: "Тест RPC, замер задержки и копирование лучшего RPC.",
+      badge_table: "Таблица",
+      badge_copy: "Копировать",
+
+      cube_monitor_title: "Мониторинг контрактов",
+      cube_monitor_desc: "Локально сохраняйте и отслеживайте изменения байткода со временем.",
+      badge_watch: "Следить",
+      badge_local: "Локально",
+      badge_changes: "Изменения",
+
+      p_quick_kicker: "Quick Scan",
+      p_quick_title: "Оцените токен за секунды",
+      p_quick_sub: "Вставьте адрес токена, выберите сеть и запустите проверку. История хранится локально; можно делиться результатами.",
+      pill_wallet: "Кошелёк",
+      btn_close: "Закрыть",
+      quick_input_title: "Ввод токена",
+      net_label: "Сеть",
+      addr_label: "Контракт токена",
+      qs_tip: "Совет: откройте с ?net=bsc&token=0x... для авто-запуска.",
+      options_label: "Опции",
+      opt_require_liq: "Требовать ликвидность (скоро)",
+      opt_show_json: "Включить JSON отчёт (копировать)",
+      btn_scan: "Сканировать",
+      btn_copy_link: "Копировать ссылку",
+      btn_copy_json: "Копировать JSON",
+      history_label: "История",
+      history_tip: "Кликните элемент, чтобы быстро повторить. Только локально.",
+      results_title: "Результаты",
+      results_hint: "Информационные проверки — всегда перепроверяйте.",
+
+      p_deep_kicker: "Безопасность + диагностика",
+      p_deep_title: "Более глубокая on-chain проверка",
+      p_deep_sub: "Доп. диагностика: отпечаток байткода, proxy подсказки и метаданные.",
+      deep_input_title: "Запустить Deep Scan",
+      deep_results_title: "Детальный отчёт",
+
+      p_honey_kicker: "Honeypot / Sell Signals",
+      p_honey_title: "Подсказки “риска продажи” (best-effort)",
+      p_honey_sub: "Клиентское обнаружение ограничено — только информационные сигналы.",
+      pill_mode: "Режим",
+      honey_input_title: "Токен",
+      honey_strict: "Строгие предупреждения (безопаснее)",
+      honey_results_title: "Сигналы",
+
+      p_app_kicker: "Approvals Guardian",
+      p_app_title: "Проверка и отзыв allowances",
+      p_app_sub: "UI готов. Подключение кошелька работает; allowance scan/revoke можно подключить следующим шагом.",
+      ap_settings_title: "Настройки",
+      ap_connected: "Подключено:",
+      ap_connect: "Подключить / обновить",
+      ap_spender_label: "Spender preset",
+      ap_spender_tip: "Начните с пресета роутера, затем добавьте токены для очистки.",
+      ap_tokens_label: "Список токенов (по одному в строке)",
+      ap_seed: "Добавить популярные токены",
+      ap_seed_history: "Использовать историю",
+      ap_check: "Проверить allowances",
+      ap_revoke_all: "Отозвать все (ненулевые)",
+      ap_results: "Allowances",
+      ap_results_hint: "Если allowance “бесконечный”, отзыв рекомендуется, если вы не доверяете на 100%.",
+
+      p_rpc_kicker: "RPC Health Checker",
+      p_rpc_title: "Найдите лучший RPC",
+      p_rpc_sub: "Тестируем eth_blockNumber и замеряем задержку. Лучший подсвечен и готов к копированию.",
+      rpc_inputs: "Ввод",
+      rpc_custom_label: "Опционально: свой RPC (в приоритете)",
+      rpc_test: "Тест RPC",
+      rpc_copy_best: "Копировать лучший RPC",
+      rpc_results: "Результаты",
+      rpc_tip: "Совет: некоторые RPC падают из-за CORS/таймаутов. Тестируйте и выбирайте стабильный.",
+
+      p_mon_kicker: "Мониторинг",
+      p_mon_title: "Отслеживание апгрейдов и изменений байткода",
+      p_mon_sub: "Сохраняйте локально и проверяйте позже, чтобы увидеть изменения.",
+      mon_add_title: "Добавить в список",
+      mon_add: "Добавить",
+      mon_check: "Проверить все",
+      mon_export: "Экспорт JSON",
+      mon_list_title: "Список",
+      mon_list_hint: "Только локально. Без серверного трекинга.",
+
+      footer_left: "CycleX Security Hub работает на клиенте и читает публичные on-chain данные.",
+      footer_tagline: "Проверяйте дважды. Подключайте кошелёк только если доверяете странице."
     }
+  };
+
+  function setLanguage(lang) {
+    const dict = translations[lang] || translations.en;
+
+    localStorage.setItem("cx_lang", lang);
+    document.documentElement.lang = lang;
+    document.documentElement.dir = (lang === "ar") ? "rtl" : "ltr";
+
+    document.body.classList.add("lang-switching");
+
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      const val = (dict[key] !== undefined) ? dict[key] : translations.en[key];
+      if (val !== undefined) el.innerHTML = val;
+    });
 
     document.querySelectorAll(".lang-btn").forEach((btn) => {
-      btn.addEventListener("click", () => setLanguage(btn.getAttribute("data-lang")));
+      btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
     });
-    setLanguage("en");
 
-    // ====== Shared helpers ======
-    const CX_DEBUG = false;
-    function cxlog(...a){ if(CX_DEBUG) console.log(...a); }
+    setTimeout(() => document.body.classList.remove("lang-switching"), 250);
+  }
 
-    const RPCS_DEFAULT = [
-      "https://bsc-dataseed.binance.org",
-      "https://bsc-dataseed1.bnbchain.org",
-      "https://bsc-dataseed2.bnbchain.org",
-      "https://bsc-dataseed3.bnbchain.org",
-      "https://bsc-dataseed1.defibit.io",
-    ];
+  // Bind language buttons
+  document.querySelectorAll(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setLanguage(btn.getAttribute("data-lang")));
+  });
 
-    // Core tokens (BSC)
-    const WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
-    const USDT = "0x55d398326f99059fF775485246999027B3197955";
-    const USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
-    const BUSD = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
+  // Init language from storage
+  setLanguage(localStorage.getItem("cx_lang") || "en");
 
-    // DEX Routers (BSC)
-    const DEXES = [
-      {
-        key: "pancake",
-        name: "PancakeSwap V2",
-        router: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-        swap: (tokenIn, tokenOut) => `https://pancakeswap.finance/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
-      },
-      {
-        key: "apeswap",
-        name: "ApeSwap",
-        router: "0xC0788A3aD43d79aa53B09c2EaCc313A787d1d607",
-        swap: (tokenIn, tokenOut) => `https://apeswap.finance/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
-      },
-      {
-        key: "biswap",
-        name: "BiSwap",
-        router: "0xE97E2787C9C8d63bFF482Fa3fdc212BbD547aE98",
-        swap: (tokenIn, tokenOut) => `https://exchange.biswap.org/#/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
-      },
-      {
-        key: "mdex",
-        name: "MDEX (BSC)",
-        router: "0x7DAe51BD3E3376B8c7c4900E9107f12Be3AF1bA8",
-        swap: (tokenIn, tokenOut) => `https://bscr.mdex.com/#/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
-      },
-      {
-        key: "bakery",
-        name: "BakerySwap",
-        router: "0x824C9364A6CF8f5EB542ad2ca8F5705561C8b1db",
-        swap: (tokenIn, tokenOut) => `https://www.bakeryswap.org/#/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
-      },
-      {
-        key: "babyswap",
-        name: "BabySwap",
-        router: "0xC085fDA7Dc3c1A1611f3Ae421e2BD3c75b3a6943",
-        swap: (tokenIn, tokenOut) => `https://exchange.babyswap.finance/#/swap?inputCurrency=${tokenIn}&outputCurrency=${tokenOut}`
+  // =========================
+  // Tool cubes -> panels (FIX)
+  // =========================
+  const toolCards = Array.from(document.querySelectorAll(".tool-card"));
+  const panels = Array.from(document.querySelectorAll(".panel-shell"));
+
+  function closeAllPanels() {
+    panels.forEach(p => p.classList.add("hidden"));
+    toolCards.forEach(c => c.classList.remove("active"));
+  }
+
+  function openPanel(toolKey) {
+    closeAllPanels();
+    const panel = document.getElementById(`panel-${toolKey}`);
+    const card = toolCards.find(c => c.getAttribute("data-tool") === toolKey);
+    if (panel) panel.classList.remove("hidden");
+    if (card) card.classList.add("active");
+    if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  toolCards.forEach((card) => {
+    card.addEventListener("click", () => openPanel(card.getAttribute("data-tool")));
+  });
+
+  // Close buttons inside panels
+  document.querySelectorAll('[id^="btnClose"]').forEach((btn) => {
+    btn.addEventListener("click", () => {
+      closeAllPanels();
+      document.getElementById("toolGrid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  // Hero quick button should open quick panel
+  document.getElementById("btn-quick")?.addEventListener("click", () => {
+    openPanel("quick");
+    document.getElementById("qs-token")?.focus();
+  });
+
+  // Keep initial state: quick panel visible (as in your HTML)
+  // If you ever make panel-quick hidden by default, uncomment:
+  // openPanel("quick");
+
+  // =========================
+  // Small utilities
+  // =========================
+  function isHexAddr(x){ return typeof x === "string" && /^0x[0-9a-fA-F]{40}$/.test(x.trim()); }
+  function toChecksum(x){ return ethers.getAddress(x.trim()); }
+
+  async function copyText(text){
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      return true;
+    }
+  }
+
+  function setStatus(el, kind, html){
+    if (!el) return;
+    el.className = "status " + (kind || "info");
+    el.innerHTML = html || "";
+    el.style.display = "block";
+  }
+
+  function fmtAddr(a){
+    try {
+      const x = toChecksum(a);
+      return x.slice(0, 6) + "…" + x.slice(-4);
+    } catch { return a; }
+  }
+
+  // =========================
+  // Minimal "Quick Scan" (optional, but makes UI feel alive)
+  // =========================
+  const NETWORKS = {
+    bsc: {
+      chainId: 56,
+      rpcs: [
+        "https://bsc-dataseed.binance.org",
+        "https://bsc-dataseed1.bnbchain.org",
+        "https://bsc-dataseed2.bnbchain.org",
+        "https://bsc-dataseed3.bnbchain.org",
+        "https://bsc-dataseed1.defibit.io"
+      ]
+    },
+    eth: {
+      chainId: 1,
+      rpcs: [
+        "https://cloudflare-eth.com",
+        "https://rpc.ankr.com/eth",
+        "https://eth.llamarpc.com"
+      ]
+    }
+  };
+
+  const ERC20_ABI = [
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint8)",
+    "function totalSupply() view returns (uint256)",
+    "function owner() view returns (address)",
+    "function getOwner() view returns (address)",
+    "function admin() view returns (address)"
+  ];
+
+  const EIP1967_IMPL_SLOT  = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+  const EIP1967_ADMIN_SLOT = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103";
+
+  function slotToAddress(storageHex){
+    if (!storageHex || storageHex === "0x") return null;
+    const h = storageHex.toLowerCase().replace(/^0x/,"").padStart(64,"0");
+    const addr = "0x" + h.slice(24);
+    if (/^0x0{40}$/.test(addr)) return null;
+    try { return toChecksum(addr); } catch { return null; }
+  }
+
+  async function detectProxy(provider, token){
+    try {
+      const implRaw = await provider.getStorage(token, EIP1967_IMPL_SLOT);
+      const impl = slotToAddress(implRaw);
+      const adminRaw = await provider.getStorage(token, EIP1967_ADMIN_SLOT);
+      const admin = slotToAddress(adminRaw);
+      if (impl) return { isProxy: true, impl, admin };
+      return { isProxy: false, impl: null, admin: admin || null };
+    } catch {
+      return { isProxy: false, impl: null, admin: null };
+    }
+  }
+
+  const _providerCache = new Map(); // key: net|rpc -> provider
+
+  async function getProvider(netKey){
+    const net = NETWORKS[netKey] || NETWORKS.bsc;
+
+    for (const url of net.rpcs) {
+      const cacheKey = `${netKey}|${url}`;
+      let p = _providerCache.get(cacheKey);
+      if (!p) {
+        p = new ethers.JsonRpcProvider(url);
+        _providerCache.set(cacheKey, p);
       }
-    ];
+      try {
+        const network = await p.getNetwork();
+        const chainId = Number(network.chainId);
+        if (chainId !== net.chainId) throw new Error("Wrong chainId");
+        // quick probe
+        await p.getBlockNumber();
+        return { provider: p, rpc: url, chainId };
+      } catch {
+        // try next
+      }
+    }
+    throw new Error("All RPCs failed (CORS/timeout). Try again or use another network.");
+  }
 
-    const BASES = [
-      { key: "WBNB", name: "WBNB", addr: WBNB, kind: "bnb" },
-      { key: "USDT", name: "USDT", addr: USDT, kind: "stable" },
-      { key: "USDC", name: "USDC", addr: USDC, kind: "stable" },
-      { key: "BUSD", name: "BUSD", addr: BUSD, kind: "stable" }
-    ];
+  const HISTORY_KEY = "cx_security_history_v1";
+  function loadHistory(){
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; }
+  }
+  function saveHistory(arr){
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 12)));
+  }
+  function addHistory(item){
+    const h = loadHistory();
+    const key = (item.net + ":" + item.token).toLowerCase();
+    const filtered = h.filter(x => (x.net + ":" + x.token).toLowerCase() !== key);
+    filtered.unshift(item);
+    saveHistory(filtered);
+  }
 
-    // Pancake factory (fallback price)
-    const PCS_FACTORY = "0xca143ce32fe78f1f7019d7d551a6402fc5350c73";
-    // Chainlink BNB/USD feed on BSC
-    const CHAINLINK_BNBUSD = "0x0567F2323251f0Aab15c8DfB1967E4e8A7D42aeE";
+  function renderHistory(){
+    const wrap = document.getElementById("qs-history");
+    if (!wrap) return;
+    const h = loadHistory();
+    if (!h.length) { wrap.innerHTML = ""; return; }
 
-    let _rpcProvider = null;
-    let _rpcUrl = "";
-    let _bestRpc = "";
-    let ssLastReport = null;
+    wrap.innerHTML = "";
+    h.forEach((it) => {
+      const div = document.createElement("div");
+      div.className = "chip";
+      div.innerHTML = `<span class="mono">${it.net.toUpperCase()} • ${fmtAddr(it.token)}</span> <span class="x">↩</span>`;
+      div.addEventListener("click", () => {
+        document.getElementById("qs-net").value = it.net;
+        document.getElementById("qs-token").value = it.token;
+        quickScan();
+      });
+      wrap.appendChild(div);
+    });
+  }
 
-    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+  let lastQuickReport = null;
 
-    async function pickProvider(customList) {
-      if (_rpcProvider) return _rpcProvider;
+  async function quickScan(){
+    const netKey = document.getElementById("qs-net")?.value || "bsc";
+    const tokenRaw = (document.getElementById("qs-token")?.value || "").trim();
+    const out = document.getElementById("qs-out");
+    const status = document.getElementById("qs-status");
 
-      const list = Array.isArray(customList) && customList.length ? customList : RPCS_DEFAULT;
+    if (!tokenRaw) {
+      setStatus(status, "warn", "<strong>⚠️ Missing token address.</strong><br>Paste a token and try again.");
+      return;
+    }
+    if (!isHexAddr(tokenRaw)) {
+      setStatus(status, "bad", "<strong>❌ Invalid address.</strong><br>Expected 0x + 40 hex chars.");
+      return;
+    }
 
-      for (const url of list) {
+    const token = toChecksum(tokenRaw);
+    setStatus(status, "info", "<strong>⏳ Scanning…</strong><br>Reading contract + metadata.");
+    setStatus(out, "info", "<strong>⏳ Working…</strong>");
+
+    try {
+      const { provider, rpc, chainId } = await getProvider(netKey);
+
+      const code = await provider.getCode(token);
+      if (!code || code === "0x") {
+        setStatus(out, "bad", `<strong>❌ Not a contract.</strong><br>${token} has no bytecode on this network.`);
+        setStatus(status, "bad", "<strong>❌ Scan finished:</strong> address is not a contract.");
+        return;
+      }
+
+      const c = new ethers.Contract(token, ERC20_ABI, provider);
+
+      let name = "—", symbol = "—", decimals = 18, supply = null;
+      try { name = await c.name(); } catch {}
+      try { symbol = await c.symbol(); } catch {}
+      try { decimals = Number(await c.decimals()); } catch {}
+      try { supply = (await c.totalSupply()).toString(); } catch {}
+
+      let owner = null;
+      for (const fn of ["owner", "getOwner", "admin"]) {
         try {
-          const p = new ethers.JsonRpcProvider(url);
-          const bn = await p.getBlockNumber();
-          const net = await p.getNetwork();
-          if (Number(net.chainId) !== 56) throw new Error("Wrong chainId");
-
-          _rpcProvider = p;
-          _rpcUrl = url;
-          cxlog("✅ RPC:", url, "block:", bn);
-          return p;
-        } catch (e) {
-          cxlog("⚠️ RPC fail:", url, e?.message || e);
-        }
-      }
-      throw new Error("All RPCs failed");
-    }
-
-    function isHexAddr(x){ return typeof x === "string" && /^0x[0-9a-fA-F]{40}$/.test(x.trim()); }
-    function toChecksum(x){ return ethers.getAddress(x.trim()); }
-
-    async function copyText(text){
-      try {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } catch {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand("copy");
-        ta.remove();
-        return true;
-      }
-    }
-
-    function setStatus(el, kind, html){
-      el.className = "status " + (kind || "info");
-      el.innerHTML = html || "";
-      el.style.display = "block";
-    }
-
-    function fmtAddr(a){
-      try {
-        const x = toChecksum(a);
-        return x.slice(0, 6) + "…" + x.slice(-4);
-      } catch { return a; }
-    }
-
-    function fmtBigintUnits(v, decimals){
-      try {
-        const s = ethers.formatUnits(v, decimals);
-        const [i, f=""] = s.split(".");
-        const intWithCommas = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        const ff = f.slice(0, 6).replace(/0+$/, "");
-        return intWithCommas + (ff ? "." + ff : "");
-      } catch {
-        return String(v);
-      }
-    }
-
-    function fmtUsd(x){
-      if (!Number.isFinite(x)) return "—";
-      if (x >= 1_000_000_000) return "$" + (x/1_000_000_000).toFixed(2) + "B";
-      if (x >= 1_000_000) return "$" + (x/1_000_000).toFixed(2) + "M";
-      if (x >= 1_000) return "$" + (x/1_000).toFixed(2) + "K";
-      return "$" + x.toFixed(2);
-    }
-
-    // ====== ABIs ======
-    const ERC20_ABI = [
-      "function name() view returns (string)",
-      "function symbol() view returns (string)",
-      "function decimals() view returns (uint8)",
-      "function totalSupply() view returns (uint256)",
-      "function owner() view returns (address)",
-      "function getOwner() view returns (address)",
-      "function admin() view returns (address)",
-    ];
-
-    const FACTORY_ABI = [
-      "function getPair(address tokenA, address tokenB) external view returns (address pair)"
-    ];
-
-    const ROUTER_ABI = [
-      "function factory() view returns (address)",
-      "function WETH() view returns (address)"
-    ];
-
-    const PAIR_ABI = [
-      "function token0() view returns (address)",
-      "function token1() view returns (address)",
-      "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)"
-    ];
-
-    const LP_ABI = [
-      "function totalSupply() view returns (uint256)",
-      "function balanceOf(address) view returns (uint256)"
-    ];
-
-    const CL_ABI = [
-      "function decimals() view returns (uint8)",
-      "function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)"
-    ];
-
-    // ====== Proxy detection (EIP-1967) ======
-    const EIP1967_IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-    const EIP1967_ADMIN_SLOT = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103";
-
-    function slotToAddress(storageHex){
-      if (!storageHex || storageHex === "0x") return null;
-      const h = storageHex.toLowerCase().replace(/^0x/,"").padStart(64,"0");
-      const addr = "0x" + h.slice(24);
-      if (/^0x0{40}$/.test(addr)) return null;
-      try { return toChecksum(addr); } catch { return null; }
-    }
-
-    async function detectProxy(provider, token){
-      try {
-        const implRaw = await provider.getStorage(token, EIP1967_IMPL_SLOT);
-        const impl = slotToAddress(implRaw);
-        const adminRaw = await provider.getStorage(token, EIP1967_ADMIN_SLOT);
-        const admin = slotToAddress(adminRaw);
-        if (impl) return { isProxy: true, impl, admin };
-        return { isProxy: false, impl: null, admin: admin || null };
-      } catch {
-        return { isProxy: false, impl: null, admin: null };
-      }
-    }
-
-    // ====== BNB/USD oracle (Chainlink + fallback) ======
-    let _bnbUsdCache = null;
-
-    async function getBnbUsd(provider){
-      if (_bnbUsdCache && (Date.now() - _bnbUsdCache.t) < 60_000) return _bnbUsdCache;
-
-      // 1) Chainlink
-      try {
-        const feed = new ethers.Contract(CHAINLINK_BNBUSD, CL_ABI, provider);
-        const dec = Number(await feed.decimals());
-        const rd = await feed.latestRoundData();
-        const ans = Number(rd[1]);
-        if (Number.isFinite(ans) && ans > 0) {
-          const px = ans / (10 ** dec);
-          _bnbUsdCache = { px, source: "Chainlink", t: Date.now() };
-          return _bnbUsdCache;
-        }
-      } catch {}
-
-      // 2) Fallback: WBNB/USDT reserves on Pancake factory
-      try {
-        const f = new ethers.Contract(PCS_FACTORY, FACTORY_ABI, provider);
-        let pair = await f.getPair(WBNB, USDT);
-        pair = toChecksum(String(pair));
-        if (pair && !/^0x0{40}$/i.test(pair)) {
-          const p = new ethers.Contract(pair, PAIR_ABI, provider);
-          const t0 = toChecksum(await p.token0());
-          const r = await p.getReserves();
-          const r0 = BigInt(r[0]);
-          const r1 = BigInt(r[1]);
-
-          const wbnbRes = (t0 === toChecksum(WBNB)) ? r0 : r1;
-          const usdtRes = (t0 === toChecksum(WBNB)) ? r1 : r0;
-
-          const wbnbF = Number(ethers.formatUnits(wbnbRes, 18));
-          const usdtF = Number(ethers.formatUnits(usdtRes, 18));
-          if (wbnbF > 0 && usdtF > 0) {
-            const px = usdtF / wbnbF;
-            _bnbUsdCache = { px, source: "On-chain (WBNB/USDT)", t: Date.now() };
-            return _bnbUsdCache;
-          }
-        }
-      } catch {}
-
-      _bnbUsdCache = { px: NaN, source: "Unavailable", t: Date.now() };
-      return _bnbUsdCache;
-    }
-
-    // ====== UI init for dropdowns ======
-    function initDexBaseDropdowns(){
-      const dexSel = document.getElementById("ss-dex-select");
-      const baseSel = document.getElementById("ss-base-select");
-      if (!dexSel || !baseSel) return;
-
-      dexSel.innerHTML = DEXES.map(d => `<option value="${d.key}">${d.name}</option>`).join("");
-      baseSel.innerHTML = BASES.map(b => `<option value="${b.key}">${b.name}</option>`).join("");
-
-      dexSel.value = "pancake";
-      baseSel.value = "WBNB";
-    }
-
-    // ====== SafeSwap scan ======
-    async function getDexFactory(provider, dex){
-      try {
-        const r = new ethers.Contract(dex.router, ROUTER_ABI, provider);
-        const f = await r.factory();
-        return toChecksum(String(f));
-      } catch {
-        return null;
-      }
-    }
-
-    async function scanOnePair(provider, token, base, dex, factoryAddr){
-      if (!factoryAddr) return null;
-
-      try {
-        const f = new ethers.Contract(factoryAddr, FACTORY_ABI, provider);
-        let pair = await f.getPair(token, base.addr);
-        pair = toChecksum(String(pair));
-        if (/^0x0{40}$/i.test(pair)) return null;
-
-        const p = new ethers.Contract(pair, PAIR_ABI, provider);
-        const t0 = toChecksum(await p.token0());
-        const r = await p.getReserves();
-        const r0 = BigInt(r[0]);
-        const r1 = BigInt(r[1]);
-
-        const baseRes = (t0 === toChecksum(base.addr)) ? r0 : r1;
-        const tokenRes = (t0 === toChecksum(base.addr)) ? r1 : r0;
-
-        let burnPct = null;
-        try {
-          const lp = new ethers.Contract(pair, LP_ABI, provider);
-          const ts = BigInt(await lp.totalSupply());
-          if (ts > 0n) {
-            const z = BigInt(await lp.balanceOf("0x0000000000000000000000000000000000000000"));
-            const d = BigInt(await lp.balanceOf("0x000000000000000000000000000000000000dEaD"));
-            const burned = z + d;
-            burnPct = Number((burned * 10000n) / ts) / 100;
-          }
+          const o = await c[fn]();
+          if (o && isHexAddr(String(o))) { owner = toChecksum(String(o)); break; }
         } catch {}
-
-        return {
-          dexKey: dex.key,
-          dexName: dex.name,
-          router: dex.router,
-          factory: factoryAddr,
-          baseKey: base.key,
-          baseName: base.name,
-          baseAddr: base.addr,
-          pair,
-          baseReserve: baseRes,
-          tokenReserve: tokenRes,
-          burnPct
-        };
-      } catch {
-        return null;
-      }
-    }
-
-    function ssBuildShareLink(paramsObj){
-      const u = new URL(window.location.href);
-      ["token","tokenIn","tokenOut","requireLiq","dex","base"].forEach(k => u.searchParams.delete(k));
-
-      if (paramsObj?.token) u.searchParams.set("token", paramsObj.token);
-      if (paramsObj?.tokenIn) u.searchParams.set("tokenIn", paramsObj.tokenIn);
-      if (paramsObj?.requireLiq) u.searchParams.set("requireLiq", "1");
-      return u.toString();
-    }
-
-    function ssRenderLinks(pairs, token, tokenInHint){
-      const wrap = document.getElementById("ss-links");
-      if (!wrap) return;
-
-      if (!pairs?.length) {
-        wrap.innerHTML = "";
-        return;
       }
 
-      const best = pairs[0];
-      const tokenIn = tokenInHint && isHexAddr(tokenInHint) ? toChecksum(tokenInHint) : best.baseAddr;
-
-      const btns = pairs.slice(0, 6).map(p => {
-        const dex = DEXES.find(d => d.key === p.dexKey);
-        const url = dex ? dex.swap(tokenIn, token) : "#";
-        const liq = (p.liqUsdApprox != null) ? fmtUsd(p.liqUsdApprox) : "—";
-        const burn = (p.burnPct != null) ? `${p.burnPct.toFixed(2)}%` : "—";
-        return `
-          <div class="card" style="padding:12px; margin-top:10px;">
-            <div class="row" style="justify-content:space-between; gap:8px;">
-              <div class="pill"><b>${p.dexName}</b> • ${p.baseName}</div>
-              <a class="btn btn-ghost" href="${url}" target="_blank" rel="noopener" style="padding:10px 14px; font-size:12px;">Open Swap</a>
-            </div>
-            <div class="small" style="margin-top:8px">
-              <b>Pair:</b> <span class="mono">${p.pair}</span><br>
-              <b>Liquidity (approx):</b> ${liq}<br>
-              <b>LP Burn:</b> ${burn}
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      wrap.innerHTML = btns;
-    }
-
-    async function ssScanV2() {
-      const input = document.getElementById("ss-token");
-      const out = document.getElementById("ss-out");
-      const status = document.getElementById("ss-status");
-      const requireLiqEl = document.getElementById("ss-require-liq");
-
-      if (!input || !out || !status || !requireLiqEl) return;
-
-      const requireLiq = !!requireLiqEl.checked;
-
-      let addrRaw = (input.value || "").trim();
-      if (!addrRaw) {
-        setStatus(status, "warn", "<strong>⚠️ Missing token address.</strong><br>Paste a token and try again.");
-        return;
-      }
-      if (!isHexAddr(addrRaw)) {
-        setStatus(status, "bad", "<strong>❌ Invalid address format.</strong><br>Expected 0x + 40 hex chars.");
-        return;
-      }
-      const token = toChecksum(addrRaw);
-
-      let tokenInHint = null;
-      try {
-        const u = new URL(window.location.href);
-        const ti = u.searchParams.get("tokenIn");
-        if (ti && isHexAddr(ti)) tokenInHint = toChecksum(ti);
-      } catch {}
-
-      const pcs = document.getElementById("ss-pcs");
-      const bsc = document.getElementById("ss-bsc");
-      if (pcs) pcs.href = `https://pancakeswap.finance/swap?outputCurrency=${token}`;
-      if (bsc) bsc.href = `https://bscscan.com/address/${token}`;
-
-      setStatus(status, "info", "<strong>⏳ Scanning…</strong><br>Reading metadata, proxy/owner hints, and multi-DEX liquidity.");
-      setStatus(out, "info", "<strong>⏳ Working…</strong>");
-      const linksWrap = document.getElementById("ss-links");
-      if (linksWrap) linksWrap.innerHTML = "";
-      ssLastReport = null;
-
-      try {
-        const provider = await pickProvider();
-
-        const code = await provider.getCode(token);
-        const isContract = code && code !== "0x";
-        if (!isContract) {
-          setStatus(out, "bad", `<strong>❌ Not a contract.</strong><br>${token} has no bytecode on BSC.`);
-          setStatus(status, "bad", "<strong>❌ Scan finished:</strong> address is not a token contract.");
-          return;
-        }
-
-        const c = new ethers.Contract(token, ERC20_ABI, provider);
-
-        let name = "—", symbol = "—", decimals = 18, supply = 0n;
-        try { name = await c.name(); } catch {}
-        try { symbol = await c.symbol(); } catch {}
-        try { decimals = Number(await c.decimals()); } catch { decimals = 18; }
-        try { supply = BigInt(await c.totalSupply()); } catch { supply = 0n; }
-
-        let owner = null;
-        for (const fn of ["owner", "getOwner", "admin"]) {
-          try {
-            const o = await c[fn]();
-            if (o && isHexAddr(String(o))) { owner = toChecksum(String(o)); break; }
-          } catch {}
-        }
-        const ownerRenounced = owner ? (owner === "0x0000000000000000000000000000000000000000") : null;
-
-        const proxy = await detectProxy(provider, token);
-
-        const bnbUsd = await getBnbUsd(provider);
-        const pairsFound = [];
-
-        for (const dex of DEXES) {
-          if (!isHexAddr(dex.router)) continue;
-          const factory = await getDexFactory(provider, dex);
-          if (!factory) continue;
-
-          for (const base of BASES) {
-            const res = await scanOnePair(provider, token, base, dex, factory);
-            if (!res) continue;
-
-            let liqUsdApprox = null;
-            try {
-              const baseAmt = Number(ethers.formatUnits(res.baseReserve, 18));
-              if (base.kind === "stable") {
-                liqUsdApprox = baseAmt * 2;
-              } else if (base.kind === "bnb") {
-                liqUsdApprox = (Number.isFinite(bnbUsd.px) ? baseAmt * bnbUsd.px * 2 : null);
-              }
-            } catch {}
-
-            pairsFound.push({ ...res, liqUsdApprox });
-          }
-        }
-
-        pairsFound.sort((a,b) => (b.liqUsdApprox || 0) - (a.liqUsdApprox || 0));
-
-        let score = 0;
-        const notes = [];
-        notes.push(`✅ Contract bytecode found`);
-
-        if (!name || name === "—") { score += 1; notes.push(`⚠️ Token name unreadable (non-standard)`); }
-        if (!symbol || symbol === "—") { score += 1; notes.push(`⚠️ Symbol unreadable (non-standard)`); }
-
-        if (proxy?.isProxy && proxy.impl) {
-          notes.push(`ℹ️ Proxy detected (EIP-1967). Implementation: ${proxy.impl}`);
-          if (proxy.admin) notes.push(`ℹ️ Proxy admin slot: ${proxy.admin}`);
-        }
-
-        if (!owner) {
-          score += 1; notes.push(`⚠️ Owner not detectable (may be fine, but less transparent)`);
-        } else if (ownerRenounced) {
-          notes.push(`✅ Ownership appears renounced (owner=0x0)`);
-        } else {
-          score += 1;
-          notes.push(`⚠️ Owner detected: ${owner} (not renounced)`);
-        }
-
-        if (!pairsFound.length) {
-          if (requireLiq) {
-            score += 4;
-            notes.push(`❌ No DEX pair found (require-liquidity enabled)`);
-          } else {
-            score += 1;
-            notes.push(`ℹ️ No DEX pair found (may be “Not listed yet”)`);
-          }
-        } else {
-          const best = pairsFound[0];
-          notes.push(`✅ Best liquidity pair: ${best.dexName} • ${best.baseName} • ${best.pair}`);
-
-          if (best.liqUsdApprox != null) {
-            notes.push(`ℹ️ Liquidity (approx): ${fmtUsd(best.liqUsdApprox)} (method: 2×base side)`);
-            if (best.baseKey === "WBNB" && Number.isFinite(bnbUsd.px)) {
-              notes.push(`ℹ️ BNB/USD: ${bnbUsd.px.toFixed(2)} (${bnbUsd.source})`);
-            }
-            if (best.liqUsdApprox < 25_000) { score += 2; notes.push(`⚠️ Low liquidity signal (< $25k approx)`); }
-          }
-
-          if (best.burnPct != null) {
-            if (best.burnPct >= 50) notes.push(`✅ LP burn seems high: ${best.burnPct.toFixed(2)}%`);
-            else { score += 1; notes.push(`⚠️ LP burn seems low/unknown: ${best.burnPct.toFixed(2)}%`); }
-          }
-        }
-
-        let badge = "info";
-        let headline = "ℹ️ Informational";
-        if (score <= 1) { badge = "ok"; headline = "✅ Looks OK (basic checks)"; }
-        else if (score <= 4) { badge = "warn"; headline = "⚠️ Caution (some risk signals)"; }
-        else { badge = "bad"; headline = "❌ High risk signals"; }
-
-        const supplyHuman = supply ? fmtBigintUnits(supply, decimals) : "—";
-
-        ssLastReport = {
-          token,
-          name,
-          symbol,
-          decimals,
-          totalSupply: supply ? supply.toString() : null,
-          owner: owner || null,
-          ownerRenounced: ownerRenounced === null ? null : ownerRenounced,
-          proxy,
-          requireLiquidity: requireLiq,
-          bnbUsd: Number.isFinite(bnbUsd.px) ? { price: bnbUsd.px, source: bnbUsd.source } : null,
-          pairs: pairsFound.slice(0, 20).map(p => ({
-            dex: p.dexName,
-            router: p.router,
-            factory: p.factory,
-            base: p.baseName,
-            baseAddr: p.baseAddr,
-            pair: p.pair,
-            liquidityUsdApprox: (p.liqUsdApprox != null) ? Number(p.liqUsdApprox) : null,
-            lpBurnPct: (p.burnPct != null) ? Number(p.burnPct) : null
-          })),
-          score,
-          headline,
-          generatedAt: new Date().toISOString(),
-          rpc: _rpcUrl || "auto"
-        };
-
-        const html = `
-          <strong>${headline}</strong><br><br>
-          <div class="pill">Token: <span class="mono">${token}</span></div>
-          <div style="margin-top:10px" class="small">
-            <b>Name:</b> ${String(name).replace(/</g,"&lt;")}<br>
-            <b>Symbol:</b> ${String(symbol).replace(/</g,"&lt;")}<br>
-            <b>Decimals:</b> ${decimals}<br>
-            <b>Total supply:</b> ${supply ? supplyHuman : "—"}
-          </div>
-          <div style="margin-top:12px" class="small">
-            <b>Signals:</b><br>
-            ${notes.map(n => "• " + n).join("<br>")}
-          </div>
-          <div style="margin-top:12px" class="small">
-            <b>Next:</b> Open a DEX only if you trust the token. Consider external audits / community sources.
-          </div>
-        `;
-
-        setStatus(out, badge, html);
-        setStatus(status, badge, `<strong>Done.</strong> Score: ${score} (lower is better). RPC: <span class="mono">${_rpcUrl || "auto"}</span>`);
-
-        ssRenderLinks(pairsFound, token, tokenInHint);
-
-      } catch (e) {
-        console.error(e);
-        setStatus(out, "bad", `<strong>❌ Scan failed.</strong><br>${(e?.message || e || "Unknown error").toString()}`);
-        setStatus(status, "bad", "<strong>❌ Scan failed.</strong> Try again or test RPCs below.");
-      }
-    }
-
-    async function ssCopyShare() {
-      const input = document.getElementById("ss-token");
-      const status = document.getElementById("ss-status");
-      const raw = (input?.value || "").trim();
-      if (!raw || !isHexAddr(raw)) {
-        setStatus(status, "warn", "<strong>⚠️ Paste a valid token address first.</strong>");
-        return;
-      }
-      const token = toChecksum(raw);
-      const requireLiq = !!document.getElementById("ss-require-liq")?.checked;
-
-      let tokenIn = null;
-      try {
-        const u = new URL(window.location.href);
-        const ti = u.searchParams.get("tokenIn");
-        if (ti && isHexAddr(ti)) tokenIn = toChecksum(ti);
-      } catch {}
-
-      const link = ssBuildShareLink({ token, tokenIn, requireLiq });
-      await copyText(link);
-      setStatus(status, "ok", `<strong>✅ Share link copied.</strong><br><span class="mono">${link}</span>`);
-    }
-
-    async function ssCopyJsonReport(){
-      const status = document.getElementById("ss-status");
-      if (!ssLastReport) {
-        setStatus(status, "warn", "<strong>⚠️ No report yet.</strong><br>Run Scan first.");
-        return;
-      }
-      const json = JSON.stringify(ssLastReport, null, 2);
-      await copyText(json);
-      setStatus(status, "ok", "<strong>✅ JSON report copied.</strong>");
-    }
-
-    async function ssOpenManualSwap(){
-      const tokenRaw = (document.getElementById("ss-token")?.value || "").trim();
-      if (!isHexAddr(tokenRaw)) {
-        setStatus(document.getElementById("ss-status"), "warn", "<strong>⚠️ Paste a valid token address first.</strong>");
-        return;
-      }
-      const token = toChecksum(tokenRaw);
-
-      const dexKey = document.getElementById("ss-dex-select")?.value;
-      const baseKey = document.getElementById("ss-base-select")?.value;
-
-      const dex = DEXES.find(d => d.key === dexKey);
-      const base = BASES.find(b => b.key === baseKey);
-      if (!dex || !base) return;
-
-      let tokenIn = base.addr;
-      try {
-        const u = new URL(window.location.href);
-        const ti = u.searchParams.get("tokenIn");
-        if (ti && isHexAddr(ti)) tokenIn = toChecksum(ti);
-      } catch {}
-
-      const url = dex.swap(tokenIn, token);
-      window.open(url, "_blank", "noopener");
-    }
-
-    function ssAutoFromQuery(){
-      try {
-        const u = new URL(window.location.href);
-        const t = u.searchParams.get("token");
-        const req = u.searchParams.get("requireLiq");
-        const reqEl = document.getElementById("ss-require-liq");
-        if (req === "1" && reqEl) reqEl.checked = true;
-
-        if (t && isHexAddr(t)) {
-          const input = document.getElementById("ss-token");
-          if (input) input.value = toChecksum(t);
-          ssScanV2();
-        }
-      } catch {}
-    }
-
-    document.getElementById("ss-scan")?.addEventListener("click", ssScanV2);
-    document.getElementById("ss-share")?.addEventListener("click", ssCopyShare);
-    document.getElementById("ss-copy-json")?.addEventListener("click", ssCopyJsonReport);
-    document.getElementById("ss-open-manual")?.addEventListener("click", ssOpenManualSwap);
-
-    // ====== 2) Approvals Guardian ======
-    window.cxAppKitModal = null;
-
-    let apSigner = null;
-    let apOwner = null;
-
-    const ALLOW_ABI = [
-      "function allowance(address owner, address spender) view returns (uint256)",
-      "function approve(address spender, uint256 value) returns (bool)",
-      "function decimals() view returns (uint8)",
-      "function symbol() view returns (string)"
-    ];
-
-    const MAX_UINT = (1n << 256n) - 1n;
-
-    function apSetStatus(kind, html){
-      setStatus(document.getElementById("ap-status"), kind, html);
-    }
-
-    function apGetSpender(){
-      const preset = document.getElementById("ap-spender-preset")?.value;
-      const input = document.getElementById("ap-spender")?.value?.trim() || "";
-      if (preset === "pcs_router") return DEXES.find(d=>d.key==="pancake")?.router || input;
-      if (preset === "custom") return input;
-      return input;
-    }
-
-    function apParseTokens(){
-      const raw = document.getElementById("ap-tokens")?.value || "";
-      return raw
-        .split(/\r?\n/)
-        .map(x => x.trim())
-        .filter(Boolean)
-        .filter(isHexAddr)
-        .map(toChecksum);
-    }
-
-    function apRenderRows(rows){
-      const table = document.getElementById("ap-table");
-      if (!table) return;
-
-      const head = table.querySelector(".trow.head");
-      table.innerHTML = "";
-      if (head) table.appendChild(head);
-
-      if (!rows.length) {
-        const row = document.createElement("div");
-        row.className = "trow";
-        row.innerHTML = `<div class="cell muted">—</div><div class="cell muted">—</div><div class="cell muted hide-sm">—</div><div class="cell muted">—</div>`;
-        table.appendChild(row);
-        return;
-      }
-
-      for (const r of rows) {
-        const row = document.createElement("div");
-        row.className = "trow";
-        const allowanceStr = r.allowanceInf ? "∞ (infinite)" : r.allowanceHuman;
-
-        row.innerHTML = `
-          <div class="cell mono" title="${r.token}">${r.token}</div>
-          <div class="cell">${allowanceStr}</div>
-          <div class="cell hide-sm">${r.symbol || "—"}</div>
-          <div class="cell">
-            <button class="btn btn-ghost" data-token="${r.token}" ${(!r.canRevoke ? "disabled" : "")} style="padding:10px 14px; font-size:12px;">
-              Revoke
-            </button>
-          </div>
-        `;
-        table.appendChild(row);
-      }
-
-      table.querySelectorAll("button[data-token]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const token = btn.getAttribute("data-token");
-          await apRevokeOne(token);
-        });
-      });
-    }
-
-    async function apEnsureConnected() {
-      const modal = window.cxAppKitModal;
-      if (!modal?.open) {
-        apSetStatus("warn", "<strong>⚠️ Wallet modal not ready yet.</strong><br>Wait a second and try again.");
-        return false;
-      }
-
-      apSetStatus("info", "<strong>⏳ Connecting wallet…</strong>");
-      await modal.open({ view: "ConnectWallet" });
-
-      const start = Date.now();
-      while (Date.now() - start < 90000) {
-        const p = modal.getWalletProvider?.();
-        if (p) {
-          const bp = new ethers.BrowserProvider(p);
-          apSigner = await bp.getSigner();
-          apOwner = await apSigner.getAddress();
-          const addrEl = document.getElementById("ap-address");
-          if (addrEl) addrEl.textContent = apOwner;
-          apSetStatus("ok", "<strong>✅ Wallet connected.</strong>");
-          return true;
-        }
-        await sleep(250);
-      }
-
-      apSetStatus("warn", "<strong>⚠️ Connection timeout.</strong><br>Please try again.");
-      return false;
-    }
-
-    async function apCheck() {
-      const ok = apOwner ? true : await apEnsureConnected();
-      if (!ok) return;
-
-      const spenderRaw = apGetSpender();
-      if (!isHexAddr(spenderRaw)) {
-        apSetStatus("bad", "<strong>❌ Invalid spender address.</strong>");
-        return;
-      }
-      const spender = toChecksum(spenderRaw);
-
-      const tokens = apParseTokens();
-      if (!tokens.length) {
-        apSetStatus("warn", "<strong>⚠️ No valid token addresses.</strong><br>Paste at least one token address (one per line).");
-        return;
-      }
-
-      apSetStatus("info", `<strong>⏳ Checking allowances…</strong><br>Owner: <span class="mono">${fmtAddr(apOwner)}</span> • Spender: <span class="mono">${fmtAddr(spender)}</span>`);
-
-      const rows = [];
-      for (const t of tokens) {
-        try {
-          const c = new ethers.Contract(t, ALLOW_ABI, apSigner);
-          let sym = "—", dec = 18;
-          try { sym = await c.symbol(); } catch {}
-          try { dec = Number(await c.decimals()); } catch { dec = 18; }
-
-          const a = BigInt(await c.allowance(apOwner, spender));
-          const isInf = (a > (MAX_UINT / 2n));
-          const human = isInf ? "∞" : (a === 0n ? "0" : fmtBigintUnits(a, dec));
-
-          rows.push({
-            token: t,
-            symbol: sym,
-            allowance: a,
-            allowanceInf: isInf,
-            allowanceHuman: human,
-            canRevoke: (a > 0n)
-          });
-        } catch {
-          rows.push({
-            token: t,
-            symbol: "—",
-            allowance: 0n,
-            allowanceInf: false,
-            allowanceHuman: "error",
-            canRevoke: false
-          });
-        }
-      }
-
-      apRenderRows(rows);
-
-      const nonZero = rows.filter(r => r.allowance > 0n).length;
-      apSetStatus(nonZero ? "warn" : "ok",
-        `<strong>Done.</strong><br>Checked ${rows.length} token(s). Non-zero: ${nonZero}.`);
-    }
-
-    async function apRevokeOne(tokenAddr) {
-      const spenderRaw = apGetSpender();
-      if (!apOwner || !apSigner) {
-        apSetStatus("warn", "<strong>⚠️ Connect wallet first.</strong>");
-        return;
-      }
-      if (!isHexAddr(spenderRaw)) {
-        apSetStatus("bad", "<strong>❌ Invalid spender address.</strong>");
-        return;
-      }
-      const spender = toChecksum(spenderRaw);
-      const token = toChecksum(tokenAddr);
-
-      apSetStatus("info", `<strong>⏳ Revoking…</strong><br>Token: <span class="mono">${fmtAddr(token)}</span> • Spender: <span class="mono">${fmtAddr(spender)}</span>`);
-
-      try {
-        const c = new ethers.Contract(token, ALLOW_ABI, apSigner);
-        const tx = await c.approve(spender, 0);
-        apSetStatus("info", `<strong>⏳ Pending…</strong><br><span class="mono">${tx.hash}</span>`);
-        await tx.wait();
-        apSetStatus("ok", "<strong>✅ Revoke successful.</strong>");
-        await apCheck();
-      } catch (e) {
-        console.error(e);
-        apSetStatus("bad", `<strong>❌ Revoke failed.</strong><br>${(e?.message || e).toString()}`);
-      }
-    }
-
-    async function apRevokeAllNonZero() {
-      const ok = apOwner ? true : await apEnsureConnected();
-      if (!ok) return;
-
-      const tokens = apParseTokens();
-      if (!tokens.length) {
-        apSetStatus("warn", "<strong>⚠️ No valid token addresses.</strong>");
-        return;
-      }
-
-      await apCheck();
-
-      const rows = [];
-      document.querySelectorAll("#ap-table button[data-token]").forEach(btn => {
-        if (!btn.disabled) rows.push(btn.getAttribute("data-token"));
-      });
-
-      if (!rows.length) {
-        apSetStatus("ok", "<strong>✅ Nothing to revoke.</strong>");
-        return;
-      }
-
-      apSetStatus("warn", `<strong>⏳ Revoking ${rows.length} token(s)…</strong><br>This will send multiple transactions.`);
-      for (const t of rows) {
-        await apRevokeOne(t);
-        await sleep(500);
-      }
-      apSetStatus("ok", "<strong>✅ Revoke batch finished.</strong>");
-    }
-
-    document.getElementById("ap-spender-preset")?.addEventListener("change", () => {
-      const preset = document.getElementById("ap-spender-preset").value;
-      const input = document.getElementById("ap-spender");
-      if (!input) return;
-
-      if (preset === "pcs_router") {
-        input.value = DEXES.find(d=>d.key==="pancake")?.router || "";
-        input.disabled = true;
-      } else {
-        input.value = "";
-        input.disabled = false;
-      }
-    });
-
-    const apSpender = document.getElementById("ap-spender");
-    const pcsRouter = DEXES.find(d=>d.key==="pancake")?.router || "";
-    if (apSpender) {
-      apSpender.value = pcsRouter;
-      apSpender.disabled = true;
-    }
-
-    document.getElementById("ap-connect")?.addEventListener("click", apEnsureConnected);
-    document.getElementById("ap-check")?.addEventListener("click", apCheck);
-    document.getElementById("ap-revoke-all")?.addEventListener("click", apRevokeAllNonZero);
-
-    // ====== 3) Bookmarklet (multi-DEX param extraction) ======
-    function buildSecurityBase(){
-      const u = new URL(window.location.href);
-      return u.origin + "/security/";
-    }
-
-    const bookmarklet = `javascript:(function(){try{var u=new URL(location.href);var get=function(k){return u.searchParams.get(k)||'';};var tokenOut=get('outputCurrency')||get('tokenOut')||get('out')||get('currency')||get('address')||get('token')||'';var tokenIn=get('inputCurrency')||get('tokenIn')||get('in')||'';if(!tokenOut){tokenOut=prompt('Paste token address (BSC):');}if(!tokenOut){return;}var dest='${buildSecurityBase()}?token='+encodeURIComponent(tokenOut.trim());if(tokenIn){dest += '&tokenIn='+encodeURIComponent(tokenIn.trim());}window.open(dest,'_blank');}catch(e){alert('DEX Guard error: '+e.message);}})();`;
-
-    const bmLink = document.getElementById("bm-link");
-    const bmCode = document.getElementById("bm-code");
-    if (bmLink) bmLink.href = bookmarklet;
-    if (bmCode) bmCode.value = bookmarklet;
-
-    // ====== 4) RPC Checker ======
-    function rpcRow(url, latency, block, ok){
-      const table = document.getElementById("rpc-table");
-      if (!table) return;
-
-      const row = document.createElement("div");
-      row.className = "trow";
-
-      const tag = ok ? "✅ OK" : "❌ Fail";
-      const lat = ok ? (latency.toFixed(0) + " ms") : "—";
-      const blockStr = ok ? String(block) : "—";
-
-      row.innerHTML = `
-        <div class="cell mono" title="${url}">${url}</div>
-        <div class="cell">${lat}</div>
-        <div class="cell hide-sm">${blockStr}</div>
-        <div class="cell">${tag}</div>
-      `;
-
-      if (ok && url === _bestRpc) {
-        row.style.background = "rgba(0,230,118,0.10)";
-        row.style.borderTopColor = "rgba(0,230,118,0.20)";
-      }
-
-      table.appendChild(row);
-    }
-
-    async function rpcTestAll(){
-      const status = document.getElementById("rpc-status");
-      const custom = (document.getElementById("rpc-custom")?.value || "").trim();
-
-      const list = [...RPCS_DEFAULT];
-      if (custom) list.unshift(custom);
-
-      const table = document.getElementById("rpc-table");
-      if (!table) return;
-
-      table.innerHTML = `
-        <div class="trow head">
-          <div class="cell">RPC</div>
-          <div class="cell">Latency</div>
-          <div class="cell hide-sm">Block</div>
-          <div class="cell">Status</div>
+      const proxy = await detectProxy(provider, token);
+
+      lastQuickReport = {
+        net: netKey,
+        chainId,
+        token,
+        name,
+        symbol,
+        decimals,
+        totalSupply: supply,
+        owner,
+        proxy,
+        rpc,
+        scannedAt: new Date().toISOString()
+      };
+
+      addHistory({ net: netKey, token, t: Date.now() });
+      renderHistory();
+
+      const proxyLine = proxy.isProxy && proxy.impl
+        ? `<div class="pill" style="margin-top:10px">Proxy: <span class="mono">${proxy.impl}</span></div>`
+        : `<div class="pill" style="margin-top:10px">Proxy: <span class="mono">not detected</span></div>`;
+
+      const ownerLine = owner
+        ? `<div class="pill" style="margin-top:10px">Owner: <span class="mono">${owner}</span></div>`
+        : `<div class="pill" style="margin-top:10px">Owner: <span class="mono">unknown / non-standard</span></div>`;
+
+      setStatus(out, "ok", `
+        <strong>✅ Scan complete</strong><br><br>
+        <div class="pill">Network: <span class="mono">${netKey.toUpperCase()}</span> • RPC: <span class="mono">${rpc}</span></div>
+        <div class="pill" style="margin-top:10px">Token: <span class="mono">${token}</span></div>
+        <div class="small" style="margin-top:10px">
+          <b>Name:</b> ${String(name).replace(/</g,"&lt;")}<br>
+          <b>Symbol:</b> ${String(symbol).replace(/</g,"&lt;")}<br>
+          <b>Decimals:</b> ${decimals}<br>
+          <b>Total supply:</b> ${supply ? `<span class="mono">${supply}</span>` : "—"}
         </div>
-      `;
+        ${ownerLine}
+        ${proxyLine}
+      `);
 
-      setStatus(status, "info", `<strong>⏳ Testing ${list.length} RPC(s)…</strong>`);
-      _bestRpc = "";
-      let bestMs = Infinity;
+      setStatus(status, "ok", `<strong>Done.</strong> Saved to history. You can copy/share JSON.`);
+    } catch (e) {
+      setStatus(out, "bad", `<strong>❌ Scan failed.</strong><br>${(e?.message || e).toString()}`);
+      setStatus(status, "bad", "<strong>❌ Scan failed.</strong> Try again (or switch network).");
+    }
+  }
 
-      for (const url of list) {
-        let ok = false;
-        let ms = 0;
-        let block = 0;
+  async function copyQuickLink(){
+    const status = document.getElementById("qs-status");
+    if (!lastQuickReport) {
+      setStatus(status, "warn", "<strong>⚠️ Run Scan first.</strong>");
+      return;
+    }
+    const u = new URL(window.location.href);
+    u.searchParams.set("net", lastQuickReport.net);
+    u.searchParams.set("token", lastQuickReport.token);
+    await copyText(u.toString());
+    setStatus(status, "ok", `<strong>✅ Link copied.</strong><br><span class="mono">${u.toString()}</span>`);
+  }
 
-        try {
-          const p = new ethers.JsonRpcProvider(url);
-          const t0 = performance.now();
-          block = await p.getBlockNumber();
-          const net = await p.getNetwork();
-          const t1 = performance.now();
-          ms = (t1 - t0);
+  async function copyQuickJson(){
+    const status = document.getElementById("qs-status");
+    if (!lastQuickReport) {
+      setStatus(status, "warn", "<strong>⚠️ No report yet.</strong><br>Run Scan first.");
+      return;
+    }
+    await copyText(JSON.stringify(lastQuickReport, null, 2));
+    setStatus(status, "ok", "<strong>✅ JSON copied.</strong>");
+  }
 
-          if (Number(net.chainId) !== 56) throw new Error("Wrong chainId");
-          ok = true;
-
-          if (ms < bestMs) {
-            bestMs = ms;
-            _bestRpc = url;
-          }
-        } catch {
-          ok = false;
-        }
-
-        rpcRow(url, ms, block, ok);
-        await sleep(120);
+  function autoRunFromQuery(){
+    try {
+      const u = new URL(window.location.href);
+      const net = (u.searchParams.get("net") || "bsc").toLowerCase();
+      const token = u.searchParams.get("token");
+      if (NETWORKS[net]) document.getElementById("qs-net").value = net;
+      if (token && isHexAddr(token)) {
+        document.getElementById("qs-token").value = toChecksum(token);
+        openPanel("quick");
+        quickScan();
       }
+    } catch {}
+  }
 
-      if (_bestRpc) {
-        setStatus(status, "ok", `<strong>✅ Best RPC:</strong> <span class="mono">${_bestRpc}</span>`);
-      } else {
-        setStatus(status, "bad", "<strong>❌ All RPC tests failed.</strong><br>Try a different custom RPC.");
-      }
+  document.getElementById("qs-run")?.addEventListener("click", quickScan);
+  document.getElementById("qs-copy-link")?.addEventListener("click", copyQuickLink);
+  document.getElementById("qs-copy-json")?.addEventListener("click", copyQuickJson);
+
+  // Share buttons (optional)
+  document.getElementById("qs-share-x")?.addEventListener("click", () => {
+    if (!lastQuickReport) return;
+    const text = `Quick Scan (${lastQuickReport.net.toUpperCase()}): ${lastQuickReport.token}`;
+    const url = new URL("https://x.com/intent/tweet");
+    url.searchParams.set("text", text);
+    window.open(url.toString(), "_blank", "noopener");
+  });
+  document.getElementById("qs-share-tg")?.addEventListener("click", () => {
+    if (!lastQuickReport) return;
+    const url = new URL("https://t.me/share/url");
+    url.searchParams.set("text", `Quick Scan (${lastQuickReport.net.toUpperCase()}): ${lastQuickReport.token}`);
+    url.searchParams.set("url", window.location.href);
+    window.open(url.toString(), "_blank", "noopener");
+  });
+
+  renderHistory();
+  autoRunFromQuery();
+
+  // =========================
+  // Wallet connect (basic hook)
+  // =========================
+  async function connectWallet(){
+    const statusQ = document.getElementById("qs-status");
+    const modal = window.cxAppKitModal;
+
+    if (!modal?.open) {
+      setStatus(statusQ, "warn", "<strong>⚠️ Wallet modal not ready yet.</strong><br>Wait 1-2 seconds and try again.");
+      return;
     }
 
-    async function rpcCopyBest(){
-      const status = document.getElementById("rpc-status");
-      if (!_bestRpc) {
-        setStatus(status, "warn", "<strong>⚠️ No best RPC yet.</strong><br>Run Test RPCs first.");
+    setStatus(statusQ, "info", "<strong>⏳ Opening wallet modal…</strong>");
+    await modal.open({ view: "ConnectWallet" });
+
+    const start = Date.now();
+    while (Date.now() - start < 60000) {
+      const p = modal.getWalletProvider?.();
+      if (p) {
+        const bp = new ethers.BrowserProvider(p);
+        const signer = await bp.getSigner();
+        const addr = await signer.getAddress();
+
+        const wl = document.getElementById("walletLabel");
+        const apw = document.getElementById("ap-wallet");
+        const apa = document.getElementById("ap-address");
+
+        if (wl) wl.textContent = addr;
+        if (apw) apw.textContent = addr;
+        if (apa) apa.textContent = addr;
+
+        setStatus(statusQ, "ok", "<strong>✅ Wallet connected.</strong>");
         return;
       }
-      await copyText(_bestRpc);
-      setStatus(status, "ok", `<strong>✅ Copied:</strong> <span class="mono">${_bestRpc}</span>`);
+      await new Promise(r => setTimeout(r, 250));
     }
 
-    document.getElementById("rpc-test")?.addEventListener("click", rpcTestAll);
-    document.getElementById("rpc-copy-best")?.addEventListener("click", rpcCopyBest);
+    setStatus(statusQ, "warn", "<strong>⚠️ Connection timeout.</strong><br>Please try again.");
+  }
 
-    document.getElementById("btn-run-all")?.addEventListener("click", async () => {
-      await ssScanV2();
-      await rpcTestAll();
-    });
+  document.getElementById("btn-connect")?.addEventListener("click", () => {
+    openPanel("approvals");
+    connectWallet();
+  });
+  document.getElementById("ap-connect")?.addEventListener("click", connectWallet);
 
-    document.getElementById("btn-connect")?.addEventListener("click", apEnsureConnected);
+})();
+</script>
 
-    // init dropdowns + autorun
-    initDexBaseDropdowns();
-    ssAutoFromQuery();
-  </script>
+<!-- AppKit (wallet list) -->
+<script type="module">
+  import { createAppKit } from "https://esm.sh/@reown/appkit@1.8.15";
+  import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
+  import { bsc } from "https://esm.sh/@reown/appkit/networks";
 
-  <!-- AppKit (wallet list) -->
-  <script type="module">
-    import { createAppKit } from "https://esm.sh/@reown/appkit@1.8.15";
-    import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
-    import { bsc } from "https://esm.sh/@reown/appkit/networks";
+  const projectId = "7886bcb95105e9e47337cec481d5de75";
 
-    const projectId = "7886bcb95105e9e47337cec481d5de75";
+  const modal = createAppKit({
+    adapters: [new EthersAdapter()],
+    networks: [bsc],
+    defaultNetwork: bsc,
+    projectId,
+    analytics: false,
+    metadata: {
+      name: "CycleX",
+      description: "CycleX Security Hub",
+      url: window.location.origin,
+      icons: [`${window.location.origin}/logo.png`]
+    }
+  });
 
-    const modal = createAppKit({
-      adapters: [new EthersAdapter()],
-      networks: [bsc],
-      defaultNetwork: bsc,
-      projectId,
-      analytics: false,
-      metadata: {
-        name: "CycleX",
-        description: "CycleX Security Hub",
-        url: window.location.origin,
-        icons: [`${window.location.origin}/logo.png`]
-      }
-    });
-
-    // IMPORTANT: set modal globally (non-module script reads it from window)
-    window.cxAppKitModal = modal;
-  </script>
+  window.cxAppKitModal = modal;
+</script>
 
