@@ -3053,15 +3053,21 @@ function riskBadge(type, label, detail = "", tipHtml = "") {
           if (s.impl && E.isAddress(s.impl)) impl = E.getAddress(s.impl);
         }
       }
-
       const liq = await liqCheckBasic(net, token, provider);
-      const badges = $("#qs-badges");         
+const badges = $("#qs-badges");
 if (badges) {
+  badges.innerHTML = ""; // חשוב כדי לא לצבור בדג׳ים
   badges.appendChild(
-    riskBadge(liq.any ? "ok" : "warn", "Liquidity", liq.hint)
+    riskBadge(
+      liq.any ? "ok" : "warn",
+      "Liquidity",
+      liq.hint,
+      "V2: reserves = token amounts in the pair.<br>V3: liquidity() is concentrated-liquidity (not direct token amounts)."
+    )
   );
 }
 
+      
 
       const hasMint = codeHasSelector(code, SEL.mint);
       const hasPause = codeHasSelector(code, SEL.pause) || codeHasSelector(code, SEL.paused);
