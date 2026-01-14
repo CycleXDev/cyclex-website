@@ -443,8 +443,6 @@
       .trow { grid-template-columns: 1.2fr 1fr 0.9fr; }
       .trow .hide-sm { display: none; }
       .panel-title { font-size: 24px; }
-
-      /* RPC collapses to 3 columns when hide-sm columns disappear */
       .trow.rpc { grid-template-columns: 1.7fr 0.9fr 0.9fr; }
     }
     @media (max-width: 900px) {
@@ -458,9 +456,6 @@
     }
   </style>
 </head>
-<!-- =========================
-PART 2/3 — BODY (HTML)
-========================= -->
 <body>
   <div class="page-shell">
     <header class="top-bar">
@@ -503,7 +498,6 @@ PART 2/3 — BODY (HTML)
         <div class="tool-grid-title" data-i18n="tools_kicker">CHOOSE A TOOL</div>
 
         <div class="tool-grid" id="toolGrid">
-          <!-- 1) QUICK -->
           <div class="tool-card active" data-tool="quick">
             <div class="tool-head">
               <div class="tool-name" data-i18n="cube_quick_title">Quick Scan</div>
@@ -519,7 +513,6 @@ PART 2/3 — BODY (HTML)
             </div>
           </div>
 
-          <!-- 2) APPROVALS -->
           <div class="tool-card" data-tool="approvals">
             <div class="tool-head">
               <div class="tool-name" data-i18n="cube_approvals_title">Approval Guardian</div>
@@ -534,7 +527,6 @@ PART 2/3 — BODY (HTML)
             </div>
           </div>
 
-          <!-- 3) RPC -->
           <div class="tool-card" data-tool="rpc">
             <div class="tool-head">
               <div class="tool-name" data-i18n="cube_rpc_title">RPC Health Checker</div>
@@ -549,7 +541,6 @@ PART 2/3 — BODY (HTML)
             </div>
           </div>
 
-          <!-- 4) MONITOR -->
           <div class="tool-card" data-tool="monitor">
             <div class="tool-head">
               <div class="tool-name" data-i18n="cube_monitor_title">Contract Diff / Upgrade Monitor</div>
@@ -612,6 +603,29 @@ PART 2/3 — BODY (HTML)
                 <input type="checkbox" id="qs-show-json" checked>
                 <span data-i18n="opt_show_json">Enable JSON report (copy)</span>
               </label>
+            </div>
+
+            <!-- NEW: Explorer API keys (stored locally) -->
+            <div class="field" style="margin-top:14px">
+              <div class="label" data-i18n="api_keys_label">Explorer API keys (optional)</div>
+              <label class="toggle">
+                <input type="checkbox" id="api-use">
+                <span data-i18n="opt_use_explorer_apis">Use BscScan/Etherscan (adds Verified + ABI heuristics)</span>
+              </label>
+
+              <div class="row" style="margin-top:10px">
+                <input id="api-bscscan" class="mono" placeholder="BscScan API key (stored locally)" />
+                <input id="api-etherscan" class="mono" placeholder="Etherscan API key (stored locally)" />
+              </div>
+
+              <div class="row" style="margin-top:10px">
+                <button class="btn btn-ghost" id="api-save" style="padding:10px 14px; font-size:12px;" data-i18n="btn_save">Save</button>
+                <button class="btn btn-ghost" id="api-clear" style="padding:10px 14px; font-size:12px;" data-i18n="btn_clear">Clear</button>
+              </div>
+
+              <div class="small" style="margin-top:8px" data-i18n="api_keys_tip">
+                Keys are saved in your browser (localStorage) only. Do not paste keys into public HTML.
+              </div>
             </div>
 
             <div class="field">
@@ -876,16 +890,14 @@ PART 2/3 — BODY (HTML)
       </footer>
     </main>
   </div>
-<!-- =========================
-PART 3/3 — SCRIPTS + JS
-========================= -->
 
-  <!-- Libraries (ORDER MATTERS) -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
 
   <script>
 (() => {
   "use strict";
+
+  const E = window.ethers;
 
   // =========================
   // i18n
@@ -914,19 +926,19 @@ PART 3/3 — SCRIPTS + JS
       badge_revoke: "Revoke",
 
       cube_rpc_title: "RPC Health Checker",
-      cube_rpc_desc: "Test endpoints, measure latency + chain + read logs, and copy the best RPC.",
+      cube_rpc_desc: "Test endpoints, show latency + block height + read logs, then copy the best RPC instantly.",
       badge_table: "Table",
       badge_copy: "Copy",
 
       cube_monitor_title: "Contract Diff / Upgrade Monitor",
-      cube_monitor_desc: "Save contracts locally and detect bytecode changes over time.",
+      cube_monitor_desc: "Save contracts locally, detect bytecode changes and proxy implementation upgrades over time.",
       badge_watch: "Watch",
       badge_local: "Local",
       badge_changes: "Changes",
 
       p_quick_kicker: "Quick Scan",
       p_quick_title: "Score a token in seconds",
-      p_quick_sub: "Paste a token address, choose network, run scan. History is stored locally and you can share results.",
+      p_quick_sub: "Paste a token address, choose network, run scan. We save history locally and generate shareable outputs.",
       pill_wallet: "Wallet",
       btn_close: "Close",
       quick_input_title: "Token Input",
@@ -943,6 +955,12 @@ PART 3/3 — SCRIPTS + JS
       history_tip: "Click an item to re-run quickly. Stored locally only.",
       results_title: "Results",
       results_hint: "Green / Yellow / Red signals. Not a guarantee — just verifiable on-chain checks.",
+
+      api_keys_label: "Explorer API keys (optional)",
+      opt_use_explorer_apis: "Use BscScan/Etherscan (adds Verified + ABI heuristics)",
+      btn_save: "Save",
+      btn_clear: "Clear",
+      api_keys_tip: "Keys are saved in your browser (localStorage) only. Do not paste keys into public HTML.",
 
       p_app_kicker: "Approval Guardian",
       p_app_title: "Check and revoke allowances",
@@ -962,7 +980,7 @@ PART 3/3 — SCRIPTS + JS
 
       p_rpc_kicker: "RPC Health Checker",
       p_rpc_title: "Find the best endpoint",
-      p_rpc_sub: "We test RPC endpoints with eth_blockNumber, measure latency, and verify Read Logs (eth_getLogs). Best result is highlighted and ready to copy.",
+      p_rpc_sub: "We test RPC endpoints with eth_blockNumber and measure latency + Read Logs (eth_getLogs). Best result is highlighted and ready to copy.",
       rpc_inputs: "Inputs",
       rpc_custom_label: "Optional custom RPC (top priority)",
       rpc_test: "Test RPCs",
@@ -984,7 +1002,6 @@ PART 3/3 — SCRIPTS + JS
       footer_tagline: "Verify twice. Connect only when you trust the page."
     },
 
-    /* (Same zh/ar/ru as before — kept) */
     zh: {
       brand_sub: "链上安全与奖励",
       hero_kicker: "安全中心",
@@ -1008,12 +1025,12 @@ PART 3/3 — SCRIPTS + JS
       badge_revoke: "撤销",
 
       cube_rpc_title: "RPC 健康检查",
-      cube_rpc_desc: "测试节点、测延迟与链信息/读日志，一键复制最佳 RPC。",
+      cube_rpc_desc: "测试节点、测延迟与区块高度/读日志，一键复制最佳 RPC。",
       badge_table: "表格",
       badge_copy: "复制",
 
       cube_monitor_title: "合约变更监控",
-      cube_monitor_desc: "本地保存并检测字节码变化（信息性质）。",
+      cube_monitor_desc: "本地保存并检测字节码变化与代理实现升级。",
       badge_watch: "监控",
       badge_local: "本地",
       badge_changes: "变化",
@@ -1037,6 +1054,12 @@ PART 3/3 — SCRIPTS + JS
       history_tip: "点击即可快速重跑。仅本地存储。",
       results_title: "结果",
       results_hint: "绿/黄/红信号。非保证—仅可链上验证的检查。",
+
+      api_keys_label: "区块浏览器 API（可选）",
+      opt_use_explorer_apis: "使用 BscScan/Etherscan（增加已验证 + ABI 风险提示）",
+      btn_save: "保存",
+      btn_clear: "清除",
+      api_keys_tip: "密钥仅保存在你的浏览器（localStorage）。不要把密钥写入公开 HTML。",
 
       p_app_kicker: "授权守卫",
       p_app_title: "检查并撤销授权",
@@ -1101,12 +1124,12 @@ PART 3/3 — SCRIPTS + JS
       badge_revoke: "إلغاء",
 
       cube_rpc_title: "فحص RPC",
-      cube_rpc_desc: "اختبر النقاط، قِس التأخير وتحقق قراءة السجلات، وانسخ أفضل RPC.",
+      cube_rpc_desc: "اختبر النقاط، قِس التأخير وارتفاع البلوك/قراءة السجلات، وانسخ أفضل RPC.",
       badge_table: "جدول",
       badge_copy: "نسخ",
 
       cube_monitor_title: "مراقبة تغيّر العقد",
-      cube_monitor_desc: "حفظ محلي وكشف تغيّر البايت كود مع الوقت.",
+      cube_monitor_desc: "حفظ محلي وكشف تغيّر البايت كود وترقية proxy مع الوقت.",
       badge_watch: "مراقبة",
       badge_local: "محلي",
       badge_changes: "تغييرات",
@@ -1131,1659 +1154,1456 @@ PART 3/3 — SCRIPTS + JS
       results_title: "النتائج",
       results_hint: "إشارات خضراء/صفراء/حمراء. ليست ضماناً — فحوصات قابلة للتحقق on-chain.",
 
+      api_keys_label: "مفاتيح Explorer (اختياري)",
+      opt_use_explorer_apis: "استخدم BscScan/Etherscan (Verified + تحذيرات ABI)",
+      btn_save: "حفظ",
+      btn_clear: "مسح",
+      api_keys_tip: "المفاتيح تُحفظ محلياً في المتصفح (localStorage). لا تضعها داخل HTML عام.",
+
       p_app_kicker: "حارس الموافقات",
       p_app_title: "فحص وإلغاء الموافقات",
       p_app_sub: "أدخل spender + توكنات (أو أضف الشائعة). نقرأ allowance(owner, spender) ونلغي عبر approve(spender, 0).",
-      ap_settings_title: "إعدادات",
+      ap_settings_title: "الإعدادات",
       ap_connected: "متصل:",
       ap_connect: "اتصال / تحديث",
-      ap_spender_label: "Spender preset",
-      ap_spender_tip: "ابدأ بمُسبق الراوتر ثم أضف التوكنات التي تريد تنظيفها.",
-      ap_tokens_label: "قائمة التوكنات (كل سطر توكن)",
-      ap_seed: "إضافة توكنات شائعة",
-      ap_seed_history: "استخدام سجل الفحص",
-      ap_check: "فحص Allowances",
+      ap_spender_label: "Spender جاهز",
+      ap_spender_tip: "ابدأ بموجه جاهز ثم أضف التوكنات التي تريد تنظيفها.",
+      ap_tokens_label: "قائمة التوكنات (سطر لكل توكن)",
+      ap_seed: "أضف توكنات شائعة",
+      ap_seed_history: "استخدم سجل الفحص",
+      ap_check: "فحص الموافقات",
       ap_revoke_all: "إلغاء الكل (غير صفر)",
-      ap_results: "Allowances",
-      ap_results_hint: "إذا كانت “لا نهائية”، يوصى بالإلغاء إلا إذا كنت تثق تماماً.",
+      ap_results: "الموافقات",
+      ap_results_hint: "إذا كانت الموافقة “غير محدودة”، يُنصح بالإلغاء إلا إذا كنت تثق تماماً بالـ spender.",
 
       p_rpc_kicker: "فحص RPC",
-      p_rpc_title: "اعثر على أفضل نقطة",
-      p_rpc_sub: "نقيس التأخير عبر eth_blockNumber ونتحقق من قراءة السجلات (eth_getLogs). الأفضل سيظهر مميزاً ويمكن نسخه.",
+      p_rpc_title: "اعثر على أفضل Endpoint",
+      p_rpc_sub: "نختبر RPC بـ eth_blockNumber ونقيس التأخير ونتحقق من قراءة السجلات (eth_getLogs). الأفضل يبرز ويمكن نسخه.",
       rpc_inputs: "المدخلات",
-      rpc_custom_label: "اختياري: RPC مخصص (أولوية)",
+      rpc_custom_label: "RPC مخصص (أولوية)",
       rpc_test: "اختبار RPC",
       rpc_copy_best: "نسخ أفضل RPC",
       rpc_results: "النتائج",
-      rpc_tip: "قد تفشل بعض RPC بسبب CORS/timeout. اختبر واختر الأكثر استقراراً.",
+      rpc_tip: "ملاحظة: بعض RPC تفشل بسبب CORS/timeout. اختبر واختر الأسرع والأكثر استقراراً.",
 
       p_mon_kicker: "مراقبة العقد",
       p_mon_title: "كشف الترقيات وتغيّر البايت كود",
-      p_mon_sub: "احفظ محلياً وأعد الفحص لاحقاً لاكتشاف التغييرات.",
-      mon_add_title: "إضافة للمراقبة",
+      p_mon_sub: "احفظ العقود محلياً. نخزن hash للكود + تنفيذ proxy. افحص لاحقاً لكشف التغييرات.",
+      mon_add_title: "إضافة لقائمة المراقبة",
       mon_add: "إضافة",
       mon_check: "فحص الكل",
       mon_export: "تصدير JSON",
       mon_list_title: "قائمة المراقبة",
-      mon_list_hint: "محلي فقط. لا يوجد تتبع سيرفر.",
+      mon_list_hint: "تخزين محلي فقط. بدون تتبع خادم.",
 
-      footer_left: "مركز أمان CycleX يعمل على المتصفح ويقرأ بيانات عامة على السلسلة.",
-      footer_tagline: "تحقق مرتين. لا تتصل إلا إذا كنت تثق بالصفحة."
+      footer_left: "CycleX Security Hub يعمل محلياً ويقرأ بيانات عامة من السلسلة.",
+      footer_tagline: "تحقق مرتين. لا تتصل إلا عندما تثق بالصفحة."
     },
 
     ru: {
-      brand_sub: "Ончейн-безопасность и вознаграждения",
-      hero_kicker: "Центр безопасности",
-      hero_title: "Инструменты безопасности CycleX",
-      hero_subtitle: "Лёгкий набор инструментов в браузере: проверка токенов, approvals и здоровье RPC (BSC + Ethereum).",
+      brand_sub: "Ончейн безопасность и награды",
+      hero_kicker: "Security Hub",
+      hero_title: "CycleX Security Tools",
+      hero_subtitle: "Лёгкий клиентский набор инструментов: безопаснее swap, гигиена approvals и проверка RPC (BSC + Ethereum).",
       btn_back: "Назад на сайт",
-      btn_connect: "Подключить кошелёк (опционально)",
-      btn_quick: "Быстрая проверка",
-      hero_note: "Проверки информационные и не гарантируют безопасность. Всегда перепроверяйте.",
+      btn_connect: "Подключить кошелёк (опц.)",
+      btn_quick: "Быстрый скан",
+      hero_note: "Важно: проверки информативны и не гарантируют безопасность. Всегда проверяйте сами.",
       tools_kicker: "ВЫБЕРИТЕ ИНСТРУМЕНТ",
 
       cube_quick_title: "Quick Scan",
-      cube_quick_desc: "Быстрая проверка: контракт, метаданные, owner/proxy подсказки и отчёт для шаринга.",
+      cube_quick_desc: "Быстрая проверка токена: контракт, метаданные, owner/proxy и отчёт.",
       badge_fast: "Быстро",
       badge_history: "История",
-      badge_share: "Шаринг",
+      badge_share: "Поделиться",
 
-      cube_approvals_title: "Approvals Guardian",
-      cube_approvals_desc: "Подключите кошелёк, проверьте allowances и отзовите approvals.",
+      cube_approvals_title: "Approval Guardian",
+      cube_approvals_desc: "Подключите кошелёк, проверьте allowances и безопасно отзовите approvals.",
       badge_wallet: "Кошелёк",
       badge_revoke: "Отозвать",
 
       cube_rpc_title: "RPC Health Checker",
-      cube_rpc_desc: "Тест RPC, замер задержки + проверка чтения логов, и копирование лучшего RPC.",
+      cube_rpc_desc: "Тест RPC: задержка, высота блока, чтение логов. Копируйте лучший RPC.",
       badge_table: "Таблица",
-      badge_copy: "Копировать",
+      badge_copy: "Копия",
 
-      cube_monitor_title: "Мониторинг контрактов",
-      cube_monitor_desc: "Локально сохраняйте и отслеживайте изменения байткода со временем.",
+      cube_monitor_title: "Contract Diff / Upgrade Monitor",
+      cube_monitor_desc: "Сохраните контракт локально и отслеживайте изменения bytecode / proxy implementation.",
       badge_watch: "Следить",
       badge_local: "Локально",
       badge_changes: "Изменения",
 
       p_quick_kicker: "Quick Scan",
       p_quick_title: "Оцените токен за секунды",
-      p_quick_sub: "Вставьте адрес токена, выберите сеть и запустите проверку. История хранится локально; можно делиться результатами.",
+      p_quick_sub: "Вставьте адрес токена, выберите сеть и запустите скан. История хранится локально, результаты можно делиться.",
       pill_wallet: "Кошелёк",
       btn_close: "Закрыть",
       quick_input_title: "Ввод токена",
       net_label: "Сеть",
       addr_label: "Контракт токена",
-      qs_tip: "Совет: откройте с ?tool=quick&net=bsc&token=0x... для авто-запуска.",
+      qs_tip: "Подсказка: откройте ?tool=quick&net=bsc&token=0x... для автозапуска.",
       options_label: "Опции",
       opt_require_liq: "Требовать ликвидность (строже)",
-      opt_show_json: "Включить JSON отчёт (копировать)",
+      opt_show_json: "Включить JSON-отчёт (копия)",
       btn_scan: "Сканировать",
       btn_copy_link: "Копировать ссылку",
       btn_copy_json: "Копировать JSON",
       history_label: "История",
-      history_tip: "Кликните элемент, чтобы быстро повторить. Только локально.",
+      history_tip: "Нажмите, чтобы быстро повторить. Только локально.",
       results_title: "Результаты",
-      results_hint: "Зелёные/жёлтые/красные сигналы. Не гарантия — проверяемые on-chain проверки.",
+      results_hint: "Сигналы Green/Yellow/Red. Не гарантия — только ончейн-проверки.",
 
-      p_app_kicker: "Approvals Guardian",
+      api_keys_label: "API ключи Explorer (опц.)",
+      opt_use_explorer_apis: "Использовать BscScan/Etherscan (Verified + ABI эвристики)",
+      btn_save: "Сохранить",
+      btn_clear: "Очистить",
+      api_keys_tip: "Ключи сохраняются только в браузере (localStorage). Не вставляйте ключи в публичный HTML.",
+
+      p_app_kicker: "Approval Guardian",
       p_app_title: "Проверка и отзыв allowances",
-      p_app_sub: "Укажите spender + токены (или добавьте популярные). Читаем allowance(owner, spender) и отзываем approve(spender, 0).",
+      p_app_sub: "Укажите spender + токены (или добавьте популярные). Читаем allowance(owner, spender) и отзываем через approve(spender, 0).",
       ap_settings_title: "Настройки",
       ap_connected: "Подключено:",
-      ap_connect: "Подключить / обновить",
-      ap_spender_label: "Spender preset",
-      ap_spender_tip: "Начните с пресета роутера, затем добавьте токены для очистки.",
+      ap_connect: "Подключить / Обновить",
+      ap_spender_label: "Spender пресет",
+      ap_spender_tip: "Выберите пресет роутера и добавьте токены, которые хотите почистить.",
       ap_tokens_label: "Список токенов (по одному в строке)",
-      ap_seed: "Добавить популярные токены",
-      ap_seed_history: "Использовать историю",
+      ap_seed: "Добавить популярные",
+      ap_seed_history: "Из истории скана",
       ap_check: "Проверить allowances",
-      ap_revoke_all: "Отозвать все (ненулевые)",
+      ap_revoke_all: "Отозвать все (≠0)",
       ap_results: "Allowances",
-      ap_results_hint: "Если allowance “бесконечный”, отзыв рекомендуется, если вы не доверяете на 100%.",
+      ap_results_hint: "Если allowance “infinite”, рекомендуется отозвать, если вы не доверяете spender полностью.",
 
       p_rpc_kicker: "RPC Health Checker",
-      p_rpc_title: "Найдите лучший RPC",
-      p_rpc_sub: "Тестируем eth_blockNumber, замеряем задержку и проверяем чтение логов (eth_getLogs). Лучший подсвечен и готов к копированию.",
-      rpc_inputs: "Ввод",
-      rpc_custom_label: "Опционально: свой RPC (в приоритете)",
-      rpc_test: "Тест RPC",
+      p_rpc_title: "Найдите лучший endpoint",
+      p_rpc_sub: "Тестируем eth_blockNumber, измеряем latency и проверяем Read Logs (eth_getLogs). Лучший результат подсвечен и готов к копированию.",
+      rpc_inputs: "Параметры",
+      rpc_custom_label: "Свой RPC (приоритет)",
+      rpc_test: "Тестировать RPC",
       rpc_copy_best: "Копировать лучший RPC",
       rpc_results: "Результаты",
-      rpc_tip: "Некоторые RPC падают из-за CORS/таймаутов. Тестируйте и выбирайте стабильный.",
+      rpc_tip: "Подсказка: некоторые RPC падают из-за CORS/timeout. Запустите тест и выберите самый стабильный/быстрый.",
 
-      p_mon_kicker: "Мониторинг",
-      p_mon_title: "Отслеживание апгрейдов и изменений байткода",
-      p_mon_sub: "Сохраняйте локально и проверяйте позже, чтобы увидеть изменения.",
+      p_mon_kicker: "Contract Monitor",
+      p_mon_title: "Отслеживайте апгрейды и изменения",
+      p_mon_sub: "Сохраняем hash кода + proxy implementation. Проверяйте позже, чтобы увидеть изменения.",
       mon_add_title: "Добавить в список",
       mon_add: "Добавить",
       mon_check: "Проверить все",
       mon_export: "Экспорт JSON",
-      mon_list_title: "Список",
+      mon_list_title: "Список наблюдения",
       mon_list_hint: "Только локально. Без серверного трекинга.",
 
-      footer_left: "CycleX Security Hub работает на клиенте и читает публичные on-chain данные.",
-      footer_tagline: "Проверяйте дважды. Подключайте кошелёк только если доверяете странице."
+      footer_left: "CycleX Security Hub работает на клиенте и читает публичные ончейн-данные.",
+      footer_tagline: "Проверяйте дважды. Подключайтесь только если доверяете странице."
     }
   };
 
-  function setLanguage(lang) {
-    const dict = translations[lang] || translations.en;
+  let currentLang = "en";
 
-    localStorage.setItem("cx_lang", lang);
-    document.documentElement.lang = lang;
-    document.documentElement.dir = (lang === "ar") ? "rtl" : "ltr";
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-    document.body.classList.add("lang-switching");
-
-    document.querySelectorAll("[data-i18n]").forEach((el) => {
-      const key = el.getAttribute("data-i18n");
-      const val = (dict[key] !== undefined) ? dict[key] : translations.en[key];
-      if (val !== undefined) el.innerHTML = val;
-    });
-
-    document.querySelectorAll(".lang-btn").forEach((btn) => {
-      btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
-    });
-
-    setTimeout(() => document.body.classList.remove("lang-switching"), 250);
+  function setDirForLang(lang) {
+    const html = document.documentElement;
+    if (lang === "ar") {
+      html.setAttribute("dir", "rtl");
+      html.setAttribute("lang", "ar");
+    } else {
+      html.setAttribute("dir", "ltr");
+      html.setAttribute("lang", lang);
+    }
   }
 
-  document.querySelectorAll(".lang-btn").forEach((btn) => {
-    btn.addEventListener("click", () => setLanguage(btn.getAttribute("data-lang")));
-  });
+  function t(key) {
+    return (translations[currentLang] && translations[currentLang][key]) || translations.en[key] || key;
+  }
 
-  setLanguage(localStorage.getItem("cx_lang") || "en");
+  function applyI18n() {
+    document.body.classList.add("lang-switching");
+    setTimeout(() => document.body.classList.remove("lang-switching"), 260);
 
-  // ===============================
-  // Shared helpers / state
-  // ===============================
-  const CX_DEBUG = false;
-  function cxlog(...a){ if(CX_DEBUG) console.log(...a); }
+    $$("[data-i18n]").forEach((el) => {
+      const k = el.getAttribute("data-i18n");
+      const val = t(k);
+      el.innerHTML = val;
+    });
+    setDirForLang(currentLang);
+  }
 
-  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-  function isHexAddr(x){ return typeof x === "string" && /^0x[0-9a-fA-F]{40}$/.test(x.trim()); }
-  function toChecksum(x){ return ethers.getAddress(x.trim()); }
+  function setLang(lang) {
+    currentLang = lang;
+    try { localStorage.setItem("cx_sec_lang", lang); } catch {}
+    $$(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
+    applyI18n();
+    // re-render dynamic labels that are not data-i18n:
+    renderWalletLabels();
+  }
 
-  async function copyText(text){
+  function initLang() {
+    let saved = null;
+    try { saved = localStorage.getItem("cx_sec_lang"); } catch {}
+    if (saved && translations[saved]) currentLang = saved;
+    setLang(currentLang);
+  }
+
+  // =========================
+  // Utils
+  // =========================
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const nowTs = () => Math.floor(Date.now() / 1000);
+
+  function shortAddr(a) {
+    if (!a || typeof a !== "string") return "—";
+    return a.slice(0, 6) + "…" + a.slice(-4);
+  }
+
+  function safeJson(obj) {
+    try { return JSON.stringify(obj, null, 2); } catch { return "{}"; }
+  }
+
+  async function copyText(text) {
     try {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
-      return true;
+      // fallback
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        return true;
+      } catch {
+        return false;
+      }
     }
   }
 
-  function setStatus(el, kind, html){
-    if (!el) return;
-    el.className = "status " + (kind || "info");
-    el.innerHTML = html || "";
+  function setStatus(el, type, html) {
+    el.classList.remove("ok", "warn", "bad", "info");
+    el.classList.add(type);
     el.style.display = "block";
+    el.innerHTML = html;
   }
 
-  function fmtAddr(a){
+  function clearStatus(el) {
+    el.style.display = "none";
+    el.innerHTML = "";
+    el.classList.remove("ok", "warn", "bad", "info");
+  }
+
+  function gtagEvent(name, params = {}) {
     try {
-      const x = toChecksum(a);
-      return x.slice(0, 6) + "…" + x.slice(-4);
-    } catch { return a; }
+      if (typeof window.gtag === "function") window.gtag("event", name, params);
+    } catch {}
   }
 
-  function fmtBigintUnits(v, decimals){
-    try {
-      const s = ethers.formatUnits(v, decimals);
-      const [i, f=""] = s.split(".");
-      const intWithCommas = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-      const ff = f.slice(0, 6).replace(/0+$/, "");
-      return intWithCommas + (ff ? "." + ff : "");
-    } catch {
-      return String(v);
-    }
+  function parseQuery() {
+    const u = new URL(location.href);
+    return {
+      tool: u.searchParams.get("tool") || "",
+      net: (u.searchParams.get("net") || "").toLowerCase(),
+      token: u.searchParams.get("token") || ""
+    };
   }
 
-  function fmtUsd(x){
-    if (!Number.isFinite(x)) return "—";
-    if (x >= 1_000_000_000) return "$" + (x/1_000_000_000).toFixed(2) + "B";
-    if (x >= 1_000_000) return "$" + (x/1_000_000).toFixed(2) + "M";
-    if (x >= 1_000) return "$" + (x/1_000).toFixed(2) + "K";
-    return "$" + x.toFixed(2);
-  }
-
-  const CX = {
-    reports: { quick: null },
-    providers: { bsc: null, eth: null },
-    rpc: { best: "", last: [] },
-    wallet: { signer: null, address: null, provider: null },
-    monitor: { list: [] }
+  // =========================
+  // Panels / Tiles
+  // =========================
+  const toolCards = $$("#toolGrid .tool-card");
+  const panels = {
+    quick: $("#panel-quick"),
+    approvals: $("#panel-approvals"),
+    rpc: $("#panel-rpc"),
+    monitor: $("#panel-monitor")
   };
 
-  // ===============================
-  // WalletConnect (Reown AppKit) — robust init
-  // ===============================
-  const WALLETCONNECT_PROJECT_ID = "7886bcb95105e9e47337cec481d5de75";
-
-  function resolveAppKit(){
-    const kitCandidates = [
-      window.AppKit,
-      window.ReownAppKit,
-      window.appKit,
-      window.appkit
-    ].filter(Boolean);
-
-    let createAppKit = null;
-    let networks = null;
-
-    for (const k of kitCandidates) {
-      if (typeof k?.createAppKit === "function") { createAppKit = k.createAppKit; networks = k.networks || null; break; }
-      if (typeof k?.default?.createAppKit === "function") { createAppKit = k.default.createAppKit; networks = k.default.networks || k.networks || null; break; }
-    }
-
-    const adapterCandidates = [
-      window.AppKitAdapterEthers,
-      window.ReownAppKitAdapterEthers,
-      window.appKitAdapterEthers,
-      window.AppKitEthersAdapter,
-      window.ReownAppKitEthersAdapter
-    ].filter(Boolean);
-
-    let EthersAdapter = null;
-    for (const a of adapterCandidates) {
-      if (typeof a?.EthersAdapter === "function") { EthersAdapter = a.EthersAdapter; break; }
-      if (typeof a?.default?.EthersAdapter === "function") { EthersAdapter = a.default.EthersAdapter; break; }
-    }
-
-    return { createAppKit, networks, EthersAdapter };
+  function showPanel(key) {
+    Object.entries(panels).forEach(([k, el]) => {
+      if (!el) return;
+      el.classList.toggle("hidden", k !== key);
+    });
+    toolCards.forEach(c => c.classList.toggle("active", c.dataset.tool === key));
+    gtagEvent("sec_tool_open", { tool: key });
   }
 
-  function initAppKitOnce(){
-    if (window.cxAppKitModal) return window.cxAppKitModal;
+  toolCards.forEach((card) => {
+    card.addEventListener("click", () => showPanel(card.dataset.tool));
+  });
 
-    const { createAppKit, networks, EthersAdapter } = resolveAppKit();
-    if (!createAppKit || !EthersAdapter) return null;
+  $("#btnCloseQuick")?.addEventListener("click", () => showPanel(null));
+  $("#btnCloseApprovals")?.addEventListener("click", () => showPanel(null));
+  $("#btnCloseRpc")?.addEventListener("click", () => showPanel(null));
+  $("#btnCloseMonitor")?.addEventListener("click", () => showPanel(null));
 
-    const nets = [];
-    if (networks?.bsc) nets.push(networks.bsc);
-    if (networks?.mainnet) nets.push(networks.mainnet);
+  // "Run Quick Scan" CTA
+  $("#btn-quick")?.addEventListener("click", () => {
+    showPanel("quick");
+    $("#qs-token")?.focus();
+  });
 
-    if (!nets.length) {
-      nets.push({
-        id: 56,
-        name: "BNB Smart Chain",
-        nativeCurrency: { name:"BNB", symbol:"BNB", decimals:18 },
-        rpcUrls: { default: { http: ["https://bsc-dataseed.binance.org"] } },
-        blockExplorers: { default: { name:"BscScan", url:"https://bscscan.com" } }
-      });
-      nets.push({
-        id: 1,
-        name: "Ethereum",
-        nativeCurrency: { name:"Ether", symbol:"ETH", decimals:18 },
-        rpcUrls: { default: { http: ["https://cloudflare-eth.com"] } },
-        blockExplorers: { default: { name:"Etherscan", url:"https://etherscan.io" } }
-      });
+  // =========================
+  // Wallet (Injected)
+  // =========================
+  const wallet = {
+    provider: null,   // E.BrowserProvider
+    signer: null,
+    address: "",
+    chainId: 0
+  };
+
+  function renderWalletLabels() {
+    const w = wallet.address ? shortAddr(wallet.address) : "not connected";
+    const wFull = wallet.address ? wallet.address : "not connected";
+    $("#walletLabel") && ($("#walletLabel").textContent = wFull);
+    $("#ap-wallet") && ($("#ap-wallet").textContent = wFull);
+    $("#ap-address") && ($("#ap-address").textContent = wallet.address ? shortAddr(wallet.address) : "—");
+  }
+
+  async function connectInjected() {
+    const status = $("#qs-status");
+    if (!window.ethereum) {
+      setStatus(status, "warn",
+        "No injected wallet detected.<br>" +
+        "Open this page inside MetaMask/Trust/OKX in-app browser, or install a wallet extension."
+      );
+      return false;
     }
 
-    const metadata = {
-      name: "CycleX Security Hub",
-      description: "Client-side security tools + approvals guardian + RPC checker",
-      url: window.location.origin,
-      icons: [window.location.origin + "/logo.png"]
-    };
+    try {
+      const bp = new E.BrowserProvider(window.ethereum);
+      await bp.send("eth_requestAccounts", []);
+      const signer = await bp.getSigner();
+      const addr = await signer.getAddress();
+      const net = await bp.getNetwork();
 
-    const modal = createAppKit({
-      projectId: WALLETCONNECT_PROJECT_ID,
-      metadata,
-      networks: nets,
-      adapters: [new EthersAdapter()],
+      wallet.provider = bp;
+      wallet.signer = signer;
+      wallet.address = addr;
+      wallet.chainId = Number(net.chainId || 0);
+
+      renderWalletLabels();
+      gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
+
+      // friendly status
+      setStatus(status, "ok", `Wallet connected: <span class="mono">${addr}</span>`);
+      return true;
+    } catch (e) {
+      setStatus(status, "bad", `Wallet connection failed: ${String(e?.message || e)}`);
+      return false;
+    }
+  }
+
+  async function ensureChain(targetChainId) {
+    if (!window.ethereum) return false;
+    try {
+      const hex = "0x" + targetChainId.toString(16);
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: hex }] });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  $("#btn-connect")?.addEventListener("click", async () => {
+    await connectInjected();
+  });
+
+  $("#ap-connect")?.addEventListener("click", async () => {
+    await connectInjected();
+    renderWalletLabels();
+  });
+
+  // =========================
+  // Explorer API keys (local)
+  // =========================
+  const LS_KEYS = "cx_sec_explorer_keys";
+  function loadApiKeys() {
+    try {
+      const raw = localStorage.getItem(LS_KEYS);
+      if (!raw) return { bscscan: "", etherscan: "", use: false };
+      const obj = JSON.parse(raw);
+      return {
+        bscscan: obj?.bscscan || "",
+        etherscan: obj?.etherscan || "",
+        use: !!obj?.use
+      };
+    } catch {
+      return { bscscan: "", etherscan: "", use: false };
+    }
+  }
+
+  function saveApiKeys(keys) {
+    try {
+      localStorage.setItem(LS_KEYS, JSON.stringify(keys));
+    } catch {}
+  }
+
+  function initApiKeysUi() {
+    const keys = loadApiKeys();
+    const use = $("#api-use");
+    const b = $("#api-bscscan");
+    const e = $("#api-etherscan");
+    if (use) use.checked = keys.use;
+    if (b) b.value = keys.bscscan;
+    if (e) e.value = keys.etherscan;
+
+    $("#api-save")?.addEventListener("click", () => {
+      const nk = {
+        use: !!$("#api-use")?.checked,
+        bscscan: ($("#api-bscscan")?.value || "").trim(),
+        etherscan: ($("#api-etherscan")?.value || "").trim()
+      };
+      saveApiKeys(nk);
+      setStatus($("#qs-status"), "ok", "Saved keys to localStorage.");
+      gtagEvent("sec_keys_saved", { use: nk.use ? 1 : 0 });
     });
 
-    window.cxAppKitModal = modal;
-    return modal;
+    $("#api-clear")?.addEventListener("click", () => {
+      saveApiKeys({ use: false, bscscan: "", etherscan: "" });
+      if ($("#api-use")) $("#api-use").checked = false;
+      if ($("#api-bscscan")) $("#api-bscscan").value = "";
+      if ($("#api-etherscan")) $("#api-etherscan").value = "";
+      setStatus($("#qs-status"), "ok", "Cleared keys.");
+      gtagEvent("sec_keys_cleared");
+    });
   }
 
-  function initAppKitRetry(){
-    // Try a few times in case unpkg scripts arrive slightly late
-    let tries = 0;
-    const maxTries = 30; // ~6s
-    const t = setInterval(() => {
-      tries++;
-      const m = initAppKitOnce();
-      if (m || tries >= maxTries) {
-        clearInterval(t);
-        if (!m) console.warn("AppKit not available (scripts not loaded?)");
+  // =========================
+  // Network constants
+  // =========================
+  const CHAINS = {
+    bsc: {
+      chainId: 56,
+      name: "BSC",
+      wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
+      explorer: "https://bscscan.com/address/",
+      rpcList: [
+        "https://bsc-dataseed.binance.org",
+        "https://bsc-dataseed1.bnbchain.org",
+        "https://bsc-dataseed2.bnbchain.org",
+        "https://bsc.publicnode.com",
+        "https://rpc.ankr.com/bsc"
+      ],
+      v2: {
+        factory: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73", // Pancake V2 factory
+        router:  "0x10ED43C718714eb63d5aA57B78B54704E256024E"
+      },
+      v3: {
+        factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865" // Pancake V3 factory
       }
-    }, 200);
-  }
-
-  initAppKitRetry();
-
-  // ===============================
-  // RPC lists
-  // ===============================
-  const RPCS = {
-    bsc: [
-      "https://bsc-dataseed.binance.org",
-      "https://bsc-dataseed1.bnbchain.org",
-      "https://bsc-dataseed2.bnbchain.org",
-      "https://bsc-dataseed3.bnbchain.org",
-      "https://bsc-dataseed1.defibit.io",
-    ],
-    eth: [
-      "https://cloudflare-eth.com",
-      "https://rpc.ankr.com/eth",
-      "https://ethereum.publicnode.com"
-    ]
-  };
-
-  async function pickProvider(net, customList){
-    if (CX.providers[net]) return CX.providers[net];
-
-    const list = (Array.isArray(customList) && customList.length) ? customList : (RPCS[net] || []);
-    const expectChainId = (net === "bsc") ? 56 : 1;
-
-    for (const url of list) {
-      try {
-        const p = new ethers.JsonRpcProvider(url);
-        const bn = await p.getBlockNumber();
-        const n = await p.getNetwork();
-        if (Number(n.chainId) !== expectChainId) throw new Error("Wrong chainId");
-        CX.providers[net] = p;
-        cxlog("✅ Provider", net, url, "block", bn);
-        return p;
-      } catch (e) {
-        cxlog("⚠️ Provider fail", net, url, e?.message || e);
+    },
+    eth: {
+      chainId: 1,
+      name: "Ethereum",
+      wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
+      explorer: "https://etherscan.io/address/",
+      rpcList: [
+        "https://cloudflare-eth.com",
+        "https://ethereum.publicnode.com",
+        "https://rpc.ankr.com/eth"
+      ],
+      v2: {
+        factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", // Uniswap V2 factory
+        router:  "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+      },
+      v3: {
+        factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984" // Uniswap V3 factory
       }
     }
-    throw new Error(`All ${net.toUpperCase()} RPCs failed (CORS/timeout/blocked)`);
+  };
+
+  function getDefaultProvider(netKey) {
+    const c = CHAINS[netKey] || CHAINS.bsc;
+    return new E.JsonRpcProvider(c.rpcList[0], c.chainId);
   }
 
-  // ===============================
-  // DEX + bases (BSC only for liquidity checks)
-  // ===============================
-  const WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
-  const USDT = "0x55d398326f99059fF775485246999027B3197955";
-  const USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
-  const BUSD = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
-  const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+  function getProviderForRpc(rpcUrl, chainId) {
+    return new E.JsonRpcProvider(rpcUrl, chainId);
+  }
 
-  const DEXES_BSC = [
-    { key:"pancake",  name:"PancakeSwap V2", router:"0x10ED43C718714eb63d5aA57B78B54704E256024E", swap:(tin,tout)=>`https://pancakeswap.finance/swap?inputCurrency=${tin}&outputCurrency=${tout}` },
-    { key:"apeswap",  name:"ApeSwap",        router:"0xC0788A3aD43d79aa53B09c2EaCc313A787d1d607", swap:(tin,tout)=>`https://apeswap.finance/swap?inputCurrency=${tin}&outputCurrency=${tout}` },
-    { key:"biswap",   name:"BiSwap",         router:"0xE97E2787C9C8d63bFF482Fa3fdc212BbD547aE98", swap:(tin,tout)=>`https://exchange.biswap.org/#/swap?inputCurrency=${tin}&outputCurrency=${tout}` },
-    { key:"mdex",     name:"MDEX (BSC)",     router:"0x7DAe51BD3E3376B8c7c4900E9107f12Be3AF1bA8", swap:(tin,tout)=>`https://bscr.mdex.com/#/swap?inputCurrency=${tin}&outputCurrency=${tout}` },
-    { key:"bakery",   name:"BakerySwap",     router:"0x824C9364A6CF8f5EB542ad2ca8F5705561C8b1db", swap:(tin,tout)=>`https://www.bakeryswap.org/#/swap?inputCurrency=${tin}&outputCurrency=${tout}` },
-    { key:"babyswap", name:"BabySwap",       router:"0xC085fDA7Dc3c1A1611f3Ae421e2BD3c75b3a6943", swap:(tin,tout)=>`https://exchange.babyswap.finance/#/swap?inputCurrency=${tin}&outputCurrency=${tout}` },
-  ];
+  // =========================
+  // Quick Scan
+  // =========================
+  const QS_LS_HISTORY = "cx_sec_qs_history";
 
-  const BASES_BSC = [
-    { key:"WBNB", name:"WBNB", addr:WBNB, kind:"bnb" },
-    { key:"USDT", name:"USDT", addr:USDT, kind:"stable" },
-    { key:"USDC", name:"USDC", addr:USDC, kind:"stable" },
-    { key:"BUSD", name:"BUSD", addr:BUSD, kind:"stable" }
-  ];
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(QS_LS_HISTORY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
+  }
 
-  // ===============================
-  // ABIs
-  // ===============================
+  function saveHistory(items) {
+    try { localStorage.setItem(QS_LS_HISTORY, JSON.stringify(items.slice(0, 20))); } catch {}
+  }
+
+  function pushHistory(entry) {
+    const cur = loadHistory();
+    const key = `${entry.net}:${entry.token.toLowerCase()}`;
+    const filtered = cur.filter(x => `${x.net}:${(x.token||"").toLowerCase()}` !== key);
+    filtered.unshift({ ...entry, ts: nowTs() });
+    saveHistory(filtered);
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const box = $("#qs-history");
+    if (!box) return;
+    const items = loadHistory();
+    box.innerHTML = "";
+    if (!items.length) {
+      box.innerHTML = `<div class="small muted">—</div>`;
+      return;
+    }
+    items.forEach((it) => {
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.innerHTML = `<span class="mono">${it.net.toUpperCase()}</span> <span class="mono">${shortAddr(it.token)}</span> <span class="x">↻</span>`;
+      chip.addEventListener("click", () => {
+        $("#qs-net").value = it.net;
+        $("#qs-token").value = it.token;
+        showPanel("quick");
+        runQuickScan();
+      });
+      box.appendChild(chip);
+    });
+  }
+
   const ERC20_ABI = [
     "function name() view returns (string)",
     "function symbol() view returns (string)",
     "function decimals() view returns (uint8)",
     "function totalSupply() view returns (uint256)",
-    "function owner() view returns (address)",
-    "function getOwner() view returns (address)",
-    "function admin() view returns (address)",
+    "function owner() view returns (address)"
   ];
 
-  const FACTORY_ABI = [ "function getPair(address tokenA, address tokenB) external view returns (address pair)" ];
-  const ROUTER_ABI  = [ "function factory() view returns (address)" ];
-  const PAIR_ABI    = [ "function token0() view returns (address)", "function token1() view returns (address)", "function getReserves() view returns (uint112,uint112,uint32)" ];
-  const LP_ABI      = [ "function totalSupply() view returns (uint256)", "function balanceOf(address) view returns (uint256)" ];
-
-  const CL_ABI = [
-    "function decimals() view returns (uint8)",
-    "function latestRoundData() view returns (uint80,int256,uint256,uint256,uint80)"
+  const PAIR_ABI = [
+    "function getReserves() view returns (uint112,uint112,uint32)",
+    "function token0() view returns (address)",
+    "function token1() view returns (address)"
   ];
 
-  // ===============================
-  // Proxy detection (EIP-1967)
-  // ===============================
-  const EIP1967_IMPL_SLOT  = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-  const EIP1967_ADMIN_SLOT = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103";
+  const FACTORY_V2_ABI = [
+    "function getPair(address,address) view returns (address)"
+  ];
 
-  function slotToAddress(storageHex){
-    if (!storageHex || storageHex === "0x") return null;
-    const h = storageHex.toLowerCase().replace(/^0x/,"").padStart(64,"0");
+  const FACTORY_V3_ABI = [
+    "function getPool(address,address,uint24) view returns (address)"
+  ];
+
+  const PROXY_IMPL_SLOT = "0x360894A13BA1A3210667C828492DB98DCA3E2076CC3735A920A3CA505D382BBC"; // EIP-1967 impl
+  function slotToAddress(hex) {
+    if (!hex || hex === "0x") return "";
+    const h = hex.replace(/^0x/, "").padStart(64, "0");
     const addr = "0x" + h.slice(24);
-    if (/^0x0{40}$/.test(addr)) return null;
-    try { return toChecksum(addr); } catch { return null; }
+    try { return E.getAddress(addr); } catch { return ""; }
   }
 
-  async function detectProxy(provider, addr){
+  async function getProxyImpl(provider, addr) {
     try {
-      const implRaw = await provider.getStorage(addr, EIP1967_IMPL_SLOT);
-      const impl = slotToAddress(implRaw);
-      const adminRaw = await provider.getStorage(addr, EIP1967_ADMIN_SLOT);
-      const admin = slotToAddress(adminRaw);
-      if (impl) return { isProxy: true, impl, admin };
-      return { isProxy: false, impl: null, admin: admin || null };
+      const v = await provider.send("eth_getStorageAt", [addr, PROXY_IMPL_SLOT, "latest"]);
+      const impl = slotToAddress(v);
+      if (impl && impl !== "0x0000000000000000000000000000000000000000") return impl;
+      return "";
     } catch {
-      return { isProxy: false, impl: null, admin: null };
+      return "";
     }
   }
 
-  // ===============================
-  // BNB/USD oracle (BSC)
-  // ===============================
-  const PCS_FACTORY = "0xca143ce32fe78f1f7019d7d551a6402fc5350c73";
-  const CHAINLINK_BNBUSD = "0x0567F2323251f0Aab15c8DfB1967E4e8A7D42aeE";
-  let _bnbUsdCache = null;
-
-  async function getBnbUsd(provider){
-    if (_bnbUsdCache && (Date.now() - _bnbUsdCache.t) < 60_000) return _bnbUsdCache;
-
-    try {
-      const feed = new ethers.Contract(CHAINLINK_BNBUSD, CL_ABI, provider);
-      const dec = Number(await feed.decimals());
-      const rd = await feed.latestRoundData();
-      const ans = Number(rd[1]);
-      if (Number.isFinite(ans) && ans > 0) {
-        const px = ans / (10 ** dec);
-        _bnbUsdCache = { px, source: "Chainlink", t: Date.now() };
-        return _bnbUsdCache;
-      }
-    } catch {}
-
-    try {
-      const f = new ethers.Contract(PCS_FACTORY, FACTORY_ABI, provider);
-      let pair = await f.getPair(WBNB, USDT);
-      pair = toChecksum(String(pair));
-      if (pair && !/^0x0{40}$/i.test(pair)) {
-        const p = new ethers.Contract(pair, PAIR_ABI, provider);
-        const t0 = toChecksum(await p.token0());
-        const r = await p.getReserves();
-        const r0 = BigInt(r[0]);
-        const r1 = BigInt(r[1]);
-
-        const wbnbRes = (t0 === toChecksum(WBNB)) ? r0 : r1;
-        const usdtRes = (t0 === toChecksum(WBNB)) ? r1 : r0;
-
-        const wbnbF = Number(ethers.formatUnits(wbnbRes, 18));
-        const usdtF = Number(ethers.formatUnits(usdtRes, 18));
-        if (wbnbF > 0 && usdtF > 0) {
-          const px = usdtF / wbnbF;
-          _bnbUsdCache = { px, source: "On-chain (WBNB/USDT)", t: Date.now() };
-          return _bnbUsdCache;
-        }
-      }
-    } catch {}
-
-    _bnbUsdCache = { px: NaN, source: "Unavailable", t: Date.now() };
-    return _bnbUsdCache;
+  async function keywordHeuristicsFromSource(sourceText) {
+    const s = (sourceText || "").toLowerCase();
+    const has = (k) => s.includes(k);
+    return {
+      mint: has(" mint(") || has("function mint") || has(" _mint("),
+      pause: has("pause") || has("paused"),
+      blacklist: has("blacklist") || has("denylist"),
+      tax: has("tax") || has("fee") || has("buyfee") || has("sellfee") || has("marketingfee")
+    };
   }
 
-  async function getDexFactory(provider, dex){
+  async function fetchExplorerData(netKey, tokenAddr) {
+    const keys = loadApiKeys();
+    if (!keys.use) return { ok: false };
+
+    const isBsc = netKey === "bsc";
+    const key = isBsc ? keys.bscscan : keys.etherscan;
+    if (!key) return { ok: false };
+
+    const apiBase = isBsc ? "https://api.bscscan.com/api" : "https://api.etherscan.io/api";
+
+    // Source code / verified
     try {
-      const r = new ethers.Contract(dex.router, ROUTER_ABI, provider);
-      const f = await r.factory();
-      return toChecksum(String(f));
+      const url = `${apiBase}?module=contract&action=getsourcecode&address=${tokenAddr}&apikey=${encodeURIComponent(key)}`;
+      const r = await fetch(url, { method: "GET" });
+      const j = await r.json();
+      const item = j?.result?.[0];
+      const source = item?.SourceCode || "";
+      const abi = item?.ABI || "";
+      const contractName = item?.ContractName || "";
+      const isVerified = !!source && source !== "0x" && source !== "";
+      return { ok: true, isVerified, contractName, source, abi };
     } catch {
-      return null;
+      return { ok: false };
     }
   }
 
-  async function scanOnePair(provider, token, base, dex, factoryAddr){
-    if (!factoryAddr) return null;
-    try {
-      const f = new ethers.Contract(factoryAddr, FACTORY_ABI, provider);
-      let pair = await f.getPair(token, base.addr);
-      pair = toChecksum(String(pair));
-      if (/^0x0{40}$/i.test(pair)) return null;
+  async function checkV2Liquidity(provider, netKey, tokenAddr) {
+    const c = CHAINS[netKey];
+    const fac = new E.Contract(c.v2.factory, FACTORY_V2_ABI, provider);
+    const pairAddr = await fac.getPair(tokenAddr, c.wrapped);
+    if (!pairAddr || pairAddr === E.ZeroAddress) return { exists: false, pair: "" };
 
-      const p = new ethers.Contract(pair, PAIR_ABI, provider);
-      const t0 = toChecksum(await p.token0());
-      const r = await p.getReserves();
-      const r0 = BigInt(r[0]);
-      const r1 = BigInt(r[1]);
+    const pair = new E.Contract(pairAddr, PAIR_ABI, provider);
+    const [r0, r1] = await pair.getReserves();
+    const t0 = (await pair.token0()).toLowerCase();
+    const t1 = (await pair.token1()).toLowerCase();
+    const wrappedLower = c.wrapped.toLowerCase();
 
-      const baseRes  = (t0 === toChecksum(base.addr)) ? r0 : r1;
-      const tokenRes = (t0 === toChecksum(base.addr)) ? r1 : r0;
+    const wrappedReserve = (t0 === wrappedLower) ? r0 : (t1 === wrappedLower ? r1 : 0n);
+    return { exists: true, pair: pairAddr, wrappedReserve: wrappedReserve.toString() };
+  }
 
-      let burnPct = null;
+  async function checkV3Pools(provider, netKey, tokenAddr) {
+    const c = CHAINS[netKey];
+    const fac = new E.Contract(c.v3.factory, FACTORY_V3_ABI, provider);
+
+    // try common fees (include Pancake/Uni variants)
+    const fees = netKey === "eth" ? [500, 3000, 10000] : [100, 500, 2500, 10000];
+    const found = [];
+    for (const f of fees) {
       try {
-        const lp = new ethers.Contract(pair, LP_ABI, provider);
-        const ts = BigInt(await lp.totalSupply());
-        if (ts > 0n) {
-          const z = BigInt(await lp.balanceOf("0x0000000000000000000000000000000000000000"));
-          const d = BigInt(await lp.balanceOf("0x000000000000000000000000000000000000dEaD"));
-          const burned = z + d;
-          burnPct = Number((burned * 10000n) / ts) / 100;
-        }
-      } catch {}
-
-      return {
-        dexKey: dex.key,
-        dexName: dex.name,
-        router: dex.router,
-        factory: factoryAddr,
-        baseKey: base.key,
-        baseName: base.name,
-        baseAddr: base.addr,
-        pair,
-        baseReserve: baseRes,
-        tokenReserve: tokenRes,
-        burnPct
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  // ===============================
-  // Core scan (Quick) — adds Proxy + Code Hash + Bytecode size
-  // ===============================
-  async function scanTokenCore({ net, token, requireLiquidity=false }){
-    const provider = await pickProvider(net);
-
-    const code = await provider.getCode(token);
-    if (!code || code === "0x") {
-      return {
-        ok: false,
-        badge: "bad",
-        headline: "❌ Not a contract",
-        score: 999,
-        notes: [`${token} has no bytecode on ${net.toUpperCase()}.`],
-        data: null
-      };
-    }
-
-    const codeHash = ethers.keccak256(code);
-    const bytecodeBytes = Math.max(0, (code.length - 2) / 2);
-
-    const c = new ethers.Contract(token, ERC20_ABI, provider);
-
-    let name="—", symbol="—", decimals=18, supply=0n;
-    try { name = await c.name(); } catch {}
-    try { symbol = await c.symbol(); } catch {}
-    try { decimals = Number(await c.decimals()); } catch {}
-    try { supply = BigInt(await c.totalSupply()); } catch {}
-
-    let owner = null;
-    for (const fn of ["owner","getOwner","admin"]) {
-      try {
-        const o = await c[fn]();
-        if (o && isHexAddr(String(o))) { owner = toChecksum(String(o)); break; }
+        const pool = await fac.getPool(tokenAddr, c.wrapped, f);
+        if (pool && pool !== E.ZeroAddress) found.push({ fee: f, pool });
       } catch {}
     }
-    const ownerRenounced = owner ? (owner === "0x0000000000000000000000000000000000000000") : null;
-    const proxy = await detectProxy(provider, token);
+    return { pools: found };
+  }
 
-    const explorer = (net === "bsc") ? "https://bscscan.com" : "https://etherscan.io";
+  function scoreFromSignals(sig) {
+    let score = 50;
 
-    // ETH: metadata-only
-    if (net === "eth") {
-      let score = 0;
-      const notes = [];
-      notes.push("✅ Contract bytecode found");
-      if (!name || name==="—") { score += 1; notes.push("⚠️ Token name unreadable (non-standard)"); }
-      if (!symbol || symbol==="—") { score += 1; notes.push("⚠️ Symbol unreadable (non-standard)"); }
-      if (proxy?.isProxy && proxy.impl) { score += 1; notes.push(`ℹ️ Proxy detected. Impl: ${proxy.impl}`); }
-      if (!owner) { score += 1; notes.push("⚠️ Owner not detectable"); }
-      else if (ownerRenounced) { notes.push("✅ Ownership appears renounced (owner=0x0)"); }
-      else { score += 1; notes.push(`⚠️ Owner detected: ${owner} (not renounced)`); }
+    if (sig.hasCode) score += 10; else score -= 40;
+    if (sig.verified) score += 12;
+    if (sig.isProxy) score -= 8;
 
-      let badge="info", headline="ℹ️ Informational";
-      if (score <= 1) { badge="ok"; headline="✅ Looks OK (basic checks)"; }
-      else if (score <= 3) { badge="warn"; headline="⚠️ Caution (some signals)"; }
-      else { badge="bad"; headline="❌ Higher risk signals"; }
+    if (sig.hasV2) score += 10;
+    if (sig.hasV3) score += 6;
 
-      return {
-        ok: true,
-        badge,
-        headline,
-        score,
-        notes,
-        data: {
-          net, token, name, symbol, decimals,
-          totalSupply: supply ? supply.toString() : null,
-          owner: owner || null,
-          ownerRenounced: ownerRenounced === null ? null : ownerRenounced,
-          proxy,
-          requireLiquidity,
-          pairs: [],
-          codeHash,
-          bytecodeBytes,
-          explorer,
-          generatedAt: new Date().toISOString()
-        }
-      };
+    if (sig.requireLiquidity && !(sig.hasV2 || sig.hasV3)) score -= 25;
+
+    if (sig.mint) score -= 10;
+    if (sig.pause) score -= 6;
+    if (sig.blacklist) score -= 10;
+    if (sig.tax) score -= 6;
+
+    score = clamp(score, 0, 100);
+
+    let level = "warn";
+    if (score >= 75) level = "ok";
+    if (score < 45) level = "bad";
+
+    return { score, level };
+  }
+
+  function badgeRowHtml(label, value, type = "info") {
+    const cls = type === "ok" ? "status ok" : type === "bad" ? "status bad" : type === "warn" ? "status warn" : "status info";
+    return `<div class="${cls}" style="display:block; margin-top:10px;"><b>${label}:</b> ${value}</div>`;
+  }
+
+  async function runQuickScan() {
+    const status = $("#qs-status");
+    const out = $("#qs-out");
+    const pairsWrap = $("#qs-pairsWrap");
+
+    clearStatus(status);
+    if (pairsWrap) pairsWrap.innerHTML = "";
+
+    const netKey = ($("#qs-net")?.value || "bsc").toLowerCase();
+    const token = ($("#qs-token")?.value || "").trim();
+    const requireLiq = !!$("#qs-require-liq")?.checked;
+    const showJson = !!$("#qs-show-json")?.checked;
+
+    if (!E.isAddress(token)) {
+      setStatus(status, "bad", "Invalid token address.");
+      return;
     }
 
-    // BSC liquidity scan
-    const bnbUsd = await getBnbUsd(provider);
-    const pairsFound = [];
+    const chain = CHAINS[netKey] || CHAINS.bsc;
+    const provider = getDefaultProvider(netKey);
 
-    for (const dex of DEXES_BSC) {
-      const factory = await getDexFactory(provider, dex);
-      if (!factory) continue;
+    setStatus(status, "info", "Scanning…");
 
-      for (const base of BASES_BSC) {
-        const res = await scanOnePair(provider, token, base, dex, factory);
-        if (!res) continue;
-
-        let liqUsdApprox = null;
-        try {
-          const baseAmt = Number(ethers.formatUnits(res.baseReserve, 18));
-          if (base.kind === "stable") liqUsdApprox = baseAmt * 2;
-          else if (base.kind === "bnb") liqUsdApprox = (Number.isFinite(bnbUsd.px) ? baseAmt * bnbUsd.px * 2 : null);
-        } catch {}
-
-        pairsFound.push({ ...res, liqUsdApprox });
-      }
-    }
-
-    pairsFound.sort((a,b) => (b.liqUsdApprox || 0) - (a.liqUsdApprox || 0));
-
-    // scoring
-    let score = 0;
-    const notes = [];
-    notes.push("✅ Contract bytecode found");
-
-    if (!name || name==="—") { score += 1; notes.push("⚠️ Token name unreadable (non-standard)"); }
-    if (!symbol || symbol==="—") { score += 1; notes.push("⚠️ Symbol unreadable (non-standard)"); }
-
-    if (proxy?.isProxy && proxy.impl) {
-      notes.push(`ℹ️ Proxy detected (EIP-1967). Impl: ${proxy.impl}`);
-      if (proxy.admin) notes.push(`ℹ️ Proxy admin slot: ${proxy.admin}`);
-      score += 1;
-    }
-
-    if (!owner) {
-      score += 1;
-      notes.push("⚠️ Owner not detectable (may be fine, but less transparent)");
-    } else if (ownerRenounced) {
-      notes.push("✅ Ownership appears renounced (owner=0x0)");
-    } else {
-      score += 1;
-      notes.push(`⚠️ Owner detected: ${owner} (not renounced)`);
-    }
-
-    if (!pairsFound.length) {
-      score += requireLiquidity ? 4 : 1;
-      notes.push(requireLiquidity ? "❌ No DEX pair found" : "ℹ️ No DEX pair found (may be “Not listed yet”)");
-    } else {
-      const best = pairsFound[0];
-      notes.push(`✅ Best liquidity pair: ${best.dexName} • ${best.baseName} • ${best.pair}`);
-
-      if (best.liqUsdApprox != null) {
-        notes.push(`ℹ️ Liquidity (approx): ${fmtUsd(best.liqUsdApprox)} (2×base side)`);
-        if (best.baseKey === "WBNB" && Number.isFinite(bnbUsd.px)) {
-          notes.push(`ℹ️ BNB/USD: ${bnbUsd.px.toFixed(2)} (${bnbUsd.source})`);
-        }
-        if (best.liqUsdApprox < 10_000) { score += 2; notes.push("⚠️ Very low liquidity (< $10k approx)"); }
-        else if (best.liqUsdApprox < 25_000) { score += 2; notes.push("⚠️ Low liquidity (< $25k approx)"); }
-      }
-
-      if (best.burnPct != null) {
-        if (best.burnPct >= 50) notes.push(`✅ LP burn seems high: ${best.burnPct.toFixed(2)}%`);
-        else { score += 1; notes.push(`⚠️ LP burn seems low/unknown: ${best.burnPct.toFixed(2)}%`); }
-      }
-    }
-
-    let badge="info", headline="ℹ️ Informational";
-    if (score <= 1) { badge="ok"; headline="✅ Looks OK (basic checks)"; }
-    else if (score <= 4) { badge="warn"; headline="⚠️ Caution (some risk signals)"; }
-    else { badge="bad"; headline="❌ High risk signals"; }
-
-    const report = {
-      net, token, name, symbol, decimals,
-      totalSupply: supply ? supply.toString() : null,
-      owner: owner || null,
-      ownerRenounced: ownerRenounced === null ? null : ownerRenounced,
-      proxy,
-      requireLiquidity,
-      bnbUsd: Number.isFinite(bnbUsd.px) ? { price: bnbUsd.px, source: bnbUsd.source } : null,
-      pairs: pairsFound.slice(0, 30).map(p => ({
-        dex: p.dexName,
-        router: p.router,
-        factory: p.factory,
-        base: p.baseName,
-        baseAddr: p.baseAddr,
-        pair: p.pair,
-        liquidityUsdApprox: (p.liqUsdApprox != null) ? Number(p.liqUsdApprox) : null,
-        lpBurnPct: (p.burnPct != null) ? Number(p.burnPct) : null
-      })),
-      score,
-      headline,
-      notes,
-      codeHash,
-      bytecodeBytes,
-      explorer,
-      generatedAt: new Date().toISOString()
+    const result = {
+      net: netKey,
+      chainId: chain.chainId,
+      token: E.getAddress(token),
+      ts: nowTs(),
+      meta: {},
+      proxy: {},
+      liquidity: {},
+      heuristics: {},
+      score: {}
     };
 
-    return { ok:true, badge, headline, score, notes, data: report };
-  }
-
-  function renderPairsCards(containerId, pairs, token){
-    const wrap = document.getElementById(containerId);
-    if (!wrap) return;
-    wrap.innerHTML = "";
-
-    if (!pairs || !pairs.length) return;
-
-    const top = pairs.slice(0, 6).map(p => {
-      const dex = DEXES_BSC.find(d => d.name === p.dex || d.key === p.dexKey);
-      const url = dex ? dex.swap(p.baseAddr, token) : "#";
-      const liq = (p.liquidityUsdApprox != null) ? fmtUsd(p.liquidityUsdApprox) : "—";
-      const burn = (p.lpBurnPct != null) ? `${p.lpBurnPct.toFixed(2)}%` : "—";
-
-      return `
-        <div class="card" style="padding:12px; margin-top:10px;">
-          <div class="row" style="justify-content:space-between; gap:8px;">
-            <div class="pill"><b>${p.dex}</b> • ${p.base}</div>
-            <a class="btn btn-ghost" href="${url}" target="_blank" rel="noopener" style="padding:10px 14px; font-size:12px;">Open Swap</a>
-          </div>
-          <div class="small" style="margin-top:8px">
-            <b>Pair:</b> <span class="mono">${p.pair}</span><br>
-            <b>Liquidity (approx):</b> ${liq}<br>
-            <b>LP Burn:</b> ${burn}
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    wrap.innerHTML = top;
-  }
-
-  // ===============================
-  // Panels / cubes navigation
-  // ===============================
-  const TOOL_KEYS = ["quick","approvals","rpc","monitor"];
-
-  function hideAllPanels(){
-    document.querySelectorAll(".panel-shell").forEach(p => p.classList.add("hidden"));
-    document.querySelectorAll(".tool-card").forEach(c => c.classList.remove("active"));
-  }
-
-  function showTool(toolKey, {scroll=true} = {}){
-    if (!TOOL_KEYS.includes(toolKey)) return;
-
-    document.querySelectorAll(".tool-card").forEach(c => {
-      c.classList.toggle("active", c.getAttribute("data-tool") === toolKey);
-    });
-
-    document.querySelectorAll(".panel-shell").forEach(p => p.classList.add("hidden"));
-    const panel = document.getElementById(`panel-${toolKey}`);
-    if (panel) panel.classList.remove("hidden");
-
-    if (scroll && panel) panel.scrollIntoView({ behavior:"smooth", block:"start" });
-  }
-
-  // ===============================
-  // Quick Scan History
-  // ===============================
-  const QS_HISTORY_KEY = "cx_qs_history_v1";
-
-  function qsLoadHistory(){
-    try { return JSON.parse(localStorage.getItem(QS_HISTORY_KEY) || "[]"); }
-    catch { return []; }
-  }
-  function qsSaveHistory(item){
-    const arr = qsLoadHistory();
-    const filtered = arr.filter(x => !(x.token === item.token && x.net === item.net));
-    filtered.unshift(item);
-    localStorage.setItem(QS_HISTORY_KEY, JSON.stringify(filtered.slice(0, 10)));
-  }
-  function qsRenderHistory(){
-    const box = document.getElementById("qs-history");
-    if (!box) return;
-    const arr = qsLoadHistory();
-    box.innerHTML = "";
-
-    if (!arr.length) {
-      box.innerHTML = `<div class="small muted">—</div>`;
-      return;
-    }
-
-    for (const it of arr) {
-      const el = document.createElement("div");
-      el.className = "chip";
-      el.innerHTML = `<span class="mono">${it.net.toUpperCase()}</span> ${fmtAddr(it.token)} <span class="x">•</span> <span>${it.score}</span>`;
-      el.addEventListener("click", () => {
-        const netSel = document.getElementById("qs-net");
-        const tokInp = document.getElementById("qs-token");
-        if (netSel) netSel.value = it.net;
-        if (tokInp) tokInp.value = it.token;
-        qsRun();
-      });
-      box.appendChild(el);
-    }
-  }
-
-  // ===============================
-  // Quick Scan
-  // ===============================
-  async function qsRun(){
-    const netSel = document.getElementById("qs-net");
-    const tokInp = document.getElementById("qs-token");
-    const out = document.getElementById("qs-out");
-    const status = document.getElementById("qs-status");
-    const requireLiqEl = document.getElementById("qs-require-liq");
-
-    if (!netSel || !tokInp || !out || !status || !requireLiqEl) return;
-
-    const net = netSel.value === "eth" ? "eth" : "bsc";
-    const raw = (tokInp.value || "").trim();
-
-    if (!raw) { setStatus(status,"warn","<strong>⚠️ Missing token address.</strong>"); return; }
-    if (!isHexAddr(raw)) { setStatus(status,"bad","<strong>❌ Invalid address.</strong> Expected 0x + 40 hex chars."); return; }
-
-    const token = toChecksum(raw);
-    const requireLiquidity = !!requireLiqEl.checked;
-
-    setStatus(status,"info",`<strong>⏳ Scanning…</strong><br>Network: <span class="mono">${net.toUpperCase()}</span>`);
-    setStatus(out,"info","<strong>⏳ Working…</strong>");
-    renderPairsCards("qs-pairsWrap", [], token);
-    CX.reports.quick = null;
-
     try {
-      const res = await scanTokenCore({ net, token, requireLiquidity });
-      if (!res.ok) {
-        setStatus(out, res.badge, `<strong>${res.headline}</strong><br>${res.notes.join("<br>")}`);
-        setStatus(status, res.badge, `<strong>Done.</strong> Score: ${res.score}`);
-        return;
+      // code present?
+      const code = await provider.getCode(result.token);
+      result.meta.hasCode = !!code && code !== "0x";
+
+      // basic ERC20 metadata
+      const erc = new E.Contract(result.token, ERC20_ABI, provider);
+      let name = "", symbol = "", decimals = null, totalSupply = null;
+      try { name = await erc.name(); } catch {}
+      try { symbol = await erc.symbol(); } catch {}
+      try { decimals = await erc.decimals(); } catch {}
+      try { totalSupply = await erc.totalSupply(); } catch {}
+      result.meta.name = name || "";
+      result.meta.symbol = symbol || "";
+      result.meta.decimals = (decimals !== null && decimals !== undefined) ? Number(decimals) : null;
+      result.meta.totalSupply = totalSupply ? totalSupply.toString() : "";
+
+      // owner
+      let owner = "";
+      try { owner = await erc.owner(); } catch {}
+      result.meta.owner = owner || "";
+
+      // proxy detection
+      const impl = await getProxyImpl(provider, result.token);
+      result.proxy.isProxy = !!impl;
+      result.proxy.implementation = impl || "";
+
+      // Explorer verified + keyword heuristics
+      const ex = await fetchExplorerData(netKey, result.token);
+      result.meta.verified = !!ex?.isVerified;
+      result.meta.contractName = ex?.contractName || "";
+      if (ex?.ok && ex?.isVerified && ex?.source) {
+        const h = await keywordHeuristicsFromSource(ex.source);
+        result.heuristics = { ...h };
+      } else {
+        result.heuristics = { mint: false, pause: false, blacklist: false, tax: false };
       }
 
-      CX.reports.quick = res.data;
+      // Liquidity V2
+      let v2 = { exists: false };
+      try { v2 = await checkV2Liquidity(provider, netKey, result.token); } catch {}
+      result.liquidity.v2 = v2;
 
-      const explorer = res.data.explorer || (net==="bsc" ? "https://bscscan.com" : "https://etherscan.io");
-      const supplyHuman = res.data.totalSupply ? fmtBigintUnits(BigInt(res.data.totalSupply), res.data.decimals) : "—";
-      const proxyLine = res.data.proxy?.isProxy ? `YES • Impl: <span class="mono">${res.data.proxy.impl}</span>` : "No";
-      const ownerLine = res.data.owner ? `<a href="${explorer}/address/${res.data.owner}" target="_blank" rel="noopener" class="mono">${fmtAddr(res.data.owner)}</a>` : "—";
+      // Liquidity V3 pools
+      let v3 = { pools: [] };
+      try { v3 = await checkV3Pools(provider, netKey, result.token); } catch {}
+      result.liquidity.v3 = v3;
 
-      const html = `
-        <strong>${res.headline}</strong><br><br>
+      // Score
+      const sig = {
+        hasCode: !!result.meta.hasCode,
+        verified: !!result.meta.verified,
+        isProxy: !!result.proxy.isProxy,
+        hasV2: !!v2?.exists,
+        hasV3: (v3?.pools?.length || 0) > 0,
+        requireLiquidity: requireLiq,
+        mint: !!result.heuristics.mint,
+        pause: !!result.heuristics.pause,
+        blacklist: !!result.heuristics.blacklist,
+        tax: !!result.heuristics.tax
+      };
+      const sc = scoreFromSignals(sig);
+      result.score = { ...sc, signals: sig };
 
-        <div class="badge-row" style="margin-top:4px">
-          <div class="badge"><strong>Risk score</strong>: ${res.data.score} (lower is better)</div>
-          <div class="badge"><strong>Proxy</strong>: ${proxyLine}</div>
-        </div>
+      // render
+      const level = sc.level;
+      const colorWord = level === "ok" ? "GREEN" : level === "warn" ? "YELLOW" : "RED";
 
-        <div style="margin-top:10px" class="small">
-          <b>Token:</b> <a href="${explorer}/address/${res.data.token}" target="_blank" rel="noopener" class="mono">${res.data.token}</a><br>
-          <b>Owner:</b> ${ownerLine}<br>
-          <b>Name:</b> ${String(res.data.name).replace(/</g,"&lt;")}<br>
-          <b>Symbol:</b> ${String(res.data.symbol).replace(/</g,"&lt;")}<br>
-          <b>Decimals:</b> ${res.data.decimals}<br>
-          <b>Total supply:</b> ${supplyHuman}<br>
-          <b>Code hash:</b> <span class="mono">${res.data.codeHash.slice(0,18)}…</span><br>
-          <b>Bytecode size:</b> ${res.data.bytecodeBytes.toLocaleString()} bytes
-        </div>
-
-        <div style="margin-top:12px" class="small">
-          <b>Signals:</b><br>
-          ${res.notes.map(n => "• " + n).join("<br>")}
+      let html = `
+        <div><b>Network:</b> ${chain.name} (${chain.chainId})</div>
+        <div><b>Token:</b> <a class="mono" target="_blank" rel="noopener" href="${chain.explorer}${result.token}">${result.token}</a></div>
+        <div style="margin-top:6px"><b>Score:</b> <span class="mono">${sc.score}/100</span> — <b>${colorWord}</b></div>
+        <div class="small" style="margin-top:8px">
+          Signals: ${sig.verified ? "Verified ✓" : "Not verified"} • ${sig.isProxy ? "Proxy hint ⚠" : "No proxy hint"} •
+          ${sig.hasV2 ? "V2 LP ✓" : "No V2 LP"} • ${sig.hasV3 ? "V3 pool ✓" : "No V3 pool"}
         </div>
       `;
 
-      setStatus(out, res.badge, html);
-      setStatus(status, res.badge, `<strong>Done.</strong> Score: ${res.score} (lower is better).`);
+      // details blocks
+      const metaLine = [
+        result.meta.name ? `Name: <span class="mono">${result.meta.name}</span>` : null,
+        result.meta.symbol ? `Symbol: <span class="mono">${result.meta.symbol}</span>` : null,
+        (result.meta.decimals !== null) ? `Decimals: <span class="mono">${result.meta.decimals}</span>` : null
+      ].filter(Boolean).join(" • ");
 
-      if (net === "bsc" && res.data.pairs?.length) {
-        renderPairsCards("qs-pairsWrap", res.data.pairs, res.data.token);
+      if (metaLine) html += `<div class="small" style="margin-top:10px">${metaLine}</div>`;
+
+      if (result.meta.owner) {
+        html += `<div class="small" style="margin-top:6px"><b>Owner:</b> <span class="mono">${result.meta.owner}</span></div>`;
       }
 
-      qsSaveHistory({ net, token: res.data.token, score: res.score, t: Date.now() });
-      qsRenderHistory();
-
-    } catch (e) {
-      console.error(e);
-      setStatus(out, "bad", `<strong>❌ Scan failed.</strong><br>${(e?.message || e).toString()}`);
-      setStatus(status, "bad", "<strong>❌ Scan failed.</strong> Try again or test RPCs.");
-    }
-  }
-
-  function qsBuildShareLink(){
-    const net = (document.getElementById("qs-net")?.value === "eth") ? "eth" : "bsc";
-    const raw = (document.getElementById("qs-token")?.value || "").trim();
-    if (!isHexAddr(raw)) return null;
-
-    const token = toChecksum(raw);
-    const requireLiquidity = !!document.getElementById("qs-require-liq")?.checked;
-
-    const u = new URL(window.location.href);
-    u.searchParams.set("tool", "quick");
-    u.searchParams.set("net", net);
-    u.searchParams.set("token", token);
-    if (requireLiquidity) u.searchParams.set("requireLiq","1"); else u.searchParams.delete("requireLiq");
-    return u.toString();
-  }
-
-  async function qsCopyLink(){
-    const status = document.getElementById("qs-status");
-    const link = qsBuildShareLink();
-    if (!link) { setStatus(status,"warn","<strong>⚠️ Paste a valid token first.</strong>"); return; }
-    await copyText(link);
-    setStatus(status,"ok",`<strong>✅ Link copied.</strong><br><span class="mono">${link}</span>`);
-  }
-
-  async function qsCopyJson(){
-    const status = document.getElementById("qs-status");
-    const enabled = !!document.getElementById("qs-show-json")?.checked;
-    if (!enabled) { setStatus(status,"warn","<strong>⚠️ JSON report disabled.</strong> Enable it in Options."); return; }
-    if (!CX.reports.quick) { setStatus(status,"warn","<strong>⚠️ No report yet.</strong> Run Scan first."); return; }
-    await copyText(JSON.stringify(CX.reports.quick, null, 2));
-    setStatus(status,"ok","<strong>✅ JSON copied.</strong>");
-  }
-
-  function qsShareX(){
-    const link = qsBuildShareLink() || window.location.href;
-    const txt = `Quick Scan (CycleX Security Hub)\n${link}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(txt)}`, "_blank", "noopener");
-  }
-  function qsShareTG(){
-    const link = qsBuildShareLink() || window.location.href;
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent("Quick Scan (CycleX Security Hub)")}`, "_blank", "noopener");
-  }
-
-  // ===============================
-  // Wallet connect helpers (AppKit + fallback)
-  // ===============================
-  function getAnyWalletProviderFromModal(modal){
-    return modal?.getWalletProvider?.() || modal?.getProvider?.() || modal?.getActiveProvider?.() || null;
-  }
-
-  async function waitForAppKitModal(timeoutMs=9000){
-    const t0 = Date.now();
-    while (Date.now() - t0 < timeoutMs) {
-      if (window.cxAppKitModal?.open && (window.cxAppKitModal?.getWalletProvider || window.cxAppKitModal?.getProvider)) return window.cxAppKitModal;
-      initAppKitOnce();
-      await sleep(150);
-    }
-    return null;
-  }
-
-  async function ensureChain(net){
-    const p = CX.wallet.provider;
-    if (!p?.request) return true;
-
-    const chainIdHex = (net === "bsc") ? "0x38" : "0x1";
-    try {
-      await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: chainIdHex }] });
-      return true;
-    } catch (e) {
-      if (net === "bsc") {
-        try {
-          await p.request({
-            method: "wallet_addEthereumChain",
-            params: [{
-              chainId: "0x38",
-              chainName: "BNB Smart Chain",
-              nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
-              rpcUrls: ["https://bsc-dataseed.binance.org"],
-              blockExplorerUrls: ["https://bscscan.com"]
-            }]
-          });
-          return true;
-        } catch {}
+      if (result.proxy.isProxy) {
+        html += `<div class="small" style="margin-top:6px"><b>Proxy implementation:</b> <span class="mono">${result.proxy.implementation}</span></div>`;
       }
-      return false;
-    }
-  }
 
-  function updateWalletLabels(addr){
-    const addrEl = document.getElementById("ap-address");
-    const pillEl = document.getElementById("ap-wallet");
-    const wl = document.getElementById("walletLabel");
-    if (addrEl) addrEl.textContent = addr;
-    if (pillEl) pillEl.textContent = addr;
-    if (wl) wl.textContent = addr;
-  }
+      // heuristics row
+      const h = result.heuristics || {};
+      const hList = [
+        h.mint ? "mint ⚠" : "mint ✓",
+        h.pause ? "pause ⚠" : "pause ✓",
+        h.blacklist ? "blacklist ⚠" : "blacklist ✓",
+        h.tax ? "tax/fee ⚠" : "tax/fee ✓"
+      ].join(" • ");
+      html += `<div class="small" style="margin-top:10px"><b>Heuristics:</b> ${hList}</div>`;
 
-  async function ensureConnected(preferredNet="bsc", statusElId="ap-status"){
-    const statusEl =
-      document.getElementById(statusElId) ||
-      document.getElementById("ap-status") ||
-      document.getElementById("qs-status");
-
-    // 1) Try AppKit modal
-    const modal = await waitForAppKitModal();
-    if (modal) {
-      try {
-        setStatus(statusEl, "info", "<strong>⏳ Opening wallet modal…</strong>");
-        try { await modal.open({ view: "ConnectWallet" }); }
-        catch { await modal.open(); }
-
-        // Wait for provider to appear
-        const start = Date.now();
-        while (Date.now() - start < 90000) {
-          const p = getAnyWalletProviderFromModal(modal);
-          if (p) {
-            CX.wallet.provider = p;
-
-            const okChain = await ensureChain(preferredNet);
-            if (!okChain) setStatus(statusEl, "warn", "<strong>⚠️ Please switch network in your wallet.</strong>");
-
-            const bp = new ethers.BrowserProvider(p);
-            CX.wallet.signer = await bp.getSigner();
-            CX.wallet.address = await CX.wallet.signer.getAddress();
-
-            updateWalletLabels(CX.wallet.address);
-            setStatus(statusEl, "ok", "<strong>✅ Wallet connected.</strong>");
-            return true;
-          }
-          await sleep(250);
+      // liquidity info
+      if (pairsWrap) {
+        let lpHtml = `<div class="small" style="margin-top:10px"><b>Liquidity:</b></div>`;
+        if (v2?.exists) {
+          lpHtml += badgeRowHtml("V2 Pair", `<a target="_blank" rel="noopener" href="${chain.explorer}${v2.pair}">${v2.pair}</a>`, "ok");
+        } else {
+          lpHtml += badgeRowHtml("V2 Pair", "Not found", requireLiq ? "bad" : "warn");
         }
+        if ((v3?.pools?.length || 0) > 0) {
+          const pools = v3.pools.map(p => `Fee ${p.fee}: <a target="_blank" rel="noopener" href="${chain.explorer}${p.pool}">${shortAddr(p.pool)}</a>`).join("<br>");
+          lpHtml += badgeRowHtml("V3 Pools", pools, "ok");
+        } else {
+          lpHtml += badgeRowHtml("V3 Pools", "Not found", "warn");
+        }
+        pairsWrap.innerHTML = lpHtml;
+      }
 
-        setStatus(statusEl, "warn", "<strong>⚠️ Connection timeout.</strong><br>Please try again.");
-        return false;
-      } catch (e) {
-        console.warn("AppKit connect failed:", e);
+      // final out
+      out.classList.remove("ok", "warn", "bad", "info");
+      out.classList.add(level);
+      out.style.display = "block";
+      out.innerHTML = html;
+
+      // history
+      pushHistory({ net: netKey, token: result.token });
+
+      // save last scan for share/copy
+      window.__cxLastScan = result;
+
+      setStatus(status, level, `Scan complete. Score: <b>${sc.score}/100</b>.`);
+      gtagEvent("sec_quick_scan_done", { net: netKey, score: sc.score });
+
+    } catch (e) {
+      setStatus(status, "bad", `Scan failed: ${String(e?.message || e)}`);
+      if (out) {
+        out.classList.remove("ok", "warn", "bad", "info");
+        out.classList.add("bad");
+        out.style.display = "block";
+        out.innerHTML = `<b>Failed.</b><br>${String(e?.message || e)}`;
       }
     }
-
-    // 2) Fallback: injected (MetaMask)
-    if (window.ethereum?.request) {
-      try {
-        setStatus(statusEl, "info", "<strong>⏳ Connecting (MetaMask)…</strong>");
-        await window.ethereum.request({ method: "eth_requestAccounts" });
-        CX.wallet.provider = window.ethereum;
-
-        const okChain = await ensureChain(preferredNet);
-        if (!okChain) setStatus(statusEl, "warn", "<strong>⚠️ Please switch network in your wallet.</strong>");
-
-        const bp = new ethers.BrowserProvider(window.ethereum);
-        CX.wallet.signer = await bp.getSigner();
-        CX.wallet.address = await CX.wallet.signer.getAddress();
-
-        updateWalletLabels(CX.wallet.address);
-        setStatus(statusEl, "ok", "<strong>✅ Wallet connected (injected).</strong>");
-        return true;
-      } catch (e) {
-        setStatus(statusEl, "bad", `<strong>❌ Wallet connect failed.</strong><br>${(e?.message || e).toString()}`);
-        return false;
-      }
-    }
-
-    setStatus(statusEl, "bad", "<strong>❌ No wallet available.</strong><br>Install MetaMask or allow WalletConnect.");
-    return false;
   }
 
-  // ===============================
-  // Approvals Guardian
-  // ===============================
-  const ALLOW_ABI = [
+  $("#qs-run")?.addEventListener("click", runQuickScan);
+
+  $("#qs-copy-json")?.addEventListener("click", async () => {
+    const last = window.__cxLastScan;
+    if (!last) return setStatus($("#qs-status"), "warn", "Nothing to copy yet. Run a scan first.");
+    const ok = await copyText(safeJson(last));
+    setStatus($("#qs-status"), ok ? "ok" : "bad", ok ? "Copied JSON to clipboard." : "Copy failed.");
+    gtagEvent("sec_copy_json", { ok: ok ? 1 : 0 });
+  });
+
+  $("#qs-copy-link")?.addEventListener("click", async () => {
+    const netKey = ($("#qs-net")?.value || "bsc").toLowerCase();
+    const token = ($("#qs-token")?.value || "").trim();
+    if (!E.isAddress(token)) return setStatus($("#qs-status"), "bad", "Invalid token address.");
+
+    const u = new URL(location.href);
+    u.searchParams.set("tool", "quick");
+    u.searchParams.set("net", netKey);
+    u.searchParams.set("token", E.getAddress(token));
+
+    const ok = await copyText(u.toString());
+    setStatus($("#qs-status"), ok ? "ok" : "bad", ok ? "Share link copied." : "Copy failed.");
+    gtagEvent("sec_copy_link", { ok: ok ? 1 : 0 });
+  });
+
+  $("#qs-share-x")?.addEventListener("click", () => {
+    const last = window.__cxLastScan;
+    const base = new URL(location.href);
+    base.searchParams.set("tool", "quick");
+    if (last?.net) base.searchParams.set("net", last.net);
+    if (last?.token) base.searchParams.set("token", last.token);
+    const text = last
+      ? `Quick Scan ${last.net.toUpperCase()} • ${shortAddr(last.token)} • Score ${last.score.score}/100`
+      : "CycleX Security Hub — Quick Scan";
+    const share = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(base.toString())}`;
+    window.open(share, "_blank", "noopener,noreferrer");
+    gtagEvent("sec_share_x");
+  });
+
+  $("#qs-share-tg")?.addEventListener("click", () => {
+    const last = window.__cxLastScan;
+    const base = new URL(location.href);
+    base.searchParams.set("tool", "quick");
+    if (last?.net) base.searchParams.set("net", last.net);
+    if (last?.token) base.searchParams.set("token", last.token);
+    const text = last
+      ? `Quick Scan ${last.net.toUpperCase()} • ${shortAddr(last.token)} • Score ${last.score.score}/100`
+      : "CycleX Security Hub — Quick Scan";
+    const share = `https://t.me/share/url?url=${encodeURIComponent(base.toString())}&text=${encodeURIComponent(text)}`;
+    window.open(share, "_blank", "noopener,noreferrer");
+    gtagEvent("sec_share_tg");
+  });
+
+  // =========================
+  // Approval Guardian
+  // =========================
+  const ERC20_ALLOW_ABI = [
     "function allowance(address owner, address spender) view returns (uint256)",
-    "function approve(address spender, uint256 value) returns (bool)",
+    "function symbol() view returns (string)",
     "function decimals() view returns (uint8)",
-    "function symbol() view returns (string)"
+    "function approve(address spender, uint256 value) returns (bool)"
   ];
-  const MAX_UINT = (1n << 256n) - 1n;
 
-  const UNI_V2_ROUTER_ETH = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
-  const PCS_V2_ROUTER_BSC = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
-
-  function apSetStatus(kind, html){ setStatus(document.getElementById("ap-status"), kind, html); }
-  function apGetNet(){ return (document.getElementById("ap-net")?.value === "eth") ? "eth" : "bsc"; }
-
-  function apGetSpender(){
-    const preset = document.getElementById("ap-spender-preset")?.value;
-    const input = (document.getElementById("ap-spender")?.value || "").trim();
-
-    if (preset === "pcs_router") return PCS_V2_ROUTER_BSC;
-    if (preset === "uni_router") return UNI_V2_ROUTER_ETH;
-    if (preset === "custom") return input;
-    return input;
+  function getSpenderPreset(netKey, presetKey) {
+    if (presetKey === "custom") return "";
+    if (presetKey === "pcs_router") return CHAINS.bsc.v2.router;
+    if (presetKey === "uni_router") return CHAINS.eth.v2.router;
+    return "";
   }
 
-  function apParseTokens(){
-    const raw = document.getElementById("ap-tokens")?.value || "";
-    return raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).filter(isHexAddr).map(toChecksum);
+  function normalizeLines(text) {
+    return (text || "")
+      .split("\n")
+      .map(s => s.trim())
+      .filter(Boolean);
   }
 
-  function apRenderRows(rows){
-    const table = document.getElementById("ap-table");
+  async function apEnsureWalletForNet(netKey) {
+    const st = $("#ap-status");
+    if (!wallet.address || !wallet.provider || !wallet.signer) {
+      setStatus(st, "info", "Connecting wallet…");
+      const ok = await connectInjected();
+      if (!ok) return false;
+    }
+
+    const target = CHAINS[netKey].chainId;
+    if (wallet.chainId !== target) {
+      setStatus(st, "warn", `Wallet network mismatch. Trying to switch to ${CHAINS[netKey].name}…`);
+      const switched = await ensureChain(target);
+      if (!switched) {
+        setStatus(st, "bad", `Please switch network in your wallet to ${CHAINS[netKey].name}.`);
+        return false;
+      }
+      // refresh provider/signer after switch
+      await connectInjected();
+    }
+    return true;
+  }
+
+  function apRenderTable(rows) {
+    const table = $("#ap-table");
     if (!table) return;
 
-    const head = table.querySelector(".trow.head");
-    table.innerHTML = "";
-    if (head) table.appendChild(head);
+    // keep header, remove others
+    const kids = Array.from(table.querySelectorAll(".trow")).slice(1);
+    kids.forEach(k => k.remove());
 
     if (!rows.length) {
-      const row = document.createElement("div");
-      row.className = "trow";
-      row.innerHTML = `<div class="cell muted">—</div><div class="cell muted">—</div><div class="cell muted hide-sm">—</div><div class="cell muted">—</div>`;
-      table.appendChild(row);
+      const tr = document.createElement("div");
+      tr.className = "trow";
+      tr.innerHTML = `<div class="cell muted">—</div><div class="cell muted">—</div><div class="cell muted hide-sm">—</div><div class="cell muted">—</div>`;
+      table.appendChild(tr);
       return;
     }
 
-    for (const r of rows) {
-      const row = document.createElement("div");
-      row.className = "trow";
-      const allowanceStr = r.allowanceInf ? "∞ (infinite)" : r.allowanceHuman;
-
-      row.innerHTML = `
-        <div class="cell mono" title="${r.token}">${r.token}</div>
-        <div class="cell">${allowanceStr}</div>
-        <div class="cell hide-sm">${r.symbol || "—"}</div>
+    rows.forEach(r => {
+      const tr = document.createElement("div");
+      tr.className = "trow" + (r.nonZero ? " highlight" : "");
+      tr.innerHTML = `
+        <div class="cell wrap"><span class="mono">${r.token}</span></div>
+        <div class="cell"><span class="mono">${r.allowanceHuman}</span></div>
+        <div class="cell hide-sm"><span class="mini">${r.symbol || "—"}</span></div>
         <div class="cell">
-          <button class="btn btn-ghost" data-token="${r.token}" ${(!r.canRevoke ? "disabled" : "")} style="padding:10px 14px; font-size:12px;">
-            Revoke
-          </button>
+          <button class="btn btn-ghost" style="padding:8px 12px; font-size:12px;" ${r.nonZero ? "" : "disabled"}>Revoke</button>
         </div>
       `;
-      table.appendChild(row);
-    }
-
-    table.querySelectorAll("button[data-token]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const token = btn.getAttribute("data-token");
-        await apRevokeOne(token);
+      const btn = tr.querySelector("button");
+      btn?.addEventListener("click", async () => {
+        await apRevokeOne(r.token);
       });
+      table.appendChild(tr);
     });
   }
 
-  async function apCheck(){
-    const net = apGetNet();
-    const ok = CX.wallet.address ? true : await ensureConnected(net, "ap-status");
+  async function apCheck() {
+    const st = $("#ap-status");
+    clearStatus(st);
+
+    const netKey = ($("#ap-net")?.value || "bsc").toLowerCase();
+    const ok = await apEnsureWalletForNet(netKey);
     if (!ok) return;
 
-    await ensureChain(net);
+    const preset = ($("#ap-spender-preset")?.value || "custom");
+    const presetAddr = getSpenderPreset(netKey, preset);
+    if (preset !== "custom") $("#ap-spender").value = presetAddr;
 
-    const spenderRaw = apGetSpender();
-    if (!isHexAddr(spenderRaw)) { apSetStatus("bad","<strong>❌ Invalid spender address.</strong>"); return; }
-    const spender = toChecksum(spenderRaw);
+    const spender = ($("#ap-spender")?.value || "").trim();
+    if (!E.isAddress(spender)) return setStatus(st, "bad", "Invalid spender address.");
 
-    const tokens = apParseTokens();
-    if (!tokens.length) { apSetStatus("warn","<strong>⚠️ No valid token addresses.</strong><br>One per line."); return; }
+    const tokenLines = normalizeLines($("#ap-tokens")?.value || "");
+    const tokens = tokenLines.filter(E.isAddress).map(a => E.getAddress(a));
+    if (!tokens.length) return setStatus(st, "warn", "Paste at least 1 token address.");
 
-    apSetStatus("info", `<strong>⏳ Checking allowances…</strong><br>Owner: <span class="mono">${fmtAddr(CX.wallet.address)}</span> • Spender: <span class="mono">${fmtAddr(spender)}</span>`);
+    setStatus(st, "info", "Checking allowances…");
 
     const rows = [];
-    for (const t of tokens) {
+    for (const token of tokens) {
       try {
-        const c = new ethers.Contract(t, ALLOW_ABI, CX.wallet.signer);
-        let sym="—", dec=18;
-        try { sym = await c.symbol(); } catch {}
-        try { dec = Number(await c.decimals()); } catch {}
-        const a = BigInt(await c.allowance(CX.wallet.address, spender));
-        const isInf = (a > (MAX_UINT / 2n));
-        const human = isInf ? "∞" : (a === 0n ? "0" : fmtBigintUnits(a, dec));
-        rows.push({ token:t, symbol:sym, allowance:a, allowanceInf:isInf, allowanceHuman:human, canRevoke:(a>0n) });
-      } catch {
-        rows.push({ token:t, symbol:"—", allowance:0n, allowanceInf:false, allowanceHuman:"error", canRevoke:false });
+        const c = new E.Contract(token, ERC20_ALLOW_ABI, wallet.provider);
+        const [allow, sym, dec] = await Promise.all([
+          c.allowance(wallet.address, spender),
+          c.symbol().catch(() => ""),
+          c.decimals().catch(() => 18)
+        ]);
+        const d = Number(dec || 18);
+        const human = (() => {
+          try { return E.formatUnits(allow, d); } catch { return allow.toString(); }
+        })();
+        const nonZero = allow > 0n;
+        rows.push({ token, symbol: sym, allowance: allow, allowanceHuman: human, nonZero });
+      } catch (e) {
+        rows.push({ token, symbol: "", allowance: 0n, allowanceHuman: "error", nonZero: false });
       }
     }
 
-    apRenderRows(rows);
-    const nonZero = rows.filter(r=>r.allowance>0n).length;
-    apSetStatus(nonZero ? "warn" : "ok", `<strong>Done.</strong><br>Checked ${rows.length}. Non-zero: ${nonZero}.`);
+    window.__cxAp = { net: netKey, spender, rows };
+    apRenderTable(rows);
+
+    const nz = rows.filter(r => r.nonZero).length;
+    setStatus(st, nz ? "warn" : "ok", nz ? `Found ${nz} non-zero allowance(s).` : "No non-zero allowances found.");
+    gtagEvent("sec_allow_check_done", { net: netKey, nonZero: nz });
   }
 
-  async function apRevokeOne(tokenAddr){
-    const net = apGetNet();
-    if (!CX.wallet.address || !CX.wallet.signer) { apSetStatus("warn","<strong>⚠️ Connect wallet first.</strong>"); return; }
-    await ensureChain(net);
-
-    const spenderRaw = apGetSpender();
-    if (!isHexAddr(spenderRaw)) { apSetStatus("bad","<strong>❌ Invalid spender address.</strong>"); return; }
-    const spender = toChecksum(spenderRaw);
-    const token = toChecksum(tokenAddr);
-
-    apSetStatus("info", `<strong>⏳ Revoking…</strong><br>Token: <span class="mono">${fmtAddr(token)}</span> • Spender: <span class="mono">${fmtAddr(spender)}</span>`);
-    try {
-      const c = new ethers.Contract(token, ALLOW_ABI, CX.wallet.signer);
-      const tx = await c.approve(spender, 0);
-      apSetStatus("info", `<strong>⏳ Pending…</strong><br><span class="mono">${tx.hash}</span>`);
-      await tx.wait();
-      apSetStatus("ok", "<strong>✅ Revoke successful.</strong>");
-      await apCheck();
-    } catch (e) {
-      console.error(e);
-      apSetStatus("bad", `<strong>❌ Revoke failed.</strong><br>${(e?.message || e).toString()}`);
-    }
-  }
-
-  async function apRevokeAllNonZero(){
-    const net = apGetNet();
-    const ok = CX.wallet.address ? true : await ensureConnected(net, "ap-status");
+  async function apRevokeOne(tokenAddr) {
+    const st = $("#ap-status");
+    const netKey = ($("#ap-net")?.value || "bsc").toLowerCase();
+    const ok = await apEnsureWalletForNet(netKey);
     if (!ok) return;
 
-    await apCheck();
+    const spender = ($("#ap-spender")?.value || "").trim();
+    if (!E.isAddress(spender)) return setStatus(st, "bad", "Invalid spender address.");
 
-    const toRevoke = [];
-    document.querySelectorAll("#ap-table button[data-token]").forEach(btn => {
-      if (!btn.disabled) toRevoke.push(btn.getAttribute("data-token"));
-    });
-
-    if (!toRevoke.length) { apSetStatus("ok","<strong>✅ Nothing to revoke.</strong>"); return; }
-
-    apSetStatus("warn", `<strong>⏳ Revoking ${toRevoke.length} token(s)…</strong><br>This will send multiple transactions.`);
-    for (const t of toRevoke) { await apRevokeOne(t); await sleep(500); }
-    apSetStatus("ok","<strong>✅ Revoke batch finished.</strong>");
-  }
-
-  const COMMON_BSC = [ WBNB, USDT, USDC, BUSD, "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82" ];
-  const COMMON_ETH = [ WETH, "0xdAC17F958D2ee523a2206206994597C13D831ec7", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "0x6B175474E89094C44Da98b954EedeAC495271d0F" ];
-
-  function apSeedCommon(){
-    const net = apGetNet();
-    const list = (net === "eth") ? COMMON_ETH : COMMON_BSC;
-    const ta = document.getElementById("ap-tokens");
-    if (!ta) return;
-    ta.value = list.join("\n");
-    apSetStatus("ok", "<strong>✅ Seeded common tokens.</strong>");
-  }
-
-  function apSeedHistory(){
-    const net = apGetNet();
-    const arr = qsLoadHistory().filter(x => x.net === net).map(x => x.token);
-    const unique = Array.from(new Set(arr)).slice(0, 15);
-    const ta = document.getElementById("ap-tokens");
-    if (!ta) return;
-
-    if (!unique.length) {
-      apSetStatus("warn", "<strong>⚠️ No scan history for this network yet.</strong>");
-      return;
-    }
-    ta.value = unique.join("\n");
-    apSetStatus("ok", "<strong>✅ Seeded from scan history.</strong>");
-  }
-
-  function apApplyPreset(){
-    const preset = document.getElementById("ap-spender-preset")?.value;
-    const input  = document.getElementById("ap-spender");
-    const netSel = document.getElementById("ap-net");
-    if (!input) return;
-
-    if (preset === "pcs_router") {
-      input.value = PCS_V2_ROUTER_BSC;
-      input.disabled = true;
-      if (netSel) netSel.value = "bsc";
-    } else if (preset === "uni_router") {
-      input.value = UNI_V2_ROUTER_ETH;
-      input.disabled = true;
-      if (netSel) netSel.value = "eth";
-    } else {
-      input.disabled = false;
-      if (!input.value || input.value === PCS_V2_ROUTER_BSC || input.value === UNI_V2_ROUTER_ETH) input.value = "";
-    }
-  }
-
-  // ===============================
-  // RPC Checker — adds Read Logs test
-  // ===============================
-  async function rpcCanReadLogs(p, net, block){
-    // tiny log query: fromBlock=toBlock=latestBlock, address=known contract
-    const addr = (net === "bsc") ? WBNB : WETH;
-    const hex = "0x" + Number(block).toString(16);
     try {
-      const logs = await p.send("eth_getLogs", [{ fromBlock: hex, toBlock: hex, address: addr }]);
-      return Array.isArray(logs);
+      setStatus(st, "info", `Revoking… ${shortAddr(tokenAddr)}`);
+      const c = new E.Contract(tokenAddr, ERC20_ALLOW_ABI, wallet.signer);
+      const tx = await c.approve(E.getAddress(spender), 0);
+      setStatus(st, "info", `Tx sent: <span class="mono">${tx.hash}</span><br>Waiting confirmation…`);
+      await tx.wait();
+      setStatus(st, "ok", "Revoke confirmed.");
+      gtagEvent("sec_revoke_one_done", { net: netKey });
+      await apCheck();
+    } catch (e) {
+      setStatus(st, "bad", `Revoke failed: ${String(e?.message || e)}`);
+    }
+  }
+
+  async function apRevokeAll() {
+    const st = $("#ap-status");
+    if (!window.__cxAp?.rows?.length) return setStatus(st, "warn", "Run Check first.");
+
+    const rows = window.__cxAp.rows.filter(r => r.nonZero);
+    if (!rows.length) return setStatus(st, "ok", "Nothing to revoke.");
+
+    setStatus(st, "warn", `Revoking ${rows.length} allowance(s)… Please confirm transactions in your wallet.`);
+
+    for (const r of rows) {
+      await apRevokeOne(r.token);
+    }
+  }
+
+  $("#ap-check")?.addEventListener("click", apCheck);
+  $("#ap-revoke-all")?.addEventListener("click", apRevokeAll);
+
+  $("#ap-spender-preset")?.addEventListener("change", () => {
+    const netKey = ($("#ap-net")?.value || "bsc").toLowerCase();
+    const preset = ($("#ap-spender-preset")?.value || "custom");
+    const p = getSpenderPreset(netKey, preset);
+    if (preset !== "custom") $("#ap-spender").value = p;
+  });
+
+  $("#ap-net")?.addEventListener("change", () => {
+    // refresh preset to match chain
+    const netKey = ($("#ap-net")?.value || "bsc").toLowerCase();
+    const preset = ($("#ap-spender-preset")?.value || "custom");
+    const p = getSpenderPreset(netKey, preset);
+    if (preset !== "custom") $("#ap-spender").value = p;
+  });
+
+  $("#ap-seed-common")?.addEventListener("click", () => {
+    // minimal seed list – keep it clean
+    const netKey = ($("#ap-net")?.value || "bsc").toLowerCase();
+    const common = netKey === "bsc"
+      ? [
+          "0xe9e7cea3dedca5984780bafc599bd69add087d56", // BUSD (legacy)
+          "0x55d398326f99059ff775485246999027b3197955", // USDT
+          "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"  // USDC
+        ]
+      : [
+          "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT
+          "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  // USDC
+        ];
+    $("#ap-tokens").value = common.join("\n");
+    setStatus($("#ap-status"), "ok", "Seeded common tokens.");
+    gtagEvent("sec_seed_common", { net: netKey });
+  });
+
+  $("#ap-seed-history")?.addEventListener("click", () => {
+    const items = loadHistory();
+    const uniq = Array.from(new Set(items.map(x => (x.token || "").toLowerCase()))).slice(0, 10);
+    $("#ap-tokens").value = uniq.map(a => E.getAddress(a)).join("\n");
+    setStatus($("#ap-status"), uniq.length ? "ok" : "warn", uniq.length ? "Loaded from scan history." : "No scan history yet.");
+    gtagEvent("sec_seed_history", { count: uniq.length });
+  });
+
+  // =========================
+  // RPC Health Checker
+  // =========================
+  function rpcGetList(netKey) {
+    const c = CHAINS[netKey] || CHAINS.bsc;
+    const custom = ($("#rpc-custom")?.value || "").trim();
+    const list = [];
+    if (custom) list.push(custom);
+    c.rpcList.forEach(u => list.push(u));
+    // de-dupe
+    return Array.from(new Set(list));
+  }
+
+  function rpcAddRow(row) {
+    const table = $("#rpc-table");
+    if (!table) return;
+
+    const div = document.createElement("div");
+    div.className = "trow rpc";
+    div.dataset.rpc = row.rpc;
+    div.innerHTML = `
+      <div class="cell wrap"><span class="mono">${row.rpc}</span></div>
+      <div class="cell"><span class="mono">${row.latencyMs ?? "—"}</span></div>
+      <div class="cell hide-sm"><span class="mono">${row.block ?? "—"}</span></div>
+      <div class="cell hide-sm">${row.readLogs === true ? "✓" : row.readLogs === false ? "✗" : "—"}</div>
+      <div class="cell">${row.ok ? "OK" : "FAIL"}</div>
+    `;
+    if (row.best) div.classList.add("highlight");
+    table.appendChild(div);
+  }
+
+  async function rpcTestOne(rpcUrl, chainId, netKey) {
+    const t0 = performance.now();
+    const p = getProviderForRpc(rpcUrl, chainId);
+
+    // blockNumber
+    let block = null;
+    try {
+      block = await Promise.race([
+        p.getBlockNumber(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000))
+      ]);
+    } catch (e) {
+      return { rpc: rpcUrl, ok: false, latencyMs: null, block: null, readLogs: null, err: String(e?.message || e) };
+    }
+
+    const latencyMs = Math.round(performance.now() - t0);
+
+    // read logs check (very small range)
+    let readLogs = false;
+    try {
+      const addr = CHAINS[netKey].wrapped;
+      const topic0 = E.id("Transfer(address,address,uint256)");
+      const fromBlock = Math.max(0, Number(block) - 120);
+      const params = [{
+        address: addr,
+        fromBlock: E.toBeHex(fromBlock),
+        toBlock: E.toBeHex(Number(block)),
+        topics: [topic0]
+      }];
+
+      // raw call
+      const logs = await Promise.race([
+        p.send("eth_getLogs", params),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), 9000))
+      ]);
+      readLogs = Array.isArray(logs);
     } catch {
-      return false;
-    }
-  }
-
-  function rpcRow(url, latency, block, logsOk, ok){
-    const table = document.getElementById("rpc-table");
-    if (!table) return;
-
-    const row = document.createElement("div");
-    row.className = "trow rpc";
-
-    const tag = ok ? "✅ OK" : "❌ Fail";
-    const lat = ok ? (latency.toFixed(0) + " ms") : "—";
-    const blockStr = ok ? String(block) : "—";
-    const logsStr = ok ? (logsOk ? "✅" : "❌") : "—";
-
-    row.innerHTML = `
-      <div class="cell mono" title="${url}">${url}</div>
-      <div class="cell">${lat}</div>
-      <div class="cell hide-sm">${blockStr}</div>
-      <div class="cell hide-sm">${logsStr}</div>
-      <div class="cell">${tag}</div>
-    `;
-
-    if (ok && url === CX.rpc.best) {
-      row.style.background = "rgba(0,230,118,0.10)";
-      row.style.borderTopColor = "rgba(0,230,118,0.20)";
+      readLogs = false;
     }
 
-    table.appendChild(row);
+    return { rpc: rpcUrl, ok: true, latencyMs, block, readLogs };
   }
 
-  async function rpcTestAll(){
-    const status = document.getElementById("rpc-status");
-    const netSel = document.getElementById("rpc-net");
-    const custom = (document.getElementById("rpc-custom")?.value || "").trim();
+  async function rpcTestAll() {
+    const st = $("#rpc-status");
+    clearStatus(st);
 
-    const net = (netSel?.value === "eth") ? "eth" : "bsc";
-    const expectChainId = (net === "bsc") ? 56 : 1;
+    const netKey = ($("#rpc-net")?.value || "bsc").toLowerCase();
+    const c = CHAINS[netKey] || CHAINS.bsc;
 
-    const list = [...(RPCS[net] || [])];
-    if (custom) list.unshift(custom);
-
-    const table = document.getElementById("rpc-table");
-    if (!table) return;
-
-    table.innerHTML = `
-      <div class="trow head rpc">
-        <div class="cell">RPC</div>
-        <div class="cell">Latency</div>
-        <div class="cell hide-sm">Block</div>
-        <div class="cell hide-sm">Read logs</div>
-        <div class="cell">Status</div>
-      </div>
-    `;
-
-    setStatus(status, "info", `<strong>⏳ Testing ${list.length} RPC(s)…</strong> <span class="mono">${net.toUpperCase()}</span>`);
-    CX.rpc.best = "";
-    CX.rpc.last = [];
-    let bestMs = Infinity;
-
-    for (const url of list) {
-      let ok = false, ms = 0, block = 0, logsOk = false;
-
-      try {
-        const p = new ethers.JsonRpcProvider(url);
-        const t0 = performance.now();
-        block = await p.getBlockNumber();
-        const n = await p.getNetwork();
-        const t1 = performance.now();
-        ms = (t1 - t0);
-        if (Number(n.chainId) !== expectChainId) throw new Error("Wrong chainId");
-
-        logsOk = await rpcCanReadLogs(p, net, block);
-        ok = true;
-
-        // pick best based on latency + must have logsOk
-        const rank = logsOk ? ms : (ms + 1500);
-        if (rank < bestMs) { bestMs = rank; CX.rpc.best = url; }
-      } catch { ok = false; }
-
-      CX.rpc.last.push({ url, ok, latencyMs: ok ? ms : null, block: ok ? block : null, logsOk: ok ? logsOk : null, net });
-      rpcRow(url, ms, block, logsOk, ok);
-      await sleep(120);
+    // clear table rows except header
+    const table = $("#rpc-table");
+    if (table) {
+      const rows = Array.from(table.querySelectorAll(".trow")).slice(1);
+      rows.forEach(r => r.remove());
     }
 
-    if (CX.rpc.best) setStatus(status, "ok", `<strong>✅ Best RPC:</strong> <span class="mono">${CX.rpc.best}</span>`);
-    else setStatus(status, "bad", "<strong>❌ All RPC tests failed.</strong><br>Try a different custom RPC.");
+    const list = rpcGetList(netKey);
+    setStatus(st, "info", `Testing ${list.length} RPC(s)…`);
+
+    const results = [];
+    for (const rpc of list) {
+      const r = await rpcTestOne(rpc, c.chainId, netKey);
+      results.push(r);
+      rpcAddRow({ ...r, best: false });
+    }
+
+    // pick best: ok + readLogs true preferred, lowest latency
+    const okOnes = results.filter(r => r.ok);
+    const okWithLogs = okOnes.filter(r => r.readLogs);
+    const pickFrom = okWithLogs.length ? okWithLogs : okOnes;
+    const best = pickFrom.sort((a,b) => (a.latencyMs ?? 1e9) - (b.latencyMs ?? 1e9))[0] || null;
+
+    // re-highlight
+    if (best && table) {
+      Array.from(table.querySelectorAll(".trow.rpc")).forEach(r => {
+        r.classList.toggle("highlight", r.dataset.rpc === best.rpc);
+      });
+    }
+
+    window.__cxRpc = { net: netKey, results, best };
+
+    if (!best) setStatus(st, "bad", "All RPCs failed (CORS/timeout). Try a different endpoint or run from a different network.");
+    else setStatus(st, best.readLogs ? "ok" : "warn", `Best RPC: <span class="mono">${best.rpc}</span> (${best.latencyMs}ms) • logs: ${best.readLogs ? "OK" : "FAIL"}`);
+
+    gtagEvent("sec_rpc_test_done", { net: netKey, ok: okOnes.length });
   }
 
-  async function rpcCopyBest(){
-    const status = document.getElementById("rpc-status");
-    if (!CX.rpc.best) { setStatus(status, "warn", "<strong>⚠️ No best RPC yet.</strong><br>Run Test RPCs first."); return; }
-    await copyText(CX.rpc.best);
-    setStatus(status, "ok", `<strong>✅ Copied:</strong> <span class="mono">${CX.rpc.best}</span>`);
+  $("#rpc-test")?.addEventListener("click", rpcTestAll);
+
+  $("#rpc-copy-best")?.addEventListener("click", async () => {
+    const st = $("#rpc-status");
+    const best = window.__cxRpc?.best;
+    if (!best) return setStatus(st, "warn", "Run Test RPCs first.");
+    const ok = await copyText(best.rpc);
+    setStatus(st, ok ? "ok" : "bad", ok ? "Copied best RPC." : "Copy failed.");
+    gtagEvent("sec_rpc_copy_best", { ok: ok ? 1 : 0 });
+  });
+
+  $("#rpc-copy-json")?.addEventListener("click", async () => {
+    const st = $("#rpc-status");
+    const res = window.__cxRpc?.results;
+    if (!res?.length) return setStatus(st, "warn", "Run Test RPCs first.");
+    const list = res.map(r => r.rpc);
+    const ok = await copyText(safeJson(list));
+    setStatus(st, ok ? "ok" : "bad", ok ? "Copied JSON list." : "Copy failed.");
+    gtagEvent("sec_rpc_copy_json", { ok: ok ? 1 : 0 });
+  });
+
+  // =========================
+  // Contract Monitor
+  // =========================
+  const MON_LS = "cx_sec_monitor_list";
+
+  function monLoad() {
+    try {
+      const raw = localStorage.getItem(MON_LS);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
   }
 
-  async function rpcCopyJson(){
-    const status = document.getElementById("rpc-status");
-    if (!CX.rpc.last?.length) { setStatus(status, "warn", "<strong>⚠️ No results yet.</strong> Run Test RPCs first."); return; }
-    await copyText(JSON.stringify(CX.rpc.last, null, 2));
-    setStatus(status, "ok", "<strong>✅ JSON copied.</strong>");
+  function monSave(arr) {
+    try { localStorage.setItem(MON_LS, JSON.stringify(arr)); } catch {}
   }
 
-  // ===============================
-  // Monitor
-  // ===============================
-  const MON_KEY = "cx_monitor_watchlist_v1";
-
-  function monLoad(){
-    try { CX.monitor.list = JSON.parse(localStorage.getItem(MON_KEY) || "[]"); }
-    catch { CX.monitor.list = []; }
+  function monKey(net, addr) {
+    return `${net}:${addr.toLowerCase()}`;
   }
 
-  function monSave(){
-    localStorage.setItem(MON_KEY, JSON.stringify(CX.monitor.list));
+  async function monFetchInfo(netKey, addr) {
+    const c = CHAINS[netKey] || CHAINS.bsc;
+    const p = getDefaultProvider(netKey);
+    const code = await p.getCode(addr);
+    const hasCode = code && code !== "0x";
+    const codeHash = hasCode ? E.keccak256(code) : "";
+    const impl = hasCode ? await getProxyImpl(p, addr) : "";
+    return { net: netKey, chainId: c.chainId, addr, hasCode, codeHash, impl, ts: nowTs() };
   }
 
-  function monRender(){
-    const table = document.getElementById("mon-table");
+  function monRender() {
+    const table = $("#mon-table");
     if (!table) return;
 
-    const head = table.querySelector(".trow.head");
-    table.innerHTML = "";
-    if (head) table.appendChild(head);
+    // remove existing non-header rows
+    const rows = Array.from(table.querySelectorAll(".trow")).slice(1);
+    rows.forEach(r => r.remove());
 
-    if (!CX.monitor.list.length) {
-      const row = document.createElement("div");
-      row.className = "trow";
-      row.innerHTML = `<div class="cell muted">—</div><div class="cell muted">—</div><div class="cell muted hide-sm">—</div><div class="cell muted">—</div>`;
-      table.appendChild(row);
+    const list = monLoad();
+    if (!list.length) {
+      const tr = document.createElement("div");
+      tr.className = "trow";
+      tr.innerHTML = `<div class="cell muted">—</div><div class="cell muted">—</div><div class="cell muted hide-sm">—</div><div class="cell muted">—</div>`;
+      table.appendChild(tr);
       return;
     }
 
-    for (const it of CX.monitor.list) {
-      const row = document.createElement("div");
-      row.className = "trow" + (it.changed ? " highlight" : "");
-      const last = it.lastSeen ? new Date(it.lastSeen).toLocaleString() : "—";
-      const st = it.changed ? "⚠️ Changed" : "✅ OK";
-      row.innerHTML = `
-        <div class="cell mono" title="${it.addr}">${fmtAddr(it.addr)} <span class="mini">(${it.addr.slice(0,10)}…)</span></div>
-        <div class="cell">${it.net.toUpperCase()}</div>
-        <div class="cell hide-sm">${last}</div>
-        <div class="cell">${st}</div>
+    list.forEach((it) => {
+      const tr = document.createElement("div");
+      tr.className = "trow";
+      tr.innerHTML = `
+        <div class="cell wrap"><span class="mono">${it.addr}</span></div>
+        <div class="cell"><span class="mono">${it.net.toUpperCase()}</span></div>
+        <div class="cell hide-sm"><span class="mini">${it.lastSeen ? new Date(it.lastSeen*1000).toLocaleString() : "—"}</span></div>
+        <div class="cell"><span class="mini">${it.status || "—"}</span></div>
       `;
-      table.appendChild(row);
-    }
+      table.appendChild(tr);
+    });
   }
 
-  async function monAdd(){
-    const status = document.getElementById("mon-status");
-    const netSel = document.getElementById("mon-net");
-    const addrInp = document.getElementById("mon-addr");
+  async function monAdd() {
+    const st = $("#mon-status");
+    clearStatus(st);
 
-    if (!netSel || !addrInp) return;
+    const netKey = ($("#mon-net")?.value || "bsc").toLowerCase();
+    const addrRaw = ($("#mon-addr")?.value || "").trim();
+    if (!E.isAddress(addrRaw)) return setStatus(st, "bad", "Invalid contract address.");
 
-    const net = (netSel.value === "eth") ? "eth" : "bsc";
-    const raw = (addrInp.value || "").trim();
-    if (!isHexAddr(raw)) { setStatus(status,"bad","<strong>❌ Invalid contract address.</strong>"); return; }
-
-    const addr = toChecksum(raw);
-    setStatus(status,"info","<strong>⏳ Adding…</strong>");
+    const addr = E.getAddress(addrRaw);
+    setStatus(st, "info", "Saving…");
 
     try {
-      const provider = await pickProvider(net);
-      const code = await provider.getCode(addr);
-      if (!code || code === "0x") { setStatus(status,"bad","<strong>❌ No bytecode.</strong> Not a contract."); return; }
+      const info = await monFetchInfo(netKey, addr);
+      if (!info.hasCode) return setStatus(st, "warn", "No contract code found at this address.");
 
-      const codeHash = ethers.keccak256(code);
-      const proxy = await detectProxy(provider, addr);
-      const impl = proxy?.isProxy ? proxy.impl : null;
+      const list = monLoad();
+      const k = monKey(netKey, addr);
+      const filtered = list.filter(x => monKey(x.net, x.addr) !== k);
 
-      const item = {
-        addr, net,
-        baseHash: codeHash,
-        baseImpl: impl,
-        lastSeen: Date.now(),
-        changed: false
-      };
+      filtered.unshift({
+        net: netKey,
+        addr,
+        codeHash: info.codeHash,
+        impl: info.impl || "",
+        lastSeen: info.ts,
+        status: "saved"
+      });
 
-      CX.monitor.list = CX.monitor.list.filter(x => !(x.addr === addr && x.net === net));
-      CX.monitor.list.unshift(item);
-      monSave();
+      monSave(filtered.slice(0, 40));
       monRender();
 
-      setStatus(status,"ok",`<strong>✅ Added.</strong><br>Hash: <span class="mono">${codeHash.slice(0,14)}…</span>${impl ? `<br>Proxy impl: <span class="mono">${impl}</span>` : ""}`);
+      setStatus(st, "ok", "Added to watchlist.");
+      gtagEvent("sec_mon_add", { net: netKey });
     } catch (e) {
-      console.error(e);
-      setStatus(status,"bad",`<strong>❌ Add failed.</strong><br>${(e?.message || e).toString()}`);
+      setStatus(st, "bad", `Add failed: ${String(e?.message || e)}`);
     }
   }
 
-  async function monCheckAll(){
-    const status = document.getElementById("mon-status");
-    if (!CX.monitor.list.length) { setStatus(status,"warn","<strong>⚠️ Watchlist empty.</strong>"); return; }
+  async function monCheckAll() {
+    const st = $("#mon-status");
+    clearStatus(st);
 
-    setStatus(status,"info",`<strong>⏳ Checking ${CX.monitor.list.length} item(s)…</strong>`);
-    let changedCount = 0;
+    const list = monLoad();
+    if (!list.length) return setStatus(st, "warn", "Watchlist is empty.");
 
-    for (const it of CX.monitor.list) {
+    setStatus(st, "info", `Checking ${list.length} contract(s)…`);
+
+    const updated = [];
+    for (const it of list) {
       try {
-        const provider = await pickProvider(it.net);
-        const code = await provider.getCode(it.addr);
-        if (!code || code === "0x") {
-          it.changed = true;
-          changedCount++;
-          it.lastSeen = Date.now();
-          continue;
+        const info = await monFetchInfo(it.net, it.addr);
+        let status = "unchanged";
+        if (!info.hasCode) status = "no code";
+        else {
+          const codeChanged = (it.codeHash && info.codeHash && it.codeHash !== info.codeHash);
+          const implChanged = (it.impl || "") !== (info.impl || "");
+          if (implChanged && info.impl) status = "proxy upgraded";
+          else if (codeChanged) status = "bytecode changed";
         }
-        const hash = ethers.keccak256(code);
-        const proxy = await detectProxy(provider, it.addr);
-        const impl = proxy?.isProxy ? proxy.impl : null;
-
-        const hashChanged = (hash !== it.baseHash);
-        const implChanged = ((impl || null) !== (it.baseImpl || null));
-
-        it.changed = hashChanged || implChanged;
-        if (it.changed) changedCount++;
-        it.lastSeen = Date.now();
+        updated.push({
+          ...it,
+          lastSeen: info.ts,
+          status,
+          codeHash: info.codeHash || it.codeHash,
+          impl: info.impl || it.impl || ""
+        });
       } catch {
-        it.changed = true;
-        changedCount++;
-        it.lastSeen = Date.now();
+        updated.push({ ...it, status: "check failed", lastSeen: nowTs() });
       }
     }
 
-    monSave();
+    monSave(updated);
     monRender();
 
-    if (changedCount) setStatus(status,"warn",`<strong>⚠️ Changes detected:</strong> ${changedCount}/${CX.monitor.list.length}`);
-    else setStatus(status,"ok",`<strong>✅ No changes detected.</strong> Checked ${CX.monitor.list.length}.`);
+    const changed = updated.filter(x => x.status !== "unchanged").length;
+    setStatus(st, changed ? "warn" : "ok", changed ? `${changed} change(s) detected.` : "All unchanged.");
+    gtagEvent("sec_mon_check_all", { changed });
   }
 
-  function monExport(){
-    const status = document.getElementById("mon-status");
-    const data = JSON.stringify(CX.monitor.list, null, 2);
+  $("#mon-add")?.addEventListener("click", monAdd);
+  $("#mon-check")?.addEventListener("click", monCheckAll);
+  $("#mon-export")?.addEventListener("click", async () => {
+    const st = $("#mon-status");
+    const list = monLoad();
+    const ok = await copyText(safeJson(list));
+    setStatus(st, ok ? "ok" : "bad", ok ? "Copied watchlist JSON." : "Copy failed.");
+    gtagEvent("sec_mon_export", { ok: ok ? 1 : 0 });
+  });
 
-    try {
-      const blob = new Blob([data], { type:"application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "cyclex_monitor_watchlist.json";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      setStatus(status,"ok","<strong>✅ Exported JSON.</strong> (Downloaded)");
-    } catch {
-      copyText(data);
-      setStatus(status,"ok","<strong>✅ Exported JSON.</strong> (Copied)");
+  // =========================
+  // Init / Auto-run from URL
+  // =========================
+  $("#qs-run") && ($("#qs-run").disabled = false);
+
+  initLang();
+  initApiKeysUi();
+  renderHistory();
+  monRender();
+  renderWalletLabels();
+
+  // default: show quick panel initially
+  showPanel("quick");
+
+  // close buttons should hide all panels (nice)
+  function showPanelOrNone(key) {
+    if (!key) {
+      Object.values(panels).forEach(el => el && el.classList.add("hidden"));
+      toolCards.forEach(c => c.classList.remove("active"));
+      return;
     }
+    showPanel(key);
   }
 
-  // ===============================
-  // Wiring
-  // ===============================
-  (function initWiring(){
-    document.querySelectorAll(".tool-card").forEach(card => {
-      card.addEventListener("click", () => showTool(card.getAttribute("data-tool")));
-    });
+  $("#btnCloseQuick")?.addEventListener("click", () => showPanelOrNone(null));
+  $("#btnCloseApprovals")?.addEventListener("click", () => showPanelOrNone(null));
+  $("#btnCloseRpc")?.addEventListener("click", () => showPanelOrNone(null));
+  $("#btnCloseMonitor")?.addEventListener("click", () => showPanelOrNone(null));
 
-    document.getElementById("btnCloseQuick")?.addEventListener("click", () => { hideAllPanels(); document.getElementById("toolGrid")?.scrollIntoView({behavior:"smooth"}); });
-    document.getElementById("btnCloseApprovals")?.addEventListener("click", () => { hideAllPanels(); document.getElementById("toolGrid")?.scrollIntoView({behavior:"smooth"}); });
-    document.getElementById("btnCloseRpc")?.addEventListener("click", () => { hideAllPanels(); document.getElementById("toolGrid")?.scrollIntoView({behavior:"smooth"}); });
-    document.getElementById("btnCloseMonitor")?.addEventListener("click", () => { hideAllPanels(); document.getElementById("toolGrid")?.scrollIntoView({behavior:"smooth"}); });
+  // language buttons
+  $$(".lang-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setLang(btn.dataset.lang));
+  });
 
-    document.getElementById("btn-quick")?.addEventListener("click", async () => { showTool("quick"); });
-    document.getElementById("btn-connect")?.addEventListener("click", async () => {
-      showTool("approvals");
-      await ensureConnected(apGetNet(), "ap-status");
-    });
-
-    document.getElementById("qs-run")?.addEventListener("click", qsRun);
-    document.getElementById("qs-copy-link")?.addEventListener("click", qsCopyLink);
-    document.getElementById("qs-copy-json")?.addEventListener("click", qsCopyJson);
-    document.getElementById("qs-share-x")?.addEventListener("click", qsShareX);
-    document.getElementById("qs-share-tg")?.addEventListener("click", qsShareTG);
-
-    document.getElementById("ap-connect")?.addEventListener("click", () => ensureConnected(apGetNet(), "ap-status"));
-    document.getElementById("ap-check")?.addEventListener("click", apCheck);
-    document.getElementById("ap-revoke-all")?.addEventListener("click", apRevokeAllNonZero);
-    document.getElementById("ap-seed-common")?.addEventListener("click", apSeedCommon);
-    document.getElementById("ap-seed-history")?.addEventListener("click", apSeedHistory);
-    document.getElementById("ap-spender-preset")?.addEventListener("change", apApplyPreset);
-
-    document.getElementById("rpc-test")?.addEventListener("click", rpcTestAll);
-    document.getElementById("rpc-copy-best")?.addEventListener("click", rpcCopyBest);
-    document.getElementById("rpc-copy-json")?.addEventListener("click", rpcCopyJson);
-
-    document.getElementById("mon-add")?.addEventListener("click", monAdd);
-    document.getElementById("mon-check")?.addEventListener("click", monCheckAll);
-    document.getElementById("mon-export")?.addEventListener("click", monExport);
-
-    qsRenderHistory();
-    monLoad();
-    monRender();
-    apApplyPreset();
-
-    const p = new URLSearchParams(window.location.search);
-    const tool = p.get("tool");
-    if (tool && TOOL_KEYS.includes(tool)) showTool(tool, {scroll:false});
-
-    const token = p.get("token");
-    const net = p.get("net");
-    if (token && isHexAddr(token)) {
-      showTool("quick", {scroll:false});
-      const netSel = document.getElementById("qs-net");
-      const tokInp = document.getElementById("qs-token");
-      const req = document.getElementById("qs-require-liq");
-      if (netSel) netSel.value = (net === "eth") ? "eth" : "bsc";
-      if (tokInp) tokInp.value = toChecksum(token);
-      if (req) req.checked = (p.get("requireLiq") === "1");
-      qsRun();
-    }
-  })();
+  // Auto-run from query
+  const q = parseQuery();
+  if (q.tool && panels[q.tool]) showPanel(q.tool);
+  if (q.tool === "quick") {
+    if (q.net && CHAINS[q.net]) $("#qs-net").value = q.net;
+    if (q.token && E.isAddress(q.token)) $("#qs-token").value = E.getAddress(q.token);
+    // auto-run after slight delay
+    setTimeout(() => {
+      if ($("#qs-token")?.value && E.isAddress($("#qs-token").value)) runQuickScan();
+    }, 450);
+  }
 
 })();
   </script>
-<script type="module">
-  import { createAppKit } from "https://esm.sh/@reown/appkit@1.6.3";
-  import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.6.3";
-  import { bsc } from "https://esm.sh/@reown/appkit@1.6.3/networks";
-  import { ethers } from "https://esm.sh/ethers@6.7.1";
-
-  window.ethers = ethers;
-
-  // ==== AppKit init ====
-  const projectId = "7886bcb95105e9e47337cec481d5de75";
-
-  const metadata = {
-    name: "CycleX",
-    description: "CycleX Security Hub",
-    url: "https://cyclex.network",   
-    icons: ["https://cyclex.network/logo.png"]
-  };
-
-  const appKit = createAppKit({
-    projectId,
-    metadata,
-    adapters: [new EthersAdapter()],
-    networks: [bsc],
-     enableAnalytics: true
-  });
-
-  const btn = document.getElementById("cxConnectWallet");
-  if (btn) {
-    btn.addEventListener("click", async () => {
-      try {
-        await appKit.open(); 
-      } catch (e) {
-        console.error("AppKit open failed:", e);
-        alert("Wallet modal failed to open. Check console.");
-      }
-    });
-  } else {
-    console.warn("Connect button not found (#cxConnectWallet).");
-  }
-
-</script>
-
 </body>
 </html>
+
