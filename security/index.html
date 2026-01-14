@@ -514,6 +514,51 @@
   transform: translateY(-1px);
 }
     .share-row { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
+    /* =========================
+   Quick Scan buttons layout
+   (scoped, won't affect other panels)
+   ========================= */
+
+#panel-quick .qs-actions,
+#panel-quick .qs-share{
+  display: grid;
+  gap: 10px;
+  align-items: stretch;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Make buttons same width + centered text */
+#panel-quick .qs-actions .btn,
+#panel-quick .qs-share .btn{
+  width: 100%;
+  justify-content: center;
+}
+
+/* Mobile: make primary button full row */
+#panel-quick .qs-actions .btn-primary{
+  grid-column: 1 / -1;
+}
+
+/* Desktop: 4 buttons nicely in 2 rows (2x2) */
+@media (min-width: 860px){
+  #panel-quick .qs-actions{
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  #panel-quick .qs-actions .btn-primary{
+    grid-column: auto;
+  }
+
+  #panel-quick .qs-share{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Small polish */
+#panel-quick .qs-actions .btn,
+#panel-quick .qs-share .btn{
+  min-height: 44px;
+}
+
 
     /* Footer */
     .footer {
@@ -749,19 +794,20 @@
             </div>
 
             <div class="field">
-              <div class="row">
-                <button class="btn btn-primary" id="qs-run" data-i18n="btn_scan">Scan</button>
-                <button class="btn btn-ghost" id="qs-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
-                <button class="btn btn-ghost" id="qs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
-                <button class="btn btn-ghost" id="qs-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
-              </div>
-            </div>
+  <div class="qs-actions">
+    <button class="btn btn-primary" id="qs-run" data-i18n="btn_scan">Scan</button>
+    <button class="btn btn-ghost" id="qs-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
+    <button class="btn btn-ghost" id="qs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
+    <button class="btn btn-ghost" id="qs-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
+  </div>
+</div>
 
-            <div class="share-row">
-              <button class="btn btn-ghost" id="qs-share-x" data-i18n="btn_share_x">Share to X</button>
-              <button class="btn btn-ghost" id="qs-share-tg" data-i18n="btn_share_tg">Share to Telegram</button>
-              <button class="btn btn-ghost" id="qs-copy-xtext" data-i18n="btn_copy_xtext">Copy X text</button>
-            </div>
+<div class="qs-share">
+  <button class="btn btn-ghost" id="qs-share-x">Share to X</button>
+  <button class="btn btn-ghost" id="qs-share-tg">Share to Telegram</button>
+  <button class="btn btn-ghost" id="qs-copy-xtext" data-i18n="btn_copy_xtext">Copy X text</button>
+</div>
+
 
             <div id="qs-status" class="status info"></div>
           </div>
