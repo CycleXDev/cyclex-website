@@ -757,13 +757,7 @@
 
             <div id="qs-status" class="status info"></div>
           </div>
-          <button class="chip chip-danger"
-            data-mon-remove="1"
-            data-addr="${it.addr}"
-            data-net="${it.net}">
-             ✕
-          </button>
-
+          
 
           <div class="card">
             <h3 data-i18n="results_title">Results</h3>
@@ -3846,29 +3840,53 @@ function bindLangButtons(){
   }
 
   function monRender() {
-    const table = $("#mon-table");
-    if (!table) return;
-    const list = monLoad();
-    table.innerHTML = `
-      <div class="trow head">
-        <div class="cell">Contract</div>
-        <div class="cell">Network</div>
-        <div class="cell hide-sm">Last seen</div>
-        <div class="cell">Status</div>
+  const table = $("#mon-table");
+  if (!table) return;
+
+  const list = monLoad();
+
+  table.innerHTML = `
+    <div class="trow head">
+      <div class="cell">Contract</div>
+      <div class="cell">Network</div>
+      <div class="cell hide-sm">Last seen</div>
+      <div class="cell">Status</div>
+    </div>
+  `;
+
+  for (const it of list) {
+    const row = document.createElement("div");
+    row.className = "trow";
+
+    const url = CHAINS?.[it.net]?.addressUrl ? CHAINS[it.net].addressUrl(it.addr) : "#";
+    const statusText = it.status || "—";
+
+    row.innerHTML = `
+      <div class="cell wrap">
+        <a href="${url}" target="_blank" rel="noopener" class="mono">${shortAddr(it.addr)}</a>
+      </div>
+      <div class="cell">${String(it.net || "").toUpperCase()}</div>
+      <div class="cell hide-sm">${it.last || "—"}</div>
+
+      <div class="cell">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <span>${statusText}</span>
+
+          <button class="chip chip-danger"
+                  title="Remove"
+                  data-mon-remove="1"
+                  data-addr="${it.addr}"
+                  data-net="${it.net}">
+            ✕
+          </button>
+        </div>
       </div>
     `;
-    for (const it of list) {
-      const row = document.createElement("div");
-      row.className = "trow";
-      row.innerHTML = `
-        <div class="cell wrap"><a href="${CHAINS[it.net].addressUrl(it.addr)}" target="_blank" rel="noopener" class="mono">${shortAddr(it.addr)}</a></div>
-        <div class="cell">${it.net.toUpperCase()}</div>
-        <div class="cell hide-sm">${it.last || "—"}</div>
-        <div class="cell">${it.status || "—"}</div>
-      `;
-      table.appendChild(row);
-    }
+
+    table.appendChild(row);
   }
+}
+
 
   async function monAdd() {
     const st = $("#mon-status");
