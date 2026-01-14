@@ -1,6 +1,3 @@
-<!-- =========================
-PART 1/3 — HEAD + CSS
-========================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -885,10 +882,6 @@ PART 3/3 — SCRIPTS + JS
 
   <!-- Libraries (ORDER MATTERS) -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
-
-  <!-- Reown AppKit (WalletConnect modal) -->
-  <script src="https://unpkg.com/@reown/appkit@1.6.3/dist/appkit.umd.js"></script>
-  <script src="https://unpkg.com/@reown/appkit-adapter-ethers@1.6.3/dist/ethers.umd.js"></script>
 
   <script>
 (() => {
@@ -2750,6 +2743,47 @@ PART 3/3 — SCRIPTS + JS
 
 })();
   </script>
+<script type="module">
+  import { createAppKit } from "https://esm.sh/@reown/appkit@1.6.3";
+  import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.6.3";
+  import { bsc } from "https://esm.sh/@reown/appkit@1.6.3/networks";
+  import { ethers } from "https://esm.sh/ethers@6.7.1";
+
+  window.ethers = ethers;
+
+  // ==== AppKit init ====
+  const projectId = "7886bcb95105e9e47337cec481d5de75";
+
+  const metadata = {
+    name: "CycleX",
+    description: "CycleX Security Hub",
+    url: "https://cyclex.network",   
+    icons: ["https://cyclex.network/logo.png"]
+  };
+
+  const appKit = createAppKit({
+    projectId,
+    metadata,
+    adapters: [new EthersAdapter()],
+    networks: [bsc],
+     enableAnalytics: true
+  });
+
+  const btn = document.getElementById("cxConnectWallet");
+  if (btn) {
+    btn.addEventListener("click", async () => {
+      try {
+        await appKit.open(); 
+      } catch (e) {
+        console.error("AppKit open failed:", e);
+        alert("Wallet modal failed to open. Check console.");
+      }
+    });
+  } else {
+    console.warn("Connect button not found (#cxConnectWallet).");
+  }
+
+</script>
 
 </body>
 </html>
