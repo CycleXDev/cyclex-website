@@ -1349,89 +1349,129 @@
       }
     };
 
-    let currentLang = "en";
-    const $ = (sel) => document.querySelector(sel);
-    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+   <script>
+  // =========================
+  // i18n (after translations)
+  // =========================
+  let currentLang = "en";
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-    function setDirForLang(lang) {
-      const html = document.documentElement;
-      if (lang === "ar") { html.setAttribute("dir","rtl"); html.setAttribute("lang","ar"); }
-      else { html.setAttribute("dir","ltr"); html.setAttribute("lang",lang); }
+  function setDirForLang(lang) {
+    const html = document.documentElement;
+    if (lang === "ar") {
+      html.setAttribute("dir", "rtl");
+      html.setAttribute("lang", "ar");
+    } else {
+      html.setAttribute("dir", "ltr");
+      html.setAttribute("lang", lang);
     }
-    function t(key) {
-      return (translations[currentLang] && translations[currentLang][key]) || translations.en[key] || key;
-    }
-    function applyI18n() {
+  }
+
+  function t(key) {
+    return (translations?.[currentLang]?.[key]) ?? (translations?.en?.[key]) ?? key;
+  }
+
+  function applyI18n() {
+    if (document.body) {
       document.body.classList.add("lang-switching");
-      setTimeout(() => document.body.classList.remove("lang-switching"), 260);
-      $$("[data-i18n]").forEach(el => { el.innerHTML = t(el.getAttribute("data-i18n")); });
-      setDirForLang(currentLang);
-      renderWalletLabels();
-    }
-    function setLang(lang) {
-      currentLang = lang;
-      try { localStorage.setItem("cx_sec_lang", lang); } catch {}
-      $$(".lang-btn").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
-      applyI18n();
-    }
-    function initLang() {
-      let saved=null; try { saved = localStorage.getItem("cx_sec_lang"); } catch {}
-      if (saved && translations[saved]) currentLang = saved;
-      setLang(currentLang);
+      setTimeout(() => document.body && document.body.classList.remove("lang-switching"), 260);
     }
 
-    // =========================
-    // Utils
-    // =========================
-    const clamp = (n,a,b)=>Math.max(a,Math.min(b,n));
-    const nowTs = ()=>Math.floor(Date.now()/1000);
+    $$("[data-i18n]").forEach((el) => {
+      el.innerHTML = t(el.getAttribute("data-i18n"));
+    });
 
-    function shortAddr(a){ return (!a || typeof a!=="string") ? "—" : `${a.slice(0,6)}…${a.slice(-4)}`; }
-    function safeJson(obj){ try { return JSON.stringify(obj,null,2); } catch { return "{}"; } }
+    setDirForLang(currentLang);
+    renderWalletLabels();
+  }
 
-    async function copyText(text){
-      try { await navigator.clipboard.writeText(text); return true; }
-      catch {
-        try {
-          const ta=document.createElement("textarea");
-          ta.value=text; document.body.appendChild(ta);
-          ta.select(); document.execCommand("copy"); ta.remove(); return true;
-        } catch { return false; }
+  function setLang(lang) {
+    currentLang = lang;
+    try { localStorage.setItem("cx_sec_lang", lang); } catch {}
+
+    $$(".lang-btn").forEach((b) => b.classList.toggle("active", b.dataset.lang === lang));
+    applyI18n();
+  }
+
+  function initLang() {
+    let saved = null;
+    try { saved = localStorage.getItem("cx_sec_lang"); } catch {}
+    if (saved && translations?.[saved]) currentLang = saved;
+    setLang(currentLang);
+  }
+
+  // =========================
+  // Utils
+  // =========================
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const nowTs = () => Math.floor(Date.now() / 1000);
+
+  function shortAddr(a) {
+    return (!a || typeof a !== "string") ? "—" : `${a.slice(0, 6)}…${a.slice(-4)}`;
+  }
+  function safeJson(obj) {
+    try { return JSON.stringify(obj, null, 2); } catch { return "{}"; }
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+        return true;
+      } catch {
+        return false;
       }
     }
+  }
 
-    function setStatus(el,type,html){
-      if(!el) return;
-      el.classList.remove("ok","warn","bad","info");
-      el.classList.add(type);
-      el.style.display="block";
-      el.innerHTML=html;
-    }
-    function clearStatus(el){
-      if(!el) return;
-      el.style.display="none"; el.innerHTML="";
-      el.classList.remove("ok","warn","bad","info");
-    }
+  function setStatus(el, type, html) {
+    if (!el) return;
+    el.classList.remove("ok", "warn", "bad", "info");
+    el.classList.add(type);
+    el.style.display = "block";
+    el.innerHTML = html;
+  }
+  function clearStatus(el) {
+    if (!el) return;
+    el.style.display = "none";
+    el.innerHTML = "";
+    el.classList.remove("ok", "warn", "bad", "info");
+  }
 
-    function gtagEvent(name, params = {}) {
-      try { if (typeof window.gtag === "function") window.gtag("event", name, params); } catch {}
-    }
+  function gtagEvent(name, params = {}) {
+    try {
+      if (typeof window.gtag === "function") window.gtag("event", name, params);
+    } catch {}
+  }
 
-    function parseQuery() {
-      const u = new URL(location.href);
-      return {
-        tool: (u.searchParams.get("tool") || "").toLowerCase(),
-        net: (u.searchParams.get("net") || "").toLowerCase(),
-        token: (u.searchParams.get("token") || ""),
-        tx: (u.searchParams.get("tx") || "")
-      };
-    }
+  function parseQuery() {
+    const u = new URL(location.href);
+    return {
+      tool: (u.searchParams.get("tool") || "").toLowerCase(),
+      net: (u.searchParams.get("net") || "").toLowerCase(),
+      token: (u.searchParams.get("token") || ""),
+      tx: (u.searchParams.get("tx") || "")
+    };
+  }
 
-    // =========================
-    // Panels / Tiles
-    // =========================
-    const toolCards = $$("#toolGrid .tool-card");
-    const panels = {
+  // =========================
+  // Panels / Tiles
+  // =========================
+  let toolCards = [];
+  let panels = {};
+
+  function initPanels() {
+    toolCards = $$("#toolGrid .tool-card");
+    panels = {
       quick: $("#panel-quick"),
       liq: $("#panel-liq"),
       approvals: $("#panel-approvals"),
@@ -1440,1204 +1480,1268 @@
       dev: $("#panel-dev")
     };
 
-    function showPanel(key){
-      Object.entries(panels).forEach(([k, el]) => { if (el) el.classList.toggle("hidden", k !== key); });
-      toolCards.forEach(c => c.classList.toggle("active", c.dataset.tool === key));
+    function showPanel(key) {
+      Object.entries(panels).forEach(([k, el]) => {
+        if (el) el.classList.toggle("hidden", k !== key);
+      });
+      toolCards.forEach((c) => c.classList.toggle("active", c.dataset.tool === key));
       if (key) gtagEvent("sec_tool_open", { tool: key });
     }
+    window.showPanel = showPanel;
 
-    toolCards.forEach(card => card.addEventListener("click", ()=>showPanel(card.dataset.tool)));
-    $("#btnCloseQuick")?.addEventListener("click", ()=>showPanel(null));
-    $("#btnCloseLiq")?.addEventListener("click", ()=>showPanel(null));
-    $("#btnCloseApprovals")?.addEventListener("click", ()=>showPanel(null));
-    $("#btnCloseRpc")?.addEventListener("click", ()=>showPanel(null));
-    $("#btnCloseTx")?.addEventListener("click", ()=>showPanel(null));
-    $("#btnCloseDev")?.addEventListener("click", ()=>showPanel(null));
+    toolCards.forEach((card) => card.addEventListener("click", () => showPanel(card.dataset.tool)));
 
-    $("#btn-quick")?.addEventListener("click", ()=>{ showPanel("quick"); $("#qs-token")?.focus(); });
+    $("#btnCloseQuick")?.addEventListener("click", () => showPanel(null));
+    $("#btnCloseLiq")?.addEventListener("click", () => showPanel(null));
+    $("#btnCloseApprovals")?.addEventListener("click", () => showPanel(null));
+    $("#btnCloseRpc")?.addEventListener("click", () => showPanel(null));
+    $("#btnCloseTx")?.addEventListener("click", () => showPanel(null));
+    $("#btnCloseDev")?.addEventListener("click", () => showPanel(null));
 
-    // =========================
-    // Wallet (AppKit) — single global state
-    // =========================
-    const wallet = {
-      providerRaw: null,     // EIP-1193
-      browserProvider: null, // ethers BrowserProvider
-      signer: null,
-      address: "",
-      chainId: 0
-    };
+    $("#btn-quick")?.addEventListener("click", () => {
+      showPanel("quick");
+      $("#qs-token")?.focus();
+      gtagEvent("sec_quick_btn");
+    });
+  }
 
-    function renderWalletLabels(){
-      const label = wallet.address ? wallet.address : "not connected";
-      $("#walletLabel") && ($("#walletLabel").textContent = label);
-      $("#ap-wallet") && ($("#ap-wallet").textContent = label);
-      $("#liq-wallet") && ($("#liq-wallet").textContent = label);
-      $("#ap-address") && ($("#ap-address").textContent = wallet.address ? shortAddr(wallet.address) : "—");
-    }
+  // =========================
+  // Wallet (AppKit) — single global state
+  // =========================
+  const wallet = {
+    providerRaw: null,     // EIP-1193
+    browserProvider: null, // ethers BrowserProvider
+    signer: null,
+    address: "",
+    chainId: 0
+  };
 
-    function attachProviderListeners(p){
-      try {
-        if (!p || typeof p.on !== "function") return;
-        p.removeAllListeners?.("accountsChanged");
-        p.removeAllListeners?.("chainChanged");
-        p.on("accountsChanged", async (accs) => {
-          const a = (accs && accs[0]) ? E.getAddress(accs[0]) : "";
-          wallet.address = a;
-          renderWalletLabels();
-        });
-        p.on("chainChanged", async (hex) => {
-          try { wallet.chainId = Number(hex); } catch { wallet.chainId = 0; }
-          renderWalletLabels();
-        });
-      } catch {}
-    }
+  function renderWalletLabels() {
+    const notConn = translations?.[currentLang]?.wallet_not_connected
+      ?? translations?.en?.wallet_not_connected
+      ?? "not connected";
 
-    async function cxConnectWallet({ silent=false } = {}) {
-      const stQuick = $("#qs-status");
-      try {
-        // open AppKit modal
-        await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
+    const labelTxt = wallet.address ? wallet.address : notConn;
 
-        const providerRaw = await waitForWalletProvider(12000);
-        if (!providerRaw) {
-          if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
-          return false;
-        }
+    const w1 = $("#walletLabel");
+    if (w1) w1.textContent = labelTxt;
 
-        wallet.providerRaw = providerRaw;
-        attachProviderListeners(providerRaw);
+    const w2 = $("#ap-wallet");
+    if (w2) w2.textContent = labelTxt;
 
-        const bp = new E.BrowserProvider(providerRaw);
-        wallet.browserProvider = bp;
+    const w3 = $("#liq-wallet");
+    if (w3) w3.textContent = labelTxt;
 
-        const signer = await bp.getSigner();
-        wallet.signer = signer;
+    const w4 = $("#ap-address");
+    if (w4) w4.textContent = wallet.address ? shortAddr(wallet.address) : "—";
+  }
 
-        const addr = await signer.getAddress();
-        const net = await bp.getNetwork();
+  function attachProviderListeners(p) {
+    try {
+      if (!p || typeof p.on !== "function") return;
 
-        wallet.address = E.getAddress(addr);
-        wallet.chainId = Number(net.chainId || 0);
+      p.removeAllListeners?.("accountsChanged");
+      p.removeAllListeners?.("chainChanged");
 
+      p.on("accountsChanged", async (accs) => {
+        const a = (accs && accs[0]) ? E.getAddress(accs[0]) : "";
+        wallet.address = a;
         renderWalletLabels();
-        if (!silent) setStatus(stQuick, "ok", `Wallet connected: <span class="mono">${wallet.address}</span>`);
-        gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
-
-        return true;
-      } catch (e) {
-        if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
-        return false;
-      }
-    }
-
-    async function ensureChain(targetChainId){
-      const p = wallet.providerRaw;
-      if (!p?.request) return false;
-      try {
-        await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x" + Number(targetChainId).toString(16) }] });
-        // refresh
-        await cxConnectWallet({ silent:true });
-        return true;
-      } catch {
-        return false;
-      }
-    }
-
-    $("#btn-connect")?.addEventListener("click", async ()=>{ await cxConnectWallet(); });
-    $("#ap-connect")?.addEventListener("click", async ()=>{ await cxConnectWallet(); });
-    // (liq doesn't need connect but we still show label)
-
-    // =========================
-    // Explorer API keys (local)
-    // =========================
-    const LS_KEYS = "cx_sec_explorer_keys";
-    function loadApiKeys(){
-      try {
-        const raw = localStorage.getItem(LS_KEYS);
-        if (!raw) return { bscscan:"", etherscan:"", use:false };
-        const o = JSON.parse(raw);
-        return { bscscan:o?.bscscan||"", etherscan:o?.etherscan||"", use:!!o?.use };
-      } catch { return { bscscan:"", etherscan:"", use:false }; }
-    }
-    function saveApiKeys(keys){ try { localStorage.setItem(LS_KEYS, JSON.stringify(keys)); } catch {} }
-    function initApiKeysUi(){
-      const keys=loadApiKeys();
-      $("#api-use") && ($("#api-use").checked = keys.use);
-      $("#api-bscscan") && ($("#api-bscscan").value = keys.bscscan);
-      $("#api-etherscan") && ($("#api-etherscan").value = keys.etherscan);
-
-      $("#api-save")?.addEventListener("click", ()=>{
-        const nk = { use: !!$("#api-use")?.checked, bscscan: ($("#api-bscscan")?.value||"").trim(), etherscan: ($("#api-etherscan")?.value||"").trim() };
-        saveApiKeys(nk);
-        setStatus($("#qs-status"), "ok", "Saved keys to localStorage.");
-        gtagEvent("sec_keys_saved", { use: nk.use ? 1 : 0 });
       });
 
-      $("#api-clear")?.addEventListener("click", ()=>{
-        saveApiKeys({ use:false, bscscan:"", etherscan:"" });
-        $("#api-use") && ($("#api-use").checked=false);
-        $("#api-bscscan") && ($("#api-bscscan").value="");
-        $("#api-etherscan") && ($("#api-etherscan").value="");
-        setStatus($("#qs-status"), "ok", "Cleared keys.");
-        gtagEvent("sec_keys_cleared");
+      p.on("chainChanged", async (hex) => {
+        try { wallet.chainId = Number(hex); } catch { wallet.chainId = 0; }
+        renderWalletLabels();
       });
+    } catch {}
+  }
+
+  async function cxConnectWallet({ silent = false } = {}) {
+    const stQuick = $("#qs-status");
+    try {
+      await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
+
+      const providerRaw = await waitForWalletProvider(12000);
+      if (!providerRaw) {
+        if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
+        return false;
+      }
+
+      wallet.providerRaw = providerRaw;
+      attachProviderListeners(providerRaw);
+
+      const bp = new E.BrowserProvider(providerRaw);
+      wallet.browserProvider = bp;
+
+      const signer = await bp.getSigner();
+      wallet.signer = signer;
+
+      const addr = await signer.getAddress();
+      const net = await bp.getNetwork();
+
+      wallet.address = E.getAddress(addr);
+      wallet.chainId = Number(net.chainId || 0);
+
+      renderWalletLabels();
+      if (!silent) setStatus(stQuick, "ok", `Wallet connected: <span class="mono">${wallet.address}</span>`);
+      gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
+
+      return true;
+    } catch (e) {
+      if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
+      return false;
+    }
+  }
+
+  async function ensureChain(targetChainId) {
+    const p = wallet.providerRaw;
+    if (!p?.request) return false;
+    try {
+      await p.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: "0x" + Number(targetChainId).toString(16) }]
+      });
+      await cxConnectWallet({ silent: true });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // connect buttons
+  function initWalletButtons() {
+    $("#btn-connect")?.addEventListener("click", async () => { await cxConnectWallet(); });
+    $("#ap-connect")?.addEventListener("click", async () => { await cxConnectWallet(); });
+  }
+
+  // =========================
+  // Explorer API keys (local)
+  // =========================
+  const LS_KEYS = "cx_sec_explorer_keys";
+
+  function loadApiKeys() {
+    try {
+      const raw = localStorage.getItem(LS_KEYS);
+      if (!raw) return { bscscan: "", etherscan: "", use: false };
+      const o = JSON.parse(raw);
+      return { bscscan: o?.bscscan || "", etherscan: o?.etherscan || "", use: !!o?.use };
+    } catch {
+      return { bscscan: "", etherscan: "", use: false };
+    }
+  }
+  function saveApiKeys(keys) {
+    try { localStorage.setItem(LS_KEYS, JSON.stringify(keys)); } catch {}
+  }
+
+  function initApiKeysUi() {
+    const keys = loadApiKeys();
+
+    const useEl = $("#api-use");
+    if (useEl) useEl.checked = keys.use;
+
+    const b1 = $("#api-bscscan");
+    if (b1) b1.value = keys.bscscan;
+
+    const b2 = $("#api-etherscan");
+    if (b2) b2.value = keys.etherscan;
+
+    $("#api-save")?.addEventListener("click", () => {
+      const nk = {
+        use: !!$("#api-use")?.checked,
+        bscscan: ($("#api-bscscan")?.value || "").trim(),
+        etherscan: ($("#api-etherscan")?.value || "").trim()
+      };
+      saveApiKeys(nk);
+      setStatus($("#qs-status"), "ok", "Saved keys to localStorage.");
+      gtagEvent("sec_keys_saved", { use: nk.use ? 1 : 0 });
+    });
+
+    $("#api-clear")?.addEventListener("click", () => {
+      saveApiKeys({ use: false, bscscan: "", etherscan: "" });
+
+      const u = $("#api-use");
+      if (u) u.checked = false;
+
+      const i1 = $("#api-bscscan");
+      if (i1) i1.value = "";
+
+      const i2 = $("#api-etherscan");
+      if (i2) i2.value = "";
+
+      setStatus($("#qs-status"), "ok", "Cleared keys.");
+      gtagEvent("sec_keys_cleared");
+    });
+  }
+
+  // =========================
+  // Network + DEX Registry (BNB / ETH + USDT)
+  // =========================
+  const CHAINS = {
+    bsc: {
+      chainId: 56,
+      name: "BSC",
+      wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
+      usdt: "0x55d398326f99059ff775485246999027b3197955", // USDT (BSC)
+      explorer: "https://bscscan.com",
+      addressUrl: (a) => `https://bscscan.com/address/${a}`,
+      txUrl: (h) => `https://bscscan.com/tx/${h}`,
+      publicRpcs: [
+        "https://bsc-dataseed.binance.org",
+        "https://bsc-dataseed1.bnbchain.org",
+        "https://bsc-dataseed2.bnbchain.org",
+        "https://bsc-dataseed3.bnbchain.org",
+        "https://bsc.publicnode.com",
+        "https://bsc-rpc.publicnode.com"
+      ]
+    },
+    eth: {
+      chainId: 1,
+      name: "Ethereum",
+      wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
+      usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT (ETH)
+      explorer: "https://etherscan.io",
+      addressUrl: (a) => `https://etherscan.io/address/${a}`,
+      txUrl: (h) => `https://etherscan.io/tx/${h}`,
+      publicRpcs: [
+        "https://cloudflare-eth.com",
+        "https://rpc.ankr.com/eth",
+        "https://ethereum.publicnode.com",
+        "https://eth.llamarpc.com"
+      ]
+    }
+  };
+
+  const DEX = {
+    bsc: {
+      v2Factory: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73", // Pancake V2 Factory
+      v3Factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865", // Pancake V3 Factory
+      routerV2: "0x10ED43C718714eb63d5aA57B78B54704E256024E", // Pancake V2 Router
+      label: "PancakeSwap"
+    },
+    eth: {
+      v2Factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", // Uniswap V2 Factory
+      v3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984", // Uniswap V3 Factory
+      routerV2: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D", // Uniswap V2 Router
+      label: "Uniswap"
+    }
+  };
+
+  // =========================
+  // ABIs (minimal)
+  // =========================
+  const ERC20_ABI = [
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint8)",
+    "function totalSupply() view returns (uint256)",
+    "function balanceOf(address) view returns (uint256)",
+    "function allowance(address,address) view returns (uint256)",
+    "function approve(address,uint256) returns (bool)"
+  ];
+
+  const V2_FACTORY_ABI = [
+    "function getPair(address tokenA, address tokenB) external view returns (address pair)"
+  ];
+  const V2_PAIR_ABI = [
+    "function token0() view returns (address)",
+    "function token1() view returns (address)",
+    "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)"
+  ];
+
+  const V3_FACTORY_ABI = [
+    "function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool)"
+  ];
+  const V3_POOL_ABI = [
+    "function liquidity() view returns (uint128)",
+    "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,uint8 feeProtocol,bool unlocked)"
+  ];
+
+  const TRANSFER_TOPIC0 = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+  const APPROVAL_TOPIC0 = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+
+  // =========================
+  // Local storage keys
+  // =========================
+  const LS_BEST_RPC = (net) => `cx_sec_best_rpc_${net}`;
+  const LS_PRIV_RPC = (net) => `cx_sec_private_rpc_${net}`;
+  const LS_QS_CACHE = "cx_sec_qs_cache_v1";
+  const LS_QS_HISTORY = "cx_sec_qs_history_v1";
+
+  // =========================
+  // RPC helpers (raw fetch)
+  // =========================
+  async function rpcRequest(url, method, params = [], timeoutMs = 9000) {
+    const ctrl = new AbortController();
+    const tmr = setTimeout(() => ctrl.abort(), timeoutMs);
+    const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method, params });
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+        signal: ctrl.signal
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const j = await res.json();
+      if (j.error) throw new Error(j.error.message || "RPC error");
+      return j.result;
+    } finally {
+      clearTimeout(tmr);
+    }
+  }
+
+  function uniq(arr) {
+    const s = new Set();
+    const out = [];
+    for (const x of arr) {
+      const k = String(x || "").trim();
+      if (!k) continue;
+      if (s.has(k)) continue;
+      s.add(k);
+      out.push(k);
+    }
+    return out;
+  }
+
+  function getSavedBestRpc(net) {
+    try { return localStorage.getItem(LS_BEST_RPC(net)) || ""; } catch { return ""; }
+  }
+  function setSavedBestRpc(net, url) {
+    try { localStorage.setItem(LS_BEST_RPC(net), url); } catch {}
+  }
+
+  function getSavedPrivateRpc(net) {
+    try { return localStorage.getItem(LS_PRIV_RPC(net)) || ""; } catch { return ""; }
+  }
+  function setSavedPrivateRpc(net, url) {
+    try { localStorage.setItem(LS_PRIV_RPC(net), url); } catch {}
+  }
+
+  function buildRpcCandidates(net) {
+    const chain = CHAINS[net];
+    const custom = ($("#rpc-custom")?.value || "").trim();
+    const privSaved = getSavedPrivateRpc(net);
+    const privInput = ($("#rpc-private")?.value || "").trim();
+    const bestSaved = getSavedBestRpc(net);
+
+    return uniq([
+      custom,
+      privInput,
+      privSaved,
+      bestSaved,
+      ...(chain?.publicRpcs || [])
+    ]);
+  }
+
+  function getReadProvider(net) {
+    const chain = CHAINS[net];
+    const custom = ($("#rpc-custom")?.value || "").trim();
+    const bestSaved = getSavedBestRpc(net);
+    const privSaved = getSavedPrivateRpc(net);
+
+    const url = custom || privSaved || bestSaved || (chain?.publicRpcs?.[0] || "");
+    if (!url) return null;
+
+    try { return new E.JsonRpcProvider(url, chain.chainId); } catch { return null; }
+  }
+
+  // =========================
+  // Explorer APIs (optional)
+  // =========================
+  function explorerApiBase(net) {
+    return net === "bsc" ? "https://api.bscscan.com/api" : "https://api.etherscan.io/api";
+  }
+
+  async function explorerGetSource(net, addr, apiKey) {
+    const base = explorerApiBase(net);
+    const u = new URL(base);
+    u.searchParams.set("module", "contract");
+    u.searchParams.set("action", "getsourcecode");
+    u.searchParams.set("address", addr);
+    if (apiKey) u.searchParams.set("apikey", apiKey);
+
+    const r = await fetch(u.toString());
+    const j = await r.json();
+    if (!j || j.status !== "1" || !j.result || !j.result[0]) return { ok: false, raw: j };
+
+    const row = j.result[0];
+    return {
+      ok: true,
+      verified: !!(row.SourceCode && String(row.SourceCode).trim().length > 0),
+      contractName: row.ContractName || "",
+      isProxy: String(row.Proxy || "").toLowerCase() === "1",
+      impl: row.Implementation || "",
+      abi: row.ABI || ""
+    };
+  }
+
+  // =========================
+  // Heuristic bytecode checks
+  // =========================
+  function codeHasSelector(codeHex, selectorNo0x) {
+    if (!codeHex || codeHex === "0x") return false;
+    const s = selectorNo0x.toLowerCase();
+    return codeHex.toLowerCase().includes("63" + s);
+  }
+
+  const SEL = {
+    owner: "8da5cb5b",
+    pause: "8456cb59",
+    unpause: "3f4ba83a",
+    paused: "5c975abb",
+    mint: "40c10f19",
+    blacklist1: "5c0e5f47",
+    blacklist2: "9a5c0d65",
+    setTax1: "b21d7b0b"
+  };
+
+  async function tryReadOwner(provider, addr) {
+    try {
+      const data = "0x" + SEL.owner;
+      const r = await provider.call({ to: addr, data });
+      if (!r || r === "0x") return "";
+      const a = "0x" + r.slice(-40);
+      if (E.isAddress(a)) return E.getAddress(a);
+      return "";
+    } catch { return ""; }
+  }
+
+  async function tryEip1967Impl(provider, addr) {
+    const slot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+    try {
+      const v = await provider.getStorage(addr, slot);
+      if (!v || v === "0x" || /^0x0+$/.test(v)) return "";
+      const a = "0x" + v.slice(-40);
+      if (E.isAddress(a) && a !== "0x0000000000000000000000000000000000000000") return E.getAddress(a);
+      return "";
+    } catch { return ""; }
+  }
+
+  // =========================
+  // UI helpers: risk badges
+  // =========================
+  function riskBadge(type, label, detail = "") {
+    const div = document.createElement("div");
+    div.className = `risk ${type}`;
+    div.innerHTML = `<span class="dot"></span><span><b>${label}</b>${detail ? ` — ${detail}` : ""}</span>`;
+    return div;
+  }
+
+  function setPairsWrap(el, rowsHtml) {
+    if (!el) return;
+    el.innerHTML = rowsHtml || "";
+  }
+
+  function fmtNum(n) {
+    try {
+      if (n === null || n === undefined) return "—";
+      const x = Number(n);
+      if (!isFinite(x)) return String(n);
+      if (x >= 1e9) return (x / 1e9).toFixed(2) + "B";
+      if (x >= 1e6) return (x / 1e6).toFixed(2) + "M";
+      if (x >= 1e3) return (x / 1e3).toFixed(2) + "K";
+      return x.toFixed(0);
+    } catch {
+      return String(n);
+    }
+  }
+
+  function netFromSelect(selId) {
+    const v = ($(selId)?.value || "bsc").toLowerCase();
+    return (v === "eth") ? "eth" : "bsc";
+  }
+
+  function explorerKeyFor(net) {
+    const keys = loadApiKeys();
+    if (!keys.use) return "";
+    if (net === "bsc") return (keys.bscscan || "").trim();
+    return (keys.etherscan || "").trim();
+  }
+
+  // =========================
+  // Quick Scan (score + report + cache)
+  // =========================
+  function qsCacheGet(key) {
+    try {
+      const raw = localStorage.getItem(LS_QS_CACHE);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      return obj?.[key] || null;
+    } catch { return null; }
+  }
+  function qsCacheSet(key, payload) {
+    try {
+      const raw = localStorage.getItem(LS_QS_CACHE);
+      const obj = raw ? JSON.parse(raw) : {};
+      obj[key] = payload;
+      localStorage.setItem(LS_QS_CACHE, JSON.stringify(obj));
+    } catch {}
+  }
+
+  function qsAddHistory(net, token) {
+    try {
+      const raw = localStorage.getItem(LS_QS_HISTORY);
+      const obj = raw ? JSON.parse(raw) : { bsc: [], eth: [] };
+      const arr = Array.isArray(obj[net]) ? obj[net] : [];
+      const tt = E.getAddress(token);
+      const next = [tt, ...arr.filter(x => String(x).toLowerCase() !== tt.toLowerCase())].slice(0, 30);
+      obj[net] = next;
+      localStorage.setItem(LS_QS_HISTORY, JSON.stringify(obj));
+    } catch {}
+  }
+  function qsGetHistory(net) {
+    try {
+      const raw = localStorage.getItem(LS_QS_HISTORY);
+      const obj = raw ? JSON.parse(raw) : { bsc: [], eth: [] };
+      return Array.isArray(obj[net]) ? obj[net] : [];
+    } catch { return []; }
+  }
+
+  function qsBuildShareLink(net, token) {
+    const u = new URL(location.href);
+    u.searchParams.set("tool", "quick");
+    u.searchParams.set("net", net);
+    u.searchParams.set("token", token);
+    return u.toString();
+  }
+
+  function qsBuildXText(summary) {
+    const base =
+      `${summary.title}\nScore: ${summary.score}/100\n${summary.net.toUpperCase()} • ${summary.tokenShort}\n` +
+      `${summary.flags.join(" • ")}\n` +
+      `Verify on explorers + don't sign blind approvals.`;
+    return base.slice(0, 270);
+  }
+
+  function qsBuildMarkdown(summary) {
+    return [
+      `## CycleX Quick Scan`,
+      ``,
+      `- **Network:** ${summary.net.toUpperCase()}`,
+      `- **Token:** \`${summary.token}\``,
+      `- **Score:** **${summary.score}/100**`,
+      `- **Verified:** ${summary.verified ? "Yes" : "No / Unknown"}`,
+      `- **Proxy:** ${summary.isProxy ? "Yes" : "No / Unknown"}${summary.impl ? ` (impl: \`${summary.impl}\`)` : ""}`,
+      `- **Owner:** ${summary.owner ? `\`${summary.owner}\`` : "Unknown"}`,
+      `- **Liquidity (V2/V3):** ${summary.liqHint}`,
+      ``,
+      `### Flags`,
+      `${summary.flags.map(x => `- ${x}`).join("\n")}`,
+      ``,
+      `### Notes`,
+      `These checks are informational and do not guarantee safety. Always verify independently.`,
+    ].join("\n");
+  }
+
+  async function runQuickScan({ auto = false } = {}) {
+    const st = $("#qs-status");
+    const out = $("#qs-out");
+    const risk = $("#qs-risk");
+    const pairsWrap = $("#qs-pairsWrap");
+
+    clearStatus(st);
+    if (risk) risk.innerHTML = "";
+    if (pairsWrap) pairsWrap.innerHTML = "";
+
+    const net = netFromSelect("#qs-net");
+    const tokenRaw = ($("#qs-token")?.value || "").trim();
+    if (!E.isAddress(tokenRaw)) {
+      setStatus(st, "warn", "Invalid token address.");
+      return;
+    }
+    const token = E.getAddress(tokenRaw);
+
+    const provider = getReadProvider(net);
+    if (!provider) {
+      setStatus(st, "bad", "No RPC available. Open RPC tool and set a working endpoint.");
+      return;
     }
 
-    // =========================
-    // Network + DEX Registry (BNB / ETH + USDT)
-    // =========================
-    const CHAINS = {
-      bsc: {
-        chainId: 56,
-        name: "BSC",
-        wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
-        usdt:   "0x55d398326f99059ff775485246999027b3197955", // USDT (BSC)
-        explorer: "https://bscscan.com",
-        addressUrl: (a)=>`https://bscscan.com/address/${a}`,
-        txUrl: (h)=>`https://bscscan.com/tx/${h}`,
-        publicRpcs: [
-          "https://bsc-dataseed.binance.org",
-          "https://bsc-dataseed1.bnbchain.org",
-          "https://bsc-dataseed2.bnbchain.org",
-          "https://bsc-dataseed3.bnbchain.org",
-          "https://bsc.publicnode.com",
-          "https://bsc-rpc.publicnode.com"
-        ]
-      },
-      eth: {
-        chainId: 1,
-        name: "Ethereum",
-        wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
-        usdt:   "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT (ETH)
-        explorer: "https://etherscan.io",
-        addressUrl: (a)=>`https://etherscan.io/address/${a}`,
-        txUrl: (h)=>`https://etherscan.io/tx/${h}`,
-        publicRpcs: [
-          "https://cloudflare-eth.com",
-          "https://rpc.ankr.com/eth",
-          "https://ethereum.publicnode.com",
-          "https://eth.llamarpc.com"
-        ]
+    const requireLiq = !!$("#qs-require-liq")?.checked;
+    const cacheKey = `${net}:${token}:${requireLiq ? 1 : 0}:${explorerKeyFor(net) ? 1 : 0}`;
+    const cached = qsCacheGet(cacheKey);
+
+    const now = Date.now();
+    if (cached && (now - (cached.ts || 0) < 10 * 60 * 1000)) {
+      renderQuickScanResult(cached.data, { cached: true });
+      setStatus(st, "ok", `Loaded cached result (≤10 min).`);
+      return;
+    }
+
+    setStatus(st, "info", "Scanning…");
+
+    try {
+      const code = await provider.getCode(token);
+      if (!code || code === "0x") {
+        setStatus(st, "bad", "Address has no contract code.");
+        return;
       }
-    };
 
-    const DEX = {
-      bsc: {
-        v2Factory: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73", // Pancake V2 Factory
-        v3Factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865", // Pancake V3 Factory
-        routerV2:  "0x10ED43C718714eb63d5aA57B78B54704E256024E", // Pancake V2 Router
-        label: "PancakeSwap"
-      },
-      eth: {
-        v2Factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", // Uniswap V2 Factory
-        v3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984", // Uniswap V3 Factory
-        routerV2:  "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D", // Uniswap V2 Router
-        label: "Uniswap"
+      const tokenC = new E.Contract(token, ERC20_ABI, provider);
+      let symbol = "?", decimals = 18, name = "";
+      try { symbol = await tokenC.symbol(); } catch {}
+      try { decimals = await tokenC.decimals(); } catch {}
+      try { name = await tokenC.name(); } catch {}
+
+      const impl1967 = await tryEip1967Impl(provider, token);
+      const owner = await tryReadOwner(provider, token);
+
+      const apiKey = explorerKeyFor(net);
+      let verified = false, isProxy = !!impl1967, impl = impl1967, contractName = "";
+      if (apiKey) {
+        const s = await explorerGetSource(net, token, apiKey);
+        if (s.ok) {
+          verified = !!s.verified;
+          contractName = s.contractName || "";
+          if (s.isProxy) isProxy = true;
+          if (s.impl && E.isAddress(s.impl)) impl = E.getAddress(s.impl);
+        }
       }
-    };
 
-    // =========================
-    // ABIs (minimal)
-    // =========================
-    const ERC20_ABI = [
-      "function name() view returns (string)",
-      "function symbol() view returns (string)",
-      "function decimals() view returns (uint8)",
-      "function totalSupply() view returns (uint256)",
-      "function balanceOf(address) view returns (uint256)",
-      "function allowance(address,address) view returns (uint256)",
-      "function approve(address,uint256) returns (bool)"
-    ];
+      const liq = await liqCheckBasic(net, token, provider);
 
-    const V2_FACTORY_ABI = [
-      "function getPair(address tokenA, address tokenB) external view returns (address pair)"
-    ];
-    const V2_PAIR_ABI = [
-      "function token0() view returns (address)",
-      "function token1() view returns (address)",
-      "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)"
-    ];
+      const hasMint = codeHasSelector(code, SEL.mint);
+      const hasPause = codeHasSelector(code, SEL.pause) || codeHasSelector(code, SEL.paused);
+      const hasBlacklist = codeHasSelector(code, SEL.blacklist1) || codeHasSelector(code, SEL.blacklist2);
+      const hasTax = codeHasSelector(code, SEL.setTax1);
 
-    const V3_FACTORY_ABI = [
-      "function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool)"
-    ];
-    const V3_POOL_ABI = [
-      "function liquidity() view returns (uint128)",
-      "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,uint8 feeProtocol,bool unlocked)"
-    ];
+      let score = 100;
+      const flags = [];
 
-    const TRANSFER_TOPIC0 = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-    const APPROVAL_TOPIC0 = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+      if (!apiKey) flags.push("Explorer API keys not enabled (proxy/verified limited).");
+      if (apiKey && !verified) { score -= 18; flags.push("Not verified on explorer (or cannot read)."); }
+      if (verified) flags.push("Verified source on explorer.");
 
-    // =========================
-    // Local storage keys
-    // =========================
-    const LS_BEST_RPC = (net)=>`cx_sec_best_rpc_${net}`;
-    const LS_PRIV_RPC = (net)=>`cx_sec_private_rpc_${net}`;
-    const LS_QS_CACHE = "cx_sec_qs_cache_v1";
-    const LS_QS_HISTORY = "cx_sec_qs_history_v1";
+      if (isProxy) { score -= 8; flags.push("Proxy detected (verify implementation)."); }
+      else flags.push("No proxy flag detected.");
 
-    // =========================
-    // RPC helpers (raw fetch)
-    // =========================
-    async function rpcRequest(url, method, params = [], timeoutMs = 9000) {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), timeoutMs);
-      const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method, params });
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body,
-          signal: ctrl.signal
+      if (!owner) { score -= 6; flags.push("Owner unknown (no owner() or read failed)."); }
+      else {
+        const zero = "0x0000000000000000000000000000000000000000";
+        if (owner.toLowerCase() === zero) flags.push("Owner is renounced (0x0).");
+        else { score -= 10; flags.push("Owner is set (centralized control possible)."); }
+      }
+
+      if (hasMint) { score -= 18; flags.push("Mint-like selector detected in bytecode (possible inflation)."); }
+      if (hasPause) { score -= 10; flags.push("Pause-like selector detected (trading can be halted)."); }
+      if (hasBlacklist) { score -= 10; flags.push("Blacklist-like selectors detected (addresses can be blocked)."); }
+      if (hasTax) { score -= 8; flags.push("Tax-setting selector detected (fees can change)."); }
+
+      if (!liq.any) {
+        score -= requireLiq ? 35 : 18;
+        flags.push("No liquidity detected (V2/V3 vs Wrapped/USDT).");
+      } else {
+        flags.push(`Liquidity detected: ${liq.hint}`);
+      }
+
+      score = clamp(score, 0, 100);
+
+      const data = {
+        ts: Date.now(),
+        net,
+        token,
+        tokenShort: shortAddr(token),
+        symbol,
+        decimals,
+        name,
+        score,
+        verified,
+        isProxy,
+        impl,
+        contractName,
+        owner,
+        hasMint, hasPause, hasBlacklist, hasTax,
+        liq
+      };
+
+      qsCacheSet(cacheKey, { ts: Date.now(), data });
+      qsAddHistory(net, token);
+
+      renderQuickScanResult(data, { cached: false });
+      setStatus(st, "ok", `Done. Score: <b>${score}/100</b>`);
+      gtagEvent("sec_quick_scan", { net, score });
+
+    } catch (e) {
+      setStatus(st, "bad", `Scan failed: ${String(e?.message || e)}`);
+    }
+
+    function renderQuickScanResult(d, { cached }) {
+      const lines = [];
+      lines.push(`<b>${d.symbol || "TOKEN"}</b> ${d.name ? `— ${d.name}` : ""}`);
+      lines.push(`<div class="small" style="margin-top:6px">Network: <b>${d.net.toUpperCase()}</b> • Score: <b>${d.score}/100</b>${cached ? " • <b>(cached)</b>" : ""}</div>`);
+      lines.push(`<div class="small" style="margin-top:6px">Token: <span class="mono">${d.token}</span></div>`);
+      lines.push(`<div class="small" style="margin-top:6px">Explorer: <a href="${CHAINS[d.net].addressUrl(d.token)}" target="_blank" rel="noopener">open</a></div>`);
+      if (out) out.innerHTML = lines.join("");
+
+      if (risk) {
+        risk.innerHTML = "";
+        if (d.score >= 75) risk.appendChild(riskBadge("ok", "Overall", "Higher signal"));
+        else if (d.score >= 50) risk.appendChild(riskBadge("warn", "Overall", "Mixed signals"));
+        else risk.appendChild(riskBadge("bad", "Overall", "High risk signals"));
+
+        risk.appendChild(riskBadge(d.verified ? "ok" : "warn", "Verified", d.verified ? "Yes" : "No/Unknown"));
+        risk.appendChild(riskBadge(d.isProxy ? "warn" : "ok", "Proxy", d.isProxy ? "Yes" : "No/Unknown"));
+        risk.appendChild(riskBadge(d.owner ? "info" : "warn", "Owner", d.owner ? shortAddr(d.owner) : "Unknown"));
+        risk.appendChild(riskBadge(d.liq?.any ? "ok" : "warn", "Liquidity", d.liq?.any ? d.liq.hint : "None"));
+        if (d.hasMint) risk.appendChild(riskBadge("bad", "Mint", "Detected"));
+        if (d.hasPause) risk.appendChild(riskBadge("warn", "Pause", "Detected"));
+        if (d.hasBlacklist) risk.appendChild(riskBadge("warn", "Blacklist", "Detected"));
+        if (d.hasTax) risk.appendChild(riskBadge("warn", "Tax", "Detected"));
+      }
+
+      if (pairsWrap) {
+        const html = `
+          <div class="table">
+            <div class="trow head">
+              <div class="cell">Pair/Pool</div>
+              <div class="cell">Type</div>
+              <div class="cell hide-sm">Target</div>
+              <div class="cell">Result</div>
+            </div>
+            ${(d.liq?.rows || []).map(r => `
+              <div class="trow">
+                <div class="cell wrap"><span class="mono">${r.addr ? shortAddr(r.addr) : "—"}</span></div>
+                <div class="cell">${r.type}</div>
+                <div class="cell hide-sm">${r.target}</div>
+                <div class="cell">${r.ok ? "✅" : "—"} ${r.note || ""}</div>
+              </div>
+            `).join("")}
+          </div>
+        `;
+        pairsWrap.innerHTML = html;
+      }
+
+      $("#qs-copy-link")?.addEventListener("click", async () => {
+        const link = qsBuildShareLink(d.net, d.token);
+        const ok = await copyText(link);
+        setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
+      }, { once: true });
+
+      $("#qs-copy-json")?.addEventListener("click", async () => {
+        const enable = !!$("#qs-show-json")?.checked;
+        if (!enable) { setStatus($("#qs-status"), "warn", "JSON report disabled (toggle in options)."); return; }
+        const ok = await copyText(safeJson(d));
+        setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
+      }, { once: true });
+
+      $("#qs-copy-md")?.addEventListener("click", async () => {
+        const md = qsBuildMarkdown({
+          net: d.net,
+          token: d.token,
+          score: d.score,
+          verified: d.verified,
+          isProxy: d.isProxy,
+          impl: d.impl,
+          owner: d.owner,
+          liqHint: d.liq?.hint || "—",
+          flags: buildFlags(d),
+          tokenShort: d.tokenShort,
+          title: `CycleX Quick Scan — ${d.symbol || "TOKEN"}`
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const j = await res.json();
-        if (j.error) throw new Error(j.error.message || "RPC error");
-        return j.result;
-      } finally {
-        clearTimeout(t);
-      }
+        const ok = await copyText(md);
+        setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied Markdown." : "Copy failed.");
+      }, { once: true });
+
+      $("#qs-share-x")?.addEventListener("click", () => {
+        const summary = buildSummary(d);
+        const text = qsBuildXText(summary);
+        const u = new URL("https://twitter.com/intent/tweet");
+        u.searchParams.set("text", text);
+        u.searchParams.set("url", qsBuildShareLink(d.net, d.token));
+        window.open(u.toString(), "_blank", "noopener");
+      }, { once: true });
+
+      $("#qs-copy-xtext")?.addEventListener("click", async () => {
+        const summary = buildSummary(d);
+        const ok = await copyText(qsBuildXText(summary));
+        setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied X text." : "Copy failed.");
+      }, { once: true });
+
+      $("#qs-share-tg")?.addEventListener("click", () => {
+        const link = qsBuildShareLink(d.net, d.token);
+        const summary = buildSummary(d);
+        const text = qsBuildXText(summary);
+        const u = new URL("https://t.me/share/url");
+        u.searchParams.set("url", link);
+        u.searchParams.set("text", text);
+        window.open(u.toString(), "_blank", "noopener");
+      }, { once: true });
+
+      const b1 = $("#qs-copy-link");
+      if (b1) b1.disabled = false;
+      const b2 = $("#qs-copy-json");
+      if (b2) b2.disabled = false;
+      const b3 = $("#qs-copy-md");
+      if (b3) b3.disabled = false;
     }
 
-    function uniq(arr) {
-      const s = new Set();
-      const out = [];
-      for (const x of arr) {
-        const k = String(x || "").trim();
-        if (!k) continue;
-        if (s.has(k)) continue;
-        s.add(k);
-        out.push(k);
-      }
-      return out;
+    function buildFlags(d) {
+      const f = [];
+      if (d.verified) f.push("Verified");
+      if (d.isProxy) f.push("Proxy");
+      if (d.hasMint) f.push("Mint");
+      if (d.hasPause) f.push("Pause");
+      if (d.hasBlacklist) f.push("Blacklist");
+      if (d.hasTax) f.push("Tax");
+      if (d.liq?.any) f.push("Liquidity");
+      return f.length ? f : ["No strong flags"];
     }
 
-    function getSavedBestRpc(net){
-      try { return localStorage.getItem(LS_BEST_RPC(net)) || ""; } catch { return ""; }
-    }
-    function setSavedBestRpc(net, url){
-      try { localStorage.setItem(LS_BEST_RPC(net), url); } catch {}
-    }
-
-    function getSavedPrivateRpc(net){
-      try { return localStorage.getItem(LS_PRIV_RPC(net)) || ""; } catch { return ""; }
-    }
-    function setSavedPrivateRpc(net, url){
-      try { localStorage.setItem(LS_PRIV_RPC(net), url); } catch {}
-    }
-
-    function buildRpcCandidates(net){
-      const chain = CHAINS[net];
-      const custom = ($("#rpc-custom")?.value || "").trim();
-      const privSaved = getSavedPrivateRpc(net);
-      const privInput = ($("#rpc-private")?.value || "").trim();
-      const bestSaved = getSavedBestRpc(net);
-
-      // Priority: custom input > private saved/input > best saved > public list
-      return uniq([
-        custom,
-        privInput,
-        privSaved,
-        bestSaved,
-        ...(chain?.publicRpcs || [])
-      ]);
-    }
-
-    function getReadProvider(net){
-      const chain = CHAINS[net];
-      const custom = ($("#rpc-custom")?.value || "").trim();
-      const bestSaved = getSavedBestRpc(net);
-      const privSaved = getSavedPrivateRpc(net);
-
-      const url = custom || privSaved || bestSaved || (chain?.publicRpcs?.[0] || "");
-      if (!url) return null;
-
-      try { return new E.JsonRpcProvider(url, chain.chainId); } catch { return null; }
-    }
-
-    // =========================
-    // Explorer APIs (optional)
-    // =========================
-    function explorerApiBase(net){
-      return net === "bsc" ? "https://api.bscscan.com/api" : "https://api.etherscan.io/api";
-    }
-
-    async function explorerGetSource(net, addr, apiKey){
-      const base = explorerApiBase(net);
-      const u = new URL(base);
-      u.searchParams.set("module","contract");
-      u.searchParams.set("action","getsourcecode");
-      u.searchParams.set("address", addr);
-      if (apiKey) u.searchParams.set("apikey", apiKey);
-
-      const r = await fetch(u.toString());
-      const j = await r.json();
-      if (!j || j.status !== "1" || !j.result || !j.result[0]) {
-        return { ok:false, raw:j };
-      }
-      const row = j.result[0];
+    function buildSummary(d) {
       return {
-        ok:true,
-        verified: !!(row.SourceCode && String(row.SourceCode).trim().length > 0),
-        contractName: row.ContractName || "",
-        isProxy: String(row.Proxy || "").toLowerCase() === "1",
-        impl: row.Implementation || "",
-        abi: row.ABI || ""
+        title: `CycleX Quick Scan — ${d.symbol || "TOKEN"}`,
+        score: d.score,
+        net: d.net,
+        tokenShort: d.tokenShort,
+        flags: buildFlags(d)
       };
     }
+  }
 
-    // =========================
-    // Heuristic bytecode checks
-    // =========================
-    function codeHasSelector(codeHex, selectorNo0x){
-      if (!codeHex || codeHex === "0x") return false;
-      const s = selectorNo0x.toLowerCase();
-      // Solidity selector push: PUSH4 0x???????? => 63???????? in bytecode
-      return codeHex.toLowerCase().includes("63" + s);
-    }
+  async function liqCheckBasic(net, token, provider) {
+    const chain = CHAINS[net];
+    const dex = DEX[net];
+    const rows = [];
+    let any = false;
 
-    const SEL = {
-      owner: "8da5cb5b",
-      pause: "8456cb59",
-      unpause: "3f4ba83a",
-      paused: "5c975abb",
-      mint: "40c10f19",
-      blacklist1: "5c0e5f47", // typical: isBlacklisted(address) (varies)
-      blacklist2: "9a5c0d65", // typical: blacklist(address) (varies)
-      setTax1: "b21d7b0b"    // typical: setTax(uint256) (varies)
-    };
+    try {
+      const fac = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, provider);
+      const targets = [
+        { label: "Wrapped", addr: chain.wrapped },
+        { label: "USDT", addr: chain.usdt }
+      ];
 
-    async function tryReadOwner(provider, addr){
-      try {
-        const data = "0x" + SEL.owner;
-        const r = await provider.call({ to: addr, data });
-        if (!r || r === "0x") return "";
-        // last 20 bytes
-        const a = "0x" + r.slice(-40);
-        if (E.isAddress(a)) return E.getAddress(a);
-        return "";
-      } catch { return ""; }
-    }
-
-    async function tryEip1967Impl(provider, addr){
-      // bytes32(uint256(keccak256('eip1967.proxy.implementation')) - 1)
-      const slot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-      try {
-        const v = await provider.getStorage(addr, slot);
-        if (!v || v === "0x" || /^0x0+$/.test(v)) return "";
-        const a = "0x" + v.slice(-40);
-        if (E.isAddress(a) && a !== "0x0000000000000000000000000000000000000000") return E.getAddress(a);
-        return "";
-      } catch { return ""; }
-    }
-
-    // =========================
-    // UI helpers: risk badges
-    // =========================
-    function riskBadge(type, label, detail=""){
-      const div = document.createElement("div");
-      div.className = `risk ${type}`;
-      div.innerHTML = `<span class="dot"></span><span><b>${label}</b>${detail ? ` — ${detail}` : ""}</span>`;
-      return div;
-    }
-
-    function setPairsWrap(el, rowsHtml){
-      if (!el) return;
-      el.innerHTML = rowsHtml || "";
-    }
-
-    function fmtNum(n){
-      try {
-        if (n === null || n === undefined) return "—";
-        const x = Number(n);
-        if (!isFinite(x)) return String(n);
-        if (x >= 1e9) return (x/1e9).toFixed(2) + "B";
-        if (x >= 1e6) return (x/1e6).toFixed(2) + "M";
-        if (x >= 1e3) return (x/1e3).toFixed(2) + "K";
-        return x.toFixed(0);
-      } catch { return String(n); }
-    }
-
-    function netFromSelect(selId){
-      const v = ($(selId)?.value || "bsc").toLowerCase();
-      return (v === "eth") ? "eth" : "bsc";
-    }
-
-    function explorerKeyFor(net){
-      const keys = loadApiKeys();
-      if (!keys.use) return "";
-      if (net === "bsc") return (keys.bscscan || "").trim();
-      return (keys.etherscan || "").trim();
-    }
-
-    // =========================
-    // Quick Scan (score + report + cache)
-    // =========================
-    function qsCacheGet(key){
-      try {
-        const raw = localStorage.getItem(LS_QS_CACHE);
-        if (!raw) return null;
-        const obj = JSON.parse(raw);
-        return obj?.[key] || null;
-      } catch { return null; }
-    }
-    function qsCacheSet(key, payload){
-      try {
-        const raw = localStorage.getItem(LS_QS_CACHE);
-        const obj = raw ? JSON.parse(raw) : {};
-        obj[key] = payload;
-        localStorage.setItem(LS_QS_CACHE, JSON.stringify(obj));
-      } catch {}
-    }
-
-    function qsAddHistory(net, token){
-      try {
-        const raw = localStorage.getItem(LS_QS_HISTORY);
-        const obj = raw ? JSON.parse(raw) : { bsc: [], eth: [] };
-        const arr = Array.isArray(obj[net]) ? obj[net] : [];
-        const t = E.getAddress(token);
-        const next = [t, ...arr.filter(x => String(x).toLowerCase() !== t.toLowerCase())].slice(0, 30);
-        obj[net] = next;
-        localStorage.setItem(LS_QS_HISTORY, JSON.stringify(obj));
-      } catch {}
-    }
-    function qsGetHistory(net){
-      try {
-        const raw = localStorage.getItem(LS_QS_HISTORY);
-        const obj = raw ? JSON.parse(raw) : { bsc: [], eth: [] };
-        return Array.isArray(obj[net]) ? obj[net] : [];
-      } catch { return []; }
-    }
-
-    function qsBuildShareLink(net, token){
-      const u = new URL(location.href);
-      u.searchParams.set("tool","quick");
-      u.searchParams.set("net", net);
-      u.searchParams.set("token", token);
-      return u.toString();
-    }
-
-    function qsBuildXText(summary){
-      const base = `${summary.title}\nScore: ${summary.score}/100\n${summary.net.toUpperCase()} • ${summary.tokenShort}\n` +
-                   `${summary.flags.join(" • ")}\n` +
-                   `Verify on explorers + don't sign blind approvals.`;
-      return base.slice(0, 270);
-    }
-
-    function qsBuildMarkdown(summary){
-      return [
-        `## CycleX Quick Scan`,
-        ``,
-        `- **Network:** ${summary.net.toUpperCase()}`,
-        `- **Token:** \`${summary.token}\``,
-        `- **Score:** **${summary.score}/100**`,
-        `- **Verified:** ${summary.verified ? "Yes" : "No / Unknown"}`,
-        `- **Proxy:** ${summary.isProxy ? "Yes" : "No / Unknown"}${summary.impl ? ` (impl: \`${summary.impl}\`)` : ""}`,
-        `- **Owner:** ${summary.owner ? `\`${summary.owner}\`` : "Unknown"}`,
-        `- **Liquidity (V2/V3):** ${summary.liqHint}`,
-        ``,
-        `### Flags`,
-        `${summary.flags.map(x=>`- ${x}`).join("\n")}`,
-        ``,
-        `### Notes`,
-        `These checks are informational and do not guarantee safety. Always verify independently.`,
-      ].join("\n");
-    }
-
-    async function runQuickScan({ auto=false } = {}){
-      const st = $("#qs-status");
-      const out = $("#qs-out");
-      const risk = $("#qs-risk");
-      const pairsWrap = $("#qs-pairsWrap");
-
-      clearStatus(st);
-      if (risk) risk.innerHTML = "";
-      if (pairsWrap) pairsWrap.innerHTML = "";
-
-      const net = netFromSelect("#qs-net");
-      const tokenRaw = ($("#qs-token")?.value || "").trim();
-      if (!E.isAddress(tokenRaw)) {
-        setStatus(st, "warn", "Invalid token address.");
-        return;
-      }
-      const token = E.getAddress(tokenRaw);
-
-      const provider = getReadProvider(net);
-      if (!provider) {
-        setStatus(st, "bad", "No RPC available. Open RPC tool and set a working endpoint.");
-        return;
-      }
-
-      const requireLiq = !!$("#qs-require-liq")?.checked;
-      const cacheKey = `${net}:${token}:${requireLiq ? 1 : 0}:${explorerKeyFor(net) ? 1 : 0}`;
-      const cached = qsCacheGet(cacheKey);
-
-      // 10 min cache
-      const now = Date.now();
-      if (cached && (now - (cached.ts || 0) < 10 * 60 * 1000)) {
-        renderQuickScanResult(cached.data, { cached:true });
-        setStatus(st, "ok", `Loaded cached result (≤10 min).`);
-        return;
-      }
-
-      setStatus(st, "info", "Scanning…");
-
-      try {
-        const code = await provider.getCode(token);
-        if (!code || code === "0x") {
-          setStatus(st, "bad", "Address has no contract code.");
-          return;
-        }
-
-        const tokenC = new E.Contract(token, ERC20_ABI, provider);
-        let symbol="?", decimals=18, name="";
-        try { symbol = await tokenC.symbol(); } catch {}
-        try { decimals = await tokenC.decimals(); } catch {}
-        try { name = await tokenC.name(); } catch {}
-
-        // proxy + owner
-        const impl1967 = await tryEip1967Impl(provider, token);
-        const owner = await tryReadOwner(provider, token);
-
-        // explorer (optional)
-        const apiKey = explorerKeyFor(net);
-        let verified = false, isProxy = !!impl1967, impl = impl1967, contractName = "";
-        if (apiKey) {
-          const s = await explorerGetSource(net, token, apiKey);
-          if (s.ok) {
-            verified = !!s.verified;
-            contractName = s.contractName || "";
-            if (s.isProxy) isProxy = true;
-            if (s.impl && E.isAddress(s.impl)) impl = E.getAddress(s.impl);
-          }
-        }
-
-        // liquidity quick snapshot
-        const liq = await liqCheckBasic(net, token, provider);
-
-        // heuristics from bytecode
-        const hasMint = codeHasSelector(code, SEL.mint);
-        const hasPause = codeHasSelector(code, SEL.pause) || codeHasSelector(code, SEL.paused);
-        const hasBlacklist = codeHasSelector(code, SEL.blacklist1) || codeHasSelector(code, SEL.blacklist2);
-        const hasTax = codeHasSelector(code, SEL.setTax1);
-
-        // score
-        let score = 100;
-        const flags = [];
-
-        // Verified bonus / penalty
-        if (!apiKey) flags.push("Explorer API keys not enabled (proxy/verified limited).");
-        if (apiKey && !verified) { score -= 18; flags.push("Not verified on explorer (or cannot read)."); }
-        if (verified) flags.push("Verified source on explorer.");
-
-        // Proxy note
-        if (isProxy) { score -= 8; flags.push("Proxy detected (verify implementation)."); }
-        else flags.push("No proxy flag detected.");
-
-        // Owner note
-        if (!owner) { score -= 6; flags.push("Owner unknown (no owner() or read failed)."); }
-        else {
-          const zero = "0x0000000000000000000000000000000000000000";
-          if (owner.toLowerCase() === zero) flags.push("Owner is renounced (0x0).");
-          else { score -= 10; flags.push("Owner is set (centralized control possible)."); }
-        }
-
-        // Risky capabilities
-        if (hasMint) { score -= 18; flags.push("Mint-like selector detected in bytecode (possible inflation)."); }
-        if (hasPause) { score -= 10; flags.push("Pause-like selector detected (trading can be halted)."); }
-        if (hasBlacklist) { score -= 10; flags.push("Blacklist-like selectors detected (addresses can be blocked)."); }
-        if (hasTax) { score -= 8; flags.push("Tax-setting selector detected (fees can change)."); }
-
-        // Liquidity
-        if (!liq.any) {
-          score -= requireLiq ? 35 : 18;
-          flags.push("No liquidity detected (V2/V3 vs Wrapped/USDT).");
+      for (const t of targets) {
+        const pair = await fac.getPair(token, t.addr);
+        if (pair && pair !== "0x0000000000000000000000000000000000000000") {
+          const p = new E.Contract(pair, V2_PAIR_ABI, provider);
+          const [r0, r1] = await p.getReserves();
+          const ok = (BigInt(r0) > 0n || BigInt(r1) > 0n);
+          any = any || ok;
+          rows.push({ type: "V2", target: t.label, addr: pair, ok, note: ok ? `reserves: ${fmtNum(r0)} / ${fmtNum(r1)}` : "empty" });
         } else {
-          flags.push(`Liquidity detected: ${liq.hint}`);
+          rows.push({ type: "V2", target: t.label, addr: "", ok: false, note: "no pair" });
         }
-
-        score = clamp(score, 0, 100);
-
-        const data = {
-          ts: Date.now(),
-          net,
-          token,
-          tokenShort: shortAddr(token),
-          symbol,
-          decimals,
-          name,
-          score,
-          verified,
-          isProxy,
-          impl,
-          contractName,
-          owner,
-          hasMint, hasPause, hasBlacklist, hasTax,
-          liq
-        };
-
-        qsCacheSet(cacheKey, { ts: Date.now(), data });
-        qsAddHistory(net, token);
-
-        renderQuickScanResult(data, { cached:false });
-        setStatus(st, "ok", `Done. Score: <b>${score}/100</b>`);
-        gtagEvent("sec_quick_scan", { net, score });
-
-      } catch (e) {
-        setStatus(st, "bad", `Scan failed: ${String(e?.message || e)}`);
       }
-
-      function renderQuickScanResult(d, { cached }){
-        // output panel
-        const lines = [];
-        lines.push(`<b>${d.symbol || "TOKEN"}</b> ${d.name ? `— ${d.name}` : ""}`);
-        lines.push(`<div class="small" style="margin-top:6px">Network: <b>${d.net.toUpperCase()}</b> • Score: <b>${d.score}/100</b>${cached ? " • <b>(cached)</b>" : ""}</div>`);
-        lines.push(`<div class="small" style="margin-top:6px">Token: <span class="mono">${d.token}</span></div>`);
-        lines.push(`<div class="small" style="margin-top:6px">Explorer: <a href="${CHAINS[d.net].addressUrl(d.token)}" target="_blank" rel="noopener">open</a></div>`);
-        if (out) out.innerHTML = lines.join("");
-
-        // risk badges
-        if (risk) {
-          risk.innerHTML = "";
-          if (d.score >= 75) risk.appendChild(riskBadge("ok", "Overall", "Higher signal"));
-          else if (d.score >= 50) risk.appendChild(riskBadge("warn", "Overall", "Mixed signals"));
-          else risk.appendChild(riskBadge("bad", "Overall", "High risk signals"));
-
-          risk.appendChild(riskBadge(d.verified ? "ok" : "warn", "Verified", d.verified ? "Yes" : "No/Unknown"));
-          risk.appendChild(riskBadge(d.isProxy ? "warn" : "ok", "Proxy", d.isProxy ? "Yes" : "No/Unknown"));
-          risk.appendChild(riskBadge(d.owner ? "info" : "warn", "Owner", d.owner ? shortAddr(d.owner) : "Unknown"));
-          risk.appendChild(riskBadge(d.liq?.any ? "ok" : "warn", "Liquidity", d.liq?.any ? d.liq.hint : "None"));
-          if (d.hasMint) risk.appendChild(riskBadge("bad", "Mint", "Detected"));
-          if (d.hasPause) risk.appendChild(riskBadge("warn", "Pause", "Detected"));
-          if (d.hasBlacklist) risk.appendChild(riskBadge("warn", "Blacklist", "Detected"));
-          if (d.hasTax) risk.appendChild(riskBadge("warn", "Tax", "Detected"));
-        }
-
-        // pairs/liquidity details
-        if (pairsWrap) {
-          const html = `
-            <div class="table">
-              <div class="trow head">
-                <div class="cell">Pair/Pool</div>
-                <div class="cell">Type</div>
-                <div class="cell hide-sm">Target</div>
-                <div class="cell">Result</div>
-              </div>
-              ${(d.liq?.rows || []).map(r => `
-                <div class="trow">
-                  <div class="cell wrap"><span class="mono">${r.addr ? shortAddr(r.addr) : "—"}</span></div>
-                  <div class="cell">${r.type}</div>
-                  <div class="cell hide-sm">${r.target}</div>
-                  <div class="cell">${r.ok ? "✅" : "—"} ${r.note || ""}</div>
-                </div>
-              `).join("")}
-            </div>
-          `;
-          pairsWrap.innerHTML = html;
-        }
-
-        // Copy buttons
-        $("#qs-copy-link")?.onclick = async ()=>{
-          const link = qsBuildShareLink(d.net, d.token);
-          const ok = await copyText(link);
-          setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
-        };
-
-        $("#qs-copy-json")?.onclick = async ()=>{
-          const enable = !!$("#qs-show-json")?.checked;
-          if (!enable) { setStatus($("#qs-status"), "warn", "JSON report disabled (toggle in options)."); return; }
-          const ok = await copyText(safeJson(d));
-          setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
-        };
-
-        $("#qs-copy-md")?.onclick = async ()=>{
-          const md = qsBuildMarkdown({
-            net: d.net,
-            token: d.token,
-            score: d.score,
-            verified: d.verified,
-            isProxy: d.isProxy,
-            impl: d.impl,
-            owner: d.owner,
-            liqHint: d.liq?.hint || "—",
-            flags: buildFlags(d),
-            tokenShort: d.tokenShort,
-            title: `CycleX Quick Scan — ${d.symbol || "TOKEN"}`
-          });
-          const ok = await copyText(md);
-          setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied Markdown." : "Copy failed.");
-        };
-
-        $("#qs-share-x")?.onclick = ()=>{
-          const summary = buildSummary(d);
-          const text = qsBuildXText(summary);
-          const u = new URL("https://twitter.com/intent/tweet");
-          u.searchParams.set("text", text);
-          u.searchParams.set("url", qsBuildShareLink(d.net, d.token));
-          window.open(u.toString(), "_blank", "noopener");
-        };
-
-        $("#qs-copy-xtext")?.onclick = async ()=>{
-          const summary = buildSummary(d);
-          const ok = await copyText(qsBuildXText(summary));
-          setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied X text." : "Copy failed.");
-        };
-
-        $("#qs-share-tg")?.onclick = ()=>{
-          const link = qsBuildShareLink(d.net, d.token);
-          const summary = buildSummary(d);
-          const text = qsBuildXText(summary);
-          const u = new URL("https://t.me/share/url");
-          u.searchParams.set("url", link);
-          u.searchParams.set("text", text);
-          window.open(u.toString(), "_blank", "noopener");
-        };
-
-        $("#qs-copy-link")?.disabled = false;
-        $("#qs-copy-json")?.disabled = false;
-        $("#qs-copy-md")?.disabled = false;
-      }
-
-      function buildFlags(d){
-        const f = [];
-        if (d.verified) f.push("Verified");
-        if (d.isProxy) f.push("Proxy");
-        if (d.hasMint) f.push("Mint");
-        if (d.hasPause) f.push("Pause");
-        if (d.hasBlacklist) f.push("Blacklist");
-        if (d.hasTax) f.push("Tax");
-        if (d.liq?.any) f.push("Liquidity");
-        return f.length ? f : ["No strong flags"];
-      }
-
-      function buildSummary(d){
-        return {
-          title: `CycleX Quick Scan — ${d.symbol || "TOKEN"}`,
-          score: d.score,
-          net: d.net,
-          tokenShort: d.tokenShort,
-          flags: buildFlags(d)
-        };
-      }
+    } catch {
+      rows.push({ type: "V2", target: "Wrapped/USDT", addr: "", ok: false, note: "factory call failed" });
     }
 
-    async function liqCheckBasic(net, token, provider){
-      const chain = CHAINS[net];
-      const dex = DEX[net];
-      const rows = [];
-      let any = false;
+    try {
+      const fac3 = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, provider);
+      const feeTiers = [500, 3000, 10000];
+      const targets = [
+        { label: "Wrapped", addr: chain.wrapped },
+        { label: "USDT", addr: chain.usdt }
+      ];
 
-      // V2
-      try {
-        const fac = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, provider);
-        const targets = [
-          { label: "Wrapped", addr: chain.wrapped },
-          { label: "USDT", addr: chain.usdt }
-        ];
-        for (const t of targets) {
-          const pair = await fac.getPair(token, t.addr);
-          if (pair && pair !== "0x0000000000000000000000000000000000000000") {
-            const p = new E.Contract(pair, V2_PAIR_ABI, provider);
-            const [r0, r1] = await p.getReserves();
-            const ok = (BigInt(r0) > 0n || BigInt(r1) > 0n);
+      for (const t of targets) {
+        for (const fee of feeTiers) {
+          const pool = await fac3.getPool(token, t.addr, fee);
+          if (pool && pool !== "0x0000000000000000000000000000000000000000") {
+            const p = new E.Contract(pool, V3_POOL_ABI, provider);
+            let liq = 0n;
+            try { liq = BigInt(await p.liquidity()); } catch {}
+            const ok = liq > 0n;
             any = any || ok;
-            rows.push({ type: "V2", target: t.label, addr: pair, ok, note: ok ? `reserves: ${fmtNum(r0)} / ${fmtNum(r1)}` : "empty" });
-          } else {
-            rows.push({ type: "V2", target: t.label, addr: "", ok:false, note:"no pair" });
+            rows.push({ type: `V3 ${fee}`, target: t.label, addr: pool, ok, note: ok ? `liquidity: ${fmtNum(liq)}` : "0" });
           }
         }
-      } catch (e) {
-        rows.push({ type:"V2", target:"Wrapped/USDT", addr:"", ok:false, note:"factory call failed" });
       }
-
-      // V3
-      try {
-        const fac3 = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, provider);
-        const feeTiers = [500, 3000, 10000];
-        const targets = [
-          { label: "Wrapped", addr: chain.wrapped },
-          { label: "USDT", addr: chain.usdt }
-        ];
-
-        for (const t of targets) {
-          for (const fee of feeTiers) {
-            const pool = await fac3.getPool(token, t.addr, fee);
-            if (pool && pool !== "0x0000000000000000000000000000000000000000") {
-              const p = new E.Contract(pool, V3_POOL_ABI, provider);
-              let liq = 0n;
-              try { liq = BigInt(await p.liquidity()); } catch {}
-              let ok = liq > 0n;
-              any = any || ok;
-              rows.push({ type: `V3 ${fee}`, target: t.label, addr: pool, ok, note: ok ? `liquidity: ${fmtNum(liq)}` : "0" });
-            }
-          }
-        }
-      } catch (e) {
-        rows.push({ type:"V3", target:"Wrapped/USDT", addr:"", ok:false, note:"factory call failed" });
-      }
-
-      const hint = any ? "V2/V3 pairs exist" : "none";
-      return { any, hint, rows };
+    } catch {
+      rows.push({ type: "V3", target: "Wrapped/USDT", addr: "", ok: false, note: "factory call failed" });
     }
 
-    // =========================
-    // Token + Liquidity Panel (detailed)
-    // =========================
-    async function runLiqScan({ auto=false } = {}){
-      const st = $("#liq-status");
-      const out = $("#liq-out");
-      const risk = $("#liq-risk");
-      const wrap = $("#liq-tablewrap");
+    const hint = any ? "V2/V3 pairs exist" : "none";
+    return { any, hint, rows };
+  }
 
-      clearStatus(st);
-      if (risk) risk.innerHTML="";
-      if (wrap) wrap.innerHTML="";
+  // =========================
+  // Token + Liquidity Panel (detailed)
+  // =========================
+  async function runLiqScan({ auto = false } = {}) {
+    const st = $("#liq-status");
+    const out = $("#liq-out");
+    const risk = $("#liq-risk");
+    const wrap = $("#liq-tablewrap");
 
-      const net = netFromSelect("#liq-net");
-      const tokenRaw = ($("#liq-token")?.value || "").trim();
-      if (!E.isAddress(tokenRaw)) { setStatus(st,"warn","Invalid token address."); return; }
-      const token = E.getAddress(tokenRaw);
+    clearStatus(st);
+    if (risk) risk.innerHTML = "";
+    if (wrap) wrap.innerHTML = "";
 
-      const provider = getReadProvider(net);
-      if (!provider) { setStatus(st,"bad","No RPC available. Set a working endpoint in RPC tool."); return; }
+    const net = netFromSelect("#liq-net");
+    const tokenRaw = ($("#liq-token")?.value || "").trim();
+    if (!E.isAddress(tokenRaw)) { setStatus(st, "warn", "Invalid token address."); return; }
+    const token = E.getAddress(tokenRaw);
 
-      $("#liq-dex-note") && ($("#liq-dex-note").textContent = `${DEX[net].label} V2+V3 factories • targets: Wrapped + USDT`);
+    const provider = getReadProvider(net);
+    if (!provider) { setStatus(st, "bad", "No RPC available. Set a working endpoint in RPC tool."); return; }
 
-      setStatus(st,"info","Scanning liquidity…");
+    const dn = $("#liq-dex-note");
+    if (dn) dn.textContent = `${DEX[net].label} V2+V3 factories • targets: Wrapped + USDT`;
 
-      try {
-        const liq = await liqCheckBasic(net, token, provider);
+    setStatus(st, "info", "Scanning liquidity…");
 
-        if (out) {
-          out.innerHTML = `<b>${shortAddr(token)}</b><div class="small" style="margin-top:6px">${net.toUpperCase()} • ${liq.any ? "✅ liquidity found" : "— no liquidity found"}</div>`;
-        }
+    try {
+      const liq = await liqCheckBasic(net, token, provider);
 
-        if (risk) {
-          risk.appendChild(riskBadge(liq.any ? "ok" : "warn", "Liquidity", liq.any ? "Detected" : "Not detected"));
-          risk.appendChild(riskBadge("info", "Targets", "Wrapped + USDT (V2/V3)"));
-        }
+      if (out) {
+        out.innerHTML = `<b>${shortAddr(token)}</b><div class="small" style="margin-top:6px">${net.toUpperCase()} • ${liq.any ? "✅ liquidity found" : "— no liquidity found"}</div>`;
+      }
 
-        if (wrap) {
-          wrap.innerHTML = `
-            <div class="table">
-              <div class="trow head">
-                <div class="cell">Pair/Pool</div>
-                <div class="cell">Type</div>
-                <div class="cell hide-sm">Target</div>
-                <div class="cell">Result</div>
-              </div>
-              ${liq.rows.map(r=>`
-                <div class="trow">
-                  <div class="cell wrap">${r.addr ? `<a class="mono" href="${CHAINS[net].addressUrl(r.addr)}" target="_blank" rel="noopener">${r.addr}</a>` : `<span class="muted">—</span>`}</div>
-                  <div class="cell">${r.type}</div>
-                  <div class="cell hide-sm">${r.target}</div>
-                  <div class="cell">${r.ok ? "✅" : "—"} ${r.note || ""}</div>
-                </div>
-              `).join("")}
+      if (risk) {
+        risk.appendChild(riskBadge(liq.any ? "ok" : "warn", "Liquidity", liq.any ? "Detected" : "Not detected"));
+        risk.appendChild(riskBadge("info", "Targets", "Wrapped + USDT (V2/V3)"));
+      }
+
+      if (wrap) {
+        wrap.innerHTML = `
+          <div class="table">
+            <div class="trow head">
+              <div class="cell">Pair/Pool</div>
+              <div class="cell">Type</div>
+              <div class="cell hide-sm">Target</div>
+              <div class="cell">Result</div>
             </div>
-          `;
-        }
-
-        $("#liq-copy-link")?.onclick = async ()=>{
-          const u = new URL(location.href);
-          u.searchParams.set("tool","liq");
-          u.searchParams.set("net", net);
-          u.searchParams.set("token", token);
-          const ok = await copyText(u.toString());
-          setStatus(st, ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
-        };
-
-        $("#liq-share-x")?.onclick = ()=>{
-          const u = new URL("https://twitter.com/intent/tweet");
-          u.searchParams.set("text", `Liquidity scan (${net.toUpperCase()}): ${shortAddr(token)} • ${liq.any ? "liquidity found" : "no liquidity found"} — CycleX Security Hub`);
-          const link = new URL(location.href);
-          link.searchParams.set("tool","liq");
-          link.searchParams.set("net", net);
-          link.searchParams.set("token", token);
-          u.searchParams.set("url", link.toString());
-          window.open(u.toString(), "_blank", "noopener");
-        };
-
-        setStatus(st,"ok","Done.");
-        gtagEvent("sec_liq_scan", { net, any: liq.any ? 1 : 0 });
-
-      } catch (e) {
-        setStatus(st,"bad",`Liquidity scan failed: ${String(e?.message || e)}`);
-      }
-    }
-
-    // =========================
-    // Approval Guardian
-    // =========================
-    function presetSpender(net, preset){
-      if (preset === "pcs_router") return DEX.bsc.routerV2;
-      if (preset === "uni_router") return DEX.eth.routerV2;
-      return "";
-    }
-
-    function parseTokenLines(text){
-      const lines = String(text||"").split("\n").map(x=>x.trim()).filter(Boolean);
-      const out = [];
-      for (const l of lines) {
-        if (E.isAddress(l)) out.push(E.getAddress(l));
-      }
-      return uniq(out);
-    }
-
-    async function apCheckAllowances(){
-      const st = $("#ap-status");
-      clearStatus(st);
-
-      const net = netFromSelect("#ap-net");
-      const spenderPreset = ($("#ap-spender-preset")?.value || "");
-      const spenderCustom = ($("#ap-spender")?.value || "").trim();
-      const spender = E.isAddress(spenderCustom) ? E.getAddress(spenderCustom) : (presetSpender(net, spenderPreset) || "");
-      if (!spender || !E.isAddress(spender)) {
-        setStatus(st,"warn","Invalid spender. Pick a preset or paste a valid address.");
-        return;
-      }
-      $("#ap-spender").value = spender;
-
-      if (!wallet.address || !wallet.signer || !wallet.browserProvider) {
-        setStatus(st,"warn","Connect a wallet first (Safe mode is on).");
-        return;
-      }
-
-      // ensure chain
-      const targetChainId = CHAINS[net].chainId;
-      if (wallet.chainId && wallet.chainId !== targetChainId) {
-        const ok = await ensureChain(targetChainId);
-        if (!ok) { setStatus(st,"warn",`Please switch network to ${CHAINS[net].name} in your wallet.`); return; }
-      }
-
-      const tokens = parseTokenLines($("#ap-tokens")?.value || "");
-      if (!tokens.length) { setStatus(st,"warn","Paste token addresses (one per line)."); return; }
-
-      setStatus(st,"info","Reading allowances…");
-
-      const table = $("#ap-table");
-      if (table) {
-        // reset rows keeping header
-        table.innerHTML = `
-          <div class="trow head">
-            <div class="cell">Token</div>
-            <div class="cell">Allowance</div>
-            <div class="cell hide-sm">Symbol</div>
-            <div class="cell">Action</div>
+            ${liq.rows.map(r => `
+              <div class="trow">
+                <div class="cell wrap">${r.addr ? `<a class="mono" href="${CHAINS[net].addressUrl(r.addr)}" target="_blank" rel="noopener">${r.addr}</a>` : `<span class="muted">—</span>`}</div>
+                <div class="cell">${r.type}</div>
+                <div class="cell hide-sm">${r.target}</div>
+                <div class="cell">${r.ok ? "✅" : "—"} ${r.note || ""}</div>
+              </div>
+            `).join("")}
           </div>
         `;
       }
 
-      try {
-        const rp = getReadProvider(net);
-        if (!rp) { setStatus(st,"bad","No RPC for reads. Set best RPC first."); return; }
+      $("#liq-copy-link")?.addEventListener("click", async () => {
+        const u = new URL(location.href);
+        u.searchParams.set("tool", "liq");
+        u.searchParams.set("net", net);
+        u.searchParams.set("token", token);
+        const ok = await copyText(u.toString());
+        setStatus(st, ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
+      }, { once: true });
 
-        const ownerAddr = wallet.address;
-        let nonZero = 0;
+      $("#liq-share-x")?.addEventListener("click", () => {
+        const u = new URL("https://twitter.com/intent/tweet");
+        u.searchParams.set("text", `Liquidity scan (${net.toUpperCase()}): ${shortAddr(token)} • ${liq.any ? "liquidity found" : "no liquidity found"} — CycleX Security Hub`);
+        const link = new URL(location.href);
+        link.searchParams.set("tool", "liq");
+        link.searchParams.set("net", net);
+        link.searchParams.set("token", token);
+        u.searchParams.set("url", link.toString());
+        window.open(u.toString(), "_blank", "noopener");
+      }, { once: true });
 
-        for (const tAddr of tokens) {
-          const cRead = new E.Contract(tAddr, ERC20_ABI, rp);
-          let sym="?", dec=18;
-          try { sym = await cRead.symbol(); } catch {}
-          try { dec = await cRead.decimals(); } catch {}
+      setStatus(st, "ok", "Done.");
+      gtagEvent("sec_liq_scan", { net, any: liq.any ? 1 : 0 });
 
-          let allowance = 0n;
-          try { allowance = BigInt(await cRead.allowance(ownerAddr, spender)); } catch { allowance = 0n; }
+    } catch (e) {
+      setStatus(st, "bad", `Liquidity scan failed: ${String(e?.message || e)}`);
+    }
+  }
 
-          const isZero = allowance === 0n;
-          if (!isZero) nonZero++;
+  // =========================
+  // Approval Guardian
+  // =========================
+  function presetSpender(net, preset) {
+    if (preset === "pcs_router") return DEX.bsc.routerV2;
+    if (preset === "uni_router") return DEX.eth.routerV2;
+    return "";
+  }
 
-          const human = (allowance > 0n && allowance < 10n**30n) ? allowance.toString() : allowance.toString(); // keep raw
-          const inf = (allowance > (2n**255n));
+  function parseTokenLines(text) {
+    const lines = String(text || "").split("\n").map(x => x.trim()).filter(Boolean);
+    const out = [];
+    for (const l of lines) if (E.isAddress(l)) out.push(E.getAddress(l));
+    return uniq(out);
+  }
 
-          const row = document.createElement("div");
-          row.className = "trow";
-          row.innerHTML = `
-            <div class="cell wrap"><a href="${CHAINS[net].addressUrl(tAddr)}" target="_blank" rel="noopener" class="mono">${shortAddr(tAddr)}</a></div>
-            <div class="cell">${inf ? "∞" : `<span class="mono">${human}</span>`}${isZero ? "" : ""}</div>
-            <div class="cell hide-sm">${sym}</div>
-            <div class="cell">
-              <button class="btn btn-ghost" style="padding:10px 14px; font-size:12px;" ${isZero ? "disabled" : ""}>Revoke</button>
-            </div>
-          `;
-          const btn = row.querySelector("button");
-          btn?.addEventListener("click", async ()=>{
-            await apRevokeOne(net, tAddr, spender);
-          });
+  async function apCheckAllowances() {
+    const st = $("#ap-status");
+    clearStatus(st);
 
-          table?.appendChild(row);
-        }
+    const net = netFromSelect("#ap-net");
+    const spenderPreset = ($("#ap-spender-preset")?.value || "");
+    const spenderCustom = ($("#ap-spender")?.value || "").trim();
+    const spender = E.isAddress(spenderCustom) ? E.getAddress(spenderCustom) : (presetSpender(net, spenderPreset) || "");
+    if (!spender || !E.isAddress(spender)) {
+      setStatus(st, "warn", "Invalid spender. Pick a preset or paste a valid address.");
+      return;
+    }
+    const spEl = $("#ap-spender");
+    if (spEl) spEl.value = spender;
 
-        setStatus(st,"ok",`Done. Non-zero allowances: <b>${nonZero}</b>`);
-        gtagEvent("sec_allowances_checked", { net, count: tokens.length });
-
-      } catch (e) {
-        setStatus(st,"bad",`Allowance read failed: ${String(e?.message || e)}`);
-      }
+    if (!wallet.address || !wallet.signer || !wallet.browserProvider) {
+      setStatus(st, "warn", "Connect a wallet first (Safe mode is on).");
+      return;
     }
 
-    async function apRevokeOne(net, token, spender){
-      const st = $("#ap-status");
-      try {
-        if (!wallet.signer) { setStatus(st,"warn","Connect wallet first."); return; }
-
-        const targetChainId = CHAINS[net].chainId;
-        if (wallet.chainId && wallet.chainId !== targetChainId) {
-          const ok = await ensureChain(targetChainId);
-          if (!ok) { setStatus(st,"warn",`Switch wallet to ${CHAINS[net].name}.`); return; }
-        }
-
-        setStatus(st,"info",`Revoking… ${shortAddr(token)}`);
-
-        const c = new E.Contract(token, ERC20_ABI, wallet.signer);
-        const tx = await c.approve(spender, 0);
-        setStatus(st,"info",`Sent tx: <a href="${CHAINS[net].txUrl(tx.hash)}" target="_blank" rel="noopener">${tx.hash.slice(0,10)}…</a>`);
-        await tx.wait();
-
-        setStatus(st,"ok","Revoke confirmed ✅");
-        gtagEvent("sec_allowance_revoked", { net });
-
-        // refresh view
-        await apCheckAllowances();
-      } catch (e) {
-        setStatus(st,"bad",`Revoke failed: ${String(e?.message || e)}`);
-      }
+    const targetChainId = CHAINS[net].chainId;
+    if (wallet.chainId && wallet.chainId !== targetChainId) {
+      const ok = await ensureChain(targetChainId);
+      if (!ok) { setStatus(st, "warn", `Please switch network to ${CHAINS[net].name} in your wallet.`); return; }
     }
 
-    async function apRevokeAll(){
-      const st = $("#ap-status");
-      const net = netFromSelect("#ap-net");
-      const spender = ($("#ap-spender")?.value || "").trim();
-      if (!E.isAddress(spender)) { setStatus(st,"warn","Invalid spender."); return; }
+    const tokens = parseTokenLines($("#ap-tokens")?.value || "");
+    if (!tokens.length) { setStatus(st, "warn", "Paste token addresses (one per line)."); return; }
 
-      if (!wallet.address || !wallet.signer) { setStatus(st,"warn","Connect a wallet first."); return; }
+    setStatus(st, "info", "Reading allowances…");
 
-      const tokens = parseTokenLines($("#ap-tokens")?.value || "");
-      if (!tokens.length) { setStatus(st,"warn","Paste token addresses (one per line)."); return; }
+    const table = $("#ap-table");
+    if (table) {
+      table.innerHTML = `
+        <div class="trow head">
+          <div class="cell">Token</div>
+          <div class="cell">Allowance</div>
+          <div class="cell hide-sm">Symbol</div>
+          <div class="cell">Action</div>
+        </div>
+      `;
+    }
 
-      setStatus(st,"info","Revoking all non-zero allowances…");
-
+    try {
       const rp = getReadProvider(net);
-      if (!rp) { setStatus(st,"bad","No RPC for reads. Set best RPC first."); return; }
+      if (!rp) { setStatus(st, "bad", "No RPC for reads. Set best RPC first."); return; }
 
-      let did = 0;
+      const ownerAddr = wallet.address;
+      let nonZero = 0;
+
       for (const tAddr of tokens) {
-        try {
-          const cRead = new E.Contract(tAddr, ERC20_ABI, rp);
-          const allowance = BigInt(await cRead.allowance(wallet.address, spender));
-          if (allowance === 0n) continue;
-          await apRevokeOne(net, tAddr, spender);
-          did++;
-        } catch {}
+        const cRead = new E.Contract(tAddr, ERC20_ABI, rp);
+        let sym = "?", dec = 18;
+        try { sym = await cRead.symbol(); } catch {}
+        try { dec = await cRead.decimals(); } catch {}
+
+        let allowance = 0n;
+        try { allowance = BigInt(await cRead.allowance(ownerAddr, spender)); } catch { allowance = 0n; }
+
+        const isZero = allowance === 0n;
+        if (!isZero) nonZero++;
+
+        const human = allowance.toString();
+        const inf = (allowance > (2n ** 255n));
+
+        const row = document.createElement("div");
+        row.className = "trow";
+        row.innerHTML = `
+          <div class="cell wrap"><a href="${CHAINS[net].addressUrl(tAddr)}" target="_blank" rel="noopener" class="mono">${shortAddr(tAddr)}</a></div>
+          <div class="cell">${inf ? "∞" : `<span class="mono">${human}</span>`}</div>
+          <div class="cell hide-sm">${sym}</div>
+          <div class="cell">
+            <button class="btn btn-ghost" style="padding:10px 14px; font-size:12px;" ${isZero ? "disabled" : ""}>Revoke</button>
+          </div>
+        `;
+        const btn = row.querySelector("button");
+        btn?.addEventListener("click", async () => { await apRevokeOne(net, tAddr, spender); });
+
+        table?.appendChild(row);
       }
 
-      setStatus(st,"ok",`Revoke-all done. Updated: ${did}`);
+      setStatus(st, "ok", `Done. Non-zero allowances: <b>${nonZero}</b>`);
+      gtagEvent("sec_allowances_checked", { net, count: tokens.length });
+
+    } catch (e) {
+      setStatus(st, "bad", `Allowance read failed: ${String(e?.message || e)}`);
+    }
+  }
+
+  async function apRevokeOne(net, token, spender) {
+    const st = $("#ap-status");
+    try {
+      if (!wallet.signer) { setStatus(st, "warn", "Connect wallet first."); return; }
+
+      const targetChainId = CHAINS[net].chainId;
+      if (wallet.chainId && wallet.chainId !== targetChainId) {
+        const ok = await ensureChain(targetChainId);
+        if (!ok) { setStatus(st, "warn", `Switch wallet to ${CHAINS[net].name}.`); return; }
+      }
+
+      setStatus(st, "info", `Revoking… ${shortAddr(token)}`);
+
+      const c = new E.Contract(token, ERC20_ABI, wallet.signer);
+      const tx = await c.approve(spender, 0);
+      setStatus(st, "info", `Sent tx: <a href="${CHAINS[net].txUrl(tx.hash)}" target="_blank" rel="noopener">${tx.hash.slice(0, 10)}…</a>`);
+      await tx.wait();
+
+      setStatus(st, "ok", "Revoke confirmed ✅");
+      gtagEvent("sec_allowance_revoked", { net });
+
+      await apCheckAllowances();
+    } catch (e) {
+      setStatus(st, "bad", `Revoke failed: ${String(e?.message || e)}`);
+    }
+  }
+
+  async function apRevokeAll() {
+    const st = $("#ap-status");
+    const net = netFromSelect("#ap-net");
+    const spender = ($("#ap-spender")?.value || "").trim();
+    if (!E.isAddress(spender)) { setStatus(st, "warn", "Invalid spender."); return; }
+
+    if (!wallet.address || !wallet.signer) { setStatus(st, "warn", "Connect a wallet first."); return; }
+
+    const tokens = parseTokenLines($("#ap-tokens")?.value || "");
+    if (!tokens.length) { setStatus(st, "warn", "Paste token addresses (one per line)."); return; }
+
+    setStatus(st, "info", "Revoking all non-zero allowances…");
+
+    const rp = getReadProvider(net);
+    if (!rp) { setStatus(st, "bad", "No RPC for reads. Set best RPC first."); return; }
+
+    let did = 0;
+    for (const tAddr of tokens) {
+      try {
+        const cRead = new E.Contract(tAddr, ERC20_ABI, rp);
+        const allowance = BigInt(await cRead.allowance(wallet.address, spender));
+        if (allowance === 0n) continue;
+        await apRevokeOne(net, tAddr, spender);
+        did++;
+      } catch {}
     }
 
-    $("#ap-spender-preset")?.addEventListener("change", ()=>{
+    setStatus(st, "ok", `Revoke-all done. Updated: ${did}`);
+  }
+
+  function initApprovalsUi() {
+    $("#ap-spender-preset")?.addEventListener("change", () => {
       const net = netFromSelect("#ap-net");
       const p = ($("#ap-spender-preset")?.value || "");
       if (p === "custom") return;
       const v = presetSpender(net, p);
-      if (v) $("#ap-spender").value = v;
+      const el = $("#ap-spender");
+      if (v && el) el.value = v;
     });
 
-    $("#ap-seed-common")?.addEventListener("click", ()=>{
+    $("#ap-seed-common")?.addEventListener("click", () => {
       const net = netFromSelect("#ap-net");
       const chain = CHAINS[net];
       const common = uniq([chain.wrapped, chain.usdt]);
-      $("#ap-tokens").value = common.join("\n");
+      const el = $("#ap-tokens");
+      if (el) el.value = common.join("\n");
       setStatus($("#ap-status"), "ok", "Seeded common tokens (Wrapped + USDT).");
     });
 
-    $("#ap-seed-history")?.addEventListener("click", ()=>{
+    $("#ap-seed-history")?.addEventListener("click", () => {
       const net = netFromSelect("#ap-net");
       const hist = qsGetHistory(net);
       if (!hist.length) { setStatus($("#ap-status"), "warn", "No scan history yet."); return; }
-      $("#ap-tokens").value = hist.join("\n");
+      const el = $("#ap-tokens");
+      if (el) el.value = hist.join("\n");
       setStatus($("#ap-status"), "ok", "Loaded tokens from scan history.");
     });
 
     $("#ap-check")?.addEventListener("click", apCheckAllowances);
     $("#ap-revoke-all")?.addEventListener("click", apRevokeAll);
+  }
 
-    // =========================
-    // RPC Health Checker
-    // =========================
-    function rpcRowHtml(r){
-      const statusTxt = r.ok ? "OK" : (r.status || "FAIL");
-      const msTxt = (r.ms === null || r.ms === undefined) ? "—" : String(r.ms);
-      const chainTxt = r.chainOk ? "✅" : "—";
-      const blockTxt = r.blockOk ? "✅" : "—";
-      const callTxt  = r.callOk ? "✅" : "—";
-      const logsTxt  = r.logsOk ? "✅" : "—";
+  // =========================
+  // RPC Health Checker
+  // =========================
+  function rpcRowHtml(r) {
+    const statusTxt = r.ok ? "OK" : (r.status || "FAIL");
+    const msTxt = (r.ms === null || r.ms === undefined) ? "—" : String(r.ms);
+    const chainTxt = r.chainOk ? "✅" : "—";
+    const blockTxt = r.blockOk ? "✅" : "—";
+    const callTxt = r.callOk ? "✅" : "—";
+    const logsTxt = r.logsOk ? "✅" : "—";
 
-      return `
-        <div class="trow rpc ${r.highlight ? "highlight" : ""}">
-          <div class="cell wrap"><span class="mono">${r.url}</span></div>
-          <div class="cell">${msTxt}</div>
-          <div class="cell hide-sm">${chainTxt}</div>
-          <div class="cell hide-sm">${blockTxt}</div>
-          <div class="cell hide-sm">${callTxt}</div>
-          <div class="cell hide-sm">${logsTxt}</div>
-          <div class="cell">${r.ok ? "✅" : "—"} ${statusTxt}</div>
+    return `
+      <div class="trow rpc ${r.highlight ? "highlight" : ""}">
+        <div class="cell wrap"><span class="mono">${r.url}</span></div>
+        <div class="cell">${msTxt}</div>
+        <div class="cell hide-sm">${chainTxt}</div>
+        <div class="cell hide-sm">${blockTxt}</div>
+        <div class="cell hide-sm">${callTxt}</div>
+        <div class="cell hide-sm">${logsTxt}</div>
+        <div class="cell">${r.ok ? "✅" : "—"} ${statusTxt}</div>
+      </div>
+    `;
+  }
+
+  async function testOneRpc(url, net) {
+    const chain = CHAINS[net];
+    const start = performance.now();
+
+    let chainOk = false, blockOk = false, callOk = false, logsOk = false;
+    let blockNumHex = "0x0";
+
+    try {
+      const chainIdHex = await rpcRequest(url, "eth_chainId", [], 6500);
+      const chainId = Number(chainIdHex);
+      chainOk = (chainId === chain.chainId);
+
+      blockNumHex = await rpcRequest(url, "eth_blockNumber", [], 6500);
+      blockOk = !!blockNumHex;
+
+      const data = "0x313ce567";
+      const callRes = await rpcRequest(url, "eth_call", [{ to: chain.usdt, data }, "latest"], 6500);
+      callOk = !!callRes;
+
+      let latest = parseInt(blockNumHex, 16);
+      if (!isFinite(latest) || latest <= 0) latest = 0;
+      const from = Math.max(0, latest - 200);
+
+      const logs = await rpcRequest(url, "eth_getLogs", [{
+        fromBlock: "0x" + from.toString(16),
+        toBlock: "0x" + latest.toString(16),
+        address: chain.usdt,
+        topics: [TRANSFER_TOPIC0]
+      }], 8000);
+
+      logsOk = Array.isArray(logs);
+
+      const ms = Math.round(performance.now() - start);
+      const ok = chainOk && blockOk && callOk && logsOk;
+      return { url, ms, ok, chainOk, blockOk, callOk, logsOk, blockNumHex };
+    } catch (e) {
+      const ms = Math.round(performance.now() - start);
+      return { url, ms, ok: false, chainOk, blockOk, callOk, logsOk, status: String(e?.message || e) };
+    }
+  }
+
+  async function runRpcTests() {
+    const st = $("#rpc-status");
+    clearStatus(st);
+
+    const net = netFromSelect("#rpc-net");
+    const candidates = buildRpcCandidates(net);
+    if (!candidates.length) { setStatus(st, "warn", "No RPC URLs to test."); return; }
+
+    const table = $("#rpc-table");
+    if (table) {
+      table.innerHTML = `
+        <div class="trow head rpc">
+          <div class="cell">RPC</div>
+          <div class="cell">ms</div>
+          <div class="cell hide-sm">chain</div>
+          <div class="cell hide-sm">block</div>
+          <div class="cell hide-sm">call</div>
+          <div class="cell hide-sm">logs</div>
+          <div class="cell">status</div>
         </div>
       `;
     }
 
-    async function testOneRpc(url, net){
-      const chain = CHAINS[net];
-      const start = performance.now();
+    setStatus(st, "info", `Testing ${candidates.length} RPCs…`);
 
-      let chainOk=false, blockOk=false, callOk=false, logsOk=false;
-      let blockNumHex = "0x0";
+    const results = [];
+    for (const url of candidates) {
+      const r = await testOneRpc(url, net);
+      results.push(r);
 
-      try {
-        const chainIdHex = await rpcRequest(url, "eth_chainId", [], 6500);
-        const chainId = Number(chainIdHex);
-        chainOk = (chainId === chain.chainId);
-
-        blockNumHex = await rpcRequest(url, "eth_blockNumber", [], 6500);
-        blockOk = !!blockNumHex;
-
-        // eth_call: decimals() on USDT
-        const data = "0x313ce567";
-        const callRes = await rpcRequest(url, "eth_call", [{ to: chain.usdt, data }, "latest"], 6500);
-        callOk = !!callRes;
-
-        // read logs: last 200 blocks for USDT Transfer
-        let latest = parseInt(blockNumHex, 16);
-        if (!isFinite(latest) || latest <= 0) latest = 0;
-        const from = Math.max(0, latest - 200);
-        const logs = await rpcRequest(url, "eth_getLogs", [{
-          fromBlock: "0x" + from.toString(16),
-          toBlock: "0x" + latest.toString(16),
-          address: chain.usdt,
-          topics: [TRANSFER_TOPIC0]
-        }], 8000);
-
-        // logs can be empty but should not error
-        logsOk = Array.isArray(logs);
-
-        const ms = Math.round(performance.now() - start);
-        const ok = chainOk && blockOk && callOk && logsOk;
-        return { url, ms, ok, chainOk, blockOk, callOk, logsOk, blockNumHex };
-      } catch (e) {
-        const ms = Math.round(performance.now() - start);
-        return { url, ms, ok:false, chainOk, blockOk, callOk, logsOk, status: String(e?.message || e) };
-      }
+      // ✅ no "&& assignment" here (prevents Invalid left-hand side issues)
+      if (table) table.innerHTML += rpcRowHtml(r);
     }
 
-    async function runRpcTests(){
-      const st = $("#rpc-status");
-      clearStatus(st);
+    const good = results.filter(r => r.ok).sort((a, b) => a.ms - b.ms);
+    if (good.length) {
+      const best = good[0];
+      setSavedBestRpc(net, best.url);
 
-      const net = netFromSelect("#rpc-net");
-      const candidates = buildRpcCandidates(net);
-      if (!candidates.length) { setStatus(st,"warn","No RPC URLs to test."); return; }
-
-      const table = $("#rpc-table");
       if (table) {
         table.innerHTML = `
           <div class="trow head rpc">
@@ -2650,90 +2754,60 @@
             <div class="cell">status</div>
           </div>
         `;
-      }
-
-      setStatus(st,"info",`Testing ${candidates.length} RPCs…`);
-
-      const results = [];
-      for (const url of candidates) {
-        const r = await testOneRpc(url, net);
-        results.push(r);
-
-        // stream results
-        table && (table.innerHTML += rpcRowHtml(r));
-      }
-
-      const good = results.filter(r => r.ok).sort((a,b)=>a.ms-b.ms);
-      if (good.length) {
-        const best = good[0];
-        setSavedBestRpc(net, best.url);
-
-        // rerender highlight
-        if (table) {
-          table.innerHTML = `
-            <div class="trow head rpc">
-              <div class="cell">RPC</div>
-              <div class="cell">ms</div>
-              <div class="cell hide-sm">chain</div>
-              <div class="cell hide-sm">block</div>
-              <div class="cell hide-sm">call</div>
-              <div class="cell hide-sm">logs</div>
-              <div class="cell">status</div>
-            </div>
-          `;
-          for (const r of results) {
-            r.highlight = (r.url === best.url);
-            table.innerHTML += rpcRowHtml(r);
-          }
+        for (const r of results) {
+          r.highlight = (r.url === best.url);
+          table.innerHTML += rpcRowHtml(r);
         }
-
-        setStatus(st,"ok",`Best RPC saved locally ✅ <span class="mono">${best.url}</span>`);
-        gtagEvent("sec_rpc_best_saved", { net });
-      } else {
-        setStatus(st,"warn","No fully working RPC found (CORS/timeouts/logs). Try a different endpoint.");
       }
+
+      setStatus(st, "ok", `Best RPC saved locally ✅ <span class="mono">${best.url}</span>`);
+      gtagEvent("sec_rpc_best_saved", { net });
+    } else {
+      setStatus(st, "warn", "No fully working RPC found (CORS/timeouts/logs). Try a different endpoint.");
     }
+  }
 
-    async function runRpcDevLogsTest(){
-      const st = $("#rpc-status");
-      const net = netFromSelect("#rpc-net");
-      const url = ( ($("#rpc-custom")?.value || "").trim() || getSavedPrivateRpc(net) || getSavedBestRpc(net) || CHAINS[net].publicRpcs[0] );
+  async function runRpcDevLogsTest() {
+    const st = $("#rpc-status");
+    const net = netFromSelect("#rpc-net");
+    const url = ((($("#rpc-custom")?.value || "").trim()) || getSavedPrivateRpc(net) || getSavedBestRpc(net) || CHAINS[net].publicRpcs[0]);
 
-      if (!url) { setStatus(st,"warn","Set an RPC first."); return; }
+    if (!url) { setStatus(st, "warn", "Set an RPC first."); return; }
 
-      const addr = ($("#rpc-dev-addr")?.value || "").trim();
-      const topic0 = ($("#rpc-dev-topic")?.value || "").trim();
+    const addr = ($("#rpc-dev-addr")?.value || "").trim();
+    const topic0 = ($("#rpc-dev-topic")?.value || "").trim();
 
-      if (addr && !E.isAddress(addr)) { setStatus(st,"warn","Invalid contract address."); return; }
-      if (topic0 && !/^0x[0-9a-fA-F]{64}$/.test(topic0)) { setStatus(st,"warn","Topic0 must be 32 bytes hex (0x + 64)."); return; }
+    if (addr && !E.isAddress(addr)) { setStatus(st, "warn", "Invalid contract address."); return; }
+    if (topic0 && !/^0x[0-9a-fA-F]{64}$/.test(topic0)) { setStatus(st, "warn", "Topic0 must be 32 bytes hex (0x + 64)."); return; }
 
-      setStatus(st,"info","Running custom logs test…");
+    setStatus(st, "info", "Running custom logs test…");
 
-      try {
-        const latestHex = await rpcRequest(url, "eth_blockNumber", [], 6500);
-        let latest = parseInt(latestHex, 16);
-        if (!isFinite(latest) || latest <= 0) latest = 0;
-        const from = Math.max(0, latest - 2000);
+    try {
+      const latestHex = await rpcRequest(url, "eth_blockNumber", [], 6500);
+      let latest = parseInt(latestHex, 16);
+      if (!isFinite(latest) || latest <= 0) latest = 0;
+      const from = Math.max(0, latest - 2000);
 
-        const logs = await rpcRequest(url, "eth_getLogs", [{
-          fromBlock: "0x" + from.toString(16),
-          toBlock: "0x" + latest.toString(16),
-          ...(addr ? { address: E.getAddress(addr) } : {}),
-          ...(topic0 ? { topics: [topic0] } : {})
-        }], 9000);
+      const logs = await rpcRequest(url, "eth_getLogs", [{
+        fromBlock: "0x" + from.toString(16),
+        toBlock: "0x" + latest.toString(16),
+        ...(addr ? { address: E.getAddress(addr) } : {}),
+        ...(topic0 ? { topics: [topic0] } : {})
+      }], 9000);
 
-        setStatus(st,"ok",`Custom logs OK ✅ returned <b>${Array.isArray(logs) ? logs.length : 0}</b> logs`);
-        gtagEvent("sec_rpc_dev_logs_ok", { net });
+      setStatus(st, "ok", `Custom logs OK ✅ returned <b>${Array.isArray(logs) ? logs.length : 0}</b> logs`);
+      gtagEvent("sec_rpc_dev_logs_ok", { net });
 
-      } catch (e) {
-        setStatus(st,"bad",`Custom logs failed: ${String(e?.message || e)}`);
-      }
+    } catch (e) {
+      setStatus(st, "bad", `Custom logs failed: ${String(e?.message || e)}`);
     }
+  }
 
+  function initRpcUi() {
     $("#rpc-test")?.addEventListener("click", runRpcTests);
     $("#rpc-dev-run")?.addEventListener("click", runRpcDevLogsTest);
 
-    $("#rpc-copy-best")?.addEventListener("click", async ()=>{
+    $("#rpc-copy-best")?.addEventListener("click", async () => {
       const net = netFromSelect("#rpc-net");
       const best = getSavedBestRpc(net);
       if (!best) { setStatus($("#rpc-status"), "warn", "No saved best RPC yet. Run tests first."); return; }
@@ -2741,7 +2815,7 @@
       setStatus($("#rpc-status"), ok ? "ok" : "warn", ok ? "Copied best RPC." : "Copy failed.");
     });
 
-    $("#rpc-share-x")?.addEventListener("click", ()=>{
+    $("#rpc-share-x")?.addEventListener("click", () => {
       const net = netFromSelect("#rpc-net");
       const best = getSavedBestRpc(net);
       const u = new URL("https://twitter.com/intent/tweet");
@@ -2749,7 +2823,7 @@
       window.open(u.toString(), "_blank", "noopener");
     });
 
-    $("#rpc-private-save")?.addEventListener("click", ()=>{
+    $("#rpc-private-save")?.addEventListener("click", () => {
       const net = netFromSelect("#rpc-net");
       const v = ($("#rpc-private")?.value || "").trim();
       if (v && !/^https?:\/\//i.test(v)) { setStatus($("#rpc-status"), "warn", "RPC must start with https://"); return; }
@@ -2757,161 +2831,171 @@
       setStatus($("#rpc-status"), "ok", "Saved private RPC locally.");
     });
 
-    $("#rpc-private-clear")?.addEventListener("click", ()=>{
+    $("#rpc-private-clear")?.addEventListener("click", () => {
       const net = netFromSelect("#rpc-net");
       setSavedPrivateRpc(net, "");
-      $("#rpc-private") && ($("#rpc-private").value = "");
+      const el = $("#rpc-private");
+      if (el) el.value = "";
       setStatus($("#rpc-status"), "ok", "Cleared private RPC.");
     });
 
-    $("#rpc-net")?.addEventListener("change", ()=>{
+    $("#rpc-net")?.addEventListener("change", () => {
       const net = netFromSelect("#rpc-net");
       const v = getSavedPrivateRpc(net);
-      $("#rpc-private") && ($("#rpc-private").value = v);
+      const el = $("#rpc-private");
+      if (el) el.value = v;
     });
 
-    // =========================
-    // Tx Decoder
-    // =========================
-    function decodeErc20Input(data){
-      if (!data || data.length < 10) return null;
-      const sig = data.slice(0, 10).toLowerCase();
-      // transfer(address,uint256) a9059cbb
-      if (sig === "0xa9059cbb" && data.length >= 10 + 64 + 64) {
-        const to = "0x" + data.slice(10+24, 10+64);
-        const val = BigInt("0x" + data.slice(10+64, 10+64+64));
-        return { type:"ERC20.transfer", to: E.isAddress(to) ? E.getAddress(to) : to, value: val.toString() };
-      }
-      // approve(address,uint256) 095ea7b3
-      if (sig === "0x095ea7b3" && data.length >= 10 + 64 + 64) {
-        const sp = "0x" + data.slice(10+24, 10+64);
-        const val = BigInt("0x" + data.slice(10+64, 10+64+64));
-        return { type:"ERC20.approve", spender: E.isAddress(sp) ? E.getAddress(sp) : sp, value: val.toString() };
-      }
-      return { type:"Unknown", selector: sig, bytes: data.length };
+    // init private input on load
+    const net = netFromSelect("#rpc-net");
+    const v = getSavedPrivateRpc(net);
+    const el = $("#rpc-private");
+    if (el) el.value = v;
+  }
+
+  // =========================
+  // Tx Decoder
+  // =========================
+  function decodeErc20Input(data) {
+    if (!data || data.length < 10) return null;
+    const sig = data.slice(0, 10).toLowerCase();
+
+    if (sig === "0xa9059cbb" && data.length >= 10 + 64 + 64) {
+      const to = "0x" + data.slice(10 + 24, 10 + 64);
+      const val = BigInt("0x" + data.slice(10 + 64, 10 + 64 + 64));
+      return { type: "ERC20.transfer", to: E.isAddress(to) ? E.getAddress(to) : to, value: val.toString() };
     }
-
-    async function runTxDecode({ auto=false } = {}){
-      const st = $("#tx-status");
-      const out = $("#tx-out");
-      const eventsEl = $("#tx-events");
-
-      clearStatus(st);
-      if (eventsEl) eventsEl.innerHTML = "";
-
-      const net = netFromSelect("#tx-net");
-      const hash = ($("#tx-hash")?.value || "").trim();
-      if (!/^0x[0-9a-fA-F]{64}$/.test(hash)) { setStatus(st,"warn","Invalid tx hash."); return; }
-
-      const best = getSavedBestRpc(net);
-      const providerUrl = ( ($("#rpc-custom")?.value || "").trim() || getSavedPrivateRpc(net) || best || CHAINS[net].publicRpcs[0] );
-      if (!providerUrl) { setStatus(st,"bad","No RPC available. Run RPC tests first."); return; }
-
-      setStatus(st,"info","Fetching tx + receipt…");
-
-      try {
-        const tx = await rpcRequest(providerUrl, "eth_getTransactionByHash", [hash], 9000);
-        const rc = await rpcRequest(providerUrl, "eth_getTransactionReceipt", [hash], 9000);
-
-        if (!tx) { setStatus(st,"warn","Transaction not found."); return; }
-
-        const decoded = decodeErc20Input(tx.input || "");
-        const from = tx.from ? E.getAddress(tx.from) : "";
-        const to = tx.to ? E.getAddress(tx.to) : "";
-        const status = rc?.status === "0x1" ? "✅ success" : (rc?.status === "0x0" ? "❌ failed" : "—");
-        const block = rc?.blockNumber ? parseInt(rc.blockNumber, 16) : null;
-
-        if (out) {
-          out.innerHTML = `
-            <b>Tx</b>: <a href="${CHAINS[net].txUrl(hash)}" target="_blank" rel="noopener" class="mono">${hash}</a><br>
-            <span class="small">Status: <b>${status}</b>${block ? ` • Block: <b>${block}</b>` : ""}</span><br><br>
-            <div class="small">From: <span class="mono">${from}</span></div>
-            <div class="small">To: <span class="mono">${to || "—"}</span></div>
-            <div class="small" style="margin-top:10px"><b>Input</b>: <span class="mono">${decoded?.type || "—"}</span></div>
-            <div class="small" style="margin-top:6px"><span class="mono">${safeJson(decoded)}</span></div>
-          `;
-        }
-
-        // decode logs (Transfer/Approval)
-        const iface = new E.Interface([
-          "event Transfer(address indexed from, address indexed to, uint256 value)",
-          "event Approval(address indexed owner, address indexed spender, uint256 value)"
-        ]);
-
-        const logs = Array.isArray(rc?.logs) ? rc.logs : [];
-        const rendered = [];
-
-        for (const lg of logs) {
-          try {
-            const topic0 = (lg.topics && lg.topics[0]) ? String(lg.topics[0]).toLowerCase() : "";
-            if (topic0 !== TRANSFER_TOPIC0 && topic0 !== APPROVAL_TOPIC0) continue;
-
-            const parsed = iface.parseLog({ topics: lg.topics, data: lg.data });
-            rendered.push({
-              address: lg.address ? E.getAddress(lg.address) : "",
-              name: parsed?.name || "",
-              args: parsed?.args ? Array.from(parsed.args).map(x=> (typeof x === "bigint" ? x.toString() : String(x))) : []
-            });
-          } catch {}
-        }
-
-        if (eventsEl) {
-          if (!rendered.length) {
-            eventsEl.innerHTML = `<div class="small muted">No standard Transfer/Approval events decoded.</div>`;
-          } else {
-            eventsEl.innerHTML = rendered.map(ev => `
-              <div class="status info" style="display:block; margin-top:10px;">
-                <b>${ev.name}</b><br>
-                <span class="small">Contract: <a href="${CHAINS[net].addressUrl(ev.address)}" target="_blank" rel="noopener" class="mono">${ev.address}</a></span><br>
-                <span class="mono">${safeJson(ev.args)}</span>
-              </div>
-            `).join("");
-          }
-        }
-
-        $("#tx-copy-md")?.onclick = async ()=>{
-          const md = [
-            `## Tx Decode (CycleX Security Hub)`,
-            ``,
-            `- Network: ${net.toUpperCase()}`,
-            `- Tx: \`${hash}\``,
-            `- Explorer: ${CHAINS[net].txUrl(hash)}`,
-            `- Status: ${status}`,
-            ``,
-            `### Decoded Input`,
-            "```json",
-            safeJson(decoded),
-            "```",
-            ``,
-            `### Decoded Events (Transfer/Approval)`,
-            "```json",
-            safeJson(rendered),
-            "```"
-          ].join("\n");
-          const ok = await copyText(md);
-          setStatus(st, ok ? "ok" : "warn", ok ? "Copied Markdown." : "Copy failed.");
-        };
-
-        setStatus(st,"ok","Done.");
-        gtagEvent("sec_tx_decode", { net });
-
-      } catch (e) {
-        setStatus(st,"bad",`Tx decode failed: ${String(e?.message || e)}`);
-      }
+    if (sig === "0x095ea7b3" && data.length >= 10 + 64 + 64) {
+      const sp = "0x" + data.slice(10 + 24, 10 + 64);
+      const val = BigInt("0x" + data.slice(10 + 64, 10 + 64 + 64));
+      return { type: "ERC20.approve", spender: E.isAddress(sp) ? E.getAddress(sp) : sp, value: val.toString() };
     }
+    return { type: "Unknown", selector: sig, bytes: data.length };
+  }
 
+  async function runTxDecode({ auto = false } = {}) {
+    const st = $("#tx-status");
+    const out = $("#tx-out");
+    const eventsEl = $("#tx-events");
+
+    clearStatus(st);
+    if (eventsEl) eventsEl.innerHTML = "";
+
+    const net = netFromSelect("#tx-net");
+    const hash = ($("#tx-hash")?.value || "").trim();
+    if (!/^0x[0-9a-fA-F]{64}$/.test(hash)) { setStatus(st, "warn", "Invalid tx hash."); return; }
+
+    const best = getSavedBestRpc(net);
+    const providerUrl = ((($("#rpc-custom")?.value || "").trim()) || getSavedPrivateRpc(net) || best || CHAINS[net].publicRpcs[0]);
+    if (!providerUrl) { setStatus(st, "bad", "No RPC available. Run RPC tests first."); return; }
+
+    setStatus(st, "info", "Fetching tx + receipt…");
+
+    try {
+      const tx = await rpcRequest(providerUrl, "eth_getTransactionByHash", [hash], 9000);
+      const rc = await rpcRequest(providerUrl, "eth_getTransactionReceipt", [hash], 9000);
+
+      if (!tx) { setStatus(st, "warn", "Transaction not found."); return; }
+
+      const decoded = decodeErc20Input(tx.input || "");
+      const from = tx.from ? E.getAddress(tx.from) : "";
+      const to = tx.to ? E.getAddress(tx.to) : "";
+      const status = rc?.status === "0x1" ? "✅ success" : (rc?.status === "0x0" ? "❌ failed" : "—");
+      const block = rc?.blockNumber ? parseInt(rc.blockNumber, 16) : null;
+
+      if (out) {
+        out.innerHTML = `
+          <b>Tx</b>: <a href="${CHAINS[net].txUrl(hash)}" target="_blank" rel="noopener" class="mono">${hash}</a><br>
+          <span class="small">Status: <b>${status}</b>${block ? ` • Block: <b>${block}</b>` : ""}</span><br><br>
+          <div class="small">From: <span class="mono">${from}</span></div>
+          <div class="small">To: <span class="mono">${to || "—"}</span></div>
+          <div class="small" style="margin-top:10px"><b>Input</b>: <span class="mono">${decoded?.type || "—"}</span></div>
+          <div class="small" style="margin-top:6px"><span class="mono">${safeJson(decoded)}</span></div>
+        `;
+      }
+
+      const iface = new E.Interface([
+        "event Transfer(address indexed from, address indexed to, uint256 value)",
+        "event Approval(address indexed owner, address indexed spender, uint256 value)"
+      ]);
+
+      const logs = Array.isArray(rc?.logs) ? rc.logs : [];
+      const rendered = [];
+
+      for (const lg of logs) {
+        try {
+          const topic0 = (lg.topics && lg.topics[0]) ? String(lg.topics[0]).toLowerCase() : "";
+          if (topic0 !== TRANSFER_TOPIC0 && topic0 !== APPROVAL_TOPIC0) continue;
+
+          const parsed = iface.parseLog({ topics: lg.topics, data: lg.data });
+          rendered.push({
+            address: lg.address ? E.getAddress(lg.address) : "",
+            name: parsed?.name || "",
+            args: parsed?.args
+              ? Array.from(parsed.args).map(x => (typeof x === "bigint" ? x.toString() : String(x)))
+              : []
+          });
+        } catch {}
+      }
+
+      if (eventsEl) {
+        if (!rendered.length) {
+          eventsEl.innerHTML = `<div class="small muted">No standard Transfer/Approval events decoded.</div>`;
+        } else {
+          eventsEl.innerHTML = rendered.map(ev => `
+            <div class="status info" style="display:block; margin-top:10px;">
+              <b>${ev.name}</b><br>
+              <span class="small">Contract: <a href="${CHAINS[net].addressUrl(ev.address)}" target="_blank" rel="noopener" class="mono">${ev.address}</a></span><br>
+              <span class="mono">${safeJson(ev.args)}</span>
+            </div>
+          `).join("");
+        }
+      }
+
+      $("#tx-copy-md")?.addEventListener("click", async () => {
+        const md = [
+          `## Tx Decode (CycleX Security Hub)`,
+          ``,
+          `- Network: ${net.toUpperCase()}`,
+          `- Tx: \`${hash}\``,
+          `- Explorer: ${CHAINS[net].txUrl(hash)}`,
+          `- Status: ${status}`,
+          ``,
+          `### Decoded Input`,
+          "```json",
+          safeJson(decoded),
+          "```",
+          ``,
+          `### Decoded Events (Transfer/Approval)`,
+          "```json",
+          safeJson(rendered),
+          "```"
+        ].join("\n");
+        const ok = await copyText(md);
+        setStatus(st, ok ? "ok" : "warn", ok ? "Copied Markdown." : "Copy failed.");
+      }, { once: true });
+
+      setStatus(st, "ok", "Done.");
+      gtagEvent("sec_tx_decode", { net });
+
+    } catch (e) {
+      setStatus(st, "bad", `Tx decode failed: ${String(e?.message || e)}`);
+    }
+  }
+
+  function initTxUi() {
     $("#tx-run")?.addEventListener("click", runTxDecode);
+  }
 
-    // =========================
-    // Dev Tools: Bookmarklet + Monitor
-    // =========================
-    function buildBookmarklet(baseUrl){
-      // bookmarklet tries to read token/tx from explorer URL and opens hub
-      const js = `
+  // =========================
+  // Dev Tools: Bookmarklet + Monitor
+  // =========================
+  function buildBookmarklet(baseUrl) {
+    const js = `
 (function(){
   try{
     var u=location.href;
-    var base="${baseUrl.replace(/"/g,'\\"')}";
+    var base="${baseUrl.replace(/"/g, '\\"')}";
     var net = (u.includes("bscscan.com") ? "bsc" : "eth");
     var m1 = u.match(/\\/address\\/(0x[a-fA-F0-9]{40})/);
     var m2 = u.match(/\\/token\\/(0x[a-fA-F0-9]{40})/);
@@ -2927,183 +3011,176 @@
     window.open(to, "_blank");
   }catch(e){ alert("Bookmarklet error: " + e); }
 })();`.trim();
+    return "javascript:" + encodeURIComponent(js);
+  }
 
-      return "javascript:" + encodeURIComponent(js);
-    }
-
-    $("#bm-generate")?.addEventListener("click", ()=>{
+  function initDevUi() {
+    $("#bm-generate")?.addEventListener("click", () => {
       const base = ($("#bm-base")?.value || location.origin + location.pathname).trim();
       const bm = buildBookmarklet(base);
       setStatus($("#bm-out"), "ok", `Generated. Copy it using the button below.`);
-      $("#bm-out").dataset.bm = bm;
+      const out = $("#bm-out");
+      if (out) out.dataset.bm = bm;
     });
 
-    $("#bm-copy")?.addEventListener("click", async ()=>{
+    $("#bm-copy")?.addEventListener("click", async () => {
       const bm = $("#bm-out")?.dataset?.bm || "";
       if (!bm) { setStatus($("#bm-out"), "warn", "Generate first."); return; }
-      const ok = await copyText(decodeURIComponent(bm.replace(/^javascript:/,"javascript:")));
-      // copy the bookmarklet as text (user can paste into bookmark URL)
+      const ok = await copyText(decodeURIComponent(bm.replace(/^javascript:/, "javascript:")));
       setStatus($("#bm-out"), ok ? "ok" : "warn", ok ? "Copied bookmarklet code." : "Copy failed.");
     });
 
-    // Monitor
-    const LS_MON = "cx_sec_mon_v1";
+    const baseEl = $("#bm-base");
+    if (baseEl) baseEl.value = location.origin + location.pathname;
 
-    function monLoad(){
-      try { return JSON.parse(localStorage.getItem(LS_MON) || "[]"); } catch { return []; }
-    }
-    function monSave(list){
-      try { localStorage.setItem(LS_MON, JSON.stringify(list)); } catch {}
-    }
-
-    function monRender(){
-      const table = $("#mon-table");
-      if (!table) return;
-      const list = monLoad();
-      table.innerHTML = `
-        <div class="trow head">
-          <div class="cell">Contract</div>
-          <div class="cell">Network</div>
-          <div class="cell hide-sm">Last seen</div>
-          <div class="cell">Status</div>
-        </div>
-      `;
-      for (const it of list) {
-        const row = document.createElement("div");
-        row.className = "trow";
-        row.innerHTML = `
-          <div class="cell wrap"><a href="${CHAINS[it.net].addressUrl(it.addr)}" target="_blank" rel="noopener" class="mono">${shortAddr(it.addr)}</a></div>
-          <div class="cell">${it.net.toUpperCase()}</div>
-          <div class="cell hide-sm">${it.last || "—"}</div>
-          <div class="cell">${it.status || "—"}</div>
-        `;
-        table.appendChild(row);
-      }
-    }
-
-    async function monAdd(){
-      const st = $("#mon-status");
-      clearStatus(st);
-
-      const net = netFromSelect("#mon-net");
-      const a = ($("#mon-addr")?.value || "").trim();
-      if (!E.isAddress(a)) { setStatus(st,"warn","Invalid contract address."); return; }
-      const addr = E.getAddress(a);
-
-      const list = monLoad();
-      const next = [{ net, addr, last:"—", status:"pending" }, ...list.filter(x => !(x.net===net && x.addr.toLowerCase()===addr.toLowerCase()))].slice(0, 40);
-      monSave(next);
-      monRender();
-      setStatus(st,"ok","Added.");
-      gtagEvent("sec_mon_add", { net });
-    }
-
-    async function monCheckAll(){
-      const st = $("#mon-status");
-      clearStatus(st);
-
-      const list = monLoad();
-      if (!list.length) { setStatus(st,"warn","Watchlist empty."); return; }
-
-      setStatus(st,"info","Checking…");
-
-      for (const it of list) {
-        try {
-          const provider = getReadProvider(it.net);
-          if (!provider) { it.status = "no rpc"; continue; }
-          const code = await provider.getCode(it.addr);
-          it.status = (code && code !== "0x") ? "code ✅" : "no code";
-          it.last = new Date().toLocaleString();
-        } catch {
-          it.status = "failed";
-          it.last = new Date().toLocaleString();
-        }
-      }
-      monSave(list);
-      monRender();
-      setStatus(st,"ok","Done.");
-      gtagEvent("sec_mon_check", { n: list.length });
-    }
-
+    monRender();
     $("#mon-add")?.addEventListener("click", monAdd);
     $("#mon-check")?.addEventListener("click", monCheckAll);
-    $("#mon-export")?.addEventListener("click", async ()=>{
+    $("#mon-export")?.addEventListener("click", async () => {
       const list = monLoad();
       const ok = await copyText(safeJson(list));
       setStatus($("#mon-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
     });
+  }
 
-    // =========================
-    // Wiring + Auto-run
-    // =========================
-    $("#qs-run")?.addEventListener("click", ()=>runQuickScan({ auto:false }));
-    $("#liq-run")?.addEventListener("click", ()=>runLiqScan({ auto:false }));
+  // Monitor
+  const LS_MON = "cx_sec_mon_v1";
 
-    // Quick scan button in header
-    $("#btn-quick")?.addEventListener("click", ()=>{
-      showPanel("quick");
-      $("#qs-token")?.focus();
-    });
+  function monLoad() {
+    try { return JSON.parse(localStorage.getItem(LS_MON) || "[]"); } catch { return []; }
+  }
+  function monSave(list) {
+    try { localStorage.setItem(LS_MON, JSON.stringify(list)); } catch {}
+  }
 
-    // Prefill bookmarklet base URL
-    $("#bm-base") && ($("#bm-base").value = location.origin + location.pathname);
+  function monRender() {
+    const table = $("#mon-table");
+    if (!table) return;
+    const list = monLoad();
+    table.innerHTML = `
+      <div class="trow head">
+        <div class="cell">Contract</div>
+        <div class="cell">Network</div>
+        <div class="cell hide-sm">Last seen</div>
+        <div class="cell">Status</div>
+      </div>
+    `;
+    for (const it of list) {
+      const row = document.createElement("div");
+      row.className = "trow";
+      row.innerHTML = `
+        <div class="cell wrap"><a href="${CHAINS[it.net].addressUrl(it.addr)}" target="_blank" rel="noopener" class="mono">${shortAddr(it.addr)}</a></div>
+        <div class="cell">${it.net.toUpperCase()}</div>
+        <div class="cell hide-sm">${it.last || "—"}</div>
+        <div class="cell">${it.status || "—"}</div>
+      `;
+      table.appendChild(row);
+    }
+  }
 
-    // Initialize RPC private input for current net
-    (function initRpcUi(){
-      const net = netFromSelect("#rpc-net");
-      const v = getSavedPrivateRpc(net);
-      $("#rpc-private") && ($("#rpc-private").value = v);
-    })();
+  async function monAdd() {
+    const st = $("#mon-status");
+    clearStatus(st);
 
-    // Init language + keys + monitor
-    initLang();
-    initApiKeysUi();
+    const net = netFromSelect("#mon-net");
+    const a = ($("#mon-addr")?.value || "").trim();
+    if (!E.isAddress(a)) { setStatus(st, "warn", "Invalid contract address."); return; }
+    const addr = E.getAddress(a);
+
+    const list = monLoad();
+    const next = [{ net, addr, last: "—", status: "pending" }, ...list.filter(x => !(x.net === net && x.addr.toLowerCase() === addr.toLowerCase()))].slice(0, 40);
+    monSave(next);
     monRender();
+    setStatus(st, "ok", "Added.");
+    gtagEvent("sec_mon_add", { net });
+  }
+
+  async function monCheckAll() {
+    const st = $("#mon-status");
+    clearStatus(st);
+
+    const list = monLoad();
+    if (!list.length) { setStatus(st, "warn", "Watchlist empty."); return; }
+
+    setStatus(st, "info", "Checking…");
+
+    for (const it of list) {
+      try {
+        const provider = getReadProvider(it.net);
+        if (!provider) { it.status = "no rpc"; continue; }
+        const code = await provider.getCode(it.addr);
+        it.status = (code && code !== "0x") ? "code ✅" : "no code";
+        it.last = new Date().toLocaleString();
+      } catch {
+        it.status = "failed";
+        it.last = new Date().toLocaleString();
+      }
+    }
+    monSave(list);
+    monRender();
+    setStatus(st, "ok", "Done.");
+    gtagEvent("sec_mon_check", { n: list.length });
+  }
+
+  // =========================
+  // Wiring + Auto-run
+  // =========================
+  function initWiring() {
+    $("#qs-run")?.addEventListener("click", () => runQuickScan({ auto: false }));
+    $("#liq-run")?.addEventListener("click", () => runLiqScan({ auto: false }));
+
     renderWalletLabels();
 
-    // Auto-run from query params
-    (function autoRunFromQuery(){
+    (function autoRunFromQuery() {
       const q = parseQuery();
       if (!q.tool) return;
 
-      const tool = ["quick","liq","approvals","rpc","tx","dev"].includes(q.tool) ? q.tool : "quick";
-      showPanel(tool);
+      const tool = ["quick", "liq", "approvals", "rpc", "tx", "dev"].includes(q.tool) ? q.tool : "quick";
+      window.showPanel?.(tool);
 
       if (q.net === "eth" || q.net === "bsc") {
-        // apply to selects
-        $("#qs-net") && ($("#qs-net").value = q.net);
-        $("#liq-net") && ($("#liq-net").value = q.net);
-        $("#ap-net") && ($("#ap-net").value = q.net);
-        $("#rpc-net") && ($("#rpc-net").value = q.net);
-        $("#tx-net") && ($("#tx-net").value = q.net);
+        const sels = ["#qs-net", "#liq-net", "#ap-net", "#rpc-net", "#tx-net"];
+        for (const s of sels) {
+          const el = $(s);
+          if (el) el.value = q.net;
+        }
       }
 
       if (tool === "quick" && q.token && E.isAddress(q.token)) {
-        $("#qs-token") && ($("#qs-token").value = E.getAddress(q.token));
-        // gentle auto-run (rate-limited)
-        setTimeout(()=>runQuickScan({ auto:true }), 350);
+        const el = $("#qs-token");
+        if (el) el.value = E.getAddress(q.token);
+        setTimeout(() => runQuickScan({ auto: true }), 350);
       }
       if (tool === "liq" && q.token && E.isAddress(q.token)) {
-        $("#liq-token") && ($("#liq-token").value = E.getAddress(q.token));
-        setTimeout(()=>runLiqScan({ auto:true }), 350);
+        const el = $("#liq-token");
+        if (el) el.value = E.getAddress(q.token);
+        setTimeout(() => runLiqScan({ auto: true }), 350);
       }
       if (tool === "tx" && q.tx && /^0x[0-9a-fA-F]{64}$/.test(q.tx)) {
-        $("#tx-hash") && ($("#tx-hash").value = q.tx);
-        setTimeout(()=>runTxDecode({ auto:true }), 350);
+        const el = $("#tx-hash");
+        if (el) el.value = q.tx;
+        setTimeout(() => runTxDecode({ auto: true }), 350);
       }
     })();
+  }
 
-    // Buttons that open panels quickly
-    $("#btn-quick")?.addEventListener("click", ()=>showPanel("quick"));
-    $("#btn-quick")?.addEventListener("click", ()=>gtagEvent("sec_quick_btn"));
+  // =========================
+  // Boot
+  // =========================
+  window.addEventListener("DOMContentLoaded", () => {
+    initPanels();
+    initWalletButtons();
+    initApiKeysUi();
+    initApprovalsUi();
+    initRpcUi();
+    initTxUi();
+    initDevUi();
 
-    // Quick scan "Run Quick Scan" hero button already wired earlier; keep also:
-    $("#btn-quick")?.addEventListener("click", ()=>{ showPanel("quick"); });
-
-    // Close panels to none
-    // (already attached above)
-
-  </script>
+    initLang();
+    monRender();
+    renderWalletLabels();
+    initWiring();
+  });
+</script>
 </body>
 </html>
-
