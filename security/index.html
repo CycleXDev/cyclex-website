@@ -514,32 +514,51 @@
   transform: translateY(-1px);
 }
     .share-row { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
-    /* =========================
-   Quick Scan buttons layout
-   (scoped, won't affect other panels)
+   /* =========================
+   Quick Scan buttons (fixed)
    ========================= */
 
-#panel-quick .qs-actions,
-#panel-quick .qs-share{
+/* Main action buttons row */
+#panel-quick .qs-actions{
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-items: stretch;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-/* Make buttons same width + centered text */
-#panel-quick .qs-actions .btn,
-#panel-quick .qs-share .btn{
+#panel-quick .qs-actions .btn{
   width: 100%;
+  min-width: 0;
   justify-content: center;
+  white-space: normal;      /* allow wrap on mobile */
+  line-height: 1.15;
+  min-height: 44px;
 }
 
-/* Mobile: make primary button full row */
+/* Make Scan feel primary on mobile */
 #panel-quick .qs-actions .btn-primary{
   grid-column: 1 / -1;
 }
 
-/* Desktop: 4 buttons nicely in 2 rows (2x2) */
+/* Share row buttons */
+#panel-quick .share-row{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+  margin-top: 12px;
+}
+
+#panel-quick .share-row .btn{
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  white-space: normal;      /* allow wrap on mobile */
+  line-height: 1.15;
+  min-height: 44px;
+}
+
+/* Desktop layout */
 @media (min-width: 860px){
   #panel-quick .qs-actions{
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -548,16 +567,17 @@
     grid-column: auto;
   }
 
-  #panel-quick .qs-share{
+  #panel-quick .share-row{
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* On desktop keep single-line labels */
+  #panel-quick .qs-actions .btn,
+  #panel-quick .share-row .btn{
+    white-space: nowrap;
   }
 }
 
-/* Small polish */
-#panel-quick .qs-actions .btn,
-#panel-quick .qs-share .btn{
-  min-height: 44px;
-}
 
 
     /* Footer */
