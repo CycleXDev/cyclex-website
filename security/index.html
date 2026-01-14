@@ -2008,45 +2008,74 @@ ph_rpc_dev_topic: "0xddf252ad... (Transfer) или оставьте пустым
 
   }
 };
+// =========================
+// i18n (after translations)
+// =========================
+let currentLang = "en";
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+function normalizeLang(x){
+  const v = String(x || "").trim().toLowerCase();
+  const map = { "cn":"zh", "zh-cn":"zh", "zh-hans":"zh" };
+  return map[v] || v;
+}
 
-  // =========================
-  // i18n (after translations)
-  // =========================
-  let currentLang = "en";
-  const $ = (sel) => document.querySelector(sel);
-  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+function setDirForLang(lang) {
+  const html = document.documentElement;
+  html.setAttribute("lang", lang === "zh" ? "zh" : lang);
+  html.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+}
 
-  function setDirForLang(lang) {
-    const html = document.documentElement;
-    if (lang === "ar") {
-      html.setAttribute("dir", "rtl");
-      html.setAttribute("lang", "ar");
-    } else {
-      html.setAttribute("dir", "ltr");
-      html.setAttribute("lang", lang);
-    }
+// ✅ t(lang,key) with EN fallback
+function t(lang, key) {
+  return (translations?.[lang]?.[key] ?? translations?.en?.[key] ?? "");
+}
+
+function applyI18n(lang) {
+  const L = normalizeLang(lang || currentLang);
+  currentLang = translations?.[L] ? L : "en";
+
+  if (document.body) {
+    document.body.classList.add("lang-switching");
+    setTimeout(() => document.body && document.body.classList.remove("lang-switching"), 260);
   }
 
-  function t(key) {
-    return (translations?.[currentLang]?.[key]) ?? (translations?.en?.[key]) ?? key;
-  }
+  // normal text/HTML
+  $$("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    const val = t(currentLang, key);
+    if (val) el.innerHTML = val;
+  });
 
-  function applyI18n() {
-    if (document.body) {
-      document.body.classList.add("lang-switching");
-      setTimeout(() => document.body && document.body.classList.remove("lang-switching"), 260);
-    }
+  // placeholders
+  $$("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    const val = t(currentLang, key);
+    if (val) el.setAttribute("placeholder", val);
+  });
 
-    $$("[data-i18n]").forEach((el) => {
-      el.innerHTML = t(el.getAttribute("data-i18n"));
-    });
+  // title attr
+  $$("[data-i18n-title]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-title");
+    const val = t(currentLang, key);
+    if (val) el.setAttribute("title", val);
+  });
 
-    setDirForLang(currentLang);
-    renderWalletLabels();
-  }
+  // aria-label attr
+  $$("[data-i18n-aria-label]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-aria-label");
+    const val = t(currentLang, key);
+    if (val) el.setAttribute("aria-label", val);
+  });
 
-  function setLang(lang) {
+  setDirForLang(currentLang);
+
+  // keep your existing behavior
+  try { renderWalletLabels && renderWalletLabels(); } catch {}
+}
+
+function setLang(lang) {
   const picked = normalizeLang(lang);
   currentLang = translations?.[picked] ? picked : "en";
 
@@ -2057,11 +2086,10 @@ ph_rpc_dev_topic: "0xddf252ad... (Transfer) или оставьте пустым
     b.classList.toggle("active", bl === currentLang);
   });
 
-  applyI18n();
+  applyI18n(currentLang);
 }
 
-
-  function initLang() {
+function initLang() {
   let saved = null;
   try { saved = localStorage.getItem("cx_sec_lang"); } catch {}
 
@@ -2069,30 +2097,22 @@ ph_rpc_dev_topic: "0xddf252ad... (Transfer) или оставьте пустым
   setLang(translations?.[s] ? s : "en");
 }
 
-    // =========================
+// =========================
 // i18n buttons wiring (FIX)
 // =========================
-function normalizeLang(x){
-  const v = String(x || "").trim().toLowerCase();
-  const map = { "cn":"zh", "zh-cn":"zh", "zh-hans":"zh" };
-  return map[v] || v;
-}
-
 function bindLangButtons(){
   $$(".lang-btn").forEach(btn => {
     btn.addEventListener("click", (e) => {
-      // אם זה <a href="#"> שלא יקפיץ/ירענן
       try { e.preventDefault(); } catch {}
 
       const raw = btn.dataset?.lang || btn.getAttribute("data-lang") || "";
       const lang = normalizeLang(raw);
 
       setLang(lang);
-      gtagEvent("sec_lang_change", { lang });
+      try { gtagEvent && gtagEvent("sec_lang_change", { lang }); } catch {}
     }, { passive: false });
   });
 }
-
 
   // =========================
   // Utils
