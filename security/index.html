@@ -4014,6 +4014,195 @@ function bindMonRemove() {
       }
     })();
   }
+// =========================
+// Deep-link + Explorer Import UX
+// =========================
+function cxToast(msg, kind = "ok", ms = 2200) {
+  try {
+    const el = document.createElement("div");
+    const bg =
+      kind === "warn" ? "rgba(255,193,7,0.16)" :
+      kind === "bad"  ? "rgba(255,80,80,0.16)"  :
+                        "rgba(0,230,118,0.14)";
+
+    el.style.cssText = `
+      position:fixed; z-index:99999;
+      top:14px; left:50%; transform:translateX(-50%);
+      max-width:min(720px, calc(100% - 24px));
+      padding:10px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.14);
+      background:${bg};
+      backdrop-filter: blur(10px);
+      color: rgba(244,246,255,0.92);
+      font-size: 13px;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+      opacity:0; transition:opacity 140ms ease, transform 140ms ease;
+    `;
+    el.innerHTML = msg;
+
+    document.body.appendChild(el);
+    requestAnimationFrame(() => {
+      el.style.opacity = "1";
+      el.style.transform = "translateX(-50%) translateY(0)";
+    });
+
+    setTimeout(() => {
+      el.style.opacity = "0";
+      el.style.transform = "translateX(-50%) translateY(-6px)";
+      setTimeout(() => el.remove(), 180);
+    }, ms);
+  } catch {}
+}
+
+function cxNormalizeNet(x) {
+  const v = String(x || "").trim().toLowerCase();
+  if (!v) return "";
+  if (v === "56" || v === "bsc" || v === "bnb" || v === "bnbchain" || v === "bnb-chain") return "bsc";
+  if (v === "1"  || v === "eth" || v === "ethereum") return "eth";
+  return v;
+}
+
+function cxIsTxHash(x) {
+  const s = String(x || "").trim();
+  return /^0x[a-fA-F0-9]{64}$/.test(s);
+}
+
+function cxIsAddress(x) {
+  try {
+    const E0 = (typeof E !== "undefined") ? E : (typeof ethers !== "undefined" ? ethers : null);
+    if (!E0) return false;
+    return E0.isAddress(String(x || "").trim());
+  } catch { return false; }
+}
+
+function cxDetectSource() {
+  // prefer explicit param, but also try referrer host
+  const sp = new URLSearchParams(location.search);
+  const src = sp.get("src") || sp.get("from") || sp.get("utm_source");
+  if (src) return src;
+
+  try {
+    const ref = document.referrer || "";
+    if (!ref) return "";
+    const host = new URL(ref).hostname.toLowerCase();
+    if (host.includes("bscscan")) return "BscScan";
+    if (host.includes("etherscan")) return "Etherscan";
+    if (host.includes("arbiscan")) return "Arbiscan";
+    if (host.includes("polygonscan")) return "PolygonScan";
+    return host.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function cxOpenTool(tool) {
+  // use existing tile click wiring (safe)
+  const card = document.querySelector(`.tool-card[data-tool="${tool}"]`);
+  if (card) {
+    card.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  } else {
+    // fallback: show panel directly if exists
+    const p = document.querySelector(`#panel-${tool}`);
+    if (p) p.classList.remove("hidden");
+  }
+
+  // scroll to panel
+  const panel = document.querySelector(`#panel-${tool}`);
+  if (panel) {
+    setTimeout(() => panel.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  }
+}
+
+function cxSetStatusById(id, kind, msg) {
+  const el = document.querySelector(id);
+  if (!el) return;
+  if (typeof setStatus === "function") {
+    setStatus(el, kind, msg);
+  } else {
+    // fallback
+    el.className = `status ${kind}`;
+    el.textContent = msg;
+  }
+}
+
+function cxAutoRunFromQuery() {
+  if (window.__cxDeepLinkRan) return;
+  window.__cxDeepLinkRan = true;
+
+  const sp = new URLSearchParams(location.search);
+
+  // detect tool
+  let tool = (sp.get("tool") || "").trim().toLowerCase();
+  const net = cxNormalizeNet(sp.get("net") || sp.get("chain") || "");
+  const token = (sp.get("token") || sp.get("addr") || sp.get("contract") || "").trim();
+  const tx = (sp.get("tx") || sp.get("hash") || "").trim();
+
+  if (!tool) {
+    if (tx) tool = "tx";
+    else if (token) tool = "quick";
+  }
+
+  const supported = new Set(["quick", "liq", "approvals", "rpc", "tx", "dev"]);
+  if (!supported.has(tool)) return;
+
+  const src = cxDetectSource();
+  const imported = Boolean(token || tx);
+  if (imported) {
+    cxToast(`Imported from <b>${src || "explorer"}</b> ✅`, "ok", 2400);
+  }
+
+  cxOpenTool(tool);
+
+  // Run after UI is visible
+  setTimeout(() => {
+    // QUICK
+    if (tool === "quick") {
+      if (net && document.querySelector("#qs-net")) document.querySelector("#qs-net").value = net;
+      if (token && document.querySelector("#qs-token")) document.querySelector("#qs-token").value = token;
+
+      if (token && !cxIsAddress(token)) {
+        cxSetStatusById("#qs-status", "warn", "Invalid token address in link.");
+        cxToast("Invalid token address in link.", "warn", 2600);
+        return;
+      }
+
+      // auto-run only if token exists
+      if (token) document.querySelector("#qs-run")?.click();
+      return;
+    }
+
+    // LIQ
+    if (tool === "liq") {
+      if (net && document.querySelector("#liq-net")) document.querySelector("#liq-net").value = net;
+      if (token && document.querySelector("#liq-token")) document.querySelector("#liq-token").value = token;
+
+      if (token && !cxIsAddress(token)) {
+        cxSetStatusById("#liq-status", "warn", "Invalid token address in link.");
+        cxToast("Invalid token address in link.", "warn", 2600);
+        return;
+      }
+
+      if (token) document.querySelector("#liq-run")?.click();
+      return;
+    }
+
+    // TX
+    if (tool === "tx") {
+      if (net && document.querySelector("#tx-net")) document.querySelector("#tx-net").value = net;
+      if (tx && document.querySelector("#tx-hash")) document.querySelector("#tx-hash").value = tx;
+
+      if (tx && !cxIsTxHash(tx)) {
+        cxSetStatusById("#tx-status", "warn", "Invalid tx hash in link.");
+        cxToast("Invalid tx hash in link.", "warn", 2600);
+        return;
+      }
+
+      if (tx) document.querySelector("#tx-run")?.click();
+      return;
+    }
+  }, 120);
+}
 
   // =========================
   // Boot
@@ -4034,6 +4223,8 @@ function bindMonRemove() {
   monRender();
   renderWalletLabels();
   initWiring();
+  cxAutoRunFromQuery();
+
 });
 
 </script>
