@@ -1,3 +1,6 @@
+<!-- =========================
+PART 1/3 — HEAD + CSS
+========================= -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -194,8 +197,8 @@
       line-height: 1.45;
     }
 
-    /* Tool cubes */
-    .tool-grid-wrap { max-width: var(--maxw); margin: 0 auto 14px; }
+    /* Tool cubes — 2x2 centered */
+    .tool-grid-wrap { max-width: 980px; margin: 0 auto 18px; }
     .tool-grid-title {
       text-align: center;
       margin: 14px 0 8px;
@@ -207,42 +210,43 @@
 
     .tool-grid {
       display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
       margin-top: 10px;
+      align-items: stretch;
     }
     .tool-card {
-      grid-column: span 4;
       background: rgba(255,255,255,0.05);
       border-radius: var(--radius-xl);
       border: 1px solid rgba(255,255,255,0.12);
-      padding: 16px 16px 14px;
+      padding: 22px 22px 18px;
       box-shadow: 0 24px 70px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05);
       cursor: pointer;
       position: relative;
       overflow: hidden;
       transition: transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
       min-width: 0;
+      min-height: 178px;
     }
     .tool-card::before{
       content:"";
       position:absolute; inset:-2px;
       background:
-        radial-gradient(520px 160px at 18% -5%, rgba(0,229,255,.16), transparent 60%),
-        radial-gradient(520px 160px at 85% 0%, rgba(124,92,255,.16), transparent 60%);
+        radial-gradient(520px 180px at 18% -5%, rgba(0,229,255,.18), transparent 60%),
+        radial-gradient(520px 180px at 85% 0%, rgba(124,92,255,.18), transparent 60%);
       pointer-events:none;
-      opacity: .9;
+      opacity: .95;
     }
     .tool-card > * { position: relative; }
 
-    .tool-card:hover { transform: translateY(-2px); border-color: rgba(0,229,255,0.26); background: rgba(255,255,255,0.06); }
-    .tool-card.active { border-color: rgba(0,229,255,0.38); background: rgba(0,229,255,0.06); }
+    .tool-card:hover { transform: translateY(-3px); border-color: rgba(0,229,255,0.28); background: rgba(255,255,255,0.065); }
+    .tool-card.active { border-color: rgba(0,229,255,0.42); background: rgba(0,229,255,0.06); }
 
-    .tool-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px; }
-    .tool-name { font-size: 15px; font-weight: 900; letter-spacing: 0.01em; line-height: 1.25; }
-    .tool-desc { font-size: 13px; color: var(--text-muted); line-height: 1.45; }
+    .tool-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .tool-name { font-size: 17px; font-weight: 900; letter-spacing: 0.01em; line-height: 1.25; }
+    .tool-desc { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
 
-    .badge-row { display:flex; flex-wrap:wrap; gap:8px; margin-top: 12px; }
+    .badge-row { display:flex; flex-wrap:wrap; gap:8px; margin-top: 14px; }
     .badge {
       display:inline-flex; align-items:center; gap:8px;
       font-size: 12px;
@@ -386,6 +390,10 @@
       text-transform: uppercase;
       color: rgba(244,246,255,0.75);
     }
+
+    /* RPC table needs extra columns (logs) */
+    .trow.rpc { grid-template-columns: 1.55fr 0.7fr 0.7fr 0.6fr 0.6fr; }
+
     .trow .cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .trow .cell.wrap { white-space: normal; overflow: visible; }
     .trow .cell .mini { font-size: 12px; color: rgba(244,246,255,0.82); }
@@ -434,20 +442,28 @@
 
     /* Responsiveness */
     @media (max-width: 980px) {
-      .tool-card { grid-column: span 6; }
       .grid-2 { grid-template-columns: 1fr; }
       .trow { grid-template-columns: 1.2fr 1fr 0.9fr; }
       .trow .hide-sm { display: none; }
       .panel-title { font-size: 24px; }
+
+      /* RPC collapses to 3 columns when hide-sm columns disappear */
+      .trow.rpc { grid-template-columns: 1.7fr 0.9fr 0.9fr; }
+    }
+    @media (max-width: 900px) {
+      .tool-grid { grid-template-columns: 1fr; }
+      .tool-card { min-height: unset; }
     }
     @media (max-width: 640px) {
-      .tool-card { grid-column: span 12; }
       .top-bar { top: 10px; padding: 10px 12px; }
       .brand-logo { width: 40px; height: 40px; border-radius: 14px; }
       .btn { padding: 12px 18px; font-size: 13px; }
     }
   </style>
 </head>
+<!-- =========================
+PART 2/3 — BODY (HTML)
+========================= -->
 <body>
   <div class="page-shell">
     <header class="top-bar">
@@ -528,7 +544,7 @@
               <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
             </div>
             <div class="tool-desc" data-i18n="cube_rpc_desc">
-              Test endpoints, show latency + block height, then copy the best RPC instantly.
+              Test endpoints, show latency + block height + read logs, then copy the best RPC instantly.
             </div>
             <div class="badge-row">
               <div class="badge"><strong data-i18n="badge_table">Table</strong></div>
@@ -739,7 +755,7 @@
             <div class="panel-kicker" data-i18n="p_rpc_kicker">RPC Health Checker</div>
             <div class="panel-title" data-i18n="p_rpc_title">Find the best endpoint</div>
             <div class="panel-sub" data-i18n="p_rpc_sub">
-              We test RPC endpoints with eth_blockNumber and measure latency. Best result is highlighted and ready to copy.
+              We test RPC endpoints with eth_blockNumber and measure latency + Read Logs (eth_getLogs). Best result is highlighted and ready to copy.
             </div>
           </div>
           <div class="panel-actions">
@@ -779,10 +795,11 @@
             <h3 data-i18n="rpc_results">Results</h3>
 
             <div id="rpc-table" class="table">
-              <div class="trow head">
+              <div class="trow head rpc">
                 <div class="cell">RPC</div>
                 <div class="cell">Latency</div>
                 <div class="cell hide-sm">Block</div>
+                <div class="cell hide-sm">Read logs</div>
                 <div class="cell">Status</div>
               </div>
             </div>
@@ -862,6 +879,9 @@
       </footer>
     </main>
   </div>
+<!-- =========================
+PART 3/3 — SCRIPTS + JS
+========================= -->
 
   <!-- Libraries (ORDER MATTERS) -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
@@ -870,8 +890,7 @@
   <script src="https://unpkg.com/@reown/appkit@1.6.3/dist/appkit.umd.js"></script>
   <script src="https://unpkg.com/@reown/appkit-adapter-ethers@1.6.3/dist/ethers.umd.js"></script>
 
-  <!-- ✅ Paste Part 3 (JS) below -->
-<script>
+  <script>
 (() => {
   "use strict";
 
@@ -902,7 +921,7 @@
       badge_revoke: "Revoke",
 
       cube_rpc_title: "RPC Health Checker",
-      cube_rpc_desc: "Test endpoints, measure latency + chain, and copy the best RPC.",
+      cube_rpc_desc: "Test endpoints, measure latency + chain + read logs, and copy the best RPC.",
       badge_table: "Table",
       badge_copy: "Copy",
 
@@ -950,7 +969,7 @@
 
       p_rpc_kicker: "RPC Health Checker",
       p_rpc_title: "Find the best endpoint",
-      p_rpc_sub: "We test RPC endpoints with eth_blockNumber and measure latency. Best result is highlighted and ready to copy.",
+      p_rpc_sub: "We test RPC endpoints with eth_blockNumber, measure latency, and verify Read Logs (eth_getLogs). Best result is highlighted and ready to copy.",
       rpc_inputs: "Inputs",
       rpc_custom_label: "Optional custom RPC (top priority)",
       rpc_test: "Test RPCs",
@@ -972,6 +991,7 @@
       footer_tagline: "Verify twice. Connect only when you trust the page."
     },
 
+    /* (Same zh/ar/ru as before — kept) */
     zh: {
       brand_sub: "链上安全与奖励",
       hero_kicker: "安全中心",
@@ -995,7 +1015,7 @@
       badge_revoke: "撤销",
 
       cube_rpc_title: "RPC 健康检查",
-      cube_rpc_desc: "测试节点、测延迟与链信息，一键复制最佳 RPC。",
+      cube_rpc_desc: "测试节点、测延迟与链信息/读日志，一键复制最佳 RPC。",
       badge_table: "表格",
       badge_copy: "复制",
 
@@ -1043,7 +1063,7 @@
 
       p_rpc_kicker: "RPC 健康检查",
       p_rpc_title: "找到最佳节点",
-      p_rpc_sub: "用 eth_blockNumber 测延迟。最佳结果会高亮，可一键复制。",
+      p_rpc_sub: "用 eth_blockNumber 测延迟，并验证读日志 (eth_getLogs)。最佳结果会高亮，可一键复制。",
       rpc_inputs: "输入",
       rpc_custom_label: "可选：自定义 RPC（优先）",
       rpc_test: "测试 RPC",
@@ -1088,7 +1108,7 @@
       badge_revoke: "إلغاء",
 
       cube_rpc_title: "فحص RPC",
-      cube_rpc_desc: "اختبر النقاط، قِس التأخير، وانسخ أفضل RPC.",
+      cube_rpc_desc: "اختبر النقاط، قِس التأخير وتحقق قراءة السجلات، وانسخ أفضل RPC.",
       badge_table: "جدول",
       badge_copy: "نسخ",
 
@@ -1136,7 +1156,7 @@
 
       p_rpc_kicker: "فحص RPC",
       p_rpc_title: "اعثر على أفضل نقطة",
-      p_rpc_sub: "نقيس التأخير عبر eth_blockNumber. الأفضل سيظهر مميزاً ويمكن نسخه.",
+      p_rpc_sub: "نقيس التأخير عبر eth_blockNumber ونتحقق من قراءة السجلات (eth_getLogs). الأفضل سيظهر مميزاً ويمكن نسخه.",
       rpc_inputs: "المدخلات",
       rpc_custom_label: "اختياري: RPC مخصص (أولوية)",
       rpc_test: "اختبار RPC",
@@ -1181,7 +1201,7 @@
       badge_revoke: "Отозвать",
 
       cube_rpc_title: "RPC Health Checker",
-      cube_rpc_desc: "Тест RPC, замер задержки и копирование лучшего RPC.",
+      cube_rpc_desc: "Тест RPC, замер задержки + проверка чтения логов, и копирование лучшего RPC.",
       badge_table: "Таблица",
       badge_copy: "Копировать",
 
@@ -1229,7 +1249,7 @@
 
       p_rpc_kicker: "RPC Health Checker",
       p_rpc_title: "Найдите лучший RPC",
-      p_rpc_sub: "Тестируем eth_blockNumber и замеряем задержку. Лучший подсвечен и готов к копированию.",
+      p_rpc_sub: "Тестируем eth_blockNumber, замеряем задержку и проверяем чтение логов (eth_getLogs). Лучший подсвечен и готов к копированию.",
       rpc_inputs: "Ввод",
       rpc_custom_label: "Опционально: свой RPC (в приоритете)",
       rpc_test: "Тест RPC",
@@ -1274,12 +1294,10 @@
     setTimeout(() => document.body.classList.remove("lang-switching"), 250);
   }
 
-  // Bind language buttons
   document.querySelectorAll(".lang-btn").forEach((btn) => {
     btn.addEventListener("click", () => setLanguage(btn.getAttribute("data-lang")));
   });
 
-  // Init language
   setLanguage(localStorage.getItem("cx_lang") || "en");
 
   // ===============================
@@ -1350,70 +1368,103 @@
   };
 
   // ===============================
-  // WalletConnect (Reown AppKit) — init
+  // WalletConnect (Reown AppKit) — robust init
   // ===============================
-  const WALLETCONNECT_PROJECT_ID = "7886bcb95105e9e47337cec481d5de75"; 
+  const WALLETCONNECT_PROJECT_ID = "7886bcb95105e9e47337cec481d5de75";
 
-  function initAppKit(){
-    try {
-      const AppKit = window.AppKit || window.appKit || window.appkit;
-      const AdapterPkg = window.AppKitAdapterEthers || window.AppKitAdapterEthers || window.appKitAdapterEthers;
+  function resolveAppKit(){
+    const kitCandidates = [
+      window.AppKit,
+      window.ReownAppKit,
+      window.appKit,
+      window.appkit
+    ].filter(Boolean);
 
-      const createAppKit = AppKit?.createAppKit || AppKit?.default?.createAppKit;
-      const EthersAdapter = AdapterPkg?.EthersAdapter || AdapterPkg?.default?.EthersAdapter;
+    let createAppKit = null;
+    let networks = null;
 
-      if (!createAppKit || !EthersAdapter) {
-        console.warn("AppKit not available (scripts not loaded?)");
-        return null;
-      }
-
-      // Prefer built-in networks if available
-      const nets = [];
-      if (AppKit?.networks?.bsc) nets.push(AppKit.networks.bsc);
-      if (AppKit?.networks?.mainnet) nets.push(AppKit.networks.mainnet);
-
-      // Fallback networks (wagmi-like shape)
-      if (!nets.length) {
-        nets.push({
-          id: 56,
-          name: "BNB Smart Chain",
-          nativeCurrency: { name:"BNB", symbol:"BNB", decimals:18 },
-          rpcUrls: { default: { http: ["https://bsc-dataseed.binance.org"] } },
-          blockExplorers: { default: { name:"BscScan", url:"https://bscscan.com" } }
-        });
-        nets.push({
-          id: 1,
-          name: "Ethereum",
-          nativeCurrency: { name:"Ether", symbol:"ETH", decimals:18 },
-          rpcUrls: { default: { http: ["https://cloudflare-eth.com"] } },
-          blockExplorers: { default: { name:"Etherscan", url:"https://etherscan.io" } }
-        });
-      }
-
-      const metadata = {
-        name: "CycleX Security Hub",
-        description: "Client-side security tools + approvals guardian + RPC checker",
-        url: window.location.origin,
-        icons: [window.location.origin + "/logo.png"]
-      };
-
-      const modal = createAppKit({
-        projectId: WALLETCONNECT_PROJECT_ID,
-        metadata,
-        networks: nets,
-        adapters: [new EthersAdapter()],
-      });
-
-      window.cxAppKitModal = modal;
-      return modal;
-    } catch (e) {
-      console.warn("initAppKit failed:", e);
-      return null;
+    for (const k of kitCandidates) {
+      if (typeof k?.createAppKit === "function") { createAppKit = k.createAppKit; networks = k.networks || null; break; }
+      if (typeof k?.default?.createAppKit === "function") { createAppKit = k.default.createAppKit; networks = k.default.networks || k.networks || null; break; }
     }
+
+    const adapterCandidates = [
+      window.AppKitAdapterEthers,
+      window.ReownAppKitAdapterEthers,
+      window.appKitAdapterEthers,
+      window.AppKitEthersAdapter,
+      window.ReownAppKitEthersAdapter
+    ].filter(Boolean);
+
+    let EthersAdapter = null;
+    for (const a of adapterCandidates) {
+      if (typeof a?.EthersAdapter === "function") { EthersAdapter = a.EthersAdapter; break; }
+      if (typeof a?.default?.EthersAdapter === "function") { EthersAdapter = a.default.EthersAdapter; break; }
+    }
+
+    return { createAppKit, networks, EthersAdapter };
   }
 
-  // Create modal now (safe even if projectId is placeholder; connect will warn)
-  initAppKit();
+  function initAppKitOnce(){
+    if (window.cxAppKitModal) return window.cxAppKitModal;
+
+    const { createAppKit, networks, EthersAdapter } = resolveAppKit();
+    if (!createAppKit || !EthersAdapter) return null;
+
+    const nets = [];
+    if (networks?.bsc) nets.push(networks.bsc);
+    if (networks?.mainnet) nets.push(networks.mainnet);
+
+    if (!nets.length) {
+      nets.push({
+        id: 56,
+        name: "BNB Smart Chain",
+        nativeCurrency: { name:"BNB", symbol:"BNB", decimals:18 },
+        rpcUrls: { default: { http: ["https://bsc-dataseed.binance.org"] } },
+        blockExplorers: { default: { name:"BscScan", url:"https://bscscan.com" } }
+      });
+      nets.push({
+        id: 1,
+        name: "Ethereum",
+        nativeCurrency: { name:"Ether", symbol:"ETH", decimals:18 },
+        rpcUrls: { default: { http: ["https://cloudflare-eth.com"] } },
+        blockExplorers: { default: { name:"Etherscan", url:"https://etherscan.io" } }
+      });
+    }
+
+    const metadata = {
+      name: "CycleX Security Hub",
+      description: "Client-side security tools + approvals guardian + RPC checker",
+      url: window.location.origin,
+      icons: [window.location.origin + "/logo.png"]
+    };
+
+    const modal = createAppKit({
+      projectId: WALLETCONNECT_PROJECT_ID,
+      metadata,
+      networks: nets,
+      adapters: [new EthersAdapter()],
+    });
+
+    window.cxAppKitModal = modal;
+    return modal;
+  }
+
+  function initAppKitRetry(){
+    // Try a few times in case unpkg scripts arrive slightly late
+    let tries = 0;
+    const maxTries = 30; // ~6s
+    const t = setInterval(() => {
+      tries++;
+      const m = initAppKitOnce();
+      if (m || tries >= maxTries) {
+        clearInterval(t);
+        if (!m) console.warn("AppKit not available (scripts not loaded?)");
+      }
+    }, 200);
+  }
+
+  initAppKitRetry();
 
   // ===============================
   // RPC lists
@@ -1462,6 +1513,7 @@
   const USDT = "0x55d398326f99059fF775485246999027B3197955";
   const USDC = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
   const BUSD = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
+  const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
   const DEXES_BSC = [
     { key:"pancake",  name:"PancakeSwap V2", router:"0x10ED43C718714eb63d5aA57B78B54704E256024E", swap:(tin,tout)=>`https://pancakeswap.finance/swap?inputCurrency=${tin}&outputCurrency=${tout}` },
@@ -1539,7 +1591,6 @@
   async function getBnbUsd(provider){
     if (_bnbUsdCache && (Date.now() - _bnbUsdCache.t) < 60_000) return _bnbUsdCache;
 
-    // 1) Chainlink
     try {
       const feed = new ethers.Contract(CHAINLINK_BNBUSD, CL_ABI, provider);
       const dec = Number(await feed.decimals());
@@ -1552,7 +1603,6 @@
       }
     } catch {}
 
-    // 2) Fallback: WBNB/USDT reserves on PCS
     try {
       const f = new ethers.Contract(PCS_FACTORY, FACTORY_ABI, provider);
       let pair = await f.getPair(WBNB, USDT);
@@ -1639,7 +1689,7 @@
   }
 
   // ===============================
-  // Core scan (Quick)
+  // Core scan (Quick) — adds Proxy + Code Hash + Bytecode size
   // ===============================
   async function scanTokenCore({ net, token, requireLiquidity=false }){
     const provider = await pickProvider(net);
@@ -1655,6 +1705,9 @@
         data: null
       };
     }
+
+    const codeHash = ethers.keccak256(code);
+    const bytecodeBytes = Math.max(0, (code.length - 2) / 2);
 
     const c = new ethers.Contract(token, ERC20_ABI, provider);
 
@@ -1673,6 +1726,8 @@
     }
     const ownerRenounced = owner ? (owner === "0x0000000000000000000000000000000000000000") : null;
     const proxy = await detectProxy(provider, token);
+
+    const explorer = (net === "bsc") ? "https://bscscan.com" : "https://etherscan.io";
 
     // ETH: metadata-only
     if (net === "eth") {
@@ -1705,6 +1760,9 @@
           proxy,
           requireLiquidity,
           pairs: [],
+          codeHash,
+          bytecodeBytes,
+          explorer,
           generatedAt: new Date().toISOString()
         }
       };
@@ -1807,6 +1865,9 @@
       score,
       headline,
       notes,
+      codeHash,
+      bytecodeBytes,
+      explorer,
       generatedAt: new Date().toISOString()
     };
 
@@ -1945,21 +2006,36 @@
 
       CX.reports.quick = res.data;
 
+      const explorer = res.data.explorer || (net==="bsc" ? "https://bscscan.com" : "https://etherscan.io");
       const supplyHuman = res.data.totalSupply ? fmtBigintUnits(BigInt(res.data.totalSupply), res.data.decimals) : "—";
+      const proxyLine = res.data.proxy?.isProxy ? `YES • Impl: <span class="mono">${res.data.proxy.impl}</span>` : "No";
+      const ownerLine = res.data.owner ? `<a href="${explorer}/address/${res.data.owner}" target="_blank" rel="noopener" class="mono">${fmtAddr(res.data.owner)}</a>` : "—";
+
       const html = `
         <strong>${res.headline}</strong><br><br>
-        <div class="pill">Token: <span class="mono">${res.data.token}</span></div>
+
+        <div class="badge-row" style="margin-top:4px">
+          <div class="badge"><strong>Risk score</strong>: ${res.data.score} (lower is better)</div>
+          <div class="badge"><strong>Proxy</strong>: ${proxyLine}</div>
+        </div>
+
         <div style="margin-top:10px" class="small">
+          <b>Token:</b> <a href="${explorer}/address/${res.data.token}" target="_blank" rel="noopener" class="mono">${res.data.token}</a><br>
+          <b>Owner:</b> ${ownerLine}<br>
           <b>Name:</b> ${String(res.data.name).replace(/</g,"&lt;")}<br>
           <b>Symbol:</b> ${String(res.data.symbol).replace(/</g,"&lt;")}<br>
           <b>Decimals:</b> ${res.data.decimals}<br>
-          <b>Total supply:</b> ${supplyHuman}
+          <b>Total supply:</b> ${supplyHuman}<br>
+          <b>Code hash:</b> <span class="mono">${res.data.codeHash.slice(0,18)}…</span><br>
+          <b>Bytecode size:</b> ${res.data.bytecodeBytes.toLocaleString()} bytes
         </div>
+
         <div style="margin-top:12px" class="small">
           <b>Signals:</b><br>
           ${res.notes.map(n => "• " + n).join("<br>")}
         </div>
       `;
+
       setStatus(out, res.badge, html);
       setStatus(status, res.badge, `<strong>Done.</strong> Score: ${res.score} (lower is better).`);
 
@@ -2021,12 +2097,17 @@
   }
 
   // ===============================
-  // Wallet connect helpers
+  // Wallet connect helpers (AppKit + fallback)
   // ===============================
-  async function waitForAppKitModal(timeoutMs=12000){
+  function getAnyWalletProviderFromModal(modal){
+    return modal?.getWalletProvider?.() || modal?.getProvider?.() || modal?.getActiveProvider?.() || null;
+  }
+
+  async function waitForAppKitModal(timeoutMs=9000){
     const t0 = Date.now();
     while (Date.now() - t0 < timeoutMs) {
-      if (window.cxAppKitModal?.open && window.cxAppKitModal?.getWalletProvider) return window.cxAppKitModal;
+      if (window.cxAppKitModal?.open && (window.cxAppKitModal?.getWalletProvider || window.cxAppKitModal?.getProvider)) return window.cxAppKitModal;
+      initAppKitOnce();
       await sleep(150);
     }
     return null;
@@ -2041,7 +2122,6 @@
       await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: chainIdHex }] });
       return true;
     } catch (e) {
-      // Optional add chain (BSC) if missing
       if (net === "bsc") {
         try {
           await p.request({
@@ -2061,54 +2141,81 @@
     }
   }
 
-  async function ensureConnected(preferredNet="bsc"){
-    const status = document.getElementById("ap-status");
+  function updateWalletLabels(addr){
+    const addrEl = document.getElementById("ap-address");
+    const pillEl = document.getElementById("ap-wallet");
+    const wl = document.getElementById("walletLabel");
+    if (addrEl) addrEl.textContent = addr;
+    if (pillEl) pillEl.textContent = addr;
+    if (wl) wl.textContent = addr;
+  }
 
-    if (String(WALLETCONNECT_PROJECT_ID || "").includes("PASTE_YOUR_WC_PROJECT_ID_HERE")) {
-      setStatus(status, "warn", "<strong>⚠️ WalletConnect Project ID חסר.</strong><br>תדביק את ה-Project ID שלך ב-JS (WALLETCONNECT_PROJECT_ID).");
-      return false;
-    }
+  async function ensureConnected(preferredNet="bsc", statusElId="ap-status"){
+    const statusEl =
+      document.getElementById(statusElId) ||
+      document.getElementById("ap-status") ||
+      document.getElementById("qs-status");
 
+    // 1) Try AppKit modal
     const modal = await waitForAppKitModal();
-    if (!modal) {
-      setStatus(status, "warn", "<strong>⚠️ Wallet modal not ready yet.</strong><br>Refresh page if this persists.");
-      return false;
-    }
+    if (modal) {
+      try {
+        setStatus(statusEl, "info", "<strong>⏳ Opening wallet modal…</strong>");
+        try { await modal.open({ view: "ConnectWallet" }); }
+        catch { await modal.open(); }
 
-    setStatus(status, "info", "<strong>⏳ Connecting wallet…</strong>");
-    await modal.open({ view: "ConnectWallet" });
+        // Wait for provider to appear
+        const start = Date.now();
+        while (Date.now() - start < 90000) {
+          const p = getAnyWalletProviderFromModal(modal);
+          if (p) {
+            CX.wallet.provider = p;
 
-    const start = Date.now();
-    while (Date.now() - start < 90000) {
-      const p = modal.getWalletProvider?.();
-      if (p) {
-        CX.wallet.provider = p;
+            const okChain = await ensureChain(preferredNet);
+            if (!okChain) setStatus(statusEl, "warn", "<strong>⚠️ Please switch network in your wallet.</strong>");
 
-        const okChain = await ensureChain(preferredNet);
-        if (!okChain) {
-          setStatus(status, "warn", "<strong>⚠️ Please switch network in your wallet.</strong>");
-          // continue anyway
+            const bp = new ethers.BrowserProvider(p);
+            CX.wallet.signer = await bp.getSigner();
+            CX.wallet.address = await CX.wallet.signer.getAddress();
+
+            updateWalletLabels(CX.wallet.address);
+            setStatus(statusEl, "ok", "<strong>✅ Wallet connected.</strong>");
+            return true;
+          }
+          await sleep(250);
         }
 
-        const bp = new ethers.BrowserProvider(p);
+        setStatus(statusEl, "warn", "<strong>⚠️ Connection timeout.</strong><br>Please try again.");
+        return false;
+      } catch (e) {
+        console.warn("AppKit connect failed:", e);
+      }
+    }
+
+    // 2) Fallback: injected (MetaMask)
+    if (window.ethereum?.request) {
+      try {
+        setStatus(statusEl, "info", "<strong>⏳ Connecting (MetaMask)…</strong>");
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        CX.wallet.provider = window.ethereum;
+
+        const okChain = await ensureChain(preferredNet);
+        if (!okChain) setStatus(statusEl, "warn", "<strong>⚠️ Please switch network in your wallet.</strong>");
+
+        const bp = new ethers.BrowserProvider(window.ethereum);
         CX.wallet.signer = await bp.getSigner();
         CX.wallet.address = await CX.wallet.signer.getAddress();
 
-        // update UI labels
-        const addrEl = document.getElementById("ap-address");
-        const pillEl = document.getElementById("ap-wallet");
-        const wl = document.getElementById("walletLabel");
-        if (addrEl) addrEl.textContent = CX.wallet.address;
-        if (pillEl) pillEl.textContent = CX.wallet.address;
-        if (wl) wl.textContent = CX.wallet.address;
-
-        setStatus(status, "ok", "<strong>✅ Wallet connected.</strong>");
+        updateWalletLabels(CX.wallet.address);
+        setStatus(statusEl, "ok", "<strong>✅ Wallet connected (injected).</strong>");
         return true;
+      } catch (e) {
+        setStatus(statusEl, "bad", `<strong>❌ Wallet connect failed.</strong><br>${(e?.message || e).toString()}`);
+        return false;
       }
-      await sleep(250);
     }
 
-    setStatus(status, "warn", "<strong>⚠️ Connection timeout.</strong><br>Please try again.");
+    setStatus(statusEl, "bad", "<strong>❌ No wallet available.</strong><br>Install MetaMask or allow WalletConnect.");
     return false;
   }
 
@@ -2127,10 +2234,7 @@
   const PCS_V2_ROUTER_BSC = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
 
   function apSetStatus(kind, html){ setStatus(document.getElementById("ap-status"), kind, html); }
-
-  function apGetNet(){
-    return (document.getElementById("ap-net")?.value === "eth") ? "eth" : "bsc";
-  }
+  function apGetNet(){ return (document.getElementById("ap-net")?.value === "eth") ? "eth" : "bsc"; }
 
   function apGetSpender(){
     const preset = document.getElementById("ap-spender-preset")?.value;
@@ -2191,7 +2295,7 @@
 
   async function apCheck(){
     const net = apGetNet();
-    const ok = CX.wallet.address ? true : await ensureConnected(net);
+    const ok = CX.wallet.address ? true : await ensureConnected(net, "ap-status");
     if (!ok) return;
 
     await ensureChain(net);
@@ -2252,7 +2356,7 @@
 
   async function apRevokeAllNonZero(){
     const net = apGetNet();
-    const ok = CX.wallet.address ? true : await ensureConnected(net);
+    const ok = CX.wallet.address ? true : await ensureConnected(net, "ap-status");
     if (!ok) return;
 
     await apCheck();
@@ -2269,20 +2373,8 @@
     apSetStatus("ok","<strong>✅ Revoke batch finished.</strong>");
   }
 
-  // Seed common tokens + history
-  const COMMON_BSC = [
-    WBNB,
-    USDT,
-    USDC,
-    BUSD,
-    "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82" // CAKE
-  ];
-  const COMMON_ETH = [
-    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
-    "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT
-    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
-    "0x6B175474E89094C44Da98b954EedeAC495271d0F"  // DAI
-  ];
+  const COMMON_BSC = [ WBNB, USDT, USDC, BUSD, "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82" ];
+  const COMMON_ETH = [ WETH, "0xdAC17F958D2ee523a2206206994597C13D831ec7", "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "0x6B175474E89094C44Da98b954EedeAC495271d0F" ];
 
   function apSeedCommon(){
     const net = apGetNet();
@@ -2329,23 +2421,37 @@
   }
 
   // ===============================
-  // RPC Checker
+  // RPC Checker — adds Read Logs test
   // ===============================
-  function rpcRow(url, latency, block, ok){
+  async function rpcCanReadLogs(p, net, block){
+    // tiny log query: fromBlock=toBlock=latestBlock, address=known contract
+    const addr = (net === "bsc") ? WBNB : WETH;
+    const hex = "0x" + Number(block).toString(16);
+    try {
+      const logs = await p.send("eth_getLogs", [{ fromBlock: hex, toBlock: hex, address: addr }]);
+      return Array.isArray(logs);
+    } catch {
+      return false;
+    }
+  }
+
+  function rpcRow(url, latency, block, logsOk, ok){
     const table = document.getElementById("rpc-table");
     if (!table) return;
 
     const row = document.createElement("div");
-    row.className = "trow";
+    row.className = "trow rpc";
 
     const tag = ok ? "✅ OK" : "❌ Fail";
     const lat = ok ? (latency.toFixed(0) + " ms") : "—";
     const blockStr = ok ? String(block) : "—";
+    const logsStr = ok ? (logsOk ? "✅" : "❌") : "—";
 
     row.innerHTML = `
       <div class="cell mono" title="${url}">${url}</div>
       <div class="cell">${lat}</div>
       <div class="cell hide-sm">${blockStr}</div>
+      <div class="cell hide-sm">${logsStr}</div>
       <div class="cell">${tag}</div>
     `;
 
@@ -2372,10 +2478,11 @@
     if (!table) return;
 
     table.innerHTML = `
-      <div class="trow head">
+      <div class="trow head rpc">
         <div class="cell">RPC</div>
         <div class="cell">Latency</div>
         <div class="cell hide-sm">Block</div>
+        <div class="cell hide-sm">Read logs</div>
         <div class="cell">Status</div>
       </div>
     `;
@@ -2386,7 +2493,7 @@
     let bestMs = Infinity;
 
     for (const url of list) {
-      let ok = false, ms = 0, block = 0;
+      let ok = false, ms = 0, block = 0, logsOk = false;
 
       try {
         const p = new ethers.JsonRpcProvider(url);
@@ -2396,13 +2503,17 @@
         const t1 = performance.now();
         ms = (t1 - t0);
         if (Number(n.chainId) !== expectChainId) throw new Error("Wrong chainId");
+
+        logsOk = await rpcCanReadLogs(p, net, block);
         ok = true;
 
-        if (ms < bestMs) { bestMs = ms; CX.rpc.best = url; }
+        // pick best based on latency + must have logsOk
+        const rank = logsOk ? ms : (ms + 1500);
+        if (rank < bestMs) { bestMs = rank; CX.rpc.best = url; }
       } catch { ok = false; }
 
-      CX.rpc.last.push({ url, ok, latencyMs: ok ? ms : null, block: ok ? block : null, net });
-      rpcRow(url, ms, block, ok);
+      CX.rpc.last.push({ url, ok, latencyMs: ok ? ms : null, block: ok ? block : null, logsOk: ok ? logsOk : null, net });
+      rpcRow(url, ms, block, logsOk, ok);
       await sleep(120);
     }
 
@@ -2578,56 +2689,47 @@
   // Wiring
   // ===============================
   (function initWiring(){
-    // cubes -> panels
     document.querySelectorAll(".tool-card").forEach(card => {
       card.addEventListener("click", () => showTool(card.getAttribute("data-tool")));
     });
 
-    // close buttons
     document.getElementById("btnCloseQuick")?.addEventListener("click", () => { hideAllPanels(); document.getElementById("toolGrid")?.scrollIntoView({behavior:"smooth"}); });
     document.getElementById("btnCloseApprovals")?.addEventListener("click", () => { hideAllPanels(); document.getElementById("toolGrid")?.scrollIntoView({behavior:"smooth"}); });
     document.getElementById("btnCloseRpc")?.addEventListener("click", () => { hideAllPanels(); document.getElementById("toolGrid")?.scrollIntoView({behavior:"smooth"}); });
     document.getElementById("btnCloseMonitor")?.addEventListener("click", () => { hideAllPanels(); document.getElementById("toolGrid")?.scrollIntoView({behavior:"smooth"}); });
 
-    // hero buttons
     document.getElementById("btn-quick")?.addEventListener("click", async () => { showTool("quick"); });
     document.getElementById("btn-connect")?.addEventListener("click", async () => {
       showTool("approvals");
-      await ensureConnected(apGetNet());
+      await ensureConnected(apGetNet(), "ap-status");
     });
 
-    // quick scan buttons
     document.getElementById("qs-run")?.addEventListener("click", qsRun);
     document.getElementById("qs-copy-link")?.addEventListener("click", qsCopyLink);
     document.getElementById("qs-copy-json")?.addEventListener("click", qsCopyJson);
     document.getElementById("qs-share-x")?.addEventListener("click", qsShareX);
     document.getElementById("qs-share-tg")?.addEventListener("click", qsShareTG);
 
-    // approvals
-    document.getElementById("ap-connect")?.addEventListener("click", () => ensureConnected(apGetNet()));
+    document.getElementById("ap-connect")?.addEventListener("click", () => ensureConnected(apGetNet(), "ap-status"));
     document.getElementById("ap-check")?.addEventListener("click", apCheck);
     document.getElementById("ap-revoke-all")?.addEventListener("click", apRevokeAllNonZero);
     document.getElementById("ap-seed-common")?.addEventListener("click", apSeedCommon);
     document.getElementById("ap-seed-history")?.addEventListener("click", apSeedHistory);
     document.getElementById("ap-spender-preset")?.addEventListener("change", apApplyPreset);
 
-    // rpc
     document.getElementById("rpc-test")?.addEventListener("click", rpcTestAll);
     document.getElementById("rpc-copy-best")?.addEventListener("click", rpcCopyBest);
     document.getElementById("rpc-copy-json")?.addEventListener("click", rpcCopyJson);
 
-    // monitor
     document.getElementById("mon-add")?.addEventListener("click", monAdd);
     document.getElementById("mon-check")?.addEventListener("click", monCheckAll);
     document.getElementById("mon-export")?.addEventListener("click", monExport);
 
-    // init defaults
     qsRenderHistory();
     monLoad();
     monRender();
     apApplyPreset();
 
-    // URL auto-run support
     const p = new URLSearchParams(window.location.search);
     const tool = p.get("tool");
     if (tool && TOOL_KEYS.includes(tool)) showTool(tool, {scroll:false});
@@ -2647,7 +2749,7 @@
   })();
 
 })();
-</script>
+  </script>
 
 </body>
 </html>
