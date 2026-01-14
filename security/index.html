@@ -283,55 +283,6 @@
     .risk.bad   { border-color: rgba(220,53,69,0.25); background: rgba(220,53,69,0.10); }
     .risk.bad .dot { background: rgba(220,53,69,0.95); }
 
-    /* Tooltip for risk badges */
-.risk, .risk-badges { overflow: visible; }
-
-.tip-icon{
-  margin-left: 8px;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.18);
-  background: rgba(255,255,255,0.06);
-  color: rgba(244,246,255,0.9);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  cursor: help;
-  position: relative;
-  padding: 0;
-  line-height: 1;
-}
-
-.tip-bubble{
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 10px);
-  transform: translateX(-50%) translateY(4px);
-  width: min(360px, 80vw);
-  background: rgba(8, 10, 22, 0.92);
-  border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 14px;
-  padding: 10px 12px;
-  color: rgba(244,246,255,0.92);
-  font-size: 12px;
-  line-height: 1.45;
-  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 50;
-  white-space: normal;
-}
-
-.tip-icon:hover .tip-bubble,
-.tip-icon:focus .tip-bubble{
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(-50%) translateY(0);
-}
-
-
     /* Panels */
     .panel-shell {
       margin-top: 14px;
@@ -2840,36 +2791,14 @@ function bindLangButtons(){
   }
 
   // =========================
-// UI helpers: risk badges (with optional tooltip)
-// =========================
-function escHtml(s){
-  return String(s ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#39;");
-}
-
-function riskBadge(type, label, detail = "", tipHtml = "") {
-  const div = document.createElement("div");
-  div.className = `risk ${type}`;
-
-  const L = escHtml(label);
-  const D = detail ? ` — ${escHtml(detail)}` : "";
-
-  // tipHtml is allowed to contain <br>/<strong>/<u> etc
-  const tipBtn = tipHtml ? `
-    <button type="button" class="tip-icon" aria-label="Info">
-      ⓘ
-      <span class="tip-bubble">${tipHtml}</span>
-    </button>
-  ` : "";
-
-  div.innerHTML = `<span class="dot"></span><span><b>${L}</b>${D}</span>${tipBtn}`;
-  return div;
-}
-
+  // UI helpers: risk badges
+  // =========================
+  function riskBadge(type, label, detail = "") {
+    const div = document.createElement("div");
+    div.className = `risk ${type}`;
+    div.innerHTML = `<span class="dot"></span><span><b>${label}</b>${detail ? ` — ${detail}` : ""}</span>`;
+    return div;
+  }
 
   function setPairsWrap(el, rowsHtml) {
     if (!el) return;
@@ -3041,21 +2970,8 @@ function riskBadge(type, label, detail = "", tipHtml = "") {
           if (s.impl && E.isAddress(s.impl)) impl = E.getAddress(s.impl);
         }
       }
-      const liq = await liqCheckBasic(net, token, provider);
-const badges = $("#qs-badges");
-if (badges) {
-  badges.innerHTML = ""; 
-  badges.appendChild(
-    riskBadge(
-      liq.any ? "ok" : "warn",
-      "Liquidity",
-      liq.hint,
-      "V2: reserves = token amounts in the pair.<br>V3: liquidity() is concentrated-liquidity (not direct token amounts)."
-    )
-  );
-}
 
-      
+      const liq = await liqCheckBasic(net, token, provider);
 
       const hasMint = codeHasSelector(code, SEL.mint);
       const hasPause = codeHasSelector(code, SEL.pause) || codeHasSelector(code, SEL.paused);
