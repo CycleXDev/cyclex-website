@@ -757,6 +757,13 @@
 
             <div id="qs-status" class="status info"></div>
           </div>
+          <button class="chip chip-danger"
+            data-mon-remove="1"
+            data-addr="${it.addr}"
+            data-net="${it.net}">
+             ✕
+          </button>
+
 
           <div class="card">
             <h3 data-i18n="results_title">Results</h3>
@@ -3907,6 +3914,39 @@ function bindLangButtons(){
     gtagEvent("sec_mon_check", { n: list.length });
   }
 
+    function monRemove(addr, net) {
+  const st = $("#mon-status");
+  const addrLower = String(addr || "").trim().toLowerCase();
+  const netNorm = String(net || "").trim().toLowerCase();
+
+  const list = monLoad();
+  const next = list.filter(it =>
+    !(String(it.net || "").toLowerCase() === netNorm &&
+      String(it.addr || "").toLowerCase() === addrLower)
+  );
+
+  monSave(next);
+  monRender();
+
+  setStatus(st, "ok", "Removed.");
+  gtagEvent("sec_mon_remove", { net: netNorm });
+}
+
+function bindMonRemove() {
+  const table = $("#mon-table");
+  if (!table || table.__cxBound) return;
+  table.__cxBound = true;
+
+  table.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-mon-remove]");
+    if (!btn) return;
+
+    e.preventDefault();
+    const addr = btn.getAttribute("data-addr") || "";
+    const net  = btn.getAttribute("data-net") || "";
+    monRemove(addr, net);
+  });
+}
   // =========================
   // Wiring + Auto-run
   // =========================
@@ -3962,6 +4002,7 @@ function bindLangButtons(){
   initDevUi();
 
   bindLangButtons();
+  bindMonRemove();
   initLang();
 
   monRender();
