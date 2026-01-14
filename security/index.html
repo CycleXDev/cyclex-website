@@ -3170,64 +3170,209 @@ function bindLangButtons(){
       };
     }
   }
+// ===== QuickScan: human number formatting for reserves/liquidity =====
+const CX_ERC20_META_ABI = [
+  "function decimals() view returns (uint8)",
+  "function symbol() view returns (string)",
+  "function balanceOf(address) view returns (uint256)"
+];
+
+const _cxErc20MetaCache = new Map();
+
+function cxToBI(x){
+  try { return (typeof x === "bigint") ? x : BigInt(x); } catch { return 0n; }
+}
+
+async function cxGetErc20Meta(addr, provider){
+  const key = String(addr || "").toLowerCase();
+  if (_cxErc20MetaCache.has(key)) return _cxErc20MetaCache.get(key);
+
+  const c = new E.Contract(addr, CX_ERC20_META_ABI, provider);
+  let decimals = 18;
+  let symbol = shortAddr(addr);
+
+  try { decimals = Number(await c.decimals()); } catch {}
+  try {
+    const s = await c.symbol();
+    if (s && String(s).trim()) symbol = String(s).trim();
+  } catch {}
+
+  const meta = { decimals, symbol };
+  _cxErc20MetaCache.set(key, meta);
+  return meta;
+}
+
+function cxCompactDecimalString(str, dp = 2){
+  if (str == null) return "0";
+  let s = String(str).trim();
+  if (!s) return "0";
+
+  let neg = false;
+  if (s[0] === "-") { neg = true; s = s.slice(1); }
+
+  const parts = s.split(".");
+  let intp = (parts[0] || "0").replace(/^0+(?=\d)/, "");
+  const frac = parts[1] || "";
+
+  // Decide suffix by integer length
+  const len = intp.length;
+  let pow = 0, suf = "";
+  if (len >= 16) { pow = 15; suf = "Q"; }
+  else if (len >= 13) { pow = 12; suf = "T"; }
+  else if (len >= 10) { pow = 9;  suf = "B"; }
+  else if (len >= 7)  { pow = 6;  suf = "M"; }
+  else if (len >= 4)  { pow = 3;  suf = "K"; }
+
+  // No suffix: show up to 6 decimals trimmed
+  if (pow === 0){
+    const frac6 = frac.slice(0, 6).replace(/0+$/,"");
+    const out = frac6 ? `${intp}.${frac6}` : intp;
+    return (neg ? "-" : "") + out;
+  }
+
+  // With suffix: build X.YY + suf from digits (string-safe)
+  const wholeLen = len - pow;
+  const whole = intp.slice(0, wholeLen) || "0";
+  const rest = intp.slice(wholeLen);
+
+  const dec = (rest + "0".repeat(dp)).slice(0, dp).replace(/0+$/,"");
+  const out = dec ? `${whole}.${dec}${suf}` : `${whole}${suf}`;
+  return (neg ? "-" : "") + out;
+}
+
+function cxFmtUnits(amount, decimals, dp = 2){
+  try {
+    const s = E.formatUnits(amount, decimals);
+    return cxCompactDecimalString(s, dp);
+  } catch {
+    return "0";
+  }
+}
+
+function cxFmtBigInt(amount, dp = 2){
+  const bi = cxToBI(amount);
+  return cxCompactDecimalString(bi.toString(), dp);
+}
 
   async function liqCheckBasic(net, token, provider) {
-    const chain = CHAINS[net];
-    const dex = DEX[net];
-    const rows = [];
-    let any = false;
+  const chain = CHAINS[net];
+  const dex = DEX[net];
+  const rows = [];
+  let any = false;
 
-    try {
-      const fac = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, provider);
-      const targets = [
-        { label: "Wrapped", addr: chain.wrapped },
-        { label: "USDT", addr: chain.usdt }
-      ];
+  const ZERO = "0x0000000000000000000000000000000000000000";
 
-      for (const t of targets) {
-        const pair = await fac.getPair(token, t.addr);
-        if (pair && pair !== "0x0000000000000000000000000000000000000000") {
-          const p = new E.Contract(pair, V2_PAIR_ABI, provider);
-          const [r0, r1] = await p.getReserves();
-          const ok = (BigInt(r0) > 0n || BigInt(r1) > 0n);
-          any = any || ok;
-          rows.push({ type: "V2", target: t.label, addr: pair, ok, note: ok ? `reserves: ${fmtNum(r0)} / ${fmtNum(r1)}` : "empty" });
-        } else {
-          rows.push({ type: "V2", target: t.label, addr: "", ok: false, note: "no pair" });
-        }
+  // Preload token/targets meta (best effort)
+  let metaToken = { decimals: 18, symbol: "TOKEN" };
+  try { metaToken = await cxGetErc20Meta(token, provider); } catch {}
+
+  // ---------- V2: show RESERVES in human units + symbols ----------
+  try {
+    const fac = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, provider);
+    const targets = [
+      { label: "Wrapped", addr: chain.wrapped },
+      { label: "USDT", addr: chain.usdt }
+    ];
+
+    for (const t of targets) {
+      const pair = await fac.getPair(token, t.addr);
+
+      if (pair && pair !== ZERO) {
+        const p = new E.Contract(pair, V2_PAIR_ABI, provider);
+
+        // Try to detect token0/token1 order (optional, depends on ABI)
+        let token0 = token, token1 = t.addr;
+        try { token0 = await p.token0(); } catch {}
+        try { token1 = await p.token1(); } catch {}
+
+        const [r0Raw, r1Raw] = await p.getReserves();
+        const r0 = cxToBI(r0Raw), r1 = cxToBI(r1Raw);
+
+        const m0 = await cxGetErc20Meta(token0, provider).catch(() => ({ decimals: 18, symbol: shortAddr(token0) }));
+        const m1 = await cxGetErc20Meta(token1, provider).catch(() => ({ decimals: 18, symbol: shortAddr(token1) }));
+
+        const ok = (r0 > 0n || r1 > 0n);
+        any = any || ok;
+
+        const a0 = cxFmtUnits(r0, m0.decimals, 2);
+        const a1 = cxFmtUnits(r1, m1.decimals, 2);
+
+        rows.push({
+          type: "V2",
+          target: t.label,
+          addr: pair,
+          ok,
+          note: ok
+            ? `reserves: ${a0} ${m0.symbol} / ${a1} ${m1.symbol}`
+            : "empty"
+        });
+      } else {
+        rows.push({ type: "V2", target: t.label, addr: "", ok: false, note: "no pair" });
       }
-    } catch {
-      rows.push({ type: "V2", target: "Wrapped/USDT", addr: "", ok: false, note: "factory call failed" });
     }
-
-    try {
-      const fac3 = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, provider);
-      const feeTiers = [500, 3000, 10000];
-      const targets = [
-        { label: "Wrapped", addr: chain.wrapped },
-        { label: "USDT", addr: chain.usdt }
-      ];
-
-      for (const t of targets) {
-        for (const fee of feeTiers) {
-          const pool = await fac3.getPool(token, t.addr, fee);
-          if (pool && pool !== "0x0000000000000000000000000000000000000000") {
-            const p = new E.Contract(pool, V3_POOL_ABI, provider);
-            let liq = 0n;
-            try { liq = BigInt(await p.liquidity()); } catch {}
-            const ok = liq > 0n;
-            any = any || ok;
-            rows.push({ type: `V3 ${fee}`, target: t.label, addr: pool, ok, note: ok ? `liquidity: ${fmtNum(liq)}` : "0" });
-          }
-        }
-      }
-    } catch {
-      rows.push({ type: "V3", target: "Wrapped/USDT", addr: "", ok: false, note: "factory call failed" });
-    }
-
-    const hint = any ? "V2/V3 pairs exist" : "none";
-    return { any, hint, rows };
+  } catch {
+    rows.push({ type: "V2", target: "Wrapped/USDT", addr: "", ok: false, note: "factory call failed" });
   }
+
+  // ---------- V3: show POOL BALANCES (human) + also show L units (small) ----------
+  try {
+    const fac3 = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, provider);
+    const feeTiers = [500, 3000, 10000];
+    const targets = [
+      { label: "Wrapped", addr: chain.wrapped },
+      { label: "USDT", addr: chain.usdt }
+    ];
+
+    for (const t of targets) {
+      for (const fee of feeTiers) {
+        const pool = await fac3.getPool(token, t.addr, fee);
+
+        if (pool && pool !== ZERO) {
+          const p = new E.Contract(pool, V3_POOL_ABI, provider);
+
+          let token0 = token, token1 = t.addr;
+          try { token0 = await p.token0(); } catch {}
+          try { token1 = await p.token1(); } catch {}
+
+          const m0 = await cxGetErc20Meta(token0, provider).catch(() => ({ decimals: 18, symbol: shortAddr(token0) }));
+          const m1 = await cxGetErc20Meta(token1, provider).catch(() => ({ decimals: 18, symbol: shortAddr(token1) }));
+
+          // Actual balances inside the pool (much more “human” than liquidity units)
+          const c0 = new E.Contract(token0, CX_ERC20_META_ABI, provider);
+          const c1 = new E.Contract(token1, CX_ERC20_META_ABI, provider);
+
+          let b0 = 0n, b1 = 0n;
+          try { b0 = cxToBI(await c0.balanceOf(pool)); } catch {}
+          try { b1 = cxToBI(await c1.balanceOf(pool)); } catch {}
+
+          let liq = 0n;
+          try { liq = cxToBI(await p.liquidity()); } catch {}
+
+          const ok = (b0 > 0n || b1 > 0n || liq > 0n);
+          any = any || ok;
+
+          const fb0 = cxFmtUnits(b0, m0.decimals, 2);
+          const fb1 = cxFmtUnits(b1, m1.decimals, 2);
+
+          rows.push({
+            type: `V3 ${fee}`,
+            target: t.label,
+            addr: pool,
+            ok,
+            note: ok
+              ? `balances: ${fb0} ${m0.symbol} / ${fb1} ${m1.symbol} · L: ${cxFmtBigInt(liq, 2)}`
+              : "0"
+          });
+        }
+      }
+    }
+  } catch {
+    rows.push({ type: "V3", target: "Wrapped/USDT", addr: "", ok: false, note: "factory call failed" });
+  }
+
+  const hint = any ? "V2/V3 pairs exist" : "none";
+  return { any, hint, rows };
+}
 
   // =========================
   // Token + Liquidity Panel (detailed)
