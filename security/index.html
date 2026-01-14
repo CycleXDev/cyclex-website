@@ -423,6 +423,25 @@
     }
 
     .trow .cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* RPC URL: allow 2 lines (readable) without breaking layout */
+.trow.rpc .cell:first-child{
+  white-space: normal;      /* override nowrap */
+  overflow: hidden;         /* keep within cell */
+  text-overflow: clip;      /* no ellipsis per-line; we'll clamp instead */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;    /* max 2 lines */
+  overflow-wrap: anywhere;  /* break long URLs nicely */
+  line-height: 1.15;
+}
+
+/* keep other columns centered and clean */
+.trow.rpc .cell:not(:first-child),
+.trow.head.rpc .cell:not(:first-child){
+  text-align: center;
+  justify-self: center;
+}
+
     .trow .cell.wrap { white-space: normal; overflow: visible; }
     .trow.highlight { background: rgba(0,230,118,0.10); border-top-color: rgba(0,230,118,0.20); }
 
