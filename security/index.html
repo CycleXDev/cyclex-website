@@ -1386,19 +1386,52 @@
   }
 
   function setLang(lang) {
-    currentLang = lang;
-    try { localStorage.setItem("cx_sec_lang", lang); } catch {}
+  const picked = normalizeLang(lang);
+  currentLang = translations?.[picked] ? picked : "en";
 
-    $$(".lang-btn").forEach((b) => b.classList.toggle("active", b.dataset.lang === lang));
-    applyI18n();
-  }
+  try { localStorage.setItem("cx_sec_lang", currentLang); } catch {}
+
+  $$(".lang-btn").forEach((b) => {
+    const bl = normalizeLang(b.dataset?.lang || b.getAttribute("data-lang") || "");
+    b.classList.toggle("active", bl === currentLang);
+  });
+
+  applyI18n();
+}
+
 
   function initLang() {
-    let saved = null;
-    try { saved = localStorage.getItem("cx_sec_lang"); } catch {}
-    if (saved && translations?.[saved]) currentLang = saved;
-    setLang(currentLang);
-  }
+  let saved = null;
+  try { saved = localStorage.getItem("cx_sec_lang"); } catch {}
+
+  const s = normalizeLang(saved);
+  setLang(translations?.[s] ? s : "en");
+}
+
+    // =========================
+// i18n buttons wiring (FIX)
+// =========================
+function normalizeLang(x){
+  const v = String(x || "").trim().toLowerCase();
+  const map = { "cn":"zh", "zh-cn":"zh", "zh-hans":"zh" };
+  return map[v] || v;
+}
+
+function bindLangButtons(){
+  $$(".lang-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      // אם זה <a href="#"> שלא יקפיץ/ירענן
+      try { e.preventDefault(); } catch {}
+
+      const raw = btn.dataset?.lang || btn.getAttribute("data-lang") || "";
+      const lang = normalizeLang(raw);
+
+      setLang(lang);
+      gtagEvent("sec_lang_change", { lang });
+    }, { passive: false });
+  });
+}
+
 
   // =========================
   // Utils
@@ -3167,19 +3200,22 @@
   // Boot
   // =========================
   window.addEventListener("DOMContentLoaded", () => {
-    initPanels();
-    initWalletButtons();
-    initApiKeysUi();
-    initApprovalsUi();
-    initRpcUi();
-    initTxUi();
-    initDevUi();
+  initPanels();
+  initWalletButtons();
+  initApiKeysUi();
+  initApprovalsUi();
+  initRpcUi();
+  initTxUi();
+  initDevUi();
 
-    initLang();
-    monRender();
-    renderWalletLabels();
-    initWiring();
-  });
+  bindLangButtons();
+  initLang();
+
+  monRender();
+  renderWalletLabels();
+  initWiring();
+});
+
 </script>
 </body>
 </html>
