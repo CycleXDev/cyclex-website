@@ -413,11 +413,83 @@
       color: rgba(244,246,255,0.75);
     }
 
-    /* RPC table: RPC | latency | chain | block | call | logs | status */
-    .trow.rpc { grid-template-columns: 1.55fr 0.62fr 0.62fr 0.62fr 0.62fr 0.62fr 0.6fr; }
-    .trow .cell { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .trow .cell.wrap { white-space: normal; overflow: visible; }
-    .trow.highlight { background: rgba(0,230,118,0.10); border-top-color: rgba(0,230,118,0.20); }
+    /* =========================
+   RPC table — show RPC URL + keep it readable (no overlap)
+   ========================= */
+
+/* allow horizontal swipe on small screens without "breaking the cube" */
+#rpc-table{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* RPC | ms | chain | block | call | logs | status */
+#rpc-table .trow.head.rpc,
+#rpc-table .trow.rpc{
+  display: grid;
+  /* IMPORTANT: give the RPC column a REAL minimum so it can’t collapse to 0 */
+  grid-template-columns: minmax(240px, 1.8fr) 72px 64px 64px 60px 60px minmax(140px, 1fr);
+  gap: 10px;
+  align-items: center;
+
+  /* keep the table usable on narrow cards (swipe instead of squish) */
+  min-width: 760px;
+}
+
+/* default cells */
+#rpc-table .trow.head.rpc .cell,
+#rpc-table .trow.rpc .cell{
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* RPC URL column (1st): allow 2 lines, break long URLs nicely */
+#rpc-table .trow.head.rpc .cell:first-child,
+#rpc-table .trow.rpc .cell:first-child{
+  white-space: normal;
+  text-overflow: clip;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+
+  /* keep URLs readable even in RTL (Arabic) */
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
+/* STATUS column (last): allow 2 lines so "limit exceeded" won’t overlap */
+#rpc-table .trow.head.rpc .cell:last-child,
+#rpc-table .trow.rpc .cell:last-child{
+  white-space: normal;
+  text-overflow: clip;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* keep numeric/icon columns centered */
+#rpc-table .trow.rpc .cell:not(:first-child),
+#rpc-table .trow.head.rpc .cell:not(:first-child){
+  text-align: center;
+  justify-self: center;
+}
+
+/* keep your highlight style */
+.trow.highlight{
+  background: rgba(0,230,118,0.10);
+  border-top-color: rgba(0,230,118,0.20);
+}
+
 
     .chip {
       display:inline-flex; align-items:center; gap:8px;
