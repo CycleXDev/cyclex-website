@@ -515,60 +515,58 @@
 }
     .share-row { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
   
-/* Quick Scan buttons (FIXED v2) */
+/* Quick Scan buttons — FIX v3 (card-friendly) */
 
-/* Main action buttons row */
-#panel-quick .row.qs-actions{
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  align-items: stretch;
-}
-
-/* Share buttons row (your HTML uses .qs-share, not .share-row) */
+/* Actions row + Share row use grid */
+#panel-quick .row.qs-actions,
 #panel-quick .qs-share{
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-items: stretch;
-  margin-top: 12px;
 }
 
+#panel-quick .qs-share{ margin-top: 12px; }
+
+/* Buttons: always allow wrapping so text stays INSIDE the pill */
 #panel-quick .qs-actions .btn,
 #panel-quick .qs-share .btn{
   width: 100%;
   min-width: 0;
-  justify-content: center;
-  text-align: center;
-  white-space: normal;   /* allow wrap on mobile */
+
+  /* tighter to fit long labels */
+  padding: 12px 14px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+
+  white-space: normal;     /* IMPORTANT: override global nowrap */
   line-height: 1.15;
+
   min-height: 44px;
+  overflow: hidden;        /* prevent spill outside pill */
+  text-overflow: ellipsis; /* safety */
 }
 
-/* Mobile symmetry */
+/* Mobile layout: nice symmetry */
 #panel-quick .qs-actions #qs-run{ grid-column: 1 / -1; }
 #panel-quick .qs-actions #qs-copy-md{ grid-column: 1 / -1; }
 #panel-quick .qs-share #qs-copy-xtext{ grid-column: 1 / -1; }
 
-/* Desktop layout */
-@media (min-width: 860px){
+/* Only on VERY wide screens make actions 4-up and share 3-up */
+@media (min-width: 1280px){
   #panel-quick .row.qs-actions{
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  #panel-quick .qs-share{
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   #panel-quick .qs-actions #qs-run,
-  #panel-quick .qs-actions #qs-copy-md,
-  #panel-quick .qs-share #qs-copy-xtext{
+  #panel-quick .qs-actions #qs-copy-md{
     grid-column: auto;
   }
 
-  /* keep single-line labels on desktop */
-  #panel-quick .qs-actions .btn,
-  #panel-quick .qs-share .btn{
-    white-space: nowrap;
+  #panel-quick .qs-share{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  #panel-quick .qs-share #qs-copy-xtext{
+    grid-column: auto;
   }
 }
 
