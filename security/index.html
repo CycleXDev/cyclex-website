@@ -1911,13 +1911,12 @@
         addressUrl: (a) => `https://bscscan.com/address/${a}`,
         txUrl: (h) => `https://bscscan.com/tx/${h}`,
         publicRpcs: [
-          "https://bsc-dataseed.binance.org",
-          "https://bsc-dataseed1.bnbchain.org",
-          "https://bsc-dataseed2.bnbchain.org",
-          "https://bsc-dataseed3.bnbchain.org",
-          "https://bsc.publicnode.com",
-          "https://bsc-rpc.publicnode.com"
-        ]
+  "https://bsc-rpc.publicnode.com",
+  "https://bsc.publicnode.com",
+  "https://rpc.ankr.com/bsc",
+  "https://bsc-dataseed1.bnbchain.org",
+  "https://bsc-dataseed2.bnbchain.org"
+]
       },
       eth: {
         chainId: 1,
@@ -2057,12 +2056,16 @@
 
     const _providerCache = new Map(); // key: net|url
     function getProviderForUrl(net, url){
-      const key = `${net}|${url}`;
-      if (_providerCache.has(key)) return _providerCache.get(key);
-      const p = new E.JsonRpcProvider(url, CHAINS[net].chainId);
-      _providerCache.set(key, p);
-      return p;
-    }
+  const key = `${net}|${url}`;
+  if (_providerCache.has(key)) return _providerCache.get(key);
+
+  const n = { name: CHAINS[net].name.toLowerCase(), chainId: CHAINS[net].chainId };
+  const p = new E.JsonRpcProvider(url, n, { staticNetwork: n });
+
+  _providerCache.set(key, p);
+  return p;
+}
+
 
     async function withRpcFallback(net, fn, { timeoutMs = 9500, preferUrls = null } = {}) {
       const urls = preferUrls && preferUrls.length ? preferUrls : buildRpcCandidates(net);
