@@ -1725,6 +1725,15 @@ th_status: "status",
 th_contract: "Contract",
 th_network: "Network",
 th_last_seen: "Last seen",
+    th_pairpool: "Pair/Pool",
+th_type: "Type",
+th_target: "Target",
+th_result: "Result",
+btn_remove: "Remove",
+toast_imported_token: "Imported token from explorer:",
+toast_imported_tx: "Imported tx from explorer:",
+err_no_working_rpc: "No working RPC found. Open RPC tool and set a working endpoint.",
+
 
 qs_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
 liq_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
@@ -1936,6 +1945,15 @@ th_status: "状态",
 th_contract: "合约",
 th_network: "网络",
 th_last_seen: "上次出现",
+    th_pairpool: "交易对/池",
+th_type: "类型",
+th_target: "目标",
+th_result: "结果",
+btn_remove: "移除",
+toast_imported_token: "已从浏览器导入代币：",
+toast_imported_tx: "已从浏览器导入交易：",
+err_no_working_rpc: "未找到可用 RPC。请在 RPC 工具中设置可用节点。",
+
 
 qs_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
 liq_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
@@ -2148,6 +2166,15 @@ th_status: "الحالة",
 th_contract: "العقد",
 th_network: "الشبكة",
 th_last_seen: "آخر ظهور",
+    th_pairpool: "زوج/مجمع",
+th_type: "النوع",
+th_target: "الهدف",
+th_result: "النتيجة",
+btn_remove: "إزالة",
+toast_imported_token: "تم استيراد التوكن من المستكشف:",
+toast_imported_tx: "تم استيراد المعاملة من المستكشف:",
+err_no_working_rpc: "لم يتم العثور على RPC يعمل. افتح أداة RPC واضبط endpoint صالح.",
+
 
 qs_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
 liq_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
@@ -2365,6 +2392,15 @@ th_status: "статус",
 th_contract: "Контракт",
 th_network: "Сеть",
 th_last_seen: "Последний раз",
+    th_pairpool: "Пара/Пул",
+th_type: "Тип",
+th_target: "Цель",
+th_result: "Результат",
+btn_remove: "Удалить",
+toast_imported_token: "Импорт токена из explorer:",
+toast_imported_tx: "Импорт tx из explorer:",
+err_no_working_rpc: "Не найден рабочий RPC. Откройте инструмент RPC и задайте рабочий endpoint.",
+
 
 qs_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
 liq_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
@@ -2541,14 +2577,28 @@ function bindLangButtons(){
   }
 
   function parseQuery() {
-    const u = new URL(location.href);
-    return {
-      tool: (u.searchParams.get("tool") || "").toLowerCase(),
-      net: (u.searchParams.get("net") || "").toLowerCase(),
-      token: (u.searchParams.get("token") || ""),
-      tx: (u.searchParams.get("tx") || "")
-    };
+  const u = new URL(location.href);
+  const sp = u.searchParams;
+
+  let tool = (sp.get("tool") || "").toLowerCase();
+
+  // accept more net aliases (incl chainId)
+  let net = (sp.get("net") || sp.get("chain") || sp.get("network") || sp.get("chainId") || "").toLowerCase();
+  if (net === "56" || net === "bsc" || net === "bnb" || net === "bnbchain" || net === "bnb-chain") net = "bsc";
+  if (net === "1" || net === "eth" || net === "ethereum") net = "eth";
+
+  // accept more params for token/tx
+  const token = sp.get("token") || sp.get("addr") || sp.get("address") || sp.get("contract") || sp.get("a") || "";
+  const tx = sp.get("tx") || sp.get("hash") || sp.get("txhash") || "";
+
+  // infer tool if missing
+  if (!tool) {
+    if (/^0x[a-fA-F0-9]{64}$/.test(String(tx).trim())) tool = "tx";
+    else if (E.isAddress(String(token).trim())) tool = "quick";
   }
+
+  return { tool, net, token, tx };
+}
 
   // =========================
   // Panels / Tiles
@@ -3212,9 +3262,10 @@ function cxResetProvider(net){
     }
     const token = E.getAddress(tokenRaw);
 
-    const provider = getReadProvider(net);
+        let provider = null;
+    try { provider = await cxGetProvider(net); } catch {}
     if (!provider) {
-      setStatus(st, "bad", "No RPC available. Open RPC tool and set a working endpoint.");
+      setStatus(st, "bad", t(currentLang, "err_no_working_rpc") || "No working RPC found. Open RPC tool and set a working endpoint.");
       return;
     }
 
@@ -3354,11 +3405,11 @@ function cxResetProvider(net){
         const html = `
           <div class="table">
             <div class="trow head">
-              <div class="cell">Pair/Pool</div>
-              <div class="cell">Type</div>
-              <div class="cell hide-sm">Target</div>
-              <div class="cell">Result</div>
-            </div>
+  <div class="cell" data-i18n="th_pairpool">Pair/Pool</div>
+  <div class="cell" data-i18n="th_type">Type</div>
+  <div class="cell hide-sm" data-i18n="th_target">Target</div>
+  <div class="cell" data-i18n="th_result">Result</div>
+</div>
             ${(d.liq?.rows || []).map(r => `
               <div class="trow">
                 <div class="cell wrap"><span class="mono">${r.addr ? shortAddr(r.addr) : "—"}</span></div>
@@ -3370,6 +3421,7 @@ function cxResetProvider(net){
           </div>
         `;
         pairsWrap.innerHTML = html;
+        try { applyI18n(currentLang); } catch {}
       }
 
       $("#qs-copy-link")?.addEventListener("click", async () => {
@@ -3681,8 +3733,9 @@ function cxFmtBigInt(amount, dp = 2){
     if (!E.isAddress(tokenRaw)) { setStatus(st, "warn", "Invalid token address."); return; }
     const token = E.getAddress(tokenRaw);
 
-    const provider = getReadProvider(net);
-    if (!provider) { setStatus(st, "bad", "No RPC available. Set a working endpoint in RPC tool."); return; }
+        let provider = null;
+    try { provider = await cxGetProvider(net); } catch {}
+    if (!provider) { setStatus(st, "bad", t(currentLang, "err_no_working_rpc") || "No working RPC found. Set a working endpoint in RPC tool."); return; }
 
     const dn = $("#liq-dex-note");
     if (dn) dn.textContent = `${DEX[net].label} V2+V3 factories • targets: Wrapped + USDT`;
@@ -3705,11 +3758,12 @@ function cxFmtBigInt(amount, dp = 2){
         wrap.innerHTML = `
           <div class="table">
             <div class="trow head">
-              <div class="cell">Pair/Pool</div>
-              <div class="cell">Type</div>
-              <div class="cell hide-sm">Target</div>
-              <div class="cell">Result</div>
-            </div>
+  <div class="cell" data-i18n="th_pairpool">Pair/Pool</div>
+  <div class="cell" data-i18n="th_type">Type</div>
+  <div class="cell hide-sm" data-i18n="th_target">Target</div>
+  <div class="cell" data-i18n="th_result">Result</div>
+</div>
+
             ${liq.rows.map(r => `
               <div class="trow">
                 <div class="cell wrap">${r.addr ? `<a class="mono" href="${CHAINS[net].addressUrl(r.addr)}" target="_blank" rel="noopener">${r.addr}</a>` : `<span class="muted">—</span>`}</div>
@@ -4367,10 +4421,10 @@ function cxFmtBigInt(amount, dp = 2){
 
   table.innerHTML = `
     <div class="trow head">
-      <div class="cell">Contract</div>
-      <div class="cell">Network</div>
-      <div class="cell hide-sm">Last seen</div>
-      <div class="cell">Status</div>
+      <div class="cell" data-i18n="th_contract">Contract</div>
+      <div class="cell" data-i18n="th_network">Network</div>
+      <div class="cell hide-sm" data-i18n="th_last_seen">Last seen</div>
+      <div class="cell" data-i18n="th_status">Status</div>
     </div>
   `;
 
@@ -4394,6 +4448,7 @@ function cxFmtBigInt(amount, dp = 2){
 
           <button class="chip chip-danger"
                   title="Remove"
+                  data-i18n-title="btn_remove"
                   data-mon-remove="1"
                   data-addr="${it.addr}"
                   data-net="${it.net}">
@@ -4405,6 +4460,12 @@ function cxFmtBigInt(amount, dp = 2){
 
     table.appendChild(row);
   }
+
+  // bind remove once (delegation)
+  try { bindMonRemove(); } catch {}
+
+  // translate injected DOM
+  try { applyI18n(currentLang); } catch {}
 }
 
 
@@ -4436,8 +4497,10 @@ function cxFmtBigInt(amount, dp = 2){
 
     for (const it of list) {
       try {
-        const provider = getReadProvider(it.net);
+                let provider = null;
+        try { provider = await cxGetProvider(it.net); } catch {}
         if (!provider) { it.status = "no rpc"; continue; }
+
         const code = await provider.getCode(it.addr);
         it.status = (code && code !== "0x") ? "code ✅" : "no code";
         it.last = new Date().toLocaleString();
@@ -4500,6 +4563,7 @@ function bindMonRemove() {
 
       const tool = ["quick", "liq", "approvals", "rpc", "tx", "dev"].includes(q.tool) ? q.tool : "quick";
       window.showPanel?.(tool);
+            try { cxHandleImportToast(q); } catch {}
 
       if (q.net === "eth" || q.net === "bsc") {
         const sels = ["#qs-net", "#liq-net", "#ap-net", "#rpc-net", "#tx-net"];
@@ -4566,6 +4630,54 @@ function cxToast(msg, kind = "ok", ms = 2200) {
     }, ms);
   } catch {}
 }
+    function cxShortHash(h) {
+  const s = String(h || "");
+  if (s.length < 16) return s || "—";
+  return `${s.slice(0, 10)}…${s.slice(-6)}`;
+}
+
+function cxLooksLikeExplorerRef() {
+  const ref = String(document.referrer || "").toLowerCase();
+  if (!ref) return false;
+
+  return (
+    ref.includes("bscscan.com") ||
+    ref.includes("etherscan.io") ||
+    ref.includes("arbiscan.io") ||
+    ref.includes("polygonscan.com") ||
+    ref.includes("snowtrace.io") ||
+    ref.includes("ftmscan.com")
+  );
+}
+
+function cxHandleImportToast(q) {
+  try {
+    const sp = new URLSearchParams(location.search);
+    const src = String(sp.get("src") || sp.get("from") || sp.get("utm_source") || "").toLowerCase();
+    const srcExplorer = /(bscscan|etherscan|arbiscan|polygonscan|snowtrace|ftmscan)/.test(src);
+
+    if (!cxLooksLikeExplorerRef() && !srcExplorer) return;
+
+    if (q?.tool === "tx" && /^0x[a-fA-F0-9]{64}$/.test(String(q.tx || ""))) {
+      cxToast(
+        `${t(currentLang, "toast_imported_tx") || "Imported tx:"} <span class="mono">${cxShortHash(q.tx)}</span>`,
+        "ok",
+        2400
+      );
+      return;
+    }
+
+    if ((q?.tool === "quick" || q?.tool === "liq") && E.isAddress(String(q.token || ""))) {
+      const addr = E.getAddress(String(q.token));
+      cxToast(
+        `${t(currentLang, "toast_imported_token") || "Imported token:"} <span class="mono">${shortAddr(addr)}</span>`,
+        "ok",
+        2400
+      );
+    }
+  } catch {}
+}
+
 
 function cxNormalizeNet(x) {
   const v = String(x || "").trim().toLowerCase();
@@ -4735,7 +4847,7 @@ function cxAutoRunFromQuery() {
   monRender();
   renderWalletLabels();
   initWiring();
-  cxAutoRunFromQuery();
+    
 
 });
 
