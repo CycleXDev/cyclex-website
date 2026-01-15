@@ -387,31 +387,21 @@
     .status.info { display:block; background: rgba(0, 229, 255, 0.10); border-color: rgba(0,229,255,0.30); color: #7df2ff; }
 
     .small { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+   /* Bookmarklet help text (under status) */
 
-    .table {
-      margin-top: 10px;
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 18px;
-      overflow: hidden;
-    }
-    .trow {
-      display: grid;
-      grid-template-columns: 1.3fr 1.1fr 0.9fr 0.9fr;
-      gap: 10px;
-      padding: 10px 12px;
-      border-top: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.03);
-      align-items: center;
-      font-size: 13px;
-    }
-    .trow.head {
-      border-top: none;
-      background: rgba(255,255,255,0.05);
-      font-size: 12px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: rgba(244,246,255,0.75);
-    }
+    #bm-help{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px dashed rgba(0,229,255,0.22);
+  background: rgba(0,229,255,0.06);
+  color: rgba(244,246,255,0.78);
+  line-height: 1.55;
+}
+#bm-help b{
+  color: rgba(244,246,255,0.95);
+}
+
 
     /* =========================
    RPC table — show RPC URL + keep it readable (no overlap)
@@ -1212,6 +1202,7 @@
             </div>
 
             <div id="bm-out" class="status info"></div>
+            <div id="bm-help" class="small" data-i18n="bm_help" style="display:none"></div>
           </div>
 
           <div class="card">
@@ -2624,9 +2615,11 @@ function bindLangButtons(){
     "function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool)"
   ];
   const V3_POOL_ABI = [
-    "function liquidity() view returns (uint128)",
-    "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,uint8 feeProtocol,bool unlocked)"
-  ];
+  "function token0() view returns (address)",
+  "function token1() view returns (address)",
+  "function liquidity() view returns (uint128)",
+  "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,uint8 feeProtocol,bool unlocked)"
+];
 
   const TRANSFER_TOPIC0 = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
   const APPROVAL_TOPIC0 = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
@@ -4060,7 +4053,6 @@ function cxFmtBigInt(amount, dp = 2){
       setStatus($("#mon-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
     });
   }
-
   // Monitor
   const LS_MON = "cx_sec_mon_v1";
 
@@ -4070,7 +4062,6 @@ function cxFmtBigInt(amount, dp = 2){
   function monSave(list) {
     try { localStorage.setItem(LS_MON, JSON.stringify(list)); } catch {}
   }
-
   function monRender() {
   const table = $("#mon-table");
   if (!table) return;
@@ -4085,7 +4076,6 @@ function cxFmtBigInt(amount, dp = 2){
       <div class="cell">Status</div>
     </div>
   `;
-
   for (const it of list) {
     const row = document.createElement("div");
     row.className = "trow";
@@ -4118,7 +4108,6 @@ function cxFmtBigInt(amount, dp = 2){
     table.appendChild(row);
   }
 }
-
 
   async function monAdd() {
     const st = $("#mon-status");
@@ -4205,38 +4194,6 @@ function bindMonRemove() {
     $("#liq-run")?.addEventListener("click", () => runLiqScan({ auto: false }));
 
     renderWalletLabels();
-
-    (function autoRunFromQuery() {
-      const q = parseQuery();
-      if (!q.tool) return;
-
-      const tool = ["quick", "liq", "approvals", "rpc", "tx", "dev"].includes(q.tool) ? q.tool : "quick";
-      window.showPanel?.(tool);
-
-      if (q.net === "eth" || q.net === "bsc") {
-        const sels = ["#qs-net", "#liq-net", "#ap-net", "#rpc-net", "#tx-net"];
-        for (const s of sels) {
-          const el = $(s);
-          if (el) el.value = q.net;
-        }
-      }
-
-      if (tool === "quick" && q.token && E.isAddress(q.token)) {
-        const el = $("#qs-token");
-        if (el) el.value = E.getAddress(q.token);
-        setTimeout(() => runQuickScan({ auto: true }), 350);
-      }
-      if (tool === "liq" && q.token && E.isAddress(q.token)) {
-        const el = $("#liq-token");
-        if (el) el.value = E.getAddress(q.token);
-        setTimeout(() => runLiqScan({ auto: true }), 350);
-      }
-      if (tool === "tx" && q.tx && /^0x[0-9a-fA-F]{64}$/.test(q.tx)) {
-        const el = $("#tx-hash");
-        if (el) el.value = q.tx;
-        setTimeout(() => runTxDecode({ auto: true }), 350);
-      }
-    })();
   }
 // =========================
 // Deep-link + Explorer Import UX
