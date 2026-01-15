@@ -4556,39 +4556,6 @@ function bindMonRemove() {
     $("#liq-run")?.addEventListener("click", () => runLiqScan({ auto: false }));
 
     renderWalletLabels();
-
-    (function autoRunFromQuery() {
-      const q = parseQuery();
-      if (!q.tool) return;
-
-      const tool = ["quick", "liq", "approvals", "rpc", "tx", "dev"].includes(q.tool) ? q.tool : "quick";
-      window.showPanel?.(tool);
-            try { cxHandleImportToast(q); } catch {}
-
-      if (q.net === "eth" || q.net === "bsc") {
-        const sels = ["#qs-net", "#liq-net", "#ap-net", "#rpc-net", "#tx-net"];
-        for (const s of sels) {
-          const el = $(s);
-          if (el) el.value = q.net;
-        }
-      }
-
-      if (tool === "quick" && q.token && E.isAddress(q.token)) {
-        const el = $("#qs-token");
-        if (el) el.value = E.getAddress(q.token);
-        setTimeout(() => runQuickScan({ auto: true }), 350);
-      }
-      if (tool === "liq" && q.token && E.isAddress(q.token)) {
-        const el = $("#liq-token");
-        if (el) el.value = E.getAddress(q.token);
-        setTimeout(() => runLiqScan({ auto: true }), 350);
-      }
-      if (tool === "tx" && q.tx && /^0x[0-9a-fA-F]{64}$/.test(q.tx)) {
-        const el = $("#tx-hash");
-        if (el) el.value = q.tx;
-        setTimeout(() => runTxDecode({ auto: true }), 350);
-      }
-    })();
   }
 // =========================
 // Deep-link + Explorer Import UX
