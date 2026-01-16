@@ -1201,5 +1201,445 @@
     </footer>
 
   </div>
+<script>
+/* =========================
+   CycleX i18n core (Part 3A)
+   Supports: EN / ZH / AR / RU
+   Uses: data-i18n (+ *_html keys for innerHTML)
+   ========================= */
+(() => {
+  "use strict";
+
+  const CX_SUPPORTED_LANGS = ["en", "zh", "ar", "ru"];
+  const CX_RTL_LANGS = new Set(["ar"]);
+
+  const translations = {
+    en: {
+      // Top / Hero
+      brand_sub: "On-Chain Security & Rewards",
+      hero_kicker: "Engineering secure on-chain systems for long-term participation",
+      hero_title: "Security tools you can verify — not just trust.",
+      hero_subtitle: "Run verifiable checks on tokens, contracts and RPC endpoints. Green / Yellow / Red signals based on on-chain data.",
+      note_line: "Signals are informational, not guarantees. Always verify independently.",
+
+      // Buttons / common
+      btn_scan: "Scan",
+      btn_copy: "Copy",
+      btn_open: "Open",
+      btn_close: "Close",
+      btn_reset: "Reset",
+      btn_refresh: "Refresh",
+
+      // Tool grid
+      tools_title: "Security Tools",
+      tool_quickscan_name: "QuickScan",
+      tool_quickscan_desc: "Verifiable on-chain risk signals for tokens.",
+      tool_rpc_name: "RPC Watch",
+      tool_rpc_desc: "Latency + health checks for EVM RPC endpoints.",
+      tool_changes_name: "Contract Watch",
+      tool_changes_desc: "Detect bytecode / proxy / admin changes.",
+      tool_bookmark_name: "Bookmarklet",
+      tool_bookmark_desc: "Save the scan script as a browser bookmark.",
+
+      // Panels
+      panel_quick_kicker: "Token scanner",
+      panel_quick_title: "QuickScan",
+      panel_quick_sub: "Paste a token address and run checks. Results are based on verifiable on-chain reads.",
+      panel_book_kicker: "Browser shortcut",
+      panel_book_title: "Bookmarklet",
+      panel_book_sub: "Save the scan script as a bookmark for 1-click access.",
+
+      // QuickScan Results block
+      results_title: "Results",
+      results_hint: "Green / Yellow / Red signals. Not a guarantee — just verifiable on-chain checks.",
+      th_liq: "Liquidity",
+      th_owner: "Owner",
+      th_sell: "Sell",
+      th_tax: "Tax",
+      th_supply: "Supply",
+      th_upgrade: "Upgrade",
+      th_verified: "Verified",
+      th_notes: "Notes",
+
+      qs_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
+      qs_disclaimer: "Based on known on-chain risk patterns. Not an audit. Results may be incomplete or wrong — always verify independently.",
+
+      // Bookmark help / copied message
+      bm_copied_html: `
+        <div class="h3-row">
+          <img src="/logo.png" alt="CycleX">
+          <strong>Copied.</strong>
+        </div>
+        <div style="margin-top:6px;">
+          Now create a new bookmark and paste the script into the <b>URL / Address</b> field.
+          <div class="small" style="margin-top:6px;">Tip: name it “CycleX QuickScan” so it’s easy to find.</div>
+        </div>
+      `,
+      bm_help_title: "How to add it",
+      bm_help_1: "Create a new bookmark in your browser.",
+      bm_help_2: "Paste the copied script into the URL/Address field.",
+      bm_help_3: "Save. Click the bookmark anytime to run the scan."
+    },
+
+    zh: {
+      brand_sub: "链上安全与奖励",
+      hero_kicker: "为长期参与构建可验证的链上安全系统",
+      hero_title: "可验证的安全工具，而不是“相信我”。",
+      hero_subtitle: "对代币、合约与 RPC 端点进行可验证检查。基于链上数据输出绿/黄/红信号。",
+      note_line: "信号仅供参考，不构成保证。请始终独立核验。",
+
+      btn_scan: "扫描",
+      btn_copy: "复制",
+      btn_open: "打开",
+      btn_close: "关闭",
+      btn_reset: "重置",
+      btn_refresh: "刷新",
+
+      tools_title: "安全工具",
+      tool_quickscan_name: "快速扫描",
+      tool_quickscan_desc: "基于链上读取的风险信号。",
+      tool_rpc_name: "RPC 监测",
+      tool_rpc_desc: "EVM RPC 延迟与健康检查。",
+      tool_changes_name: "合约监测",
+      tool_changes_desc: "检测字节码 / 代理 / 管理员变化。",
+      tool_bookmark_name: "书签脚本",
+      tool_bookmark_desc: "将扫描脚本保存为浏览器书签。",
+
+      panel_quick_kicker: "代币扫描",
+      panel_quick_title: "快速扫描",
+      panel_quick_sub: "粘贴代币地址并运行检查。结果基于可验证的链上读取。",
+      panel_book_kicker: "浏览器快捷方式",
+      panel_book_title: "书签脚本",
+      panel_book_sub: "保存脚本为书签，一键调用。",
+
+      results_title: "结果",
+      results_hint: "绿/黄/红信号。不是保证——只是可验证的链上检查。",
+      th_liq: "流动性",
+      th_owner: "所有者",
+      th_sell: "卖出",
+      th_tax: "税费",
+      th_supply: "供应",
+      th_upgrade: "升级",
+      th_verified: "已验证",
+      th_notes: "备注",
+
+      qs_ready_html: "<strong>就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
+      qs_disclaimer: "基于常见链上风险模式。非审计。结果可能不完整或有误——请始终独立核验。",
+
+      bm_copied_html: `
+        <div class="h3-row">
+          <img src="/logo.png" alt="CycleX">
+          <strong>已复制。</strong>
+        </div>
+        <div style="margin-top:6px;">
+          现在创建一个新书签，并将脚本粘贴到 <b>URL / 地址</b> 字段。
+          <div class="small" style="margin-top:6px;">提示：命名为 “CycleX QuickScan” 更容易找到。</div>
+        </div>
+      `,
+      bm_help_title: "添加方法",
+      bm_help_1: "在浏览器中新建书签。",
+      bm_help_2: "将复制的脚本粘贴到 URL/地址字段。",
+      bm_help_3: "保存。以后点击书签即可运行扫描。"
+    },
+
+    ar: {
+      brand_sub: "أمان ومكافآت على السلسلة",
+      hero_kicker: "نبني أنظمة آمنة قابلة للتحقق للمشاركة طويلة الأمد",
+      hero_title: "أدوات أمان يمكنك التحقق منها — لا مجرد ثقة.",
+      hero_subtitle: "نفّذ فحوصات قابلة للتحقق على التوكنات والعقود وواجهات RPC. إشارات أخضر/أصفر/أحمر مبنية على بيانات السلسلة.",
+      note_line: "الإشارات معلوماتية وليست ضماناً. تحقّق دائماً بشكل مستقل.",
+
+      btn_scan: "فحص",
+      btn_copy: "نسخ",
+      btn_open: "فتح",
+      btn_close: "إغلاق",
+      btn_reset: "إعادة ضبط",
+      btn_refresh: "تحديث",
+
+      tools_title: "أدوات الأمان",
+      tool_quickscan_name: "فحص سريع",
+      tool_quickscan_desc: "إشارات مخاطر قابلة للتحقق من السلسلة.",
+      tool_rpc_name: "مراقبة RPC",
+      tool_rpc_desc: "فحص الصحة والكمون لنقاط RPC (EVM).",
+      tool_changes_name: "مراقبة العقد",
+      tool_changes_desc: "كشف تغيّر البايت كود / البروكسي / المدير.",
+      tool_bookmark_name: "Bookmarklet",
+      tool_bookmark_desc: "احفظ سكربت الفحص كإشارة مرجعية.",
+
+      panel_quick_kicker: "ماسح التوكن",
+      panel_quick_title: "فحص سريع",
+      panel_quick_sub: "الصق عنوان التوكن وشغّل الفحوصات. النتائج مبنية على قراءات قابلة للتحقق من السلسلة.",
+      panel_book_kicker: "اختصار المتصفح",
+      panel_book_title: "Bookmarklet",
+      panel_book_sub: "احفظ السكربت كإشارة مرجعية للوصول بنقرة واحدة.",
+
+      results_title: "النتائج",
+      results_hint: "إشارات أخضر/أصفر/أحمر. ليست ضماناً — مجرد فحوصات قابلة للتحقق على السلسلة.",
+      th_liq: "السيولة",
+      th_owner: "المالك",
+      th_sell: "البيع",
+      th_tax: "الضريبة",
+      th_supply: "المعروض",
+      th_upgrade: "الترقية",
+      th_verified: "موثّق",
+      th_notes: "ملاحظات",
+
+      qs_ready_html: "<strong>جاهز.</strong><br>الصق عنوان التوكن واضغط <b>فحص</b>.",
+      qs_disclaimer: "مبني على أنماط مخاطر معروفة على السلسلة. ليس تدقيقاً. قد تكون النتائج ناقصة أو خاطئة — تحقّق دائماً بشكل مستقل.",
+
+      bm_copied_html: `
+        <div class="h3-row">
+          <img src="/logo.png" alt="CycleX">
+          <strong>تم النسخ.</strong>
+        </div>
+        <div style="margin-top:6px;">
+          أنشئ إشارة مرجعية جديدة ثم الصق السكربت في حقل <b>URL / العنوان</b>.
+          <div class="small" style="margin-top:6px;">نصيحة: سمِّها “CycleX QuickScan” لتسهيل العثور عليها.</div>
+        </div>
+      `,
+      bm_help_title: "طريقة الإضافة",
+      bm_help_1: "أنشئ إشارة مرجعية جديدة في المتصفح.",
+      bm_help_2: "الصق السكربت المنسوخ في حقل URL/العنوان.",
+      bm_help_3: "احفظ. اضغط الإشارة المرجعية في أي وقت لتشغيل الفحص."
+    },
+
+    ru: {
+      brand_sub: "Ончейн-безопасность и награды",
+      hero_kicker: "Проектируем проверяемые ончейн-системы для долгосрочного участия",
+      hero_title: "Инструменты безопасности, которые можно проверить — а не просто верить.",
+      hero_subtitle: "Проверки токенов, контрактов и RPC-эндпоинтов. Сигналы зелёный/жёлтый/красный на основе ончейн-чтений.",
+      note_line: "Сигналы носят информационный характер и не являются гарантией. Всегда проверяйте самостоятельно.",
+
+      btn_scan: "Сканировать",
+      btn_copy: "Копировать",
+      btn_open: "Открыть",
+      btn_close: "Закрыть",
+      btn_reset: "Сброс",
+      btn_refresh: "Обновить",
+
+      tools_title: "Инструменты безопасности",
+      tool_quickscan_name: "Быстрый скан",
+      tool_quickscan_desc: "Проверяемые ончейн-сигналы риска для токенов.",
+      tool_rpc_name: "RPC контроль",
+      tool_rpc_desc: "Проверка здоровья и задержки EVM RPC.",
+      tool_changes_name: "Мониторинг контракта",
+      tool_changes_desc: "Обнаружение изменений bytecode / proxy / admin.",
+      tool_bookmark_name: "Букмарклет",
+      tool_bookmark_desc: "Сохраните скрипт сканера как закладку.",
+
+      panel_quick_kicker: "Сканер токенов",
+      panel_quick_title: "QuickScan",
+      panel_quick_sub: "Вставьте адрес токена и запустите проверки. Результаты основаны на проверяемых ончейн-чтениях.",
+      panel_book_kicker: "Ярлык браузера",
+      panel_book_title: "Bookmarklet",
+      panel_book_sub: "Сохраните скрипт как закладку для запуска в 1 клик.",
+
+      results_title: "Результаты",
+      results_hint: "Зелёный / Жёлтый / Красный. Не гарантия — только проверяемые ончейн-проверки.",
+      th_liq: "Ликвидность",
+      th_owner: "Владелец",
+      th_sell: "Продажа",
+      th_tax: "Налог",
+      th_supply: "Саплай",
+      th_upgrade: "Апгрейд",
+      th_verified: "Вериф.",
+      th_notes: "Заметки",
+
+      qs_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
+      qs_disclaimer: "Основано на известных ончейн-паттернах риска. Это не аудит. Результаты могут быть неполными или ошибочными — проверяйте самостоятельно.",
+
+      bm_copied_html: `
+        <div class="h3-row">
+          <img src="/logo.png" alt="CycleX">
+          <strong>Скопировано.</strong>
+        </div>
+        <div style="margin-top:6px;">
+          Создайте новую закладку и вставьте скрипт в поле <b>URL / Address</b>.
+          <div class="small" style="margin-top:6px;">Совет: назовите “CycleX QuickScan”, чтобы легко найти.</div>
+        </div>
+      `,
+      bm_help_title: "Как добавить",
+      bm_help_1: "Создайте новую закладку в браузере.",
+      bm_help_2: "Вставьте скопированный скрипт в поле URL/Address.",
+      bm_help_3: "Сохраните. Нажимайте закладку для запуска сканера."
+    }
+  };
+
+  // ---- helpers ----
+  function cxGetLang() {
+    const saved = (localStorage.getItem("cx_lang") || "").toLowerCase();
+    if (CX_SUPPORTED_LANGS.includes(saved)) return saved;
+
+    const nav = (navigator.language || "en").slice(0, 2).toLowerCase();
+    if (CX_SUPPORTED_LANGS.includes(nav)) return nav;
+
+    return "en";
+  }
+
+  function cxT(key, vars) {
+    const lang = window.CX_LANG || "en";
+    let str =
+      (translations[lang] && translations[lang][key]) ||
+      (translations.en && translations.en[key]) ||
+      "";
+
+    if (vars && typeof vars === "object") {
+      for (const [k, v] of Object.entries(vars)) {
+        str = str.split(`{${k}}`).join(String(v));
+      }
+    }
+    return str;
+  }
+
+  function cxApplyTranslations() {
+    const lang = window.CX_LANG || "en";
+
+    document.body.classList.add("lang-switching");
+    setTimeout(() => document.body.classList.remove("lang-switching"), 280);
+
+    document.documentElement.setAttribute("lang", lang);
+    document.documentElement.setAttribute("dir", CX_RTL_LANGS.has(lang) ? "rtl" : "ltr");
+
+    // highlight active button
+    document.querySelectorAll(".lang-btn").forEach((btn) => {
+      const bLang = (btn.getAttribute("data-lang") || btn.dataset.lang || "").toLowerCase();
+      btn.classList.toggle("active", bLang === lang);
+    });
+
+    // translate nodes
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const key = el.getAttribute("data-i18n");
+      if (!key) return;
+
+      const val =
+        (translations[lang] && translations[lang][key]) ||
+        (translations.en && translations.en[key]);
+
+      if (val == null) return; // leave as-is if missing
+      const htmlMode = el.getAttribute("data-i18n-mode") === "html" || key.endsWith("_html");
+      if (htmlMode) el.innerHTML = val;
+      else el.textContent = val;
+    });
+  }
+
+  function cxSetLang(lang) {
+    lang = (lang || "").toLowerCase();
+    if (!CX_SUPPORTED_LANGS.includes(lang)) lang = "en";
+    localStorage.setItem("cx_lang", lang);
+    window.CX_LANG = lang;
+    cxApplyTranslations();
+  }
+
+  // ---- expose ----
+  window.CX_TRANSLATIONS = translations;
+  window.CX_LANG = cxGetLang();
+  window.cxT = cxT;
+  window.cxSetLang = cxSetLang;
+  window.cxApplyTranslations = cxApplyTranslations;
+
+  // ---- bind lang buttons ----
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".lang-btn");
+    if (!btn) return;
+    const lang = (btn.getAttribute("data-lang") || btn.dataset.lang || "").toLowerCase();
+    if (lang) cxSetLang(lang);
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    cxApplyTranslations();
+  });
+})();
+</script>
+<script>
+/* =========================
+   Panel switch + status helpers (Part 3B)
+   - Makes all panels behave the same
+   - Gives you a clean "Copied" message with logo (bookmark)
+   ========================= */
+(() => {
+  "use strict";
+
+  function cxHideAllPanels() {
+    document.querySelectorAll(".panel-shell").forEach((p) => p.classList.add("hidden"));
+  }
+
+  function cxDeactivateCards() {
+    document.querySelectorAll(".tool-card").forEach((c) => c.classList.remove("active"));
+  }
+
+  // Unified open panel (prevents "weird gaps" caused by inconsistent scroll/offset)
+  function cxOpenPanel(panelId, cardEl) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    cxHideAllPanels();
+    panel.classList.remove("hidden");
+
+    cxDeactivateCards();
+    if (cardEl) cardEl.classList.add("active");
+
+    // Ensure consistent spacing (same for ALL panels)
+    panel.style.marginTop = "16px";
+
+    // Smooth scroll with sticky top-bar offset
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => window.scrollBy(0, -90), 260);
+  }
+
+  // status helper (supports i18n keys)
+  function cxSetStatus(elOrId, kind, msgKeyOrText, vars) {
+    const el = typeof elOrId === "string" ? document.getElementById(elOrId) : elOrId;
+    if (!el) return;
+
+    el.classList.remove("ok", "warn", "bad", "info");
+    if (kind) el.classList.add(kind);
+
+    el.style.display = "block";
+
+    let out = "";
+    if (msgKeyOrText) {
+      const maybe = window.cxT ? window.cxT(msgKeyOrText, vars) : "";
+      out = maybe || String(msgKeyOrText);
+    }
+
+    const htmlMode = typeof msgKeyOrText === "string" && msgKeyOrText.endsWith("_html");
+    if (htmlMode) el.innerHTML = out;
+    else el.textContent = out;
+  }
+
+  // Bookmark helper: call this after you copy the bookmarklet
+  // Example: cxShowBookmarkCopied("bm-out", "bm-help");
+  function cxShowBookmarkCopied(statusId, helpId) {
+    const status = document.getElementById(statusId);
+    const help = document.getElementById(helpId);
+    if (!status || !help) return;
+
+    cxSetStatus(status, "info", "bm_copied_html");
+    help.style.display = "block";
+
+    if (window.cxApplyTranslations) window.cxApplyTranslations();
+  }
+
+  // Wire tool cards -> panels (expects data-panel="panel-quick" etc.)
+  document.addEventListener("click", (e) => {
+    const card = e.target.closest(".tool-card");
+    if (!card) return;
+
+    const panelId =
+      card.getAttribute("data-panel") ||
+      card.dataset.panel ||
+      card.getAttribute("data-target") ||
+      card.dataset.target ||
+      "";
+
+    if (panelId) cxOpenPanel(panelId, card);
+  });
+
+  // expose
+  window.cxOpenPanel = cxOpenPanel;
+  window.cxSetStatus = cxSetStatus;
+  window.cxShowBookmarkCopied = cxShowBookmarkCopied;
+})();
+</script>
 
   <!-- PART 3 WILL START HERE: scripts -->
