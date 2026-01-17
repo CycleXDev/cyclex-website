@@ -190,6 +190,19 @@
   .btn-ghost:hover{transform:translateY(-1px);border-color:rgba(0,229,255,.26)}
   .note-line{margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.45}
 
+   .btn-mini{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:8px 10px;border-radius:999px;
+  border:1px solid rgba(255,80,80,.30);
+  background:rgba(255,80,80,.10);
+  color:#ffd1d6;
+  font-size:12px;font-weight:700;
+  cursor:pointer;
+  transition:transform var(--transition-fast), border-color var(--transition-fast);
+}
+.btn-mini:hover{transform:translateY(-1px);border-color:rgba(255,80,80,.55)}
+
+
   /* =========================
      Tool grid
      ========================= */
@@ -198,6 +211,10 @@
     max-width:1160px;
     margin:0 auto;
   }
+  .tool-grid-wrap + .panel-shell{
+    margin-top: var(--tool-panel-gap);
+  }
+
   .tool-grid-title{
     text-align:center;
     margin:12px 0 6px;
@@ -279,7 +296,7 @@
   .panel-shell{
     width:100%;
     max-width:1160px;
-    margin:var(--tool-panel-gap) auto 0;
+    margin:0 auto 0;
     padding:18px 18px;
     border-radius:var(--radius-xl);
     background:rgba(255,255,255,.04);
@@ -428,6 +445,20 @@
   #rpc-table .trow.head.rpc .cell:not(:first-child){text-align:center;justify-self:center}
 
   .trow.highlight{background:rgba(0,230,118,.10);border-top-color:rgba(0,230,118,.20)}
+#ap-table .trow.head,
+#ap-table .trow{
+  grid-template-columns: 1.35fr 1fr .7fr 1fr 92px;
+  min-width: 780px;
+}
+
+#ap-table .trow .cell:nth-child(2),
+#ap-table .trow .cell:nth-child(3),
+#ap-table .trow .cell:nth-child(4),
+#ap-table .trow .cell:nth-child(5){
+  text-align:center;
+  justify-self:center;
+}
+
 
  #mon-table{
   overflow-x:auto !important;
@@ -624,12 +655,12 @@
     .tool-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
     .trow{min-width:560px}
 
-    /* ✅ FIX: tables where hide-sm removes a column (no "ghost" grid column) */
     #ap-table .trow,
     #ap-table .trow.head{
-      grid-template-columns:1.35fr .95fr .85fr;
-      min-width:520px;
-    }
+      grid-template-columns: 1.45fr .95fr 1fr 86px;
+      min-width: 600px;
+   }
+
     /* Monitor on tablet/mobile: keep scroll + keep 5 columns */
 #mon-table{
   overflow-x:auto !important;
@@ -1045,13 +1076,18 @@
                 <div class="cell">Allowance</div>
                 <div class="cell hide-sm">Symbol</div>
                 <div class="cell">Action</div>
-                <div class="cell">Remove</div>
+                <div class="cell" data-i18n="th_remove">Remove</div>
               </div>
               <div class="trow">
                 <div class="cell muted">—</div>
                 <div class="cell muted">—</div>
                 <div class="cell muted hide-sm">—</div>
                 <div class="cell muted">—</div>
+                <div class="cell muted">—</div>
+                <div class="cell">
+                <button class="btn-mini" data-ap-remove="0xTOKENADDRESS">Remove</button>
+                </div>
+
               </div>
             </div>
           </div>
@@ -1512,6 +1548,7 @@ const translations = {
     mon_add: "Add",
     mon_check: "Check all",
     mon_export: "Copy JSON",
+    th_remove: "Remove",
 
     // footer
     footer_left:
@@ -1724,6 +1761,8 @@ ph_rpc_dev_topic: "0xddf252ad... (Transfer) or leave empty"
     mon_add: "添加",
     mon_check: "全部检查",
     mon_export: "复制 JSON",
+    th_remove: "移除",
+
 
     // footer
     footer_left: "CycleX 安全中心在本地运行，读取公开链上数据。",
@@ -1935,6 +1974,7 @@ ph_rpc_dev_topic: "0xddf252ad...（Transfer）或留空"
     mon_add: "إضافة",
     mon_check: "فحص الكل",
     mon_export: "نسخ JSON",
+    th_remove: "إزالة",
 
     // footer
     footer_left:
@@ -2152,6 +2192,7 @@ ph_rpc_dev_topic: "0xddf252ad... (Transfer) أو اتركه فارغاً"
     mon_add: "Добавить",
     mon_check: "Проверить все",
     mon_export: "Копировать JSON",
+    th_remove: "Удалить",
 
     // footer
     footer_left:
@@ -2523,6 +2564,38 @@ function bindLangButtons(){
       $("#btn-connect")?.addEventListener("click", async () => { await cxConnectWallet(); });
       $("#ap-connect")?.addEventListener("click", async () => { await cxConnectWallet(); });
     }
+
+   
+function apRemoveTokenFromList(token){
+  const ta = $("#ap-tokens");
+  if (!ta) return;
+
+  const target = String(token || "").trim();
+  if (!target) return;
+
+  const lines = (ta.value || "")
+    .split(/\r?\n/g)
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  const next = lines.filter(x => x.toLowerCase() !== target.toLowerCase());
+  ta.value = next.join("\n");
+}
+
+$("#ap-table")?.addEventListener("click", (e) => {
+  const btn = e.target?.closest?.("[data-ap-remove]");
+  if (!btn) return;
+
+  const token = btn.getAttribute("data-ap-remove") || "";
+  apRemoveTokenFromList(token);
+
+  // remove row from UI instantly
+  const row = btn.closest(".trow");
+  row?.remove();
+
+  try { gtagEvent("sec_ap_remove_token", { token: token.slice(0, 10) }); } catch {}
+});
+
 
     // =========================
     // Explorer API keys (local)
