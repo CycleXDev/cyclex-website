@@ -601,32 +601,83 @@
       min-width:520px;
     }
 
-    #mon-table .trow,
+    /* ✅ Contract Monitor table — match Image 2 (single row + remove col) */
+#mon-table .trow,
 #mon-table .trow.head{
+  /* 5 columns: contract | network | last seen | status | remove */
   grid-template-columns:
-    fit-content(220px)
-    fit-content(110px)
-    fit-content(240px)
-    fit-content(100px)
-    52px;
+    fit-content(210px)   /* CONTRACT */
+    fit-content(90px)    /* NETWORK */
+    fit-content(200px)   /* LAST SEEN */
+    fit-content(130px)   /* STATUS */
+    44px;                /* REMOVE (X) */
 
-  column-gap: 12px;
+  gap: 14px;
   justify-content: start;
-  min-width: 680px; 
+  align-items: center;
+  min-width: 0;          /* מבטל את min-width:640px של .trow רק לטבלה הזו */
 }
 
-#mon-table .cell{
+/* alignments like Image 2 */
+#mon-table .trow .cell{ min-width:0; }
+#mon-table .trow .cell:nth-child(2),
+#mon-table .trow .cell:nth-child(3),
+#mon-table .trow .cell:nth-child(4),
+#mon-table .trow.head .cell:nth-child(2),
+#mon-table .trow.head .cell:nth-child(3),
+#mon-table .trow.head .cell:nth-child(4){
+  text-align:center;
+  justify-self:center;
+}
+
+/* last column (remove) aligned right */
+#mon-table .trow .cell:nth-child(5),
+#mon-table .trow.head .cell:nth-child(5){
+  justify-self:end;
+  text-align:right;
+}
+
+/* make LAST SEEN wrap to 2 lines like Image 2 (only data rows) */
+#mon-table .trow:not(.head) .cell:nth-child(3){
+  white-space: normal;
+  line-height: 1.15;
+}
+
+/* keep CONTRACT + others single-line ellipsis */
+#mon-table .trow:not(.head) .cell:nth-child(1),
+#mon-table .trow:not(.head) .cell:nth-child(2),
+#mon-table .trow:not(.head) .cell:nth-child(4){
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  justify-self: start;
-  text-align: left;
 }
 
-#mon-table .trow .cell:last-child{
-  justify-self: end;
-  text-align: right;
+    /* ✅ Remove X button (Contract Monitor) */
+#mon-table .trow .cell:last-child,
+#mon-table .trow.head .cell:last-child{
+  justify-self:end;
+  text-align:right;
 }
+
+.mon-remove{
+  width:34px;height:34px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.06);
+  color:rgba(244,246,255,.92);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:800;line-height:1;
+  cursor:pointer;
+  transition:transform .18s ease-out, border-color .18s ease-out, background .18s ease-out;
+}
+
+.mon-remove:hover{
+  transform:translateY(-1px);
+  border-color:rgba(0,229,255,.35);
+  background:rgba(0,229,255,.10);
+}
+
+
 
 
     /* RPC: collapses to RPC / ms / status */
@@ -1029,6 +1080,14 @@
                 <div class="cell muted">—</div>
                 <div class="cell muted hide-sm">—</div>
                 <div class="cell muted">—</div>
+                <div class="cell">
+    <button class="mon-remove" type="button"
+            data-action="mon-remove"
+            data-addr=""
+            data-i18n-title="remove"
+            data-i18n-aria-label="remove"
+            title="Remove"
+            aria-label="Remove">×</button>
               </div>
             </div>
           </div>
@@ -1256,6 +1315,7 @@
                 <div class="cell" data-i18n="th_network">Network</div>
                 <div class="cell hide-sm" data-i18n="th_last_seen">Last seen</div>
                 <div class="cell" data-i18n="th_status">Status</div>
+                <div class="cell" data-i18n="th_remove">Remove</div>
               </div>
             </div>
           </div>
