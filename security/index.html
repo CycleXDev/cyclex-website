@@ -581,49 +581,18 @@
     .tool-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
     .trow{min-width:560px}
 
+    /* ✅ FIX: tables where hide-sm removes a column (no "ghost" grid column) */
     #ap-table .trow,
     #ap-table .trow.head{
       grid-template-columns:1.35fr .95fr .85fr;
       min-width:520px;
     }
 
-    /* Contract Monitor (local) — compact rows */
- .trow.head,
- .trow{
-  padding: 8px 12px !important;
-  gap: 10px !important;
-  min-height: 44px !important;
-}
-
- .cell{
-  line-height: 1.15 !important;
-  padding: 0 !important;
-}
-
- .trow{
-  border-radius: 14px !important;
-}
-.icon-x-btn{
-  width:32px;height:32px;
-  border-radius:999px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:rgba(244,246,255,.90);
-  font-size:18px;
-  line-height:1;
-  cursor:pointer;
-  transition:transform .12s ease, border-color .12s ease, background .12s ease;
-}
-.icon-x-btn:hover{
-  transform:translateY(-1px);
-  border-color:rgba(220,53,69,.38);
-  background:rgba(220,53,69,.12);
-}
-.icon-x-btn:active{ transform:translateY(0); }
-
+    #mon-table .trow,
+    #mon-table .trow.head{
+      grid-template-columns:1.7fr 1fr .95fr;
+      min-width:520px;
+    }
 
     /* RPC: collapses to RPC / ms / status */
     #rpc-table .trow.head.rpc,
@@ -4149,7 +4118,7 @@ function bindLangButtons(){
     }
 
     function renderMonitorTable(){
-      const table = $("");
+      const table = $("#mon-table");
       if (!table) return;
       const head = table.querySelector(".trow.head");
       table.innerHTML = "";
@@ -4167,20 +4136,6 @@ function bindLangButtons(){
         `);
         return;
       }
-      const x = document.createElement("button");
-x.type = "button";
-x.className = "icon-x-btn mon-remove";
-x.innerHTML = "&times;";
-x.addEventListener("click", () => {
-  watchlist.splice(i, 1);
-
-  localStorage.setItem(LS_MON, JSON.stringify(watchlist));
-
-  renderMonitor();
-});
-
-row.appendChild(x);
-
 
       for (const item of list) {
         const chain = CHAINS[item.net];
