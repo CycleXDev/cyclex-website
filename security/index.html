@@ -393,21 +393,64 @@
     font-size:13px;
     min-width:640px;
   }
-/* ✅ Contract Monitor — spread columns (like Image 2) */
+/* =========================
+   Contract Monitor — Image 2 (tight + 5 columns)
+   ========================= */
+
+/* match Image 2 (no scrollbar on desktop) */
+#mon-table{ overflow: hidden; }
+
+/* 5 columns: Contract | Network | Last seen | Status | Remove */
 #mon-table .trow,
 #mon-table .trow.head{
+  display:grid;
   grid-template-columns:
-    minmax(220px, 1.6fr)  /* Contract */
-    minmax(90px,  .8fr)   /* Network */
-    minmax(220px, 1.4fr)  /* Last seen */
-    minmax(120px, 1fr)    /* Status */
-    44px;                 /* Remove */
+    fit-content(240px)   /* Contract */
+    fit-content(110px)   /* Network */
+    fit-content(240px)   /* Last seen */
+    fit-content(120px)   /* Status */
+    44px;                /* Remove */
 
-  column-gap: 14px;
-  align-items: center;
-  width: 100%;
-  min-width: 760px; 
+  gap:10px;
+  align-items:center;
+  min-width:720px;
 }
+
+/* alignment like Image 2 */
+#mon-table .trow .cell{ min-width:0; }
+
+#mon-table .trow .cell:nth-child(2),
+#mon-table .trow .cell:nth-child(3),
+#mon-table .trow .cell:nth-child(4),
+#mon-table .trow.head .cell:nth-child(2),
+#mon-table .trow.head .cell:nth-child(3),
+#mon-table .trow.head .cell:nth-child(4){
+  text-align:center;
+  justify-self:center;
+}
+
+/* remove column right-aligned */
+#mon-table .trow .cell:nth-child(5),
+#mon-table .trow.head .cell:nth-child(5){
+  justify-self:end;
+  text-align:right;
+}
+
+/* Last seen wraps to 2 lines (data rows only) */
+#mon-table .trow:not(.head) .cell:nth-child(3){
+  white-space:normal;
+  line-height:1.15;
+}
+
+/* keep other columns single-line ellipsis */
+#mon-table .trow:not(.head) .cell:nth-child(1),
+#mon-table .trow:not(.head) .cell:nth-child(2),
+#mon-table .trow:not(.head) .cell:nth-child(4){
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
 
 /* alignments like Image 2 */
 #mon-table .trow .cell{ min-width:0; }
@@ -629,6 +672,10 @@
       grid-template-columns:1.35fr .95fr .85fr;
       min-width:520px;
     }
+    @media (max-width:980px){
+  #mon-table{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+}
+
 /* alignments like Image 2 */
 #mon-table .trow .cell{ min-width:0; }
 #mon-table .trow .cell:nth-child(2),
@@ -4293,7 +4340,7 @@ function bindLangButtons(){
       for (const item of list) {
         try{
           const codeRes = await getCodeSafe(item.net, item.addr);
-          item.status = (codeRes.ok && codeRes.code && codeRes.code !== "0x") ? "ok" : "no code";
+          item.status = (codeRes.ok && codeRes.code && codeRes.code !== "0x") ? "code ✅" : "no code ❌";
           item.lastSeen = nowTs();
         } catch {
           item.status = "error";
