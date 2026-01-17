@@ -392,32 +392,48 @@
     align-items:center;
     font-size:13px;
     min-width:640px;
-  }
-/* =========================
-   Contract Monitor — Image 2 (tight + 5 columns)
-   ========================= */
-
-/* match Image 2 (no scrollbar on desktop) */
-#mon-table{ overflow: hidden; }
+  }    
+/* ✅ Contract Monitor — fill full width, 5 columns, single-line, no scroll */
+#mon-table{
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
 
 /* 5 columns: Contract | Network | Last seen | Status | Remove */
 #mon-table .trow,
 #mon-table .trow.head{
-  display:grid;
   grid-template-columns:
-    fit-content(240px)   /* Contract */
-    fit-content(110px)   /* Network */
-    fit-content(240px)   /* Last seen */
-    fit-content(120px)   /* Status */
-    44px;                /* Remove */
+    minmax(160px, 1.9fr)   /* Contract */
+    minmax(80px, 0.8fr)    /* Network */
+    minmax(190px, 1.4fr)   /* Last seen */
+    minmax(90px, 0.9fr)    /* Status */
+    44px;                  /* Remove */
 
-  gap:10px;
-  align-items:center;
-  min-width:720px;
+  column-gap: 14px;
+  width: 100%;
+
+  /* 🔥 מבטל את ה-min-width של .trow הכללי שמכריח גלילה */
+  min-width: 0;
 }
 
-/* alignment like Image 2 */
-#mon-table .trow .cell{ min-width:0; }
+#mon-table .trow .cell,
+#mon-table .trow.head .cell{
+  min-width: 0;
+}
+
+/* single line for ALL cells (no wrapping) */
+#mon-table .trow .cell{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* alignment: left / center / right */
+#mon-table .trow .cell:nth-child(1),
+#mon-table .trow.head .cell:nth-child(1){
+  justify-self: start;
+  text-align: left;
+}
 
 #mon-table .trow .cell:nth-child(2),
 #mon-table .trow .cell:nth-child(3),
@@ -425,56 +441,33 @@
 #mon-table .trow.head .cell:nth-child(2),
 #mon-table .trow.head .cell:nth-child(3),
 #mon-table .trow.head .cell:nth-child(4){
-  text-align:center;
-  justify-self:center;
-}
-
-/* remove column right-aligned */
-#mon-table .trow .cell:nth-child(5),
-#mon-table .trow.head .cell:nth-child(5){
-  justify-self:end;
-  text-align:right;
-}
-
-/* Last seen wraps to 2 lines (data rows only) */
-#mon-table .trow:not(.head) .cell:nth-child(3){
-  white-space:normal;
-  line-height:1.15;
-}
-
-/* keep other columns single-line ellipsis */
-#mon-table .trow:not(.head) .cell:nth-child(1),
-#mon-table .trow:not(.head) .cell:nth-child(2),
-#mon-table .trow:not(.head) .cell:nth-child(4){
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-
-/* alignments like Image 2 */
-#mon-table .trow .cell{ min-width:0; }
-
-#mon-table .trow .cell:nth-child(2),
-#mon-table .trow .cell:nth-child(3),
-#mon-table .trow .cell:nth-child(4),
-#mon-table .trow.head .cell:nth-child(2),
-#mon-table .trow.head .cell:nth-child(3),
-#mon-table .trow.head .cell:nth-child(4){
-  text-align:center;
-  justify-self:center;
+  justify-self: center;
+  text-align: center;
 }
 
 #mon-table .trow .cell:nth-child(5),
 #mon-table .trow.head .cell:nth-child(5){
-  justify-self:end;
-  text-align:right;
+  justify-self: end;
+  text-align: right;
+  overflow: visible; 
 }
 
-/* Last seen wraps nicely (only data rows) */
-#mon-table .trow:not(.head) .cell:nth-child(3){
-  white-space: normal;
-  line-height: 1.15;
+/* Remove button */
+.mon-remove{
+  width:34px;height:34px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.06);
+  color:rgba(244,246,255,.92);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:800;line-height:1;
+  cursor:pointer;
+  transition:transform .18s ease-out, border-color .18s ease-out, background .18s ease-out;
+}
+.mon-remove:hover{
+  transform:translateY(-1px);
+  border-color:rgba(0,229,255,.35);
+  background:rgba(0,229,255,.10);
 }
 
     
@@ -488,6 +481,8 @@
   }
   .trow .cell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .trow .cell.wrap{white-space:normal;text-overflow:clip;overflow-wrap:anywhere}
+
+    
 
   /* RPC table */
   #rpc-table{overflow-x:auto;-webkit-overflow-scrolling:touch}
