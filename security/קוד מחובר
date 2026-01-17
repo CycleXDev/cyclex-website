@@ -1,0 +1,4288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (GA4) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BXDFXJWCNQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-BXDFXJWCNQ');
+  </script>
+
+  <link rel="icon" href="/logo.png">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="apple-touch-icon" href="/logo.png">
+
+  <meta charset="UTF-8" />
+  <title>CycleX – Security Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+  :root{
+    --bg-main:#05060a;
+    --bg-gradient-start:#05060a;
+    --bg-gradient-mid:#1a0d3a;
+    --bg-gradient-end:#003a4c;
+
+    --text-main:#f4f6ff;
+    --text-muted:rgba(244,246,255,.7);
+
+    --accent-cyan:#00e5ff;
+    --accent-green:#5dffb2;
+    --accent-purple:#7c5cff;
+
+    --card-bg:rgba(255,255,255,.06);
+    --border-subtle:rgba(255,255,255,.12);
+
+    --shadow-soft:0 24px 70px rgba(0,0,0,.65);
+    --radius-xl:24px;
+    --radius-lg:18px;
+    --transition-fast:.18s ease-out;
+
+    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    --sans:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+
+    --container: 1080px;
+    --container-wide: 1120px;
+
+    /* ✅ single source of truth for grid/panel spacing */
+    --tool-panel-gap: 18px;
+    --tool-grid-gap: 18px;
+
+    /* sticky bar offset for scrollIntoView (even if we later disable scroll) */
+    --scroll-offset: 96px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  html{
+    font-size:16px;
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+  }
+
+  body{
+    font-family:var(--sans);
+    background:
+      radial-gradient(circle at top left, rgba(124,92,255,.35) 0%, transparent 45%),
+      radial-gradient(circle at top right, rgba(0,229,255,.35) 0%, transparent 45%),
+      radial-gradient(circle at bottom, rgba(0,58,76,.55) 0%, transparent 55%),
+      linear-gradient(160deg,var(--bg-gradient-start),var(--bg-gradient-mid),var(--bg-gradient-end));
+    color:var(--text-main);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    animation:fadeBody .7s ease-out forwards;
+    opacity:1;
+    overflow-x:hidden;
+  }
+  @keyframes fadeBody{from{opacity:0}to{opacity:1}}
+  a{color:inherit;text-decoration:none}
+
+  .page-shell{
+    width:100%;
+    max-width:var(--container-wide);
+    margin:0 auto;
+    padding:28px 18px 70px;
+    transform:none !important;
+  }
+
+  /* helpers */
+  .hide-sm{}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:plaintext}
+  .muted{color:var(--text-muted);font-size:13px;line-height:1.45}
+  .small{font-size:12px;color:var(--text-muted);line-height:1.45}
+  .cell{min-width:0}
+  .wrap{white-space:normal;overflow-wrap:anywhere}
+
+  /* Top bar */
+  .top-bar{
+    position:sticky; top:14px; z-index:999;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:11px 16px;
+    margin:0 auto 22px;
+    width:100%;
+    max-width:var(--container-wide);
+    border-radius:999px;
+    background:rgba(8,10,22,.55);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow:0 20px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand-logo{
+    width:42px;height:42px;border-radius:16px;object-fit:contain;
+    box-shadow:0 12px 32px rgba(0,0,0,.8);
+    flex:0 0 auto;
+  }
+  .brand-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .brand-title{
+    font-weight:800;letter-spacing:.05em;font-size:17px;text-transform:uppercase;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .brand-sub{
+    font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--text-muted);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+
+  .lang-switch{
+    display:inline-flex;align-items:center;padding:4px;border-radius:999px;gap:2px;
+    background:rgba(255,255,255,.06);
+    backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:0 12px 36px rgba(0,0,0,.55);
+    flex:0 0 auto;
+  }
+  .lang-btn{
+    border:none;background:transparent;color:var(--text-muted);
+    font-size:11px;padding:6px 9px;border-radius:999px;cursor:pointer;
+    transition:background var(--transition-fast),color var(--transition-fast),transform var(--transition-fast);
+    user-select:none;white-space:nowrap;
+  }
+  .lang-btn:hover{transform:translateY(-1px)}
+  .lang-btn.active{background:rgba(0,229,255,.14);color:var(--accent-cyan)}
+
+  body.lang-switching{animation:langFade .28s ease-out}
+  @keyframes langFade{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Hero */
+  .hero{text-align:center;max-width:980px;margin:0 auto 16px;animation:fadeUp .8s ease-out forwards}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  .hero-kicker{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:12px}
+  .hero-title{font-size:clamp(36px,4.7vw,56px);line-height:1.05;font-weight:900;margin-bottom:12px;letter-spacing:-.02em}
+  .hero-subtitle{max-width:760px;margin:0 auto 16px;font-size:15px;line-height:1.5;color:var(--text-muted)}
+  .hero-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-bottom:10px}
+
+  .btn{
+    border-radius:999px;border:none;
+    padding:12px 22px;
+    font-size:13px;font-weight:700;
+    letter-spacing:.04em;text-transform:uppercase;
+    cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    transition:transform var(--transition-fast),box-shadow var(--transition-fast),background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast);
+    user-select:none;white-space:nowrap;max-width:100%;min-width:0;
+  }
+  .btn:disabled{opacity:.55;cursor:not-allowed}
+  .btn-primary{
+    background:linear-gradient(135deg,var(--accent-cyan),#7df2ff);
+    color:#020308;
+    box-shadow:0 14px 40px rgba(0,229,255,.35);
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 18px 60px rgba(0,229,255,.55)}
+  .btn-secondary{
+    background:linear-gradient(135deg,var(--accent-green),#b9ffcf);
+    color:#020308;
+    box-shadow:0 14px 40px rgba(0,230,118,.35);
+  }
+  .btn-secondary:hover{transform:translateY(-1px);box-shadow:0 18px 60px rgba(0,230,118,.6)}
+  .btn-ghost{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.16);
+    color:var(--text-main);
+    box-shadow:0 12px 34px rgba(0,0,0,.45);
+  }
+  .btn-ghost:hover{transform:translateY(-1px);border-color:rgba(0,229,255,.26)}
+  .note-line{margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.45}
+
+  /* =========================
+     Tool grid (single source of truth)
+     ========================= */
+  .tool-grid-wrap{
+    width:100%;
+    max-width:var(--container);
+    margin:0 auto;
+  }
+  .tool-grid-title{
+    text-align:center;
+    margin:12px 0 6px;
+    font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:rgba(244,246,255,.72);
+  }
+
+  .tool-grid{
+    display:grid;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:var(--tool-grid-gap);
+    margin-top:12px;
+    align-items:stretch;
+  }
+
+  .tool-card{
+    background:rgba(255,255,255,.05);
+    border-radius:var(--radius-xl);
+    border:1px solid rgba(255,255,255,.12);
+    padding:22px 22px 18px;
+    box-shadow:0 20px 55px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition:transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+    min-width:0;
+    min-height:178px;
+  }
+  .tool-card::before{
+    content:"";
+    position:absolute; inset:-2px;
+    background:
+      radial-gradient(520px 180px at 18% -5%, rgba(0,229,255,.18), transparent 60%),
+      radial-gradient(520px 180px at 85% 0%, rgba(124,92,255,.18), transparent 60%);
+    pointer-events:none;
+    opacity:.95;
+  }
+  .tool-card > *{position:relative}
+  .tool-card:hover{transform:translateY(-2px);border-color:rgba(0,229,255,.28);background:rgba(255,255,255,.06)}
+  .tool-card.active{border-color:rgba(0,229,255,.42);background:rgba(0,229,255,.06)}
+
+  .tool-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .tool-name{font-size:17px;font-weight:900;letter-spacing:.01em;line-height:1.22}
+  .tool-desc{font-size:14px;color:var(--text-muted);line-height:1.5}
+
+  .badge-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .badge{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:12px;padding:7px 11px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05);
+    color:var(--text-muted);
+    white-space:nowrap;user-select:none;
+  }
+  .badge strong{color:rgba(244,246,255,.92);font-weight:800}
+  .badge.beta{border-color:rgba(255,193,7,.25);background:rgba(255,193,7,.08);color:rgba(244,246,255,.92)}
+
+  /* Risk badges */
+  .risk-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .risk{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 10px;border-radius:999px;font-size:12px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05);
+    color:rgba(244,246,255,.88);
+    user-select:none;
+  }
+  .risk .dot{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.25);box-shadow:0 0 0 3px rgba(255,255,255,.06);flex:0 0 auto}
+  .risk.ok{border-color:rgba(0,230,118,.25);background:rgba(0,230,118,.08)}
+  .risk.ok .dot{background:rgba(0,230,118,.95)}
+  .risk.warn{border-color:rgba(255,193,7,.25);background:rgba(255,193,7,.08)}
+  .risk.warn .dot{background:rgba(255,193,7,.95)}
+  .risk.bad{border-color:rgba(220,53,69,.25);background:rgba(220,53,69,.10)}
+  .risk.bad .dot{background:rgba(220,53,69,.95)}
+
+  /* =========================
+     Panels (same width as cubes)
+     ========================= */
+  .panel-shell{
+    width:100%;
+    max-width:var(--container);
+    margin:var(--tool-panel-gap) auto 0;
+    padding:18px 18px;
+    border-radius:var(--radius-xl);
+    background:rgba(255,255,255,.04);
+    backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 26px 70px rgba(0,0,0,.60), inset 0 1px 0 rgba(255,255,255,.05);
+    scroll-margin-top: var(--scroll-offset);
+  }
+  .panel-shell.hidden{display:none}
+
+  .panel-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+    margin-bottom:12px;
+  }
+  .panel-kicker{
+    font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent-purple);margin-bottom:8px;
+  }
+  .panel-title{
+    font-size:clamp(22px,2.2vw,28px);
+    font-weight:900;letter-spacing:-.01em;line-height:1.12;
+  }
+  .panel-sub{margin-top:8px;max-width:900px;color:var(--text-muted);font-size:14px;line-height:1.6}
+
+  .panel-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:12px;padding:6px 10px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05);
+    color:var(--text-muted);
+    white-space:nowrap;
+  }
+
+  .grid-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:14px}
+
+  .card{
+    background:var(--card-bg);
+    border-radius:var(--radius-lg);
+    border:1px solid var(--border-subtle);
+    padding:14px;
+    box-shadow:var(--shadow-soft);
+    backdrop-filter:blur(18px);
+    min-width:0;
+  }
+  .card h3{font-size:14px;letter-spacing:.02em;margin-bottom:8px;color:var(--text-main)}
+
+  .field{margin-top:10px}
+  .label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:rgba(244,246,255,.75);margin-bottom:6px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  input,textarea,select{
+    width:100%;
+    padding:10px 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(5,7,18,.9);
+    color:var(--text-main);
+    font-size:13px;
+    outline:none;
+  }
+  textarea{border-radius:18px;min-height:96px;resize:vertical;padding:12px 12px}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent-cyan)}
+
+  .toggle{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.04);
+    border-radius:14px;
+    user-select:none;
+    width:100%;
+  }
+  .toggle input{width:auto;accent-color:var(--accent-cyan)}
+
+  .status{
+    margin-top:10px;
+    padding:12px 14px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(255,255,255,.04);
+    color:var(--text-main);
+    line-height:1.5;
+    font-size:13px;
+    display:none;
+    overflow-wrap:anywhere;
+  }
+  .status.ok{display:block;background:rgba(0,230,118,.10);border-color:rgba(0,230,118,.35);color:#78ffbf}
+  .status.warn{display:block;background:rgba(255,193,7,.10);border-color:rgba(255,193,7,.35);color:#ffd166}
+  .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
+  .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
+
+  /* tables */
+  .table{
+    margin-top:10px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:18px;
+    overflow-x:auto;overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    background:rgba(255,255,255,.03);
+  }
+  .trow{
+    display:grid;
+    grid-template-columns:1.3fr 1.1fr .9fr .9fr;
+    gap:10px;
+    padding:10px 12px;
+    border-top:1px solid rgba(255,255,255,.10);
+    align-items:center;
+    font-size:13px;
+    min-width:640px;
+  }
+  .trow.head{
+    border-top:none;
+    background:rgba(255,255,255,.05);
+    font-size:12px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:rgba(244,246,255,.75);
+  }
+  .trow .cell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .trow .cell.wrap{white-space:normal;text-overflow:clip;overflow-wrap:anywhere}
+
+  /* RPC table */
+  #rpc-table{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #rpc-table .trow.head.rpc,
+  #rpc-table .trow.rpc{
+    display:grid;
+    grid-template-columns:minmax(240px,1.8fr) 72px 64px 64px 60px 60px minmax(140px,1fr);
+    gap:10px;align-items:center;min-width:760px;
+  }
+  #rpc-table .trow.head.rpc .cell,
+  #rpc-table .trow.rpc .cell{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  #rpc-table .trow.head.rpc .cell:first-child,
+  #rpc-table .trow.rpc .cell:first-child{
+    white-space:normal;text-overflow:clip;overflow:hidden;overflow-wrap:anywhere;
+    line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+    direction:ltr;unicode-bidi:plaintext;
+  }
+  #rpc-table .trow.head.rpc .cell:last-child,
+  #rpc-table .trow.rpc .cell:last-child{
+    white-space:normal;text-overflow:clip;overflow:hidden;overflow-wrap:anywhere;
+    line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  }
+  #rpc-table .trow.rpc .cell:not(:first-child),
+  #rpc-table .trow.head.rpc .cell:not(:first-child){text-align:center;justify-self:center}
+
+  .trow.highlight{background:rgba(0,230,118,.10);border-top-color:rgba(0,230,118,.20)}
+
+  /* chips */
+  .chip{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:8px 10px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05);
+    color:rgba(244,246,255,.88);
+    cursor:pointer;user-select:none;
+    transition:transform var(--transition-fast), border-color var(--transition-fast);
+    font-size:12px;
+  }
+  .chip:hover{transform:translateY(-1px);border-color:rgba(0,229,255,.26)}
+  .chip-danger{border-color:rgba(255,80,80,.25);background:rgba(255,80,80,.08)}
+  .chip-danger:hover{border-color:rgba(255,80,80,.45);transform:translateY(-1px)}
+  .share-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+
+  /* QuickScan actions */
+  #panel-quick .row.qs-actions,
+  #panel-quick .qs-share{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+    align-items:stretch;
+  }
+  #panel-quick .qs-share{margin-top:12px}
+  #panel-quick .qs-actions .btn,
+  #panel-quick .qs-share .btn{
+    width:100%;
+    min-width:0;
+    padding:12px 14px;
+    font-size:12px;
+    letter-spacing:.03em;
+    white-space:normal;
+    line-height:1.15;
+    min-height:44px;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  #panel-quick .qs-actions #qs-run{grid-column:1/-1}
+  #panel-quick .qs-actions #qs-copy-md{grid-column:1/-1}
+  #panel-quick .qs-share #qs-copy-xtext{grid-column:1/-1}
+
+  @media (min-width:1280px){
+    #panel-quick .row.qs-actions{grid-template-columns:repeat(4,minmax(0,1fr))}
+    #panel-quick .qs-actions #qs-run,
+    #panel-quick .qs-actions #qs-copy-md{grid-column:auto}
+    #panel-quick .qs-share{grid-template-columns:repeat(3,minmax(0,1fr))}
+    #panel-quick .qs-share #qs-copy-xtext{grid-column:auto}
+  }
+
+  /* QuickScan risk table */
+  #qs-riskTable{margin-top:12px;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  #qs-riskTable .trow.head.risk,
+  #qs-riskTable .trow.risk{
+    display:grid;
+    grid-template-columns:.95fr .95fr .95fr .95fr .95fr .95fr .85fr 1.5fr;
+    gap:10px;padding:10px 12px;align-items:center;min-width:980px;
+  }
+  #qs-riskTable .trow.head.risk{
+    background:rgba(255,255,255,.05);
+    font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    color:rgba(244,246,255,.75);
+    border-top:none;
+  }
+  #qs-riskTable .trow.risk{background:rgba(255,255,255,.03);border-top:1px solid rgba(255,255,255,.10)}
+  #qs-riskTable .cell{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #qs-riskTable .cell:not(:last-child){text-align:center;justify-self:center}
+  #qs-riskTable .cell:last-child{
+    text-align:left;white-space:normal;overflow-wrap:anywhere;line-height:1.15;
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
+  }
+
+  /* signals (QuickScan top row UI) */
+  .sig{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:6px 10px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05);
+    color:rgba(244,246,255,.92);
+    font-size:12px;white-space:nowrap;
+  }
+  .sig .dot{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.25);box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+  .sig.ok{border-color:rgba(0,230,118,.25);background:rgba(0,230,118,.08)}
+  .sig.ok .dot{background:rgba(0,230,118,.95)}
+  .sig.warn{border-color:rgba(255,193,7,.25);background:rgba(255,193,7,.08)}
+  .sig.warn .dot{background:rgba(255,193,7,.95)}
+  .sig.bad{border-color:rgba(220,53,69,.25);background:rgba(220,53,69,.10)}
+  .sig.bad .dot{background:rgba(220,53,69,.95)}
+  .sig.unk{border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:rgba(244,246,255,.75)}
+  .sig.unk .dot{background:rgba(255,255,255,.25)}
+
+  .qs-scoreRow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+  .score-pill{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:8px 12px;border-radius:999px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05);
+    font-size:12px;color:rgba(244,246,255,.92);
+  }
+  .score-pill strong{font-weight:900;letter-spacing:.02em}
+  .score-pill.low{border-color:rgba(0,230,118,.25);background:rgba(0,230,118,.08)}
+  .score-pill.med{border-color:rgba(255,193,7,.25);background:rgba(255,193,7,.08)}
+  .score-pill.high{border-color:rgba(220,53,69,.25);background:rgba(220,53,69,.10)}
+
+  .flags-box{
+    margin-top:10px;padding:12px 14px;border-radius:16px;
+    border:1px solid rgba(255,193,7,.25);
+    background:rgba(255,193,7,.08);
+    color:#ffd166;font-size:13px;line-height:1.45;display:none;
+  }
+  .flags-box ul{margin-top:8px;padding-left:18px}
+  .flags-box li{margin:4px 0}
+  .qs-disclaimer{margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.45}
+
+  /* Bookmarklet help */
+  .h3-row{display:flex;align-items:center;gap:10px}
+  .h3-row img{width:22px;height:22px;border-radius:8px;box-shadow:0 10px 24px rgba(0,0,0,.6)}
+  .help-box{
+    margin-top:10px;padding:12px 14px;border-radius:16px;
+    border:1px solid rgba(0,229,255,.20);
+    background:rgba(0,229,255,.08);
+    color:#7df2ff;font-size:13px;line-height:1.45;display:none;
+  }
+  .help-box ol{margin-top:8px;padding-left:18px}
+  .help-box li{margin:4px 0}
+
+  /* Footer */
+  .footer{
+    border-top:1px solid rgba(255,255,255,.06);
+    margin-top:20px;padding-top:16px;
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;
+    font-size:12px;color:var(--text-muted);
+  }
+  .footer-tagline{color:var(--accent-cyan);font-weight:700}
+
+  /* RTL */
+  html[dir="rtl"] body{direction:rtl}
+  html[dir="rtl"] .top-bar{flex-direction:row-reverse}
+  html[dir="rtl"] .brand{flex-direction:row-reverse}
+  html[dir="rtl"] .panel-head{flex-direction:row-reverse}
+  html[dir="rtl"] .row{flex-direction:row-reverse}
+  html[dir="rtl"] .panel-actions{justify-content:flex-start}
+
+  /* ✅ responsive */
+  @media (max-width:980px){
+    .grid-2{grid-template-columns:1fr}
+    .hide-sm{display:none!important}
+
+    .tool-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
+    .trow{min-width:560px}
+
+    /* ✅ FIX: tables where hide-sm removes a column (no "ghost" grid column) */
+    #ap-table .trow,
+    #ap-table .trow.head{
+      grid-template-columns:1.35fr .95fr .85fr;
+      min-width:520px;
+    }
+
+    #mon-table .trow,
+    #mon-table .trow.head{
+      grid-template-columns:1.7fr 1fr .95fr;
+      min-width:520px;
+    }
+
+    /* RPC: collapses to RPC / ms / status */
+    #rpc-table .trow.head.rpc,
+    #rpc-table .trow.rpc{
+      grid-template-columns:minmax(220px,1.6fr) 72px minmax(140px,1fr);
+      min-width:560px;
+    }
+  }
+
+  @media (max-width:640px){
+    .top-bar{top:10px;padding:10px 12px}
+    .brand-logo{width:40px;height:40px;border-radius:14px}
+    .btn{padding:12px 18px;font-size:13px}
+
+    .tool-grid{grid-template-columns:1fr; gap:14px}
+  }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="top-bar">
+      <a class="brand" href="/" title="Back to CycleX" data-i18n-title="title_back_to_cyclex">
+        <img src="/logo.png" alt="CycleX logo" class="brand-logo" />
+        <div class="brand-text">
+          <div class="brand-title">CYCLEX</div>
+          <div class="brand-sub" data-i18n="brand_sub">On-Chain Security & Rewards</div>
+        </div>
+      </a>
+
+      <div class="lang-switch" aria-label="Language selector" data-i18n-aria-label="aria_lang_selector">
+        <button class="lang-btn active" data-lang="en">🇺🇸 EN</button>
+        <button class="lang-btn" data-lang="zh">🇨🇳 中文</button>
+        <button class="lang-btn" data-lang="ar">🇸🇦 عربي</button>
+        <button class="lang-btn" data-lang="ru">🇷🇺 RU</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-kicker" data-i18n="hero_kicker">Security Hub</div>
+        <h1 class="hero-title" data-i18n="hero_title">CycleX Security Tools</h1>
+        <p class="hero-subtitle" data-i18n="hero_subtitle">
+          A lightweight, client-side toolkit for safer swaps, approvals hygiene, liquidity checks, RPC health, and transaction decoding across BSC + Ethereum.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="/" data-i18n="btn_back">Back to Site</a>
+          <button class="btn btn-secondary" id="btn-connect" data-i18n="btn_connect">Connect Wallet (optional)</button>
+          <button class="btn btn-ghost" id="btn-quick" data-i18n="btn_quick">Run Quick Scan</button>
+        </div>
+
+        <div class="note-line" data-i18n="hero_note">
+          Note: These checks are informational and do not guarantee safety. Always verify independently.
+        </div>
+      </section>
+
+      <section class="tool-grid-wrap">
+        <div class="tool-grid-title" data-i18n="tools_kicker">CHOOSE A TOOL</div>
+
+        <div class="tool-grid" id="toolGrid">
+          <div class="tool-card active" data-tool="quick">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_quick_title">Quick Scan</div>
+              <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_quick_desc">Fast token sanity-check + shareable report + cache.</div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_fast">Fast</strong></div>
+              <div class="badge"><strong data-i18n="badge_share">Share</strong></div>
+              <div class="badge"><strong data-i18n="badge_cache">Cache</strong></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="liq">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_liq_title">Token + Liquidity Scan</div>
+              <div class="badge"><strong>V2</strong> + <strong>V3</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_liq_desc">DEX Registry checks (Pancake/Uni): token vs WBNB/WETH and USDT.</div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_dex">DEX</strong></div>
+              <div class="badge"><strong>USDT</strong></div>
+              <div class="badge"><strong data-i18n="badge_pairs">Pairs</strong></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="approvals">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_approvals_title">Approval Guardian</div>
+              <div class="badge"><strong data-i18n="badge_wallet">Wallet</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_approvals_desc">Check and revoke ERC-20 allowances safely (approve → 0).</div>
+            <div class="badge-row">
+              <div class="badge"><strong>BSC</strong> + <strong>ETH</strong></div>
+              <div class="badge"><strong data-i18n="badge_safe">Safe</strong></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="rpc">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_rpc_title">RPC Health Checker</div>
+              <div class="badge"><strong>✅</strong> <span data-i18n="badge_table">Table</span></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_rpc_desc">Latency + chainId + block + eth_call + read logs + dev custom test.</div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_copy">Copy</strong></div>
+              <div class="badge"><strong data-i18n="badge_dev">Dev</strong></div>
+              <div class="badge"><strong>X</strong> <span data-i18n="badge_share">Share</span></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="tx">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_tx_title">Tx Decoder</div>
+              <div class="badge"><strong data-i18n="badge_decode">Decode</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_tx_desc">Decode inputs + common events (Transfer/Approval) from a tx hash.</div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_receipt">Receipt</strong></div>
+              <div class="badge"><strong data-i18n="badge_events">Events</strong></div>
+            </div>
+          </div>
+
+          <div class="tool-card" data-tool="dev">
+            <div class="tool-head">
+              <div class="tool-name" data-i18n="cube_dev_title">Dev Tools</div>
+              <div class="badge"><strong data-i18n="badge_tools">Tools</strong></div>
+            </div>
+            <div class="tool-desc" data-i18n="cube_dev_desc">Bookmarklet generator + local contract monitor (no server).</div>
+            <div class="badge-row">
+              <div class="badge"><strong data-i18n="badge_bookmarklet">Bookmarklet</strong></div>
+              <div class="badge"><strong data-i18n="badge_local">Local</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- PANELS -->
+      <section class="panel-shell" id="panel-quick">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_quick_kicker">Quick Scan</div>
+            <div class="panel-title" data-i18n="p_quick_title">Score a token in seconds</div>
+            <div class="panel-sub" data-i18n="p_quick_sub">
+              Paste a token address, choose network, run scan. Cached for 10 minutes. Generate shareable text + JSON + Markdown.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <div class="pill"><span data-i18n="pill_wallet">Wallet</span>: <span class="mono" id="walletLabel" data-i18n="wallet_not_connected">not connected</span></div>
+            <button class="btn btn-ghost" id="btnCloseQuick" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="quick_input_title">Token Input</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="qs-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="addr_label">Token contract</div>
+              <input id="qs-token" class="mono" placeholder="0x..." />
+              <div class="small" style="margin-top:8px" data-i18n="qs_tip">
+                Tip: open with <span class="mono">?tool=quick&net=bsc&token=0x...</span> to auto-run (rate-limited).
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="options_label">Options</div>
+              <label class="toggle">
+                <input type="checkbox" id="qs-require-liq">
+                <span data-i18n="opt_require_liq">Require liquidity (stricter score)</span>
+              </label>
+              <label class="toggle" style="margin-top:10px">
+                <input type="checkbox" id="qs-show-json" checked>
+                <span data-i18n="opt_show_json">Enable JSON report (copy)</span>
+              </label>
+            </div>
+
+            <div class="field" style="margin-top:14px">
+              <div class="label" data-i18n="api_keys_label">Explorer API keys (optional)</div>
+              <label class="toggle">
+                <input type="checkbox" id="api-use">
+                <span data-i18n="opt_use_explorer_apis">Use BscScan/Etherscan (adds Verified + ABI heuristics)</span>
+              </label>
+
+              <div class="row" style="margin-top:10px">
+                <input id="api-bscscan" class="mono" placeholder="BscScan API key (stored locally)" data-i18n-placeholder="ph_bscscan_key" />
+                <input id="api-etherscan" class="mono" placeholder="Etherscan API key (stored locally)" data-i18n-placeholder="ph_etherscan_key" />
+              </div>
+
+              <div class="row" style="margin-top:10px">
+                <button class="btn btn-ghost" id="api-save" style="padding:10px 14px; font-size:12px;" data-i18n="btn_save">Save</button>
+                <button class="btn btn-ghost" id="api-clear" style="padding:10px 14px; font-size:12px;" data-i18n="btn_clear">Clear</button>
+              </div>
+
+              <div class="small" style="margin-top:8px" data-i18n="api_keys_tip">
+                Keys are saved in your browser (localStorage) only. Do not paste keys into public HTML.
+              </div>
+            </div>
+
+            <div class="field">
+  <div class="row qs-actions">
+    <button class="btn btn-primary" id="qs-run" data-i18n="btn_scan">Scan</button>
+    <button class="btn btn-ghost" id="qs-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
+    <button class="btn btn-ghost" id="qs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
+    <button class="btn btn-ghost" id="qs-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
+  </div>
+</div>
+
+<div class="qs-share">
+  <button class="btn btn-ghost" id="qs-share-x">Share to X</button>
+  <button class="btn btn-ghost" id="qs-share-tg">Share to Telegram</button>
+  <button class="btn btn-ghost" id="qs-copy-xtext" data-i18n="btn_copy_xtext">Copy X text</button>
+</div>
+
+
+            <div id="qs-status" class="status info"></div>
+          </div>
+          
+
+          <div class="card">
+            <h3 data-i18n="results_title">Results</h3>
+            <div class="small" data-i18n="results_hint">
+              Green / Yellow / Red signals. Not a guarantee — just verifiable on-chain checks.
+            </div>
+
+            <div id="qs-out" class="status info" style="display:block; margin-top:10px;" data-i18n="qs_ready_html">
+            <strong>Ready.</strong><br>
+            Paste a token address and click <b>Scan</b>.
+            </div>
+
+            <div id="qs-risk" class="risk-badges"></div>
+            <div id="qs-pairsWrap" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-liq">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_liq_kicker">Token + Liquidity Scan</div>
+            <div class="panel-title" data-i18n="p_liq_title">DEX Registry liquidity checks</div>
+            <div class="panel-sub" data-i18n="p_liq_sub">
+              We check PancakeSwap (BSC) / Uniswap (ETH) V2 + V3 factories. Pairs tested: token vs WBNB/WETH and token vs USDT.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <div class="pill"><span data-i18n="pill_wallet">Wallet</span>: <span class="mono" id="liq-wallet" data-i18n="wallet_not_connected">not connected</span></div>
+            <button class="btn btn-ghost" id="btnCloseLiq" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="liq_input_title">Token + Network</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="liq-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="addr_label">Token contract</div>
+              <input id="liq-token" class="mono" placeholder="0x..." />
+              <div class="small" style="margin-top:8px" data-i18n="liq_tip">
+                Tip: open with <span class="mono">?tool=liq&net=bsc&token=0x...</span> to auto-run.
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="liq_dex_label">DEX registry (checked)</div>
+              <div class="small" id="liq-dex-note" style="margin-top:6px;"></div>
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="liq-run" data-i18n="btn_scan">Scan</button>
+                <button class="btn btn-ghost" id="liq-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
+                <button class="btn btn-ghost" id="liq-share-x" data-i18n="btn_share_x">Share to X</button>
+              </div>
+            </div>
+
+            <div id="liq-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="liq_results_title">Liquidity Results</h3>
+            <div class="small" data-i18n="liq_results_hint">
+              V2: pair + reserves snapshot. V3: pool existence + liquidity() + slot0 tick snapshot.
+            </div>
+
+            <div id="liq-out" class="status info" style="display:block; margin-top:10px;" data-i18n="liq_ready_html">
+            <strong>Ready.</strong><br>
+            Paste a token address and click <b>Scan</b>.
+            </div>
+
+            <div id="liq-risk" class="risk-badges"></div>
+            <div id="liq-tablewrap" style="margin-top:10px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-approvals">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_app_kicker">Approval Guardian</div>
+            <div class="panel-title" data-i18n="p_app_title">Check and revoke allowances</div>
+            <div class="panel-sub" data-i18n="p_app_sub">
+              Provide spender + tokens (or seed common tokens). We read allowance(owner, spender) and revoke with approve(spender, 0).
+            </div>
+          </div>
+          <div class="panel-actions">
+            <div class="pill"><span data-i18n="pill_wallet">Wallet</span>: <span class="mono" id="ap-wallet" data-i18n="wallet_not_connected">not connected</span></div>
+            <button class="btn btn-ghost" id="btnCloseApprovals" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="ap_settings_title">Settings</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="ap-net">
+                <option value="bsc" data-i18n="net_bsc">BSC (BNB Chain)</option>
+                <option value="eth" data-i18n="net_eth">Ethereum</option>
+
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="row" style="justify-content:space-between">
+                <div class="pill"><span data-i18n="ap_connected">Connected:</span> <span id="ap-address" class="mono">—</span></div>
+                <button class="btn btn-secondary" id="ap-connect" data-i18n="ap_connect">Connect / Refresh</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="ap_spender_label">Spender preset</div>
+              <div class="row">
+                <select id="ap-spender-preset">
+                  <option value="pcs_router" data-i18n="spender_pcs_router">PancakeSwap Router (BSC)</option>
+                  <option value="uni_router" data-i18n="spender_uni_router">Uniswap V2 Router (ETH)</option>
+                  <option value="custom" data-i18n="spender_custom">Custom…</option>
+                </select>
+                <input id="ap-spender" class="mono" placeholder="0x spender..." data-i18n-placeholder="ph_spender" />
+              </div>
+              <div class="small" style="margin-top:8px" data-i18n="ap_spender_tip">
+                Start with a router preset, then add tokens you want to clean up.
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="ap_tokens_label">Token list (one per line)</div>
+              <textarea id="ap-tokens" class="mono" placeholder="0x...\n0x...\n0x..." data-i18n-placeholder="ph_token_list"></textarea>
+              <div class="row" style="margin-top:10px">
+                <button class="btn btn-ghost" id="ap-seed-common" data-i18n="ap_seed">Seed common tokens</button>
+                <button class="btn btn-ghost" id="ap-seed-history" data-i18n="ap_seed_history">Use scan history</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="ap-check" data-i18n="ap_check">Check Allowances</button>
+                <button class="btn btn-ghost" id="ap-revoke-all" data-i18n="ap_revoke_all">Revoke All (non-zero)</button>
+              </div>
+              <div class="small" style="margin-top:8px" data-i18n="safe_mode_note">
+                Safe mode: actions that require a signature are disabled until you connect a wallet.
+              </div>
+            </div>
+
+            <div id="ap-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="ap_results">Allowances</h3>
+            <div class="small" data-i18n="ap_results_hint">
+              If allowance is “infinite”, revoke is recommended unless you fully trust the spender.
+            </div>
+
+            <div id="ap-table" class="table" style="margin-top:12px;">
+              <div class="trow head">
+                <div class="cell">Token</div>
+                <div class="cell">Allowance</div>
+                <div class="cell hide-sm">Symbol</div>
+                <div class="cell">Action</div>
+              </div>
+              <div class="trow">
+                <div class="cell muted">—</div>
+                <div class="cell muted">—</div>
+                <div class="cell muted hide-sm">—</div>
+                <div class="cell muted">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-rpc">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_rpc_kicker">RPC Health Checker</div>
+            <div class="panel-title" data-i18n="p_rpc_title">Find the best endpoint</div>
+            <div class="panel-sub" data-i18n="p_rpc_sub">
+              We test RPCs with latency + chainId + block + eth_call + read logs. Includes a developer custom logs test and saves the best RPC locally.
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="btnCloseRpc" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="rpc_inputs">Inputs</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="rpc-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="rpc_private_label">Private RPC (saved locally)</div>
+              <input id="rpc-private" class="mono" placeholder="https://... (stored locally only)" data-i18n-placeholder="ph_rpc_private" />
+              <div class="row" style="margin-top:10px">
+                <button class="btn btn-ghost" id="rpc-private-save" style="padding:10px 14px; font-size:12px;" data-i18n="btn_save">Save</button>
+                <button class="btn btn-ghost" id="rpc-private-clear" style="padding:10px 14px; font-size:12px;" data-i18n="btn_clear">Clear</button>
+              </div>
+              <div class="small" style="margin-top:8px" data-i18n="rpc_private_tip">
+                Not embedded in HTML. Stored in your browser only (localStorage).
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="rpc_custom_label">Optional custom RPC (top priority)</div>
+              <input id="rpc-custom" class="mono" placeholder="https://..." data-i18n-placeholder="ph_rpc_custom" />
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="rpc-test" data-i18n="rpc_test">Test RPCs</button>
+                <button class="btn btn-ghost" id="rpc-copy-best" data-i18n="rpc_copy_best">Copy Best RPC</button>
+                <button class="btn btn-ghost" id="rpc-share-x" data-i18n="btn_share_x">Share to X</button>
+              </div>
+            </div>
+
+            <div class="field" style="margin-top:14px">
+              <h3 data-i18n="rpc_dev_title">Developer custom logs test</h3>
+              <div class="small" data-i18n="rpc_dev_hint">
+                Optional: test logs for a contract. This helps developers verify their own RPC stability.
+              </div>
+
+              <div class="field">
+                <div class="label" data-i18n="rpc_dev_addr">Contract address (optional)</div>
+                <input id="rpc-dev-addr" class="mono" placeholder="0x..." data-i18n-placeholder="ph_0x" />
+              </div>
+
+              <div class="field">
+                <div class="label" data-i18n="rpc_dev_topic">Topic0 (optional)</div>
+                <input id="rpc-dev-topic" class="mono" placeholder="0xddf252ad... (Transfer) or leave empty" data-i18n-placeholder="ph_rpc_dev_topic" />
+              </div>
+
+              <div class="row" style="margin-top:10px">
+                <button class="btn btn-ghost" id="rpc-dev-run" style="padding:10px 14px; font-size:12px;" data-i18n="rpc_dev_run">Run custom test</button>
+              </div>
+            </div>
+
+            <div id="rpc-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="rpc_results">Results</h3>
+
+            <div id="rpc-table" class="table">
+              <div class="trow head rpc">
+                <div class="cell">RPC</div>
+                <div class="cell">ms</div>
+                <div class="cell hide-sm">chain</div>
+                <div class="cell hide-sm">block</div>
+                <div class="cell hide-sm">call</div>
+                <div class="cell hide-sm">logs</div>
+                <div class="cell">status</div>
+              </div>
+            </div>
+
+            <div class="small" style="margin-top:10px" data-i18n="rpc_tip">
+              Tip: Some RPCs fail due to CORS/timeouts. Run the test and pick the stable fastest.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-tx">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_tx_kicker">Tx Decoder</div>
+            <div class="panel-title" data-i18n="p_tx_title">Decode a transaction</div>
+            <div class="panel-sub" data-i18n="p_tx_sub">
+              Paste a tx hash. We fetch tx + receipt and decode common inputs and events (Transfer / Approval + common swap calls).
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="btnCloseTx" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="tx_input_title">Tx Input</h3>
+
+            <div class="field">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="tx-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="tx_hash_label">Transaction hash</div>
+              <input id="tx-hash" class="mono" placeholder="0x..." data-i18n-placeholder="ph_0x" />
+              <div class="small" style="margin-top:8px" data-i18n="tx_tip">
+                Tip: open with <span class="mono">?tool=tx&net=bsc&tx=0x...</span> to auto-run.
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="tx-run" data-i18n="btn_decode">Decode</button>
+                <button class="btn btn-ghost" id="tx-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
+              </div>
+            </div>
+
+            <div id="tx-status" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="tx_results_title">Decoded Output</h3>
+            <div id="tx-out" class="status info" style="display:block; margin-top:10px;" data-i18n="tx_ready_html">
+            <strong>Ready.</strong><br>
+            Paste a tx hash and click <b>Decode</b>.
+            </div>
+            <div id="tx-events" style="margin-top:10px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-shell hidden" id="panel-dev">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker" data-i18n="p_dev_kicker">Dev Tools</div>
+            <div class="panel-title" data-i18n="p_dev_title">Bookmarklet + Local Monitor</div>
+            <div class="panel-sub" data-i18n="p_dev_sub">
+              Generate a bookmarklet that sends token/tx from explorers to CycleX Hub. Also includes a local contract monitor (watchlist stored in your browser).
+            </div>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-ghost" id="btnCloseDev" data-i18n="btn_close">Close</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 data-i18n="bm_title">Bookmarklet Generator</h3>
+            <div class="small" data-i18n="bm_hint">
+              Drag to bookmarks bar or copy the generated bookmarklet. Use it on BscScan/Etherscan pages.
+            </div>
+
+            <div class="field" style="margin-top:12px">
+              <div class="label" data-i18n="bm_base_label">Hub URL (this page)</div>
+              <input id="bm-base" class="mono" />
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="bm-generate" data-i18n="bm_generate">Generate</button>
+                <button class="btn btn-ghost" id="bm-copy" data-i18n="bm_copy">Copy Bookmarklet</button>
+              </div>
+            </div>
+
+            <div id="bm-out" class="status info"></div>
+          </div>
+
+          <div class="card">
+            <h3 data-i18n="mon_list_title">Contract Monitor (local)</h3>
+            <div class="small" data-i18n="mon_list_hint">Stored locally only. No server tracking.</div>
+
+            <div class="field" style="margin-top:12px">
+              <div class="label" data-i18n="net_label">Network</div>
+              <select id="mon-net">
+                <option value="bsc">BSC (BNB Chain)</option>
+                <option value="eth">Ethereum</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <div class="label" data-i18n="addr_label">Contract address</div>
+              <input id="mon-addr" class="mono" placeholder="0x..." data-i18n-placeholder="ph_0x" />
+            </div>
+
+            <div class="field">
+              <div class="row">
+                <button class="btn btn-primary" id="mon-add" data-i18n="mon_add">Add</button>
+                <button class="btn btn-ghost" id="mon-check" data-i18n="mon_check">Check all</button>
+                <button class="btn btn-ghost" id="mon-export" data-i18n="mon_export">Copy JSON</button>
+              </div>
+            </div>
+
+            <div id="mon-status" class="status info"></div>
+
+            <div id="mon-table" class="table" style="margin-top:12px;">
+              <div class="trow head">
+                <div class="cell" data-i18n="th_contract">Contract</div>
+                <div class="cell" data-i18n="th_network">Network</div>
+                <div class="cell hide-sm" data-i18n="th_last_seen">Last seen</div>
+                <div class="cell" data-i18n="th_status">Status</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div data-i18n="footer_left">
+          CycleX Security Hub runs client-side and reads public on-chain data.
+        </div>
+        <div class="footer-tagline" data-i18n="footer_tagline">
+          Verify twice. Connect only when you trust the page.
+        </div>
+      </footer>
+
+    </main>
+  </div>
+  <!-- ethers -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
+
+  <!-- AppKit + App logic -->
+  <script type="module">
+    "use strict";
+
+    const E = window.ethers;
+
+    // =========================
+    // AppKit (Reown)
+    // =========================
+    import { createAppKit } from "https://esm.sh/@reown/appkit@1.8.15";
+    import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
+    import { bsc, mainnet } from "https://esm.sh/@reown/appkit/networks";
+
+    const APPKIT_PROJECT_ID = "7886bcb95105e9e47337cec481d5de75";
+
+    const appkit = createAppKit({
+      adapters: [new EthersAdapter()],
+      networks: [bsc, mainnet],
+      defaultNetwork: bsc,
+      projectId: APPKIT_PROJECT_ID,
+      analytics: false,
+      metadata: {
+        name: "CycleX",
+        description: "CycleX Security Hub",
+        url: window.location.origin,
+        icons: [`${window.location.origin}/logo.png`]
+      }
+    });
+
+    window.CxAppKitModal = appkit;
+
+    async function waitForWalletProvider(timeoutMs = 12000) {
+      const start = Date.now();
+      while (Date.now() - start < timeoutMs) {
+        try {
+          const p = window.CxAppKitModal?.getWalletProvider?.();
+          if (p) return p;
+        } catch {}
+        await new Promise(r => setTimeout(r, 250));
+      }
+      return null;
+    }
+
+   // =========================
+// i18n (4 languages)
+// =========================
+const translations = {
+  en: {
+    // header / hero
+    brand_sub: "On-Chain Security & Rewards",
+    hero_kicker: "Security Hub",
+    hero_title: "CycleX Security Tools",
+    hero_subtitle:
+      "A lightweight, client-side toolkit for safer swaps, approvals hygiene, liquidity checks, RPC health, and transaction decoding across BSC + Ethereum.",
+    btn_back: "Back to Site",
+    btn_connect: "Connect Wallet (optional)",
+    wallet_not_connected: "not connected",
+    btn_quick: "Run Quick Scan",
+    hero_note:
+      "Note: These checks are informational and do not guarantee safety. Always verify independently.",
+    tools_kicker: "CHOOSE A TOOL",
+
+    // tiles
+    cube_quick_title: "Quick Scan",
+    cube_quick_desc: "Fast token sanity-check + shareable report + cache.",
+    cube_liq_title: "Token + Liquidity Scan",
+    cube_liq_desc: "DEX registry checks (Pancake/Uni): token vs WBNB/WETH and USDT.",
+    cube_approvals_title: "Approval Guardian",
+    cube_approvals_desc: "Check and revoke ERC-20 allowances safely (approve → 0).",
+    cube_rpc_title: "RPC Health Checker",
+    cube_rpc_desc: "Latency + chainId + block + eth_call + read logs + dev custom test.",
+    cube_tx_title: "Tx Decoder",
+    cube_tx_desc: "Decode inputs + common events (Transfer/Approval) from a tx hash.",
+    cube_dev_title: "Dev Tools",
+    cube_dev_desc: "Bookmarklet generator + local contract monitor (no server).",
+
+    // tile badges
+    badge_fast: "Fast",
+    badge_share: "Share",
+    badge_cache: "Cache",
+    badge_dex: "DEX",
+    badge_pairs: "Pairs",
+    badge_wallet: "Wallet",
+    badge_safe: "Safe",
+    badge_copy: "Copy",
+    badge_dev: "Dev",
+    badge_decode: "Decode",
+    badge_receipt: "Receipt",
+    badge_events: "Events",
+    badge_tools: "Tools",
+    badge_bookmarklet: "Bookmarklet",
+    badge_local: "Local",
+
+    // generic
+    pill_wallet: "Wallet",
+    btn_close: "Close",
+    btn_save: "Save",
+    btn_clear: "Clear",
+    btn_scan: "Scan",
+    btn_decode: "Decode",
+    btn_copy_md: "Copy Markdown",
+    btn_copy_link: "Copy Share Link",
+    btn_copy_json: "Copy JSON",
+    btn_copy_xtext: "Copy X text",
+
+    // quick panel
+    p_quick_kicker: "Quick Scan",
+    p_quick_title: "Score a token in seconds",
+    p_quick_sub:
+      "Paste a token address, choose network, run scan. Cached for 10 minutes. Generate shareable text + JSON + Markdown.",
+    quick_input_title: "Token Input",
+    net_label: "Network",
+    addr_label: "Token contract",
+    qs_tip:
+      'Tip: open with <span class="mono">?tool=quick&net=bsc&token=0x...</span> to auto-run (rate-limited).',
+    options_label: "Options",
+    opt_require_liq: "Require liquidity (stricter score)",
+    opt_show_json: "Enable JSON report (copy)",
+    api_keys_label: "Explorer API keys (optional)",
+    opt_use_explorer_apis: "Use BscScan/Etherscan (adds Verified + ABI heuristics)",
+    api_keys_tip:
+      "Keys are saved in your browser (localStorage) only. Do not paste keys into public HTML.",
+    results_title: "Results",
+    results_hint:
+      "Green / Yellow / Red signals. Not a guarantee — just verifiable on-chain checks.",
+
+    // liquidity panel
+    p_liq_kicker: "Token + Liquidity Scan",
+    p_liq_title: "DEX registry liquidity checks",
+    p_liq_sub:
+      "We check PancakeSwap (BSC) / Uniswap (ETH) V2 + V3 factories. Pairs tested: token vs WBNB/WETH and token vs USDT.",
+    liq_input_title: "Token + Network",
+    liq_tip:
+      'Tip: open with <span class="mono">?tool=liq&net=bsc&token=0x...</span> to auto-run.',
+    liq_dex_label: "DEX registry (checked)",
+    liq_results_title: "Liquidity Results",
+    liq_results_hint:
+      "V2: pair + reserves snapshot. V3: pool existence + liquidity() + slot0 tick snapshot.",
+
+    
+    // approvals panel
+    p_app_kicker: "Approval Guardian",
+    p_app_title: "Check and revoke allowances",
+    p_app_sub:
+      "Provide spender + tokens (or seed common tokens). We read allowance(owner, spender) and revoke with approve(spender, 0).",
+    ap_settings_title: "Settings",
+    ap_connected: "Connected:",
+    ap_connect: "Connect / Refresh",
+    ap_spender_label: "Spender preset",
+    ap_spender_tip:
+      "Start with a router preset, then add tokens you want to clean up.",
+    ap_tokens_label: "Token list (one per line)",
+    ap_seed: "Seed common tokens",
+    ap_seed_history: "Use scan history",
+    ap_check: "Check Allowances",
+    ap_revoke_all: "Revoke All (non-zero)",
+    ap_results: "Allowances",
+    ap_results_hint:
+      "If allowance is “infinite”, revoke is recommended unless you fully trust the spender.",
+    safe_mode_note:
+      "Safe mode: actions that require a signature are disabled until you connect a wallet.",
+
+    // rpc panel
+    p_rpc_kicker: "RPC Health Checker",
+    p_rpc_title: "Find the best endpoint",
+    p_rpc_sub:
+      "We test RPCs with latency + chainId + block + eth_call + read logs. Includes a developer custom logs test and saves the best RPC locally.",
+    rpc_inputs: "Inputs",
+    rpc_private_label: "Private RPC (saved locally)",
+    rpc_private_tip:
+      "Not embedded in HTML. Stored in your browser only (localStorage).",
+    rpc_custom_label: "Optional custom RPC (top priority)",
+    rpc_test: "Test RPCs",
+    rpc_copy_best: "Copy Best RPC",
+    rpc_results: "Results",
+    rpc_tip:
+      "Tip: Some RPCs fail due to CORS/timeouts. Run the test and pick the stable fastest.",
+    rpc_dev_title: "Developer custom logs test",
+    rpc_dev_hint:
+      "Optional: test logs for a contract. This helps developers verify their own RPC stability.",
+    rpc_dev_addr: "Contract address (optional)",
+    rpc_dev_topic: "Topic0 (optional)",
+    rpc_dev_run: "Run custom test",
+
+    // tx panel
+    p_tx_kicker: "Tx Decoder",
+    p_tx_title: "Decode a transaction",
+    p_tx_sub:
+      "Paste a tx hash. We fetch tx + receipt and decode common inputs and events (Transfer / Approval + common swap calls).",
+    tx_input_title: "Tx Input",
+    tx_hash_label: "Transaction hash",
+    tx_tip:
+      'Tip: open with <span class="mono">?tool=tx&net=bsc&tx=0x...</span> to auto-run.',
+    tx_results_title: "Decoded Output",
+
+    // dev panel
+    p_dev_kicker: "Dev Tools",
+    p_dev_title: "Bookmarklet + Local Monitor",
+    p_dev_sub:
+      "Generate a bookmarklet that sends token/tx from explorers to CycleX Hub. Also includes a local contract monitor (watchlist stored in your browser).",
+    bm_title: "Bookmarklet Generator",
+    bm_hint:
+      "Drag to bookmarks bar or copy the generated bookmarklet. Use it on BscScan/Etherscan pages.",
+    bm_base_label: "Hub URL (this page)",
+    bm_generate: "Generate",
+    bm_copy: "Copy Bookmarklet",
+
+    mon_add_title: "Add to watchlist",
+    mon_list_title: "Contract Monitor (local)",
+    mon_list_hint: "Stored locally only. No server tracking.",
+    mon_add: "Add",
+    mon_check: "Check all",
+    mon_export: "Copy JSON",
+
+    // footer
+    footer_left:
+      "CycleX Security Hub runs client-side and reads public on-chain data.",
+    footer_tagline: "Verify twice. Connect only when you trust the page.",
+    // --- ADD THESE KEYS (EN) ---
+title_back_to_cyclex: "Back to CycleX",
+aria_lang_selector: "Language selector",
+badge_table: "Table",
+btn_share_x: "Share to X",
+btn_share_tg: "Share to Telegram",
+net_bsc: "BSC (BNB Chain)",
+net_eth: "Ethereum",
+spender_pcs_router: "PancakeSwap Router (BSC)",
+spender_uni_router: "Uniswap V2 Router (ETH)",
+spender_custom: "Custom…",
+
+th_token: "Token",
+th_allowance: "Allowance",
+th_symbol: "Symbol",
+th_action: "Action",
+th_rpc: "RPC",
+th_ms: "ms",
+th_chain: "chain",
+th_block: "block",
+th_call: "call",
+th_logs: "logs",
+th_status: "status",
+th_contract: "Contract",
+th_network: "Network",
+th_last_seen: "Last seen",
+
+qs_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
+liq_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
+tx_ready_html: "<strong>Ready.</strong><br>Paste a tx hash and click <b>Decode</b>.",
+
+ph_0x: "0x...",
+ph_spender: "0x spender...",
+ph_token_list: "0x...\n0x...\n0x...",
+ph_bscscan_key: "BscScan API key (stored locally)",
+ph_etherscan_key: "Etherscan API key (stored locally)",
+ph_rpc_private: "https://... (stored locally only)",
+ph_rpc_custom: "https://...",
+ph_rpc_dev_topic: "0xddf252ad... (Transfer) or leave empty"
+
+    
+  },
+
+  zh: {
+    // header / hero
+    brand_sub: "链上安全与奖励",
+    hero_kicker: "安全中心",
+    hero_title: "CycleX 安全工具",
+    hero_subtitle:
+      "轻量级客户端工具：更安全的交换、授权管理、流动性检查、RPC 健康检测与交易解码（BSC + 以太坊）。",
+    btn_back: "返回主站",
+    btn_connect: "连接钱包（可选）",
+    wallet_not_connected: "未连接",
+    btn_quick: "运行快速扫描",
+    hero_note:
+      "提示：这些检查仅供参考，不保证安全。请务必自行验证。",
+    tools_kicker: "选择工具",
+
+    // tiles
+    cube_quick_title: "快速扫描",
+    cube_quick_desc: "快速代币体检 + 可分享报告 + 缓存。",
+    cube_liq_title: "代币 + 流动性扫描",
+    cube_liq_desc: "DEX 检查（Pancake/Uni）：代币 vs WBNB/WETH 与 USDT。",
+    cube_approvals_title: "授权卫士",
+    cube_approvals_desc: "检查并安全撤销 ERC-20 授权（approve → 0）。",
+    cube_rpc_title: "RPC 健康检测",
+    cube_rpc_desc: "延迟 + chainId + 区块 + eth_call + 读取 logs + 开发自定义测试。",
+    cube_tx_title: "交易解码",
+    cube_tx_desc: "从交易哈希解码输入与常见事件（Transfer/Approval）。",
+    cube_dev_title: "开发工具",
+    cube_dev_desc: "书签脚本生成器 + 本地合约监控（无服务器）。",
+
+    // tile badges
+    badge_fast: "快速",
+    badge_share: "分享",
+    badge_cache: "缓存",
+    badge_dex: "DEX",
+    badge_pairs: "交易对",
+    badge_wallet: "钱包",
+    badge_safe: "安全",
+    badge_copy: "复制",
+    badge_dev: "开发",
+    badge_decode: "解码",
+    badge_receipt: "回执",
+    badge_events: "事件",
+    badge_tools: "工具",
+    badge_bookmarklet: "书签脚本",
+    badge_local: "本地",
+
+    // generic
+    pill_wallet: "钱包",
+    btn_close: "关闭",
+    btn_save: "保存",
+    btn_clear: "清除",
+    btn_scan: "扫描",
+    btn_decode: "解码",
+    btn_copy_md: "复制 Markdown",
+    btn_copy_link: "复制分享链接",
+    btn_copy_json: "复制 JSON",
+    btn_copy_xtext: "复制 X 文案",
+
+    // quick panel
+    p_quick_kicker: "快速扫描",
+    p_quick_title: "几秒内给代币打分",
+    p_quick_sub:
+      "粘贴代币地址，选择网络并扫描。缓存 10 分钟。可生成可分享文本 + JSON + Markdown。",
+    quick_input_title: "代币输入",
+    net_label: "网络",
+    addr_label: "代币合约",
+    qs_tip:
+      '提示：可用 <span class="mono">?tool=quick&net=bsc&token=0x...</span> 打开自动运行（限速）。',
+    options_label: "选项",
+    opt_require_liq: "要求有流动性（更严格评分）",
+    opt_show_json: "启用 JSON 报告（可复制）",
+    api_keys_label: "区块浏览器 API Key（可选）",
+    opt_use_explorer_apis: "使用 BscScan/Etherscan（增加 Verified + ABI 规则）",
+    api_keys_tip:
+      "Key 仅保存在浏览器本地（localStorage）。不要把 Key 写进公开 HTML。",
+    results_title: "结果",
+    results_hint:
+      "绿色 / 黄色 / 红色信号。不是保证——只是可验证的链上检查。",
+
+    // liquidity panel
+    p_liq_kicker: "代币 + 流动性扫描",
+    p_liq_title: "DEX 注册表流动性检查",
+    p_liq_sub:
+      "检查 PancakeSwap（BSC）/ Uniswap（ETH）V2 + V3 工厂。测试交易对：代币 vs WBNB/WETH 与代币 vs USDT。",
+    liq_input_title: "代币 + 网络",
+    liq_tip:
+      '提示：可用 <span class="mono">?tool=liq&net=bsc&token=0x...</span> 打开自动运行。',
+    liq_dex_label: "DEX 注册表（已检查）",
+    liq_results_title: "流动性结果",
+    liq_results_hint:
+      "V2：交易对 + 储备快照。V3：池子存在性 + liquidity() + slot0 tick 快照。",
+
+    // approvals panel
+    p_app_kicker: "授权卫士",
+    p_app_title: "检查并撤销授权",
+    p_app_sub:
+      "填写 spender + 代币列表（或一键填入常用代币）。读取 allowance(owner, spender)，并用 approve(spender, 0) 撤销。",
+    ap_settings_title: "设置",
+    ap_connected: "已连接：",
+    ap_connect: "连接 / 刷新",
+    ap_spender_label: "Spender 预设",
+    ap_spender_tip: "先选路由预设，再添加你想清理的代币。",
+    ap_tokens_label: "代币列表（每行一个）",
+    ap_seed: "填入常用代币",
+    ap_seed_history: "使用扫描历史",
+    ap_check: "检查授权",
+    ap_revoke_all: "撤销全部（非零）",
+    ap_results: "授权列表",
+    ap_results_hint:
+      "若授权为“无限”，除非你完全信任该 spender，否则建议撤销。",
+    safe_mode_note:
+      "安全模式：需要签名的操作会在连接钱包前被禁用。",
+
+    // rpc panel
+    p_rpc_kicker: "RPC 健康检测",
+    p_rpc_title: "找到最佳节点",
+    p_rpc_sub:
+      "测试 RPC：延迟 + chainId + 区块 + eth_call + 读取 logs。包含开发者自定义 logs 测试，并把最佳 RPC 存到本地。",
+    rpc_inputs: "输入",
+    rpc_private_label: "私有 RPC（本地保存）",
+    rpc_private_tip:
+      "不会写进 HTML，只保存在你的浏览器（localStorage）。",
+    rpc_custom_label: "可选自定义 RPC（优先级最高）",
+    rpc_test: "测试 RPC",
+    rpc_copy_best: "复制最佳 RPC",
+    rpc_results: "结果",
+    rpc_tip:
+      "提示：部分 RPC 会因 CORS/超时失败。运行测试并选择稳定且最快的。",
+    rpc_dev_title: "开发者自定义 logs 测试",
+    rpc_dev_hint:
+      "可选：对某合约测试 logs，帮助开发者验证 RPC 的稳定性。",
+    rpc_dev_addr: "合约地址（可选）",
+    rpc_dev_topic: "Topic0（可选）",
+    rpc_dev_run: "运行自定义测试",
+
+    // tx panel
+    p_tx_kicker: "交易解码",
+    p_tx_title: "解码一笔交易",
+    p_tx_sub:
+      "粘贴交易哈希。获取 tx + receipt，并解码常见输入与事件（Transfer / Approval + 常见 swap 调用）。",
+    tx_input_title: "交易输入",
+    tx_hash_label: "交易哈希",
+    tx_tip:
+      '提示：可用 <span class="mono">?tool=tx&net=bsc&tx=0x...</span> 打开自动运行。',
+    tx_results_title: "解码输出",
+
+    // dev panel
+    p_dev_kicker: "开发工具",
+    p_dev_title: "书签脚本 + 本地监控",
+    p_dev_sub:
+      "生成书签脚本，把浏览器页面上的代币/交易一键发送到 CycleX Hub。也包含本地合约监控（列表保存在浏览器）。",
+    bm_title: "书签脚本生成器",
+    bm_hint:
+      "拖到书签栏或复制生成的书签脚本。在 BscScan/Etherscan 页面使用。",
+    bm_base_label: "Hub URL（当前页面）",
+    bm_generate: "生成",
+    bm_copy: "复制书签脚本",
+
+    mon_add_title: "加入监控列表",
+    mon_list_title: "合约监控（本地）",
+    mon_list_hint: "仅本地保存。无服务器跟踪。",
+    mon_add: "添加",
+    mon_check: "全部检查",
+    mon_export: "复制 JSON",
+
+    // footer
+    footer_left: "CycleX 安全中心在本地运行，读取公开链上数据。",
+    footer_tagline: "多验证一次。只在信任页面时连接钱包。",
+    // --- ADD THESE KEYS (ZH) ---
+title_back_to_cyclex: "返回 CycleX",
+aria_lang_selector: "语言选择",
+badge_table: "表格",
+btn_share_x: "分享到 X",
+btn_share_tg: "分享到 Telegram",
+net_bsc: "BSC（BNB Chain）",
+net_eth: "以太坊",
+spender_pcs_router: "PancakeSwap 路由器（BSC）",
+spender_uni_router: "Uniswap V2 路由器（ETH）",
+spender_custom: "自定义…",
+
+th_token: "代币",
+th_allowance: "授权额度",
+th_symbol: "符号",
+th_action: "操作",
+th_rpc: "RPC",
+th_ms: "毫秒",
+th_chain: "链",
+th_block: "区块",
+th_call: "调用",
+th_logs: "日志",
+th_status: "状态",
+th_contract: "合约",
+th_network: "网络",
+th_last_seen: "上次出现",
+
+qs_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
+liq_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
+tx_ready_html: "<strong>准备就绪。</strong><br>粘贴交易哈希并点击 <b>解码</b>。",
+
+ph_0x: "0x...",
+ph_spender: "0x spender...",
+ph_token_list: "0x...\n0x...\n0x...",
+ph_bscscan_key: "BscScan API Key（本地保存）",
+ph_etherscan_key: "Etherscan API Key（本地保存）",
+ph_rpc_private: "https://...（仅本地保存）",
+ph_rpc_custom: "https://...",
+ph_rpc_dev_topic: "0xddf252ad...（Transfer）或留空"
+
+  },
+
+  ar: {
+    // header / hero
+    brand_sub: "أمان ومكافآت على السلسلة",
+    hero_kicker: "مركز الأمان",
+    hero_title: "أدوات CycleX الأمنية",
+    hero_subtitle:
+      "مجموعة خفيفة تعمل على المتصفح: swaps أكثر أماناً، إدارة approvals، فحص السيولة، صحة RPC، وفك تشفير المعاملات عبر BSC + Ethereum.",
+    btn_back: "العودة للموقع",
+    btn_connect: "اتصال المحفظة (اختياري)",
+    wallet_not_connected: "غير متصل",
+    btn_quick: "تشغيل فحص سريع",
+    hero_note:
+      "ملاحظة: هذه الفحوصات معلوماتية ولا تضمن الأمان. تحقق دائماً بنفسك.",
+    tools_kicker: "اختر أداة",
+
+    // tiles
+    cube_quick_title: "فحص سريع",
+    cube_quick_desc: "فحص سريع للتوكن + تقرير قابل للمشاركة + كاش.",
+    cube_liq_title: "فحص التوكن + السيولة",
+    cube_liq_desc: "فحص DEX (Pancake/Uni): التوكن مقابل WBNB/WETH و USDT.",
+    cube_approvals_title: "حارس الصلاحيات",
+    cube_approvals_desc: "تحقق وألغِ صلاحيات ERC-20 بأمان (approve → 0).",
+    cube_rpc_title: "فحص صحة RPC",
+    cube_rpc_desc: "زمن الاستجابة + chainId + بلوك + eth_call + قراءة logs + اختبار مطوّر.",
+    cube_tx_title: "فك تشفير Tx",
+    cube_tx_desc: "فك تشفير المدخلات + أحداث شائعة (Transfer/Approval) من tx hash.",
+    cube_dev_title: "أدوات المطوّر",
+    cube_dev_desc: "مولّد Bookmarklet + مراقبة عقد محلية (بدون سيرفر).",
+
+    // tile badges
+    badge_fast: "سريع",
+    badge_share: "مشاركة",
+    badge_cache: "كاش",
+    badge_dex: "DEX",
+    badge_pairs: "أزواج",
+    badge_wallet: "محفظة",
+    badge_safe: "آمن",
+    badge_copy: "نسخ",
+    badge_dev: "مطوّر",
+    badge_decode: "فك",
+    badge_receipt: "إيصال",
+    badge_events: "أحداث",
+    badge_tools: "أدوات",
+    badge_bookmarklet: "Bookmarklet",
+    badge_local: "محلي",
+
+    // generic
+    pill_wallet: "محفظة",
+    btn_close: "إغلاق",
+    btn_save: "حفظ",
+    btn_clear: "مسح",
+    btn_scan: "فحص",
+    btn_decode: "فك التشفير",
+    btn_copy_md: "نسخ Markdown",
+    btn_copy_link: "نسخ رابط المشاركة",
+    btn_copy_json: "نسخ JSON",
+    btn_copy_xtext: "نسخ نص X",
+
+    // quick panel
+    p_quick_kicker: "فحص سريع",
+    p_quick_title: "قيّم توكن خلال ثوانٍ",
+    p_quick_sub:
+      "ألصق عنوان التوكن، اختر الشبكة، شغّل الفحص. يُحفظ بالكاش لمدة 10 دقائق. أنشئ نصاً قابلاً للمشاركة + JSON + Markdown.",
+    quick_input_title: "إدخال التوكن",
+    net_label: "الشبكة",
+    addr_label: "عقد التوكن",
+    qs_tip:
+      'نصيحة: افتح <span class="mono">?tool=quick&net=bsc&token=0x...</span> للتشغيل التلقائي (محدود).',
+    options_label: "الخيارات",
+    opt_require_liq: "يتطلب سيولة (تقييم أكثر صرامة)",
+    opt_show_json: "تفعيل تقرير JSON (نسخ)",
+    api_keys_label: "مفاتيح API للمستكشف (اختياري)",
+    opt_use_explorer_apis: "استخدام BscScan/Etherscan (يزيد Verified + قواعد ABI)",
+    api_keys_tip:
+      "المفاتيح تُحفظ محلياً في المتصفح (localStorage) فقط. لا تضعها داخل HTML عام.",
+    results_title: "النتائج",
+    results_hint:
+      "إشارات خضراء/صفراء/حمراء. ليست ضماناً — مجرد فحوصات على السلسلة قابلة للتحقق.",
+
+    // liquidity panel
+    p_liq_kicker: "فحص التوكن + السيولة",
+    p_liq_title: "فحص سيولة DEX",
+    p_liq_sub:
+      "نُجري فحص PancakeSwap (BSC) / Uniswap (ETH) V2 + V3. الأزواج: التوكن مقابل WBNB/WETH و USDT.",
+    liq_input_title: "توكن + شبكة",
+    liq_tip:
+      'نصيحة: افتح <span class="mono">?tool=liq&net=bsc&token=0x...</span> للتشغيل التلقائي.',
+    liq_dex_label: "سجل DEX (مفحوص)",
+    liq_results_title: "نتائج السيولة",
+    liq_results_hint:
+      "V2: زوج + لقطة الاحتياطي. V3: وجود الحوض + liquidity() + لقطة slot0/tick.",
+
+    // approvals panel
+    p_app_kicker: "حارس الصلاحيات",
+    p_app_title: "تحقق وألغِ الصلاحيات",
+    p_app_sub:
+      "أدخل spender + قائمة التوكنات (أو أضف الشائعة). نقرأ allowance(owner, spender) ونلغي عبر approve(spender, 0).",
+    ap_settings_title: "الإعدادات",
+    ap_connected: "متصل:",
+    ap_connect: "اتصال / تحديث",
+    ap_spender_label: "إعداد spender",
+    ap_spender_tip:
+      "ابدأ باختيار راوتر جاهز، ثم أضف التوكنات التي تريد تنظيفها.",
+    ap_tokens_label: "قائمة التوكنات (كل سطر عنوان)",
+    ap_seed: "إضافة توكنات شائعة",
+    ap_seed_history: "استخدام سجل الفحص",
+    ap_check: "فحص الصلاحيات",
+    ap_revoke_all: "إلغاء الكل (غير الصفرية)",
+    ap_results: "الصلاحيات",
+    ap_results_hint:
+      "إذا كانت الصلاحية “غير محدودة”، يُنصح بالإلغاء ما لم تكن تثق تماماً بالـ spender.",
+    safe_mode_note:
+      "الوضع الآمن: العمليات التي تتطلب توقيعاً معطلة حتى تتصل بالمحفظة.",
+
+    // rpc panel
+    p_rpc_kicker: "فحص صحة RPC",
+    p_rpc_title: "اعثر على أفضل Endpoint",
+    p_rpc_sub:
+      "نختبر RPC: زمن الاستجابة + chainId + بلوك + eth_call + قراءة logs. يتضمن اختبار logs للمطور ويحفظ أفضل RPC محلياً.",
+    rpc_inputs: "المدخلات",
+    rpc_private_label: "RPC خاص (محفوظ محلياً)",
+    rpc_private_tip:
+      "غير مدمج في HTML. محفوظ في متصفحك فقط (localStorage).",
+    rpc_custom_label: "RPC مخصص (أولوية أعلى)",
+    rpc_test: "اختبار RPCs",
+    rpc_copy_best: "نسخ أفضل RPC",
+    rpc_results: "النتائج",
+    rpc_tip:
+      "نصيحة: بعض RPCs تفشل بسبب CORS/مهلة. شغّل الاختبار واختر الأسرع والأكثر استقراراً.",
+    rpc_dev_title: "اختبار logs مخصص للمطور",
+    rpc_dev_hint:
+      "اختياري: اختبر logs لعقد محدد للتأكد من استقرار الـ RPC.",
+    rpc_dev_addr: "عنوان العقد (اختياري)",
+    rpc_dev_topic: "Topic0 (اختياري)",
+    rpc_dev_run: "تشغيل الاختبار",
+
+    // tx panel
+    p_tx_kicker: "فك تشفير Tx",
+    p_tx_title: "فك تشفير معاملة",
+    p_tx_sub:
+      "ألصق tx hash. نجلب tx + receipt ونفك تشفير المدخلات والأحداث الشائعة (Transfer / Approval + استدعاءات swap).",
+    tx_input_title: "إدخال Tx",
+    tx_hash_label: "هاش المعاملة",
+    tx_tip:
+      'نصيحة: افتح <span class="mono">?tool=tx&net=bsc&tx=0x...</span> للتشغيل التلقائي.',
+    tx_results_title: "المخرجات",
+
+    // dev panel
+    p_dev_kicker: "أدوات المطوّر",
+    p_dev_title: "Bookmarklet + مراقبة محلية",
+    p_dev_sub:
+      "أنشئ Bookmarklet يرسل التوكن/المعاملة من المستكشف إلى CycleX Hub. ويتضمن مراقبة عقد محلية (قائمة محفوظة في متصفحك).",
+    bm_title: "مولّد Bookmarklet",
+    bm_hint:
+      "اسحب إلى شريط الإشارات أو انسخ الـ Bookmarklet. استخدمه في صفحات BscScan/Etherscan.",
+    bm_base_label: "رابط Hub (هذه الصفحة)",
+    bm_generate: "إنشاء",
+    bm_copy: "نسخ Bookmarklet",
+
+    mon_add_title: "إضافة لقائمة المراقبة",
+    mon_list_title: "مراقبة العقود (محلي)",
+    mon_list_hint: "محفوظ محلياً فقط. بدون تتبع سيرفر.",
+    mon_add: "إضافة",
+    mon_check: "فحص الكل",
+    mon_export: "نسخ JSON",
+
+    // footer
+    footer_left:
+      "CycleX Security Hub يعمل على المتصفح ويقرأ بيانات عامة على السلسلة.",
+    footer_tagline: "تحقق مرتين. لا تتصل إلا عندما تثق بالصفحة.",
+    // --- ADD THESE KEYS (AR) ---
+title_back_to_cyclex: "العودة إلى CycleX",
+aria_lang_selector: "اختيار اللغة",
+badge_table: "جدول",
+btn_share_x: "مشاركة على X",
+btn_share_tg: "مشاركة على تيليجرام",
+net_bsc: "BSC (BNB Chain)",
+net_eth: "إيثريوم",
+spender_pcs_router: "راوتر PancakeSwap (BSC)",
+spender_uni_router: "راوتر Uniswap V2 (ETH)",
+spender_custom: "مخصص…",
+
+th_token: "التوكن",
+th_allowance: "الصلاحية",
+th_symbol: "الرمز",
+th_action: "إجراء",
+th_rpc: "RPC",
+th_ms: "مللي ثانية",
+th_chain: "السلسلة",
+th_block: "بلوك",
+th_call: "استدعاء",
+th_logs: "سجلات",
+th_status: "الحالة",
+th_contract: "العقد",
+th_network: "الشبكة",
+th_last_seen: "آخر ظهور",
+
+qs_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
+liq_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
+tx_ready_html: "<strong>جاهز.</strong><br>ألصق tx hash ثم اضغط <b>فك التشفير</b>.",
+
+ph_0x: "0x...",
+ph_spender: "0x spender...",
+ph_token_list: "0x...\n0x...\n0x...",
+ph_bscscan_key: "مفتاح BscScan API (محفوظ محلياً)",
+ph_etherscan_key: "مفتاح Etherscan API (محفوظ محلياً)",
+ph_rpc_private: "https://... (محفوظ محلياً فقط)",
+ph_rpc_custom: "https://...",
+ph_rpc_dev_topic: "0xddf252ad... (Transfer) أو اتركه فارغاً"
+
+  },
+
+  ru: {
+    // header / hero
+    brand_sub: "Ончейн безопасность и награды",
+    hero_kicker: "Security Hub",
+    hero_title: "Инструменты безопасности CycleX",
+    hero_subtitle:
+      "Лёгкий клиентский набор: более безопасные swaps, гигиена approvals, проверка ликвидности, здоровье RPC и декодер транзакций для BSC + Ethereum.",
+    btn_back: "Назад на сайт",
+    btn_connect: "Подключить кошелёк (опц.)",
+    wallet_not_connected: "не подключен",
+    btn_quick: "Запустить быстрый скан",
+    hero_note:
+      "Важно: проверки носят информационный характер и не гарантируют безопасность. Всегда проверяйте самостоятельно.",
+    tools_kicker: "ВЫБЕРИТЕ ИНСТРУМЕНТ",
+
+    // tiles
+    cube_quick_title: "Быстрый скан",
+    cube_quick_desc: "Быстрая проверка токена + шаримый отчёт + кэш.",
+    cube_liq_title: "Токен + ликвидность",
+    cube_liq_desc: "Проверка DEX (Pancake/Uni): токен vs WBNB/WETH и USDT.",
+    cube_approvals_title: "Approval Guardian",
+    cube_approvals_desc:
+      "Проверка и безопасный отзыв ERC-20 allowance (approve → 0).",
+    cube_rpc_title: "Проверка RPC",
+    cube_rpc_desc:
+      "Latency + chainId + block + eth_call + чтение logs + dev custom test.",
+    cube_tx_title: "Декодер Tx",
+    cube_tx_desc:
+      "Декодирует input и события (Transfer/Approval) по tx hash.",
+    cube_dev_title: "Dev Tools",
+    cube_dev_desc:
+      "Генератор bookmarklet + локальный монитор контрактов (без сервера).",
+
+    // tile badges
+    badge_fast: "Быстро",
+    badge_share: "Поделиться",
+    badge_cache: "Кэш",
+    badge_dex: "DEX",
+    badge_pairs: "Пары",
+    badge_wallet: "Кошелёк",
+    badge_safe: "Безопасно",
+    badge_copy: "Копировать",
+    badge_dev: "Dev",
+    badge_decode: "Decode",
+    badge_receipt: "Receipt",
+    badge_events: "Events",
+    badge_tools: "Tools",
+    badge_bookmarklet: "Bookmarklet",
+    badge_local: "Local",
+
+    // generic
+    pill_wallet: "Кошелёк",
+    btn_close: "Закрыть",
+    btn_save: "Сохранить",
+    btn_clear: "Очистить",
+    btn_scan: "Сканировать",
+    btn_decode: "Декодировать",
+    btn_copy_md: "Копировать Markdown",
+    btn_copy_link: "Копировать ссылку",
+    btn_copy_json: "Копировать JSON",
+    btn_copy_xtext: "Копировать текст для X",
+
+    // quick panel
+    p_quick_kicker: "Быстрый скан",
+    p_quick_title: "Оцените токен за секунды",
+    p_quick_sub:
+      "Вставьте адрес токена, выберите сеть и запустите скан. Кэш на 10 минут. Генерация текста для шаринга + JSON + Markdown.",
+    quick_input_title: "Ввод токена",
+    net_label: "Сеть",
+    addr_label: "Контракт токена",
+    qs_tip:
+      'Совет: откройте <span class="mono">?tool=quick&net=bsc&token=0x...</span> для авто-старта (лимитировано).',
+    options_label: "Опции",
+    opt_require_liq: "Требовать ликвидность (строже)",
+    opt_show_json: "Включить JSON отчёт (копирование)",
+    api_keys_label: "API ключи Explorer (опционально)",
+    opt_use_explorer_apis:
+      "Использовать BscScan/Etherscan (Verified + ABI эвристики)",
+    api_keys_tip:
+      "Ключи сохраняются только в вашем браузере (localStorage). Не вставляйте ключи в публичный HTML.",
+    results_title: "Результаты",
+    results_hint:
+      "Зелёные / жёлтые / красные сигналы. Это не гарантия — только проверяемые ончейн-проверки.",
+
+    // liquidity panel
+    p_liq_kicker: "Токен + ликвидность",
+    p_liq_title: "Проверка ликвидности DEX",
+    p_liq_sub:
+      "Проверяем PancakeSwap (BSC) / Uniswap (ETH) V2 + V3 фабрики. Пары: токен vs WBNB/WETH и токен vs USDT.",
+    liq_input_title: "Токен + сеть",
+    liq_tip:
+      'Совет: откройте <span class="mono">?tool=liq&net=bsc&token=0x...</span> для авто-старта.',
+    liq_dex_label: "DEX реестр (проверяется)",
+    liq_results_title: "Результаты ликвидности",
+    liq_results_hint:
+      "V2: пара + snapshot резервов. V3: наличие пула + liquidity() + slot0/tick snapshot.",
+
+    // approvals panel
+    p_app_kicker: "Approval Guardian",
+    p_app_title: "Проверка и отзыв allowance",
+    p_app_sub:
+      "Укажите spender + токены (или добавьте популярные). Читаем allowance(owner, spender) и отзываем через approve(spender, 0).",
+    ap_settings_title: "Настройки",
+    ap_connected: "Подключено:",
+    ap_connect: "Подключить / Обновить",
+    ap_spender_label: "Spender preset",
+    ap_spender_tip:
+      "Начните с роутера, затем добавьте токены для очистки.",
+    ap_tokens_label: "Список токенов (по одному в строке)",
+    ap_seed: "Добавить популярные токены",
+    ap_seed_history: "Использовать историю сканов",
+    ap_check: "Проверить allowance",
+    ap_revoke_all: "Отозвать все (ненулевые)",
+    ap_results: "Allowances",
+    ap_results_hint:
+      "Если allowance “бесконечный”, лучше отозвать, если вы не полностью доверяете spender.",
+    safe_mode_note:
+      "Safe mode: действия, требующие подпись, отключены до подключения кошелька.",
+
+    // rpc panel
+    p_rpc_kicker: "Проверка RPC",
+    p_rpc_title: "Найдите лучший endpoint",
+    p_rpc_sub:
+      "Тестируем RPC: latency + chainId + block + eth_call + чтение logs. Есть dev custom logs test, лучший RPC сохраняется локально.",
+    rpc_inputs: "Ввод",
+    rpc_private_label: "Приватный RPC (локально)",
+    rpc_private_tip:
+      "Не встраивается в HTML. Хранится только в вашем браузере (localStorage).",
+    rpc_custom_label: "Кастомный RPC (высший приоритет)",
+    rpc_test: "Тестировать RPC",
+    rpc_copy_best: "Копировать лучший RPC",
+    rpc_results: "Результаты",
+    rpc_tip:
+      "Совет: некоторые RPC падают из-за CORS/timeout. Запустите тест и выберите стабильный и быстрый.",
+    rpc_dev_title: "Dev custom logs test",
+    rpc_dev_hint:
+      "Опционально: тест logs по контракту, чтобы проверить стабильность RPC.",
+    rpc_dev_addr: "Адрес контракта (опционально)",
+    rpc_dev_topic: "Topic0 (опционально)",
+    rpc_dev_run: "Запустить тест",
+
+    // tx panel
+    p_tx_kicker: "Tx Decoder",
+    p_tx_title: "Декодировать транзакцию",
+    p_tx_sub:
+      "Вставьте tx hash. Получим tx + receipt и декодируем input и события (Transfer / Approval + популярные swap вызовы).",
+    tx_input_title: "Ввод Tx",
+    tx_hash_label: "Хэш транзакции",
+    tx_tip:
+      'Совет: откройте <span class="mono">?tool=tx&net=bsc&tx=0x...</span> для авто-старта.',
+    tx_results_title: "Декодированный вывод",
+
+    // dev panel
+    p_dev_kicker: "Dev Tools",
+    p_dev_title: "Bookmarklet + локальный монитор",
+    p_dev_sub:
+      "Создайте bookmarklet, который отправляет token/tx со страниц explorer в CycleX Hub. Также есть локальный монитор контрактов (список хранится в браузере).",
+    bm_title: "Генератор Bookmarklet",
+    bm_hint:
+      "Перетащите в панель закладок или скопируйте bookmarklet. Используйте на BscScan/Etherscan.",
+    bm_base_label: "Hub URL (эта страница)",
+    bm_generate: "Сгенерировать",
+    bm_copy: "Копировать Bookmarklet",
+
+    mon_add_title: "Добавить в список",
+    mon_list_title: "Монитор контрактов (локально)",
+    mon_list_hint: "Хранится локально. Без серверного трекинга.",
+    mon_add: "Добавить",
+    mon_check: "Проверить все",
+    mon_export: "Копировать JSON",
+
+    // footer
+    footer_left:
+      "CycleX Security Hub работает на клиенте и читает публичные ончейн-данные.",
+    footer_tagline: "Проверяйте дважды. Подключайтесь только если доверяете странице.",
+    // --- ADD THESE KEYS (RU) ---
+title_back_to_cyclex: "Назад к CycleX",
+aria_lang_selector: "Выбор языка",
+badge_table: "Таблица",
+btn_share_x: "Поделиться в X",
+btn_share_tg: "Поделиться в Telegram",
+net_bsc: "BSC (BNB Chain)",
+net_eth: "Эфириум",
+spender_pcs_router: "PancakeSwap Router (BSC)",
+spender_uni_router: "Uniswap V2 Router (ETH)",
+spender_custom: "Пользовательский…",
+
+th_token: "Токен",
+th_allowance: "Лимит",
+th_symbol: "Символ",
+th_action: "Действие",
+th_rpc: "RPC",
+th_ms: "мс",
+th_chain: "сеть",
+th_block: "блок",
+th_call: "call",
+th_logs: "логи",
+th_status: "статус",
+th_contract: "Контракт",
+th_network: "Сеть",
+th_last_seen: "Последний раз",
+
+qs_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
+liq_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
+tx_ready_html: "<strong>Готово.</strong><br>Вставьте tx hash и нажмите <b>Декодировать</b>.",
+
+ph_0x: "0x...",
+ph_spender: "0x spender...",
+ph_token_list: "0x...\n0x...\n0x...",
+ph_bscscan_key: "BscScan API key (локально)",
+ph_etherscan_key: "Etherscan API key (локально)",
+ph_rpc_private: "https://... (только локально)",
+ph_rpc_custom: "https://...",
+ph_rpc_dev_topic: "0xddf252ad... (Transfer) или оставьте пустым"
+
+  }
+};
+// =========================
+// i18n (after translations)
+// =========================
+let currentLang = "en";
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+function normalizeLang(x){
+  const v = String(x || "").trim().toLowerCase();
+  const map = { "cn":"zh", "zh-cn":"zh", "zh-hans":"zh" };
+  return map[v] || v;
+}
+
+function setDirForLang(lang) {
+  const html = document.documentElement;
+  html.setAttribute("lang", lang === "zh" ? "zh" : lang);
+  html.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+}
+
+// ✅ t(lang,key) with EN fallback
+function t(lang, key) {
+  return (translations?.[lang]?.[key] ?? translations?.en?.[key] ?? "");
+}
+
+function applyI18n(lang) {
+  const L = normalizeLang(lang || currentLang);
+  currentLang = translations?.[L] ? L : "en";
+
+  if (document.body) {
+    document.body.classList.add("lang-switching");
+    setTimeout(() => document.body && document.body.classList.remove("lang-switching"), 260);
+  }
+
+  // normal text/HTML
+  $$("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    const val = t(currentLang, key);
+    if (val) el.innerHTML = val;
+  });
+
+  // placeholders
+  $$("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    const val = t(currentLang, key);
+    if (val) el.setAttribute("placeholder", val);
+  });
+
+  // title attr
+  $$("[data-i18n-title]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-title");
+    const val = t(currentLang, key);
+    if (val) el.setAttribute("title", val);
+  });
+
+  // aria-label attr
+  $$("[data-i18n-aria-label]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-aria-label");
+    const val = t(currentLang, key);
+    if (val) el.setAttribute("aria-label", val);
+  });
+
+  setDirForLang(currentLang);
+
+  // keep your existing behavior
+  try { renderWalletLabels && renderWalletLabels(); } catch {}
+}
+
+function setLang(lang) {
+  const picked = normalizeLang(lang);
+  currentLang = translations?.[picked] ? picked : "en";
+
+  try { localStorage.setItem("cx_sec_lang", currentLang); } catch {}
+
+  $$(".lang-btn").forEach((b) => {
+    const bl = normalizeLang(b.dataset?.lang || b.getAttribute("data-lang") || "");
+    b.classList.toggle("active", bl === currentLang);
+  });
+
+  applyI18n(currentLang);
+}
+
+function initLang() {
+  let saved = null;
+  try { saved = localStorage.getItem("cx_sec_lang"); } catch {}
+
+  const s = normalizeLang(saved);
+  setLang(translations?.[s] ? s : "en");
+}
+
+// =========================
+// i18n buttons wiring (FIX)
+// =========================
+function bindLangButtons(){
+  $$(".lang-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      try { e.preventDefault(); } catch {}
+
+      const raw = btn.dataset?.lang || btn.getAttribute("data-lang") || "";
+      const lang = normalizeLang(raw);
+
+      setLang(lang);
+      try { gtagEvent && gtagEvent("sec_lang_change", { lang }); } catch {}
+    }, { passive: false });
+  });
+}
+    // =========================
+    // Utils (dedup, single source of truth)
+    // =========================
+    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+    const nowTs = () => Math.floor(Date.now() / 1000);
+
+    const DEAD = "0x000000000000000000000000000000000000dEaD";
+    const ZERO = "0x0000000000000000000000000000000000000000";
+
+    function shortAddr(a) {
+      return (!a || typeof a !== "string") ? "—" : `${a.slice(0, 6)}…${a.slice(-4)}`;
+    }
+    function safeJson(obj) {
+      try { return JSON.stringify(obj, null, 2); } catch { return "{}"; }
+    }
+    function isAddr(x){
+      try { return E.isAddress(String(x||"").trim()); } catch { return false; }
+    }
+    function normAddr(x){
+      return E.getAddress(String(x||"").trim());
+    }
+    function isBurnAddr(a){
+      if (!a) return false;
+      const z = String(a).toLowerCase();
+      return z === ZERO.toLowerCase() || z === DEAD.toLowerCase();
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        try {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    }
+
+    function setStatus(el, type, html) {
+      if (!el) return;
+      el.classList.remove("ok", "warn", "bad", "info");
+      el.classList.add(type);
+      el.style.display = "block";
+      el.innerHTML = html;
+    }
+    function clearStatus(el) {
+      if (!el) return;
+      el.style.display = "none";
+      el.innerHTML = "";
+      el.classList.remove("ok", "warn", "bad", "info");
+    }
+
+    function gtagEvent(name, params = {}) {
+      try { if (typeof window.gtag === "function") window.gtag("event", name, params); } catch {}
+    }
+
+    function parseQuery() {
+      const u = new URL(location.href);
+      return {
+        tool: (u.searchParams.get("tool") || "").toLowerCase(),
+        net: (u.searchParams.get("net") || "").toLowerCase(),
+        token: (u.searchParams.get("token") || ""),
+        tx: (u.searchParams.get("tx") || "")
+      };
+    }
+
+    // =========================
+    // Panels / Tiles
+    // =========================
+    let toolCards = [];
+    let panels = {};
+
+    function initPanels() {
+      toolCards = $$("#toolGrid .tool-card");
+      panels = {
+        quick: $("#panel-quick"),
+        liq: $("#panel-liq"),
+        approvals: $("#panel-approvals"),
+        rpc: $("#panel-rpc"),
+        tx: $("#panel-tx"),
+        dev: $("#panel-dev")
+      };
+
+      function showPanel(key) {
+        Object.entries(panels).forEach(([k, el]) => {
+          if (el) el.classList.toggle("hidden", k !== key);
+        });
+        toolCards.forEach((c) => c.classList.toggle("active", c.dataset.tool === key));
+        if (key) gtagEvent("sec_tool_open", { tool: key });
+      }
+      window.showPanel = showPanel;
+
+      toolCards.forEach((card) => card.addEventListener("click", () => showPanel(card.dataset.tool)));
+
+      $("#btnCloseQuick")?.addEventListener("click", () => showPanel(null));
+      $("#btnCloseLiq")?.addEventListener("click", () => showPanel(null));
+      $("#btnCloseApprovals")?.addEventListener("click", () => showPanel(null));
+      $("#btnCloseRpc")?.addEventListener("click", () => showPanel(null));
+      $("#btnCloseTx")?.addEventListener("click", () => showPanel(null));
+      $("#btnCloseDev")?.addEventListener("click", () => showPanel(null));
+
+      $("#btn-quick")?.addEventListener("click", () => {
+        showPanel("quick");
+        $("#qs-token")?.focus();
+        gtagEvent("sec_quick_btn");
+      });
+    }
+
+    // =========================
+    // Wallet (AppKit) — single global state
+    // =========================
+    const wallet = {
+      providerRaw: null,     // EIP-1193
+      browserProvider: null, // ethers BrowserProvider
+      signer: null,
+      address: "",
+      chainId: 0
+    };
+
+    function renderWalletLabels() {
+      const notConn = t(currentLang, "wallet_not_connected") || "not connected";
+      const labelTxt = wallet.address ? wallet.address : notConn;
+
+      const w1 = $("#walletLabel");
+      if (w1) w1.textContent = labelTxt;
+
+      const w2 = $("#ap-wallet");
+      if (w2) w2.textContent = labelTxt;
+
+      const w3 = $("#liq-wallet");
+      if (w3) w3.textContent = labelTxt;
+
+      const w4 = $("#ap-address");
+      if (w4) w4.textContent = wallet.address ? shortAddr(wallet.address) : "—";
+    }
+
+    function attachProviderListeners(p) {
+      try {
+        if (!p || typeof p.on !== "function") return;
+        p.removeAllListeners?.("accountsChanged");
+        p.removeAllListeners?.("chainChanged");
+
+        p.on("accountsChanged", async (accs) => {
+          const a = (accs && accs[0]) ? E.getAddress(accs[0]) : "";
+          wallet.address = a;
+          renderWalletLabels();
+        });
+
+        p.on("chainChanged", async (hex) => {
+          try { wallet.chainId = Number(hex); } catch { wallet.chainId = 0; }
+          renderWalletLabels();
+        });
+      } catch {}
+    }
+
+    async function cxConnectWallet({ silent = false } = {}) {
+      const stQuick = $("#qs-status");
+      try {
+        await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
+
+        const providerRaw = await waitForWalletProvider(12000);
+        if (!providerRaw) {
+          if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
+          return false;
+        }
+
+        wallet.providerRaw = providerRaw;
+        attachProviderListeners(providerRaw);
+
+        const bp = new E.BrowserProvider(providerRaw);
+        wallet.browserProvider = bp;
+
+        const signer = await bp.getSigner();
+        wallet.signer = signer;
+
+        const addr = await signer.getAddress();
+        const net = await bp.getNetwork();
+
+        wallet.address = E.getAddress(addr);
+        wallet.chainId = Number(net.chainId || 0);
+
+        renderWalletLabels();
+        if (!silent) setStatus(stQuick, "ok", `Wallet connected: <span class="mono">${wallet.address}</span>`);
+        gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
+
+        return true;
+      } catch (e) {
+        if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
+        return false;
+      }
+    }
+
+    async function ensureChain(targetChainId) {
+      const p = wallet.providerRaw;
+      if (!p?.request) return false;
+      try {
+        await p.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: "0x" + Number(targetChainId).toString(16) }]
+        });
+        await cxConnectWallet({ silent: true });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function initWalletButtons() {
+      $("#btn-connect")?.addEventListener("click", async () => { await cxConnectWallet(); });
+      $("#ap-connect")?.addEventListener("click", async () => { await cxConnectWallet(); });
+    }
+
+    // =========================
+    // Explorer API keys (local)
+    // =========================
+    const LS_KEYS = "cx_sec_explorer_keys";
+    function loadApiKeys() {
+      try {
+        const raw = localStorage.getItem(LS_KEYS);
+        if (!raw) return { bscscan: "", etherscan: "", use: false };
+        const o = JSON.parse(raw);
+        return { bscscan: o?.bscscan || "", etherscan: o?.etherscan || "", use: !!o?.use };
+      } catch { return { bscscan: "", etherscan: "", use: false }; }
+    }
+    function saveApiKeys(keys) {
+      try { localStorage.setItem(LS_KEYS, JSON.stringify(keys)); } catch {}
+    }
+    function explorerKeyFor(net) {
+      const keys = loadApiKeys();
+      if (!keys.use) return "";
+      if (net === "bsc") return (keys.bscscan || "").trim();
+      return (keys.etherscan || "").trim();
+    }
+    function initApiKeysUi() {
+      const keys = loadApiKeys();
+      const useEl = $("#api-use"); if (useEl) useEl.checked = keys.use;
+      const b1 = $("#api-bscscan"); if (b1) b1.value = keys.bscscan;
+      const b2 = $("#api-etherscan"); if (b2) b2.value = keys.etherscan;
+
+      $("#api-save")?.addEventListener("click", () => {
+        const nk = {
+          use: !!$("#api-use")?.checked,
+          bscscan: ($("#api-bscscan")?.value || "").trim(),
+          etherscan: ($("#api-etherscan")?.value || "").trim()
+        };
+        saveApiKeys(nk);
+        setStatus($("#qs-status"), "ok", "Saved keys to localStorage.");
+        gtagEvent("sec_keys_saved", { use: nk.use ? 1 : 0 });
+      });
+
+      $("#api-clear")?.addEventListener("click", () => {
+        saveApiKeys({ use: false, bscscan: "", etherscan: "" });
+        const u = $("#api-use"); if (u) u.checked = false;
+        const i1 = $("#api-bscscan"); if (i1) i1.value = "";
+        const i2 = $("#api-etherscan"); if (i2) i2.value = "";
+        setStatus($("#qs-status"), "ok", "Cleared keys.");
+        gtagEvent("sec_keys_cleared");
+      });
+    }
+
+    // =========================
+    // Network config (✅ fix ETH everywhere)
+    // =========================
+    const CHAINS = {
+      bsc: {
+        chainId: 56,
+        name: "BSC",
+        wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+        usdt: "0x55d398326f99059ff775485246999027b3197955",
+        explorer: "https://bscscan.com",
+        addressUrl: (a) => `https://bscscan.com/address/${a}`,
+        txUrl: (h) => `https://bscscan.com/tx/${h}`,
+        publicRpcs: [
+  "https://bsc-rpc.publicnode.com",
+  "https://bsc.publicnode.com",
+  "https://rpc.ankr.com/bsc",
+  "https://bsc-dataseed1.bnbchain.org",
+  "https://bsc-dataseed2.bnbchain.org"
+]
+      },
+      eth: {
+        chainId: 1,
+        name: "Ethereum",
+        wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        explorer: "https://etherscan.io",
+        addressUrl: (a) => `https://etherscan.io/address/${a}`,
+        txUrl: (h) => `https://etherscan.io/tx/${h}`,
+        publicRpcs: [
+          "https://cloudflare-eth.com",
+          "https://rpc.ankr.com/eth",
+          "https://ethereum.publicnode.com",
+          "https://eth.llamarpc.com"
+        ]
+      }
+    };
+
+    const DEX = {
+      bsc: {
+        v2Factory: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73",
+        v3Factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865",
+        routerV2: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+        label: "PancakeSwap"
+      },
+      eth: {
+        v2Factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f",
+        v3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+        routerV2: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+        label: "Uniswap"
+      }
+    };
+
+    // =========================
+    // ABIs (minimal) — ✅ V3 token0/token1 added
+    // =========================
+    const ERC20_ABI = [
+      "function name() view returns (string)",
+      "function symbol() view returns (string)",
+      "function decimals() view returns (uint8)",
+      "function totalSupply() view returns (uint256)",
+      "function balanceOf(address) view returns (uint256)",
+      "function allowance(address,address) view returns (uint256)",
+      "function approve(address,uint256) returns (bool)"
+    ];
+
+    const V2_FACTORY_ABI = [
+      "function getPair(address tokenA, address tokenB) external view returns (address pair)"
+    ];
+    const V2_PAIR_ABI = [
+      "function token0() view returns (address)",
+      "function token1() view returns (address)",
+      "function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)"
+    ];
+
+    const V3_FACTORY_ABI = [
+      "function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool)"
+    ];
+    const V3_POOL_ABI = [
+      "function token0() view returns (address)",
+      "function token1() view returns (address)",
+      "function liquidity() view returns (uint128)",
+      "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,uint8 feeProtocol,bool unlocked)"
+    ];
+
+    const TRANSFER_TOPIC0 = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+    const APPROVAL_TOPIC0 = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+
+    // =========================
+    // Local storage keys
+    // =========================
+    const LS_BEST_RPC = (net) => `cx_sec_best_rpc_${net}`;
+    const LS_PRIV_RPC = (net) => `cx_sec_private_rpc_${net}`;
+    const LS_QS_CACHE = "cx_sec_qs_cache_v2";
+    const LS_QS_HISTORY = "cx_sec_qs_history_v1";
+    const LS_MON = "cx_sec_monitor_v1";
+
+    // =========================
+    // Unified RPC layer (✅ item #1 + #2)
+    // =========================
+    function uniq(arr) {
+      const s = new Set();
+      const out = [];
+      for (const x of arr) {
+        const k = String(x || "").trim();
+        if (!k) continue;
+        if (s.has(k)) continue;
+        s.add(k);
+        out.push(k);
+      }
+      return out;
+    }
+
+    function getSavedBestRpc(net) {
+      try { return localStorage.getItem(LS_BEST_RPC(net)) || ""; } catch { return ""; }
+    }
+    function setSavedBestRpc(net, url) {
+      try { localStorage.setItem(LS_BEST_RPC(net), url); } catch {}
+    }
+
+    function getSavedPrivateRpc(net) {
+      try { return localStorage.getItem(LS_PRIV_RPC(net)) || ""; } catch { return ""; }
+    }
+    function setSavedPrivateRpc(net, url) {
+      try { localStorage.setItem(LS_PRIV_RPC(net), url); } catch {}
+    }
+
+    async function rpcRequest(url, method, params = [], timeoutMs = 9000) {
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), timeoutMs);
+      const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method, params });
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body,
+          signal: ctrl.signal
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const j = await res.json();
+        if (j.error) throw new Error(j.error.message || "RPC error");
+        return j.result;
+      } finally {
+        clearTimeout(tmr);
+      }
+    }
+
+    function buildRpcCandidates(net) {
+      const chain = CHAINS[net];
+      const custom = ($("#rpc-custom")?.value || "").trim();
+      const privSaved = getSavedPrivateRpc(net);
+      const privInput = ($("#rpc-private")?.value || "").trim();
+      const bestSaved = getSavedBestRpc(net);
+      return uniq([custom, privInput, privSaved, bestSaved, ...(chain?.publicRpcs || [])]);
+    }
+
+    const _providerCache = new Map(); // key: net|url
+    function getProviderForUrl(net, url){
+  const key = `${net}|${url}`;
+  if (_providerCache.has(key)) return _providerCache.get(key);
+
+  const n = { name: CHAINS[net].name.toLowerCase(), chainId: CHAINS[net].chainId };
+  const p = new E.JsonRpcProvider(url, n, { staticNetwork: n });
+
+  _providerCache.set(key, p);
+  return p;
+}
+
+
+    async function withRpcFallback(net, fn, { timeoutMs = 9500, preferUrls = null } = {}) {
+      const urls = preferUrls && preferUrls.length ? preferUrls : buildRpcCandidates(net);
+      let lastErr = null;
+      for (const url of urls) {
+        try {
+          const provider = getProviderForUrl(net, url);
+          const res = await Promise.race([
+            fn(provider, url),
+            new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), timeoutMs))
+          ]);
+          return { ok: true, url, res };
+        } catch (e) {
+          lastErr = e;
+          continue;
+        }
+      }
+      return { ok: false, url: "", err: lastErr || new Error("All RPCs failed") };
+    }
+
+    async function getCodeSafe(net, addr){
+      const a = normAddr(addr);
+      // Use raw eth_getCode (faster + abortable) with fallback
+      const urls = buildRpcCandidates(net);
+      let last = null;
+      for (const url of urls) {
+        try {
+          const code = await rpcRequest(url, "eth_getCode", [a, "latest"], 9000);
+          if (typeof code === "string") {
+            // mark as “best” if it works well
+            return { ok: true, url, code };
+          }
+        } catch (e) { last = e; }
+      }
+      return { ok: false, url: "", err: last || new Error("eth_getCode failed"), code: "0x" };
+    }
+
+    function getReadProvider(net) {
+      const chain = CHAINS[net];
+      const custom = ($("#rpc-custom")?.value || "").trim();
+      const bestSaved = getSavedBestRpc(net);
+      const privSaved = getSavedPrivateRpc(net);
+      const url = custom || privSaved || bestSaved || (chain?.publicRpcs?.[0] || "");
+      if (!url) return null;
+      try { return new E.JsonRpcProvider(url, chain.chainId); } catch { return null; }
+    }
+
+    function netFromSelect(selId) {
+      const v = ($(selId)?.value || "bsc").toLowerCase();
+      return (v === "eth") ? "eth" : "bsc";
+    }
+
+    // =========================
+    // Explorer API (optional)
+    // =========================
+    function explorerApiBase(net) {
+      return net === "bsc" ? "https://api.bscscan.com/api" : "https://api.etherscan.io/api";
+    }
+
+    async function explorerGetSource(net, addr, apiKey) {
+      const base = explorerApiBase(net);
+      const u = new URL(base);
+      u.searchParams.set("module", "contract");
+      u.searchParams.set("action", "getsourcecode");
+      u.searchParams.set("address", addr);
+      if (apiKey) u.searchParams.set("apikey", apiKey);
+
+      const r = await fetch(u.toString());
+      const j = await r.json();
+      if (!j || j.status !== "1" || !j.result || !j.result[0]) return { ok: false, raw: j };
+
+      const row = j.result[0];
+      const abiRaw = row.ABI || "";
+      let abiJson = null;
+      let isVerified = false;
+
+      try {
+        if (abiRaw && abiRaw !== "Contract source code not verified" && abiRaw !== "[]") {
+          abiJson = JSON.parse(abiRaw);
+          isVerified = Array.isArray(abiJson) && abiJson.length > 0;
+        }
+      } catch {
+        abiJson = null;
+        isVerified = false;
+      }
+
+      // Heuristics (BscScan/Etherscan fields differ but usually include these)
+      const isProxy = String(row.Proxy || row.proxy || "").toLowerCase() === "1" || /proxy/i.test(String(row.ContractName || "")) && /proxy/i.test(String(row.SourceCode || ""));
+      const impl = (row.Implementation || row.implementation || "").trim();
+      const contractName = (row.ContractName || row.contractName || "").trim();
+
+      return {
+        ok: true,
+        verified: isVerified,
+        abi: abiJson,
+        isProxy,
+        implementation: impl,
+        contractName,
+        raw: row
+      };
+    }
+
+    // =========================
+    // Formatting helpers
+    // =========================
+    function fmtNum(x, digits = 2){
+      const n = Number(x);
+      if (!Number.isFinite(n)) return "—";
+      const d = clamp(digits, 0, 8);
+      return n.toLocaleString(undefined, { maximumFractionDigits: d });
+    }
+    function fmtBig(bn, decimals = 18, digits = 4){
+      try {
+        const v = Number(E.formatUnits(bn, decimals));
+        if (!Number.isFinite(v)) return "—";
+        return fmtNum(v, digits);
+      } catch { return "—"; }
+    }
+    function looksInfiniteAllowance(v){
+      try {
+        // ethers v6 returns bigint
+        const x = BigInt(v);
+        return x > (BigInt(2) ** BigInt(255)); // "practically infinite"
+      } catch { return false; }
+    }
+    function safeLower(x){ return String(x || "").toLowerCase(); }
+
+    // =========================
+    // Quick Scan (client-only)
+    // =========================
+    function loadQsCache(){
+      try { return JSON.parse(localStorage.getItem(LS_QS_CACHE) || "{}"); } catch { return {}; }
+    }
+    function saveQsCache(obj){
+      try { localStorage.setItem(LS_QS_CACHE, JSON.stringify(obj || {})); } catch {}
+    }
+    function loadQsHistory(){
+      try { return JSON.parse(localStorage.getItem(LS_QS_HISTORY) || "[]"); } catch { return []; }
+    }
+    function saveQsHistory(arr){
+      try { localStorage.setItem(LS_QS_HISTORY, JSON.stringify(arr || [])); } catch {}
+    }
+
+    function qsCacheKey(net, token, requireLiq, useApis){
+      return `${net}:${safeLower(token)}:${requireLiq ? 1 : 0}:${useApis ? 1 : 0}`;
+    }
+
+    function addQsHistory(net, token){
+      try{
+        const arr = loadQsHistory();
+        const key = `${net}:${safeLower(token)}`;
+        const filtered = arr.filter(x => x?.key !== key);
+        filtered.unshift({ key, net, token: normAddr(token), ts: nowTs() });
+        saveQsHistory(filtered.slice(0, 80));
+      } catch {}
+    }
+
+    function qsBuildShareLink(net, token){
+      const u = new URL(location.href);
+      u.searchParams.set("tool", "quick");
+      u.searchParams.set("net", net);
+      u.searchParams.set("token", token);
+      return u.toString();
+    }
+
+    function qsRiskChip(type, label){
+      const map = { ok: "ok", warn: "warn", bad: "bad" };
+      const cls = map[type] || "warn";
+      return `<div class="risk ${cls}"><span class="dot"></span><span>${label}</span></div>`;
+    }
+
+    function qsMakeRow(label, liq, owner, sell, tax, supply, upgrade, result){
+      const wrap = (x) => `<div class="cell ${String(x).length > 18 ? "wrap" : ""}">${x}</div>`;
+      return `
+        <div class="trow riskgrid">
+          ${wrap(label)}
+          ${wrap(liq)}
+          ${wrap(owner)}
+          ${wrap(sell)}
+          ${wrap(tax)}
+          ${wrap(supply)}
+          ${wrap(upgrade)}
+          ${wrap(result)}
+        </div>
+      `;
+    }
+
+    function qsRenderRiskTable(container, rowsHtml){
+      const title = t(currentLang, "qs_risk_table_title") || "Risk Table";
+      const h = `
+        <div class="table" id="qsRiskTable">
+          <div class="trow head riskgrid">
+            <div class="cell">${title}</div>
+            <div class="cell">${t(currentLang,"qs_col_liq") || "Liquidity"}</div>
+            <div class="cell">${t(currentLang,"qs_col_owner") || "Owner Control"}</div>
+            <div class="cell">${t(currentLang,"qs_col_sell") || "Sell Risk"}</div>
+            <div class="cell">${t(currentLang,"qs_col_tax") || "Tax Risk"}</div>
+            <div class="cell">${t(currentLang,"qs_col_supply") || "Supply Risk"}</div>
+            <div class="cell">${t(currentLang,"qs_col_upgrade") || "Upgrade Risk"}</div>
+            <div class="cell">${t(currentLang,"qs_col_result") || "Result"}</div>
+          </div>
+          ${rowsHtml || ""}
+        </div>
+        <div class="small" style="margin-top:10px">
+          ${t(currentLang,"qs_disclaimer_html") || "Based on known on-chain risk patterns. Not an audit. No guarantee."}
+        </div>
+      `;
+      container.innerHTML = h;
+    }
+
+    async function qsDexLiquiditySnapshot(net, token){
+      // checks V2 pair + V3 pools existence (basic)
+      const tokenAddr = normAddr(token);
+      const chain = CHAINS[net];
+      const dex = DEX[net];
+      const out = {
+        v2Pair: "",
+        v2HasReserves: false,
+        v3Pools: [],
+        notes: []
+      };
+
+      const read = getReadProvider(net);
+      if (!read) {
+        out.notes.push("No RPC available.");
+        return out;
+      }
+
+      // V2
+      try {
+        const f = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, read);
+        const pair = await f.getPair(tokenAddr, chain.wrapped);
+        if (pair && pair !== ZERO) {
+          out.v2Pair = pair;
+          const p = new E.Contract(pair, V2_PAIR_ABI, read);
+          const r = await p.getReserves();
+          const r0 = BigInt(r[0]);
+          const r1 = BigInt(r[1]);
+          out.v2HasReserves = (r0 > 0n && r1 > 0n);
+        }
+      } catch (e) {
+        out.notes.push(`V2 check failed: ${String(e?.message || e)}`);
+      }
+
+      // V3 (fee tiers)
+      const fees = [500, 3000, 10000];
+      try {
+        const vf = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, read);
+        for (const fee of fees) {
+          let pool = ZERO;
+          try { pool = await vf.getPool(tokenAddr, chain.wrapped, fee); } catch {}
+          if (pool && pool !== ZERO) {
+            try {
+              const vp = new E.Contract(pool, V3_POOL_ABI, read);
+              const liq = await vp.liquidity();
+              out.v3Pools.push({ fee, pool, liquidity: String(liq) });
+            } catch {
+              out.v3Pools.push({ fee, pool, liquidity: "?" });
+            }
+          }
+        }
+      } catch (e) {
+        out.notes.push(`V3 check failed: ${String(e?.message || e)}`);
+      }
+
+      return out;
+    }
+
+    function qsBuildMarkdownReport(rep){
+      const lines = [];
+      lines.push(`## Quick Scan — ${rep.chain.name}`);
+      lines.push(`Token: \`${rep.token}\``);
+      lines.push(`Explorer: ${rep.chain.addressUrl(rep.token)}`);
+      lines.push(`Score: **${rep.score}/100** (${rep.grade})`);
+      lines.push("");
+      lines.push(`### Signals`);
+      for (const s of rep.signals) lines.push(`- ${s.level.toUpperCase()}: ${s.text}`);
+      if (rep.redFlags.length) {
+        lines.push("");
+        lines.push(`### Red Flags`);
+        for (const f of rep.redFlags) lines.push(`- ❗ ${f}`);
+      }
+      if (rep.liquidity) {
+        lines.push("");
+        lines.push(`### Liquidity Snapshot`);
+        lines.push(`- V2 Pair: ${rep.liquidity.v2Pair ? rep.chain.addressUrl(rep.liquidity.v2Pair) : "—"}`);
+        lines.push(`- V2 Reserves: ${rep.liquidity.v2HasReserves ? "✅" : "—"}`);
+        lines.push(`- V3 Pools: ${rep.liquidity.v3Pools?.length ? rep.liquidity.v3Pools.map(p=>`fee ${p.fee}: ${rep.chain.addressUrl(p.pool)}`).join(", ") : "—"}`);
+      }
+      lines.push("");
+      lines.push(`> ${rep.disclaimer}`);
+      return lines.join("\n");
+    }
+
+    function qsBuildXText(rep){
+      const base = `Quick Scan (${rep.chain.name})\nToken: ${shortAddr(rep.token)}\nScore: ${rep.score}/100 (${rep.grade})\n`;
+      const flags = rep.redFlags.slice(0, 2).map(f => `❗ ${f}`).join("\n");
+      const link = rep.shareLink || "";
+      return `${base}${flags ? flags + "\n" : ""}${link}`.trim();
+    }
+
+    async function runQuickScan(){
+      const st = $("#qs-status");
+      const out = $("#qs-out");
+      const riskWrap = $("#qs-risk");
+      const pairsWrap = $("#qs-pairsWrap");
+
+      clearStatus(st);
+
+      const net = netFromSelect("#qs-net");
+      const tokenRaw = ($("#qs-token")?.value || "").trim();
+      const requireLiq = !!$("#qs-require-liq")?.checked;
+      const showJson = !!$("#qs-show-json")?.checked;
+      const useApis = !!$("#api-use")?.checked;
+
+      if (!isAddr(tokenRaw)) {
+        setStatus(st, "warn", "Please paste a valid token address.");
+        return;
+      }
+      const token = normAddr(tokenRaw);
+
+      setStatus(st, "info", "Scanning…");
+
+      const cache = loadQsCache();
+      const ckey = qsCacheKey(net, token, requireLiq, useApis);
+      const cached = cache?.[ckey];
+      if (cached && cached.ts && (nowTs() - cached.ts) < 600) {
+        // render cached
+        setStatus(st, "ok", `Loaded cached result (≤10 min).`);
+        renderQuickScanReport(cached.rep, { showJson });
+        return;
+      }
+
+      const chain = CHAINS[net];
+      const rep = {
+        ts: nowTs(),
+        chain,
+        token,
+        score: 60,
+        grade: "Medium",
+        requireLiq,
+        signals: [],
+        redFlags: [],
+        meta: {},
+        liquidity: null,
+        explorer: chain.addressUrl(token),
+        disclaimer: "Informational checks only. Not an audit. No safety guarantee.",
+        shareLink: qsBuildShareLink(net, token)
+      };
+
+      // 1) bytecode exists
+      const codeRes = await getCodeSafe(net, token);
+      if (!codeRes.ok || !codeRes.code || codeRes.code === "0x") {
+        rep.score = 0;
+        rep.grade = "Invalid";
+        rep.redFlags.push("No contract code (EOA or invalid address).");
+        rep.signals.push({ level: "bad", text: "No bytecode detected." });
+        cache[ckey] = { ts: nowTs(), rep };
+        saveQsCache(cache);
+        setStatus(st, "bad", "No contract code detected.");
+        renderQuickScanReport(rep, { showJson });
+        return;
+      } else {
+        rep.signals.push({ level: "ok", text: `Bytecode detected (RPC: ${codeRes.url ? shortAddr(codeRes.url) : "ok"})` });
+      }
+
+      // 2) Try read ERC20 basics
+      const read = getReadProvider(net);
+      if (read) {
+        try {
+          const c = new E.Contract(token, ERC20_ABI, read);
+          const [name, symbol, decimals, supply] = await Promise.all([
+            c.name().catch(()=> ""),
+            c.symbol().catch(()=> ""),
+            c.decimals().catch(()=> 18),
+            c.totalSupply().catch(()=> 0n)
+          ]);
+          rep.meta.name = name;
+          rep.meta.symbol = symbol;
+          rep.meta.decimals = Number(decimals);
+          rep.meta.totalSupply = String(supply);
+          rep.signals.push({ level: "ok", text: `ERC-20 read OK (${symbol || "token"})` });
+
+          // supply sanity
+          if (supply === 0n) {
+            rep.score -= 10;
+            rep.signals.push({ level: "warn", text: "totalSupply() returns 0 (unusual)." });
+          }
+        } catch (e) {
+          rep.score -= 8;
+          rep.signals.push({ level: "warn", text: "ERC-20 metadata calls failed (name/symbol/decimals)." });
+        }
+      } else {
+        rep.score -= 8;
+        rep.signals.push({ level: "warn", text: "No read provider available; limited checks." });
+      }
+
+      // 3) Liquidity snapshot (optional but used by requireLiq)
+      rep.liquidity = await qsDexLiquiditySnapshot(net, token);
+      const liqOk = !!(rep.liquidity?.v2HasReserves || (rep.liquidity?.v3Pools?.length));
+      if (liqOk) {
+        rep.signals.push({ level: "ok", text: "DEX liquidity signals present (V2 reserves or V3 pools)." });
+      } else {
+        rep.signals.push({ level: "warn", text: "No strong DEX liquidity signal found (V2 reserves / V3 pools not detected)." });
+        if (requireLiq) {
+          rep.score -= 25;
+          rep.redFlags.push("Liquidity required: no detectable liquidity signal.");
+        } else {
+          rep.score -= 10;
+        }
+      }
+
+      // 4) Explorer API (Verified / Proxy heuristics)
+      const apiKey = explorerKeyFor(net);
+      if (useApis) {
+        try {
+          const src = await explorerGetSource(net, token, apiKey);
+          if (src.ok) {
+            rep.meta.verified = !!src.verified;
+            rep.meta.isProxy = !!src.isProxy;
+            rep.meta.implementation = src.implementation || "";
+            rep.meta.contractName = src.contractName || "";
+
+            if (src.verified) {
+              rep.score += 10;
+              rep.signals.push({ level: "ok", text: "Explorer: verified source / ABI available." });
+            } else {
+              rep.score -= 8;
+              rep.signals.push({ level: "warn", text: "Explorer: not verified (ABI not available)." });
+            }
+
+            if (src.isProxy) {
+              rep.score -= 12;
+              rep.redFlags.push("Proxy detected (upgrade risk).");
+              rep.signals.push({ level: "warn", text: "Proxy pattern detected." });
+            }
+          } else {
+            rep.score -= 4;
+            rep.signals.push({ level: "warn", text: "Explorer API did not return a usable record." });
+          }
+        } catch (e) {
+          rep.score -= 4;
+          rep.signals.push({ level: "warn", text: `Explorer API error: ${String(e?.message || e)}` });
+        }
+      } else {
+        rep.signals.push({ level: "info", text: "Explorer API keys disabled (Verified/ABI heuristics not used)." });
+      }
+
+      // 5) Basic “owner / tax / sell / supply” heuristics via ABI surface (if we got ABI)
+      // This is NOT an audit—just common pattern detection.
+      const abi = rep?.meta?.abi || null;
+      // (If explorerGetSource returned ABI, store it here)
+      // For minimal impact, we try to re-fetch only if enabled+ok.
+      if (useApis) {
+        try {
+          const src2 = await explorerGetSource(net, token, apiKey);
+          if (src2.ok && src2.abi) rep.meta.abi = src2.abi;
+        } catch {}
+      }
+
+      const abi2 = rep.meta.abi;
+      if (Array.isArray(abi2)) {
+        const names = abi2.map(x => String(x?.name || "")).filter(Boolean).map(safeLower);
+        const has = (k) => names.includes(safeLower(k));
+        const hasAny = (arr) => arr.some(k => names.includes(safeLower(k)));
+
+        // owner control
+        if (has("owner") || has("getowner") || has("transferownership")) {
+          rep.signals.push({ level: "warn", text: "Owner controls detected (common). Verify renounce / timelock." });
+          rep.score -= 6;
+        } else {
+          rep.signals.push({ level: "ok", text: "No obvious Ownable surface in ABI (not definitive)." });
+        }
+
+        // tax / fee
+        if (hasAny(["settax", "setfees", "setfee", "setbuyfee", "setsellfee", "setmarketingfee"])) {
+          rep.redFlags.push("Tax/fee setters detected.");
+          rep.signals.push({ level: "warn", text: "Tax/fee setters exist in ABI." });
+          rep.score -= 12;
+        }
+
+        // blacklist / trading gate
+        if (hasAny(["blacklist", "setblacklist", "excludeFromFee", "settrading", "enabletrading", "setmaxwallet", "setmaxtx"])) {
+          rep.redFlags.push("Trading restrictions / blacklist surface detected.");
+          rep.signals.push({ level: "warn", text: "Possible blacklist / trading gate / maxTx/maxWallet functions detected." });
+          rep.score -= 12;
+        }
+
+        // mint / supply
+        if (hasAny(["mint", "_mint", "setSupply", "increaseSupply"])) {
+          rep.redFlags.push("Mint surface detected (supply risk).");
+          rep.signals.push({ level: "warn", text: "Mint-like function names detected." });
+          rep.score -= 14;
+        }
+      } else {
+        rep.signals.push({ level: "info", text: "ABI heuristics unavailable (enable Explorer API keys for richer scan)." });
+      }
+
+      rep.score = clamp(rep.score, 0, 100);
+      rep.grade = rep.score >= 80 ? "Low risk" : rep.score >= 55 ? "Medium" : rep.score >= 30 ? "High" : "Critical";
+
+      // Save cache + history
+      cache[ckey] = { ts: nowTs(), rep };
+      saveQsCache(cache);
+      addQsHistory(net, token);
+
+      setStatus(st, rep.score >= 55 ? "ok" : rep.score >= 30 ? "warn" : "bad", `Done. Score: <b>${rep.score}/100</b> (${rep.grade}).`);
+      renderQuickScanReport(rep, { showJson });
+    }
+
+    function renderQuickScanReport(rep, { showJson } = { showJson: true }){
+      const out = $("#qs-out");
+      const riskWrap = $("#qs-risk");
+      const pairsWrap = $("#qs-pairsWrap");
+
+      // Main output box
+      const metaLine = rep.meta?.symbol ? `${rep.meta.symbol}` : "Token";
+      const nameLine = rep.meta?.name ? ` — ${rep.meta.name}` : "";
+      const dec = Number(rep.meta?.decimals ?? 18);
+
+      const supplyTxt = (rep.meta?.totalSupply)
+        ? fmtBig(BigInt(rep.meta.totalSupply), dec, 4)
+        : "—";
+
+      const verifiedTxt = rep.meta?.verified === true ? "✅ Verified" : rep.meta?.verified === false ? "— Not verified" : "—";
+      const proxyTxt = rep.meta?.isProxy ? "⚠️ Proxy" : "—";
+
+      const html = `
+        <div><b>${metaLine}${nameLine}</b></div>
+        <div class="small" style="margin-top:6px;">
+          Score: <b>${rep.score}/100</b> (${rep.grade}) • Supply: <span class="mono">${supplyTxt}</span> • ${verifiedTxt} • ${proxyTxt}
+        </div>
+        <div class="small" style="margin-top:8px;">
+          Explorer: <a href="${rep.explorer}" target="_blank" rel="noopener">${rep.explorer}</a>
+        </div>
+        ${showJson ? `<pre class="small mono" style="margin-top:10px; white-space:pre-wrap;">${safeJson(rep)}</pre>` : ""}
+      `;
+      out.className = "status info";
+      out.style.display = "block";
+      out.innerHTML = html;
+
+      // Risk chips
+      const chips = [];
+      for (const s of (rep.signals || [])) {
+        const lvl = s.level === "ok" ? "ok" : s.level === "bad" ? "bad" : s.level === "warn" ? "warn" : "warn";
+        chips.push(qsRiskChip(lvl, s.text));
+      }
+      riskWrap.innerHTML = chips.join("");
+
+      // Risk table
+      const liq = rep.liquidity?.v2HasReserves || (rep.liquidity?.v3Pools?.length) ? "✅" : "—";
+      const owner = (rep.redFlags || []).some(x => /owner|proxy|upgrade/i.test(x)) ? "⚠️" : "—";
+      const sell = (rep.redFlags || []).some(x => /trading|blacklist|max/i.test(x)) ? "⚠️" : "—";
+      const tax = (rep.redFlags || []).some(x => /tax|fee/i.test(x)) ? "⚠️" : "—";
+      const supply = (rep.redFlags || []).some(x => /mint|supply/i.test(x)) ? "⚠️" : "—";
+      const upg = (rep.redFlags || []).some(x => /proxy|upgrade/i.test(x)) ? "⚠️" : "—";
+      const result = rep.score >= 55 ? "✅ OK" : rep.score >= 30 ? "⚠️ Caution" : "🛑 High risk";
+
+      let rows = "";
+      rows += qsMakeRow("Token", liq, owner, sell, tax, supply, upg, result);
+
+      const flagsTitle = t(currentLang, "qs_red_flags") || "Red Flags";
+      const flags = (rep.redFlags || []).slice(0, 10);
+      if (flags.length) {
+        const flagsHtml = flags.map(f => `<div class="small" style="margin-top:6px;">❗ ${f}</div>`).join("");
+        rows += `
+          <div class="trow riskgrid">
+            <div class="cell wrap"><b>${flagsTitle}</b></div>
+            <div class="cell wrap" style="grid-column: 2 / -1">${flagsHtml}</div>
+          </div>
+        `;
+      }
+
+      qsRenderRiskTable(pairsWrap, rows);
+    }
+
+    function initQuickScanUi(){
+      $("#qs-run")?.addEventListener("click", () => { runQuickScan(); gtagEvent("sec_qs_run"); });
+
+      $("#qs-copy-link")?.addEventListener("click", async () => {
+        const net = netFromSelect("#qs-net");
+        const token = ($("#qs-token")?.value || "").trim();
+        if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
+        const link = qsBuildShareLink(net, normAddr(token));
+        const ok = await copyText(link);
+        setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
+        gtagEvent("sec_qs_copy_link");
+      });
+
+      $("#qs-copy-json")?.addEventListener("click", async () => {
+        const html = $("#qs-out")?.textContent || "";
+        // Prefer the JSON from the <pre> if present
+        const pre = $("#qs-out pre");
+        const txt = pre ? pre.innerText : html;
+        const ok = await copyText(txt);
+        setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied." : "Copy failed.");
+        gtagEvent("sec_qs_copy_json");
+      });
+
+      $("#qs-copy-md")?.addEventListener("click", async () => {
+        const cache = loadQsCache();
+        const net = netFromSelect("#qs-net");
+        const token = ($("#qs-token")?.value || "").trim();
+        if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
+
+        const requireLiq = !!$("#qs-require-liq")?.checked;
+        const useApis = !!$("#api-use")?.checked;
+        const key = qsCacheKey(net, normAddr(token), requireLiq, useApis);
+        const rep = cache?.[key]?.rep;
+        if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
+        const md = qsBuildMarkdownReport(rep);
+        const ok = await copyText(md);
+        setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied Markdown report." : "Copy failed.");
+        gtagEvent("sec_qs_copy_md");
+      });
+
+      $("#qs-share-x")?.addEventListener("click", () => {
+        const cache = loadQsCache();
+        const net = netFromSelect("#qs-net");
+        const token = ($("#qs-token")?.value || "").trim();
+        if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
+        const requireLiq = !!$("#qs-require-liq")?.checked;
+        const useApis = !!$("#api-use")?.checked;
+        const key = qsCacheKey(net, normAddr(token), requireLiq, useApis);
+        const rep = cache?.[key]?.rep;
+        if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
+
+        const text = qsBuildXText(rep);
+        const u = new URL("https://twitter.com/intent/tweet");
+        u.searchParams.set("text", text);
+        window.open(u.toString(), "_blank", "noopener,noreferrer");
+        gtagEvent("sec_qs_share_x");
+      });
+
+      $("#qs-share-tg")?.addEventListener("click", () => {
+        const net = netFromSelect("#qs-net");
+        const token = ($("#qs-token")?.value || "").trim();
+        if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
+        const link = qsBuildShareLink(net, normAddr(token));
+        const u = new URL("https://t.me/share/url");
+        u.searchParams.set("url", link);
+        u.searchParams.set("text", "CycleX Security Hub — Quick Scan");
+        window.open(u.toString(), "_blank", "noopener,noreferrer");
+        gtagEvent("sec_qs_share_tg");
+      });
+
+      $("#qs-copy-xtext")?.addEventListener("click", async () => {
+        const cache = loadQsCache();
+        const net = netFromSelect("#qs-net");
+        const token = ($("#qs-token")?.value || "").trim();
+        if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
+        const requireLiq = !!$("#qs-require-liq")?.checked;
+        const useApis = !!$("#api-use")?.checked;
+        const key = qsCacheKey(net, normAddr(token), requireLiq, useApis);
+        const rep = cache?.[key]?.rep;
+        if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
+        const ok = await copyText(qsBuildXText(rep));
+        setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied X text." : "Copy failed.");
+        gtagEvent("sec_qs_copy_xtext");
+      });
+    }
+
+    // =========================
+    // Liquidity Scan panel
+    // =========================
+    function liqBuildShareLink(net, token){
+      const u = new URL(location.href);
+      u.searchParams.set("tool", "liq");
+      u.searchParams.set("net", net);
+      u.searchParams.set("token", token);
+      return u.toString();
+    }
+
+    async function runLiqScan(){
+      const st = $("#liq-status");
+      const out = $("#liq-out");
+      const risk = $("#liq-risk");
+      const wrap = $("#liq-tablewrap");
+
+      clearStatus(st);
+      risk.innerHTML = "";
+
+      const net = netFromSelect("#liq-net");
+      const tokenRaw = ($("#liq-token")?.value || "").trim();
+      if (!isAddr(tokenRaw)) {
+        setStatus(st, "warn", "Please paste a valid token address.");
+        return;
+      }
+      const token = normAddr(tokenRaw);
+
+      setStatus(st, "info", "Scanning liquidity…");
+      const chain = CHAINS[net];
+      const dex = DEX[net];
+      const read = getReadProvider(net);
+
+      if (!read) {
+        setStatus(st, "bad", "No RPC available.");
+        return;
+      }
+
+      const res = { net, token, dex: dex.label, v2: [], v3: [], ts: nowTs() };
+
+      // V2 pairs: token vs wrapped + token vs usdt
+      try {
+        const f = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, read);
+        const pairs = [
+          { other: chain.wrapped, label: "Wrapped" },
+          { other: chain.usdt, label: "USDT" }
+        ];
+        for (const p of pairs) {
+          const pair = await f.getPair(token, p.other).catch(()=>ZERO);
+          if (pair && pair !== ZERO) {
+            const pairC = new E.Contract(pair, V2_PAIR_ABI, read);
+            const [t0, t1, r] = await Promise.all([
+              pairC.token0(),
+              pairC.token1(),
+              pairC.getReserves()
+            ]);
+            res.v2.push({
+              pair,
+              token0: t0,
+              token1: t1,
+              reserve0: String(r[0]),
+              reserve1: String(r[1]),
+              otherLabel: p.label,
+              other: p.other
+            });
+          }
+        }
+      } catch (e) {}
+
+      // V3 pools: token vs wrapped, fee tiers
+      try {
+        const vf = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, read);
+        const fees = [500, 3000, 10000];
+        for (const fee of fees) {
+          const pool = await vf.getPool(token, chain.wrapped, fee).catch(()=>ZERO);
+          if (pool && pool !== ZERO) {
+            const vp = new E.Contract(pool, V3_POOL_ABI, read);
+            const [t0, t1, liq, slot0] = await Promise.all([
+              vp.token0().catch(()=>ZERO),
+              vp.token1().catch(()=>ZERO),
+              vp.liquidity().catch(()=>0n),
+              vp.slot0().catch(()=>null)
+            ]);
+            res.v3.push({
+              fee,
+              pool,
+              token0: t0,
+              token1: t1,
+              liquidity: String(liq),
+              tick: slot0 ? String(slot0[1]) : "—"
+            });
+          }
+        }
+      } catch (e) {}
+
+      // Render
+      const chips = [];
+      if (res.v2.length) chips.push(qsRiskChip("ok", `V2 pairs found: ${res.v2.length}`));
+      else chips.push(qsRiskChip("warn", "No V2 pairs found (wrapped/USDT)."));
+
+      if (res.v3.length) chips.push(qsRiskChip("ok", `V3 pools found: ${res.v3.length}`));
+      else chips.push(qsRiskChip("warn", "No V3 pools found (fee tiers)."));
+
+      risk.innerHTML = chips.join("");
+
+      const rows = [];
+      rows.push(`
+        <div class="trow head">
+          <div class="cell">Pool / Pair</div>
+          <div class="cell">Type</div>
+          <div class="cell">Detail</div>
+          <div class="cell">Link</div>
+        </div>
+      `);
+
+      for (const v of res.v2) {
+        const hasRes = (BigInt(v.reserve0) > 0n && BigInt(v.reserve1) > 0n);
+        rows.push(`
+          <div class="trow ${hasRes ? "highlight" : ""}">
+            <div class="cell mono">${shortAddr(v.pair)}</div>
+            <div class="cell">V2</div>
+            <div class="cell">Reserves: ${hasRes ? "✅" : "—"} • ${v.otherLabel}</div>
+            <div class="cell"><a href="${chain.addressUrl(v.pair)}" target="_blank" rel="noopener">Explorer</a></div>
+          </div>
+        `);
+      }
+
+      for (const v of res.v3) {
+        const liq = (() => { try { return BigInt(v.liquidity) > 0n; } catch { return false; } })();
+        rows.push(`
+          <div class="trow ${liq ? "highlight" : ""}">
+            <div class="cell mono">${shortAddr(v.pool)}</div>
+            <div class="cell">V3</div>
+            <div class="cell">Fee: ${v.fee} • Liquidity: ${liq ? "✅" : "—"} • Tick: ${v.tick}</div>
+            <div class="cell"><a href="${chain.addressUrl(v.pool)}" target="_blank" rel="noopener">Explorer</a></div>
+          </div>
+        `);
+      }
+
+      wrap.innerHTML = `<div class="table">${rows.join("")}</div>`;
+      out.innerHTML = `
+        <b>${dex.label}</b> liquidity scan completed.<br>
+        Token: <span class="mono">${token}</span><br>
+        Share: <span class="mono">${liqBuildShareLink(net, token)}</span>
+      `;
+      out.style.display = "block";
+
+      setStatus(st, (res.v2.length || res.v3.length) ? "ok" : "warn", "Done.");
+      gtagEvent("sec_liq_run", { net });
+    }
+
+    function initLiqUi(){
+      // Note for which DEX is scanned
+      const updateDexNote = () => {
+        const net = netFromSelect("#liq-net");
+        const dex = DEX[net];
+        const el = $("#liq-dex-note");
+        if (el) el.textContent = `${dex.label}: V2 Factory + V3 Factory (wrapped + USDT pairs)`;
+      };
+      $("#liq-net")?.addEventListener("change", updateDexNote);
+      updateDexNote();
+
+      $("#liq-run")?.addEventListener("click", runLiqScan);
+      $("#liq-copy-link")?.addEventListener("click", async () => {
+        const net = netFromSelect("#liq-net");
+        const token = ($("#liq-token")?.value || "").trim();
+        if (!isAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
+        const link = liqBuildShareLink(net, normAddr(token));
+        const ok = await copyText(link);
+        setStatus($("#liq-status"), ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
+      });
+      $("#liq-share-x")?.addEventListener("click", () => {
+        const net = netFromSelect("#liq-net");
+        const token = ($("#liq-token")?.value || "").trim();
+        if (!isAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
+        const link = liqBuildShareLink(net, normAddr(token));
+        const u = new URL("https://twitter.com/intent/tweet");
+        u.searchParams.set("text", `Liquidity scan (${CHAINS[net].name})\nToken: ${shortAddr(token)}\n${link}`);
+        window.open(u.toString(), "_blank", "noopener,noreferrer");
+      });
+    }
+
+    // =========================
+    // Approval Guardian
+    // =========================
+    function setSpenderFromPreset(){
+      const net = netFromSelect("#ap-net");
+      const preset = ($("#ap-spender-preset")?.value || "custom");
+      const dex = DEX[net];
+
+      let v = "";
+      if (preset === "pcs_router" && net === "bsc") v = dex.routerV2;
+      if (preset === "uni_router" && net === "eth") v = dex.routerV2;
+
+      if (preset !== "custom") {
+        const inEl = $("#ap-spender");
+        if (inEl) inEl.value = v;
+      }
+    }
+
+    async function apCheckAllowances(){
+      const st = $("#ap-status");
+      clearStatus(st);
+
+      const net = netFromSelect("#ap-net");
+      const spenderRaw = ($("#ap-spender")?.value || "").trim();
+      if (!isAddr(spenderRaw)) return setStatus(st, "warn", "Enter a valid spender address.");
+
+      if (!wallet.address || !wallet.signer) {
+        setStatus(st, "warn", "Connect a wallet first.");
+        return;
+      }
+
+      const spender = normAddr(spenderRaw);
+      const tokenLines = ($("#ap-tokens")?.value || "").split("\n").map(s => s.trim()).filter(Boolean);
+      const tokens = tokenLines.filter(isAddr).map(normAddr);
+
+      if (!tokens.length) return setStatus(st, "warn", "Paste at least one token address.");
+
+      setStatus(st, "info", "Reading allowances…");
+
+      const provider = getReadProvider(net);
+      if (!provider) return setStatus(st, "bad", "No RPC available.");
+
+      const table = $("#ap-table");
+      const head = table?.querySelector(".trow.head");
+      if (table) table.innerHTML = "";
+      if (table && head) table.appendChild(head);
+
+      const rows = [];
+      let anyNonZero = false;
+
+      for (const tk of tokens) {
+        try{
+          const c = new E.Contract(tk, ERC20_ABI, provider);
+          const [sym, dec, alw] = await Promise.all([
+            c.symbol().catch(()=> "—"),
+            c.decimals().catch(()=> 18),
+            c.allowance(wallet.address, spender).catch(()=> 0n)
+          ]);
+          const nz = BigInt(alw) > 0n;
+          if (nz) anyNonZero = true;
+
+          const inf = looksInfiniteAllowance(alw);
+          const alwTxt = inf ? "∞" : fmtBig(BigInt(alw), Number(dec), 4);
+
+          rows.push(`
+            <div class="trow">
+              <div class="cell mono">${shortAddr(tk)}</div>
+              <div class="cell">${alwTxt}</div>
+              <div class="cell hide-sm">${sym}</div>
+              <div class="cell">
+                ${nz ? `<button class="chip chip-danger" data-revoke="${tk}" data-spender="${spender}">Revoke</button>` : `<span class="muted">—</span>`}
+              </div>
+            </div>
+          `);
+        } catch {
+          rows.push(`
+            <div class="trow">
+              <div class="cell mono">${shortAddr(tk)}</div>
+              <div class="cell muted">—</div>
+              <div class="cell muted hide-sm">—</div>
+              <div class="cell muted">error</div>
+            </div>
+          `);
+        }
+      }
+
+      if (table) table.insertAdjacentHTML("beforeend", rows.join(""));
+
+      // bind revoke buttons
+      $$("#ap-table [data-revoke]").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const tk = btn.getAttribute("data-revoke");
+          const sp = btn.getAttribute("data-spender");
+          await apRevokeOne(net, tk, sp);
+        });
+      });
+
+      setStatus(st, anyNonZero ? "ok" : "ok", anyNonZero ? "Done. Non-zero allowances found." : "Done. No non-zero allowances found.");
+      gtagEvent("sec_ap_check", { net });
+    }
+
+    async function apRevokeOne(net, token, spender){
+      const st = $("#ap-status");
+
+      if (!wallet.signer) return setStatus(st, "warn", "Connect a wallet first.");
+      const chainId = CHAINS[net].chainId;
+      if (wallet.chainId && wallet.chainId !== chainId) {
+        const ok = await ensureChain(chainId);
+        if (!ok) return setStatus(st, "warn", `Please switch network to ${CHAINS[net].name}.`);
+      }
+
+      try{
+        setStatus(st, "info", "Sending revoke tx (approve → 0)…");
+        const c = new E.Contract(normAddr(token), ERC20_ABI, wallet.signer);
+        const tx = await c.approve(normAddr(spender), 0n);
+        setStatus(st, "info", `Pending: <span class="mono">${tx.hash}</span>`);
+        await tx.wait();
+        setStatus(st, "ok", "Revoke confirmed.");
+        gtagEvent("sec_ap_revoke_one", { net });
+        await apCheckAllowances();
+      } catch (e){
+        setStatus(st, "bad", `Revoke failed: ${String(e?.message || e)}`);
+      }
+    }
+
+    async function apRevokeAll(){
+      const st = $("#ap-status");
+      const net = netFromSelect("#ap-net");
+      const spenderRaw = ($("#ap-spender")?.value || "").trim();
+      if (!isAddr(spenderRaw)) return setStatus(st, "warn", "Enter a valid spender address.");
+      if (!wallet.signer) return setStatus(st, "warn", "Connect a wallet first.");
+
+      // Gather tokens from current table with non-zero entries
+      const btns = $$("#ap-table [data-revoke]");
+      if (!btns.length) return setStatus(st, "ok", "Nothing to revoke.");
+
+      const chainId = CHAINS[net].chainId;
+      if (wallet.chainId && wallet.chainId !== chainId) {
+        const ok = await ensureChain(chainId);
+        if (!ok) return setStatus(st, "warn", `Please switch network to ${CHAINS[net].name}.`);
+      }
+
+      setStatus(st, "info", `Revoking ${btns.length} token(s)…`);
+
+      for (let i=0;i<btns.length;i++){
+        const tk = btns[i].getAttribute("data-revoke");
+        try{
+          const c = new E.Contract(normAddr(tk), ERC20_ABI, wallet.signer);
+          const tx = await c.approve(normAddr(spenderRaw), 0n);
+          setStatus(st, "info", `(${i+1}/${btns.length}) Pending: <span class="mono">${tx.hash}</span>`);
+          await tx.wait();
+        } catch (e){
+          setStatus(st, "warn", `(${i+1}/${btns.length}) Failed: ${shortAddr(tk)} — ${String(e?.message || e)}`);
+        }
+      }
+
+      setStatus(st, "ok", "Revoke-all finished.");
+      gtagEvent("sec_ap_revoke_all", { net });
+      await apCheckAllowances();
+    }
+
+    function apSeedCommon(){
+      const net = netFromSelect("#ap-net");
+      const chain = CHAINS[net];
+      // Minimal useful seeds (wrapped + usdt)
+      const list = [chain.wrapped, chain.usdt];
+      const ta = $("#ap-tokens");
+      if (ta) ta.value = list.join("\n");
+      setStatus($("#ap-status"), "ok", "Seeded common tokens (wrapped + USDT).");
+    }
+
+    function apSeedHistory(){
+      const hist = loadQsHistory();
+      const net = netFromSelect("#ap-net");
+      const tokens = hist.filter(x => x?.net === net).slice(0, 20).map(x => x.token);
+      const ta = $("#ap-tokens");
+      if (ta) ta.value = tokens.join("\n");
+      setStatus($("#ap-status"), tokens.length ? "ok" : "warn", tokens.length ? "Seeded from scan history." : "No scan history found for this network.");
+    }
+
+    function initApprovalsUi(){
+      $("#ap-spender-preset")?.addEventListener("change", setSpenderFromPreset);
+      $("#ap-net")?.addEventListener("change", setSpenderFromPreset);
+      setSpenderFromPreset();
+
+      $("#ap-check")?.addEventListener("click", apCheckAllowances);
+      $("#ap-revoke-all")?.addEventListener("click", apRevokeAll);
+      $("#ap-seed-common")?.addEventListener("click", apSeedCommon);
+      $("#ap-seed-history")?.addEventListener("click", apSeedHistory);
+    }
+
+    // =========================
+    // RPC Health Checker
+    // =========================
+    function rpcRowHtml(url, ms, chain, block, callOk, logsOk, status){
+      const ok = status === "ok";
+      const cls = ok ? "highlight" : "";
+      return `
+        <div class="trow rpc ${cls}">
+          <div class="cell mono" title="${url}">${url}</div>
+          <div class="cell">${ms ?? "—"}</div>
+          <div class="cell hide-sm">${chain ?? "—"}</div>
+          <div class="cell hide-sm">${block ?? "—"}</div>
+          <div class="cell hide-sm">${callOk ?? "—"}</div>
+          <div class="cell hide-sm">${logsOk ?? "—"}</div>
+          <div class="cell">${status}</div>
+        </div>
+      `;
+    }
+
+    async function rpcTestOne(net, url){
+      const chainIdExpected = CHAINS[net].chainId;
+
+      const t0 = performance.now();
+      let chainId = null;
+      let block = null;
+      let callOk = "—";
+      let logsOk = "—";
+
+      try{
+        const cid = await rpcRequest(url, "eth_chainId", [], 8000);
+        chainId = parseInt(cid, 16);
+        if (chainId !== chainIdExpected) throw new Error(`wrong chainId ${chainId}`);
+      } catch (e){
+        const ms = Math.round(performance.now() - t0);
+        return { ok: false, url, ms, chainId: chainId ?? "—", block: "—", callOk: "—", logsOk: "—", err: e };
+      }
+
+      try{
+        const bn = await rpcRequest(url, "eth_blockNumber", [], 8000);
+        block = parseInt(bn, 16);
+      } catch {}
+
+      try{
+        // simple eth_call to get WETH/WBNB decimals (cheap)
+        const wrapped = CHAINS[net].wrapped;
+        const dataDecimals = "0x313ce567"; // decimals()
+        const res = await rpcRequest(url, "eth_call", [{ to: wrapped, data: dataDecimals }, "latest"], 8000);
+        callOk = (res && res !== "0x") ? "✅" : "—";
+      } catch {
+        callOk = "—";
+      }
+
+      try{
+        // lightweight logs read: last 200 blocks, Transfer topic on wrapped
+        const latest = block || (parseInt(await rpcRequest(url, "eth_blockNumber", [], 8000), 16));
+        const from = Math.max(0, latest - 200);
+        const filter = {
+          address: CHAINS[net].wrapped,
+          fromBlock: "0x" + from.toString(16),
+          toBlock: "0x" + latest.toString(16),
+          topics: [TRANSFER_TOPIC0]
+        };
+        const logs = await rpcRequest(url, "eth_getLogs", [filter], 8500);
+        logsOk = Array.isArray(logs) ? "✅" : "—";
+      } catch {
+        logsOk = "—";
+      }
+
+      const ms = Math.round(performance.now() - t0);
+      return { ok: true, url, ms, chainId, block, callOk, logsOk };
+    }
+
+    async function runRpcTest(){
+      const st = $("#rpc-status");
+      clearStatus(st);
+
+      const net = netFromSelect("#rpc-net");
+      const table = $("#rpc-table");
+
+      // reset table head
+      if (table) {
+        const head = table.querySelector(".trow.head.rpc");
+        table.innerHTML = "";
+        if (head) table.appendChild(head);
+      }
+
+      const urls = buildRpcCandidates(net);
+      if (!urls.length) return setStatus(st, "warn", "No RPCs available.");
+
+      setStatus(st, "info", `Testing ${urls.length} RPC(s)…`);
+
+      let best = null;
+      for (const url of urls) {
+        const r = await rpcTestOne(net, url);
+        if (table) {
+          table.insertAdjacentHTML("beforeend", rpcRowHtml(
+            url,
+            r.ms ?? "—",
+            r.chainId ?? "—",
+            r.block ?? "—",
+            r.callOk ?? "—",
+            r.logsOk ?? "—",
+            r.ok ? "ok" : "fail"
+          ));
+        }
+        if (r.ok) {
+          if (!best || (r.ms < best.ms)) best = r;
+        }
+      }
+
+      if (best) {
+        setSavedBestRpc(net, best.url);
+        setStatus(st, "ok", `Best RPC saved: <span class="mono">${best.url}</span>`);
+        gtagEvent("sec_rpc_best_saved", { net });
+      } else {
+        setStatus(st, "bad", "All RPCs failed (CORS/timeout/blocked). Try adding a custom RPC.");
+      }
+      gtagEvent("sec_rpc_test", { net });
+    }
+
+    async function rpcCopyBest(){
+      const net = netFromSelect("#rpc-net");
+      const best = getSavedBestRpc(net);
+      if (!best) return setStatus($("#rpc-status"), "warn", "No saved best RPC yet. Run test first.");
+      const ok = await copyText(best);
+      setStatus($("#rpc-status"), ok ? "ok" : "warn", ok ? "Copied best RPC." : "Copy failed.");
+    }
+
+    function initRpcUi(){
+      const netSel = $("#rpc-net");
+      const privInput = $("#rpc-private");
+
+      const loadPrivToInput = () => {
+        const net = netFromSelect("#rpc-net");
+        const saved = getSavedPrivateRpc(net);
+        if (privInput) privInput.value = saved;
+      };
+
+      netSel?.addEventListener("change", loadPrivToInput);
+      loadPrivToInput();
+
+      $("#rpc-private-save")?.addEventListener("click", () => {
+        const net = netFromSelect("#rpc-net");
+        const v = ($("#rpc-private")?.value || "").trim();
+        if (v) setSavedPrivateRpc(net, v);
+        setStatus($("#rpc-status"), "ok", "Saved private RPC locally.");
+      });
+
+      $("#rpc-private-clear")?.addEventListener("click", () => {
+        const net = netFromSelect("#rpc-net");
+        setSavedPrivateRpc(net, "");
+        if ($("#rpc-private")) $("#rpc-private").value = "";
+        setStatus($("#rpc-status"), "ok", "Cleared private RPC.");
+      });
+
+      $("#rpc-test")?.addEventListener("click", runRpcTest);
+      $("#rpc-copy-best")?.addEventListener("click", rpcCopyBest);
+
+      $("#rpc-share-x")?.addEventListener("click", () => {
+        const net = netFromSelect("#rpc-net");
+        const best = getSavedBestRpc(net) || "—";
+        const u = new URL("https://twitter.com/intent/tweet");
+        u.searchParams.set("text", `RPC Health (${CHAINS[net].name})\nBest: ${best}\nCycleX Security Hub`);
+        window.open(u.toString(), "_blank", "noopener,noreferrer");
+      });
+
+      // Dev custom logs test
+      $("#rpc-dev-run")?.addEventListener("click", async () => {
+        const net = netFromSelect("#rpc-net");
+        const addrRaw = ($("#rpc-dev-addr")?.value || "").trim();
+        const topic0 = ($("#rpc-dev-topic")?.value || "").trim() || TRANSFER_TOPIC0;
+        if (!addrRaw) return setStatus($("#rpc-status"), "warn", "Enter a contract address for the dev test.");
+        if (!isAddr(addrRaw)) return setStatus($("#rpc-status"), "warn", "Invalid contract address.");
+
+        const addr = normAddr(addrRaw);
+        const urls = buildRpcCandidates(net);
+        if (!urls.length) return setStatus($("#rpc-status"), "warn", "No RPCs available.");
+
+        setStatus($("#rpc-status"), "info", "Running custom logs test…");
+        const latest = await withRpcFallback(net, async (provider, url) => {
+          const bn = await provider.getBlockNumber();
+          return { url, bn };
+        }, { timeoutMs: 9500 });
+
+        if (!latest.ok) return setStatus($("#rpc-status"), "bad", `Failed to read block number: ${String(latest.err?.message || latest.err)}`);
+
+        const bn = latest.res.bn;
+        const from = Math.max(0, bn - 2000);
+
+        const r = await withRpcFallback(net, async (provider, url) => {
+          const logs = await provider.getLogs({
+            address: addr,
+            fromBlock: from,
+            toBlock: bn,
+            topics: [topic0]
+          });
+          return { url, count: logs.length };
+        }, { timeoutMs: 10500 });
+
+        if (r.ok) {
+          setStatus($("#rpc-status"), "ok", `Custom logs test OK (${r.res.count} logs) — RPC: <span class="mono">${r.url}</span>`);
+        } else {
+          setStatus($("#rpc-status"), "bad", `Custom logs test failed: ${String(r.err?.message || r.err)}`);
+        }
+        gtagEvent("sec_rpc_dev_logs", { net });
+      });
+    }
+
+    // =========================
+    // Tx Decoder
+    // =========================
+    const ROUTER_ABI_MIN = [
+      "function swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
+      "function swapExactETHForTokens(uint256,address[],address,uint256) payable",
+      "function swapExactTokensForETH(uint256,uint256,address[],address,uint256)",
+      "function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)",
+      "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256,address[],address,uint256) payable",
+      "function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)"
+    ];
+
+    function decodeTransferLog(log){
+      try{
+        const from = "0x" + log.topics[1].slice(26);
+        const to = "0x" + log.topics[2].slice(26);
+        const val = BigInt(log.data);
+        return { from: normAddr(from), to: normAddr(to), value: val };
+      } catch { return null; }
+    }
+    function decodeApprovalLog(log){
+      try{
+        const owner = "0x" + log.topics[1].slice(26);
+        const spender = "0x" + log.topics[2].slice(26);
+        const val = BigInt(log.data);
+        return { owner: normAddr(owner), spender: normAddr(spender), value: val };
+      } catch { return null; }
+    }
+
+    async function runTxDecode(){
+      const st = $("#tx-status");
+      const out = $("#tx-out");
+      const evWrap = $("#tx-events");
+      clearStatus(st);
+
+      const net = netFromSelect("#tx-net");
+      const hash = ($("#tx-hash")?.value || "").trim();
+      if (!hash || !/^0x([A-Fa-f0-9]{64})$/.test(hash)) {
+        setStatus(st, "warn", "Please paste a valid tx hash.");
+        return;
+      }
+
+      const read = getReadProvider(net);
+      if (!read) return setStatus(st, "bad", "No RPC available.");
+
+      setStatus(st, "info", "Fetching tx + receipt…");
+
+      try{
+        const [tx, rc] = await Promise.all([
+          read.getTransaction(hash),
+          read.getTransactionReceipt(hash)
+        ]);
+
+        if (!tx) return setStatus(st, "bad", "Tx not found.");
+
+        const chain = CHAINS[net];
+        const txLink = chain.txUrl(hash);
+
+        // attempt decode with router ABI (best-effort)
+        let decoded = null;
+        try{
+          const iface = new E.Interface(ROUTER_ABI_MIN);
+          decoded = iface.parseTransaction({ data: tx.data, value: tx.value });
+        } catch {}
+
+        // render header
+        out.innerHTML = `
+          <b>Tx:</b> <a href="${txLink}" target="_blank" rel="noopener">${txLink}</a><br>
+          <b>From:</b> <span class="mono">${tx.from}</span><br>
+          <b>To:</b> <span class="mono">${tx.to || "—"}</span><br>
+          <b>Value:</b> <span class="mono">${tx.value ? E.formatEther(tx.value) : "0"}</span><br>
+          ${decoded ? `<b>Decoded call:</b> <span class="mono">${decoded.name}</span>` : `<b>Decoded call:</b> <span class="muted">unknown</span>`}
+        `;
+        out.style.display = "block";
+
+        // events
+        const items = [];
+        const logs = rc?.logs || [];
+
+        const transfers = logs.filter(l => l.topics?.[0] === TRANSFER_TOPIC0).slice(0, 20);
+        const approvals = logs.filter(l => l.topics?.[0] === APPROVAL_TOPIC0).slice(0, 20);
+
+        if (decoded?.args) {
+          const args = [];
+          decoded.args.forEach((v, i) => {
+            args.push(`<div class="small mono" style="margin-top:6px;">arg${i}: ${String(v)}</div>`);
+          });
+          items.push(`
+            <div class="card">
+              <h3>Decoded Inputs</h3>
+              <div class="small">Best-effort decode for common router calls.</div>
+              ${args.join("")}
+            </div>
+          `);
+        }
+
+        if (transfers.length) {
+          const rows = transfers.map(l => {
+            const d = decodeTransferLog(l);
+            if (!d) return "";
+            return `<div class="small mono" style="margin-top:6px;">Transfer ${shortAddr(d.from)} → ${shortAddr(d.to)} • raw: ${d.value.toString()}</div>`;
+          }).join("");
+          items.push(`
+            <div class="card">
+              <h3>Transfer Events</h3>
+              ${rows}
+            </div>
+          `);
+        }
+
+        if (approvals.length) {
+          const rows = approvals.map(l => {
+            const d = decodeApprovalLog(l);
+            if (!d) return "";
+            return `<div class="small mono" style="margin-top:6px;">Approval ${shortAddr(d.owner)} → ${shortAddr(d.spender)} • raw: ${d.value.toString()}</div>`;
+          }).join("");
+          items.push(`
+            <div class="card">
+              <h3>Approval Events</h3>
+              ${rows}
+            </div>
+          `);
+        }
+
+        evWrap.innerHTML = items.length ? `<div class="grid-2">${items.join("")}</div>` : `<div class="small muted">No common events detected (or log count is zero).</div>`;
+        setStatus(st, "ok", "Done.");
+        gtagEvent("sec_tx_decode", { net });
+      } catch (e){
+        setStatus(st, "bad", `Decode failed: ${String(e?.message || e)}`);
+      }
+    }
+
+    function initTxUi(){
+      $("#tx-run")?.addEventListener("click", runTxDecode);
+      $("#tx-copy-md")?.addEventListener("click", async () => {
+        const txt = ($("#tx-out")?.innerText || "").trim();
+        if (!txt) return setStatus($("#tx-status"), "warn", "Nothing to copy yet.");
+        const ok = await copyText(txt);
+        setStatus($("#tx-status"), ok ? "ok" : "warn", ok ? "Copied." : "Copy failed.");
+      });
+    }
+
+    // =========================
+    // Dev Tools (Bookmarklet + Monitor)
+    // =========================
+    function renderBmHelp(){
+      const el = $("#bm-help");
+      if (!el) return;
+      el.innerHTML = t(currentLang, "bm_help_html") || "";
+    }
+
+    function bmGenerate(){
+      const base = ($("#bm-base")?.value || location.href.split("?")[0]).trim();
+      const js = `
+(function(){
+  try{
+    var href = location.href;
+    var u = new URL(href);
+    var isTx = /\\/tx\\//i.test(u.pathname);
+    var isAddr = /\\/(address|token)\\//i.test(u.pathname);
+    var v = href.split("/").pop();
+    var net = /etherscan\\.io/i.test(u.host) ? "eth" : "bsc";
+    var hub = new URL("${base}");
+    hub.searchParams.set("tool", isTx ? "tx" : "quick");
+    hub.searchParams.set("net", net);
+    if (isTx) hub.searchParams.set("tx", v);
+    else hub.searchParams.set("token", v);
+    window.open(hub.toString(), "_blank");
+  }catch(e){ alert("CycleX Hub bookmarklet error"); }
+})();`.trim();
+
+      const bm = `javascript:${encodeURIComponent(js)}`;
+      setStatus($("#bm-out"), "ok", `Bookmarklet generated. <span class="mono">(copy it)</span>`);
+      $("#bm-out").dataset.bm = bm;
+      renderBmHelp();
+      gtagEvent("sec_bm_generate");
+    }
+
+    async function bmCopy(){
+      const bm = $("#bm-out")?.dataset?.bm || "";
+      if (!bm) return setStatus($("#bm-out"), "warn", "Generate first.");
+      const ok = await copyText(bm);
+      setStatus($("#bm-out"), ok ? "ok" : "warn", ok ? "Copied bookmarklet." : "Copy failed.");
+    }
+
+    function loadMonitor(){
+      try { return JSON.parse(localStorage.getItem(LS_MON) || "[]"); } catch { return []; }
+    }
+    function saveMonitor(list){
+      try { localStorage.setItem(LS_MON, JSON.stringify(list || [])); } catch {}
+    }
+
+    function renderMonitorTable(){
+      const table = $("#mon-table");
+      if (!table) return;
+      const head = table.querySelector(".trow.head");
+      table.innerHTML = "";
+      if (head) table.appendChild(head);
+
+      const list = loadMonitor();
+      if (!list.length) {
+        table.insertAdjacentHTML("beforeend", `
+          <div class="trow">
+            <div class="cell muted">—</div>
+            <div class="cell muted">—</div>
+            <div class="cell muted hide-sm">—</div>
+            <div class="cell muted">—</div>
+          </div>
+        `);
+        return;
+      }
+
+      for (const item of list) {
+        const chain = CHAINS[item.net];
+        table.insertAdjacentHTML("beforeend", `
+          <div class="trow">
+            <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
+            <div class="cell">${chain.name}</div>
+            <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen * 1000).toLocaleString() : "—"}</div>
+            <div class="cell">${item.status || "—"}</div>
+          </div>
+        `);
+      }
+    }
+
+    async function monAdd(){
+      const st = $("#mon-status");
+      clearStatus(st);
+
+      const net = netFromSelect("#mon-net");
+      const addrRaw = ($("#mon-addr")?.value || "").trim();
+      if (!isAddr(addrRaw)) return setStatus(st, "warn", "Enter a valid contract address.");
+
+      const addr = normAddr(addrRaw);
+      const list = loadMonitor();
+      const key = `${net}:${safeLower(addr)}`;
+      const filtered = list.filter(x => `${x.net}:${safeLower(x.addr)}` !== key);
+      filtered.unshift({ net, addr, status: "added", lastSeen: nowTs() });
+      saveMonitor(filtered.slice(0, 50));
+      renderMonitorTable();
+      setStatus(st, "ok", "Added to monitor list (local).");
+      gtagEvent("sec_mon_add", { net });
+    }
+
+    async function monCheckAll(){
+      const st = $("#mon-status");
+      clearStatus(st);
+
+      const list = loadMonitor();
+      if (!list.length) return setStatus(st, "warn", "Monitor list is empty.");
+
+      setStatus(st, "info", `Checking ${list.length} contract(s)…`);
+
+      for (const item of list) {
+        try{
+          const codeRes = await getCodeSafe(item.net, item.addr);
+          item.status = (codeRes.ok && codeRes.code && codeRes.code !== "0x") ? "ok" : "no code";
+          item.lastSeen = nowTs();
+        } catch {
+          item.status = "error";
+          item.lastSeen = nowTs();
+        }
+      }
+
+      saveMonitor(list);
+      renderMonitorTable();
+      setStatus(st, "ok", "Monitor check done.");
+      gtagEvent("sec_mon_check");
+    }
+
+    async function monExport(){
+      const list = loadMonitor();
+      const ok = await copyText(safeJson(list));
+      setStatus($("#mon-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
+    }
+
+    function initDevUi(){
+      const base = location.href.split("?")[0];
+      const el = $("#bm-base");
+      if (el) el.value = base;
+
+      $("#bm-generate")?.addEventListener("click", bmGenerate);
+      $("#bm-copy")?.addEventListener("click", bmCopy);
+
+      $("#mon-add")?.addEventListener("click", monAdd);
+      $("#mon-check")?.addEventListener("click", monCheckAll);
+      $("#mon-export")?.addEventListener("click", monExport);
+
+      renderBmHelp();
+      renderMonitorTable();
+    }
+
+    // =========================
+    // URL auto-run (tool=...)
+    // =========================
+    async function handleAutoRun(){
+      const q = parseQuery();
+      if (!q.tool) return;
+
+      const tool = q.tool;
+      const net = (q.net === "eth") ? "eth" : "bsc";
+
+      if (tool === "quick") {
+        showPanel("quick");
+        if ($("#qs-net")) $("#qs-net").value = net;
+        if (q.token && isAddr(q.token)) {
+          if ($("#qs-token")) $("#qs-token").value = normAddr(q.token);
+          // small delay so UI is ready
+          setTimeout(() => runQuickScan(), 250);
+        }
+      }
+
+      if (tool === "liq") {
+        showPanel("liq");
+        if ($("#liq-net")) $("#liq-net").value = net;
+        if (q.token && isAddr(q.token)) {
+          if ($("#liq-token")) $("#liq-token").value = normAddr(q.token);
+          setTimeout(() => runLiqScan(), 250);
+        }
+      }
+
+      if (tool === "tx") {
+        showPanel("tx");
+        if ($("#tx-net")) $("#tx-net").value = net;
+        if (q.tx && /^0x([A-Fa-f0-9]{64})$/.test(q.tx)) {
+          if ($("#tx-hash")) $("#tx-hash").value = q.tx;
+          setTimeout(() => runTxDecode(), 250);
+        }
+      }
+    }
+
+    // =========================
+    // Boot
+    // =========================
+    function boot(){
+      initLang();
+      bindLangButtons();
+
+      initPanels();
+      initWalletButtons();
+      initApiKeysUi();
+
+      initQuickScanUi();
+      initLiqUi();
+      initApprovalsUi();
+      initRpcUi();
+      initTxUi();
+      initDevUi();
+
+      applyI18n(currentLang);
+      renderWalletLabels();
+      handleAutoRun();
+
+      // UX: close panels via ESC
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") showPanel(null);
+      });
+    }
+
+    // Run
+    boot();
+  </script>
+</body>
+</html>
+
+        
