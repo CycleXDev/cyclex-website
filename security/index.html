@@ -48,8 +48,8 @@
     --container-wide: 1160px;
 
     /* ✅ single source of truth for grid/panel spacing */
-    --tool-panel-gap: 18px;
-    --tool-grid-gap: 18px;
+    --tool-panel-gap: 10px;
+    --tool-grid-gap: 16px;
 
     /* sticky bar offset for scrollIntoView (even if we later disable scroll) */
     --scroll-offset: 96px;
@@ -211,9 +211,7 @@
     max-width:1160px;
     margin:0 auto;
   }
-  .tool-grid-wrap + .panel-shell{
-    margin-top: var(--tool-panel-gap);
-  }
+  
 
   .tool-grid-title{
     text-align:center;
@@ -296,7 +294,7 @@
   .panel-shell{
     width:100%;
     max-width:1160px;
-    margin:0 auto 0;
+    margin: var(--tool-panel-gap) auto 0;
     padding:18px 18px;
     border-radius:var(--radius-xl);
     background:rgba(255,255,255,.04);
@@ -1079,14 +1077,17 @@
                 <div class="cell" data-i18n="th_remove">Remove</div>
               </div>
               <div class="trow">
+  <div class="cell muted">—</div>
+  <div class="cell muted">—</div>
+  <div class="cell muted hide-sm">—</div>
+  <div class="cell muted">—</div>
                 <div class="cell muted">—</div>
-                <div class="cell muted">—</div>
-                <div class="cell muted hide-sm">—</div>
-                <div class="cell muted">—</div>
-                <div class="cell muted">—</div>
-                <div class="cell">
-                <button class="btn-mini" data-ap-remove="0xTOKENADDRESS">Remove</button>
-                </div>
+
+  <div class="cell">
+    <button class="btn-mini" data-ap-remove="0xTOKENADDRESS">Remove</button>
+  </div>
+</div>
+
 
               </div>
             </div>
@@ -1315,6 +1316,7 @@
                 <div class="cell" data-i18n="th_network">Network</div>
                 <div class="cell hide-sm" data-i18n="th_last_seen">Last seen</div>
                 <div class="cell" data-i18n="th_status">Status</div>
+                  <div class="cell" data-i18n="th_Remove">Remove</div>
               </div>
             </div>
           </div>
@@ -4263,6 +4265,7 @@ $("#ap-table")?.addEventListener("click", (e) => {
             <div class="cell muted">—</div>
             <div class="cell muted hide-sm">—</div>
             <div class="cell muted">—</div>
+            <div class="cell muted">—</div>
           </div>
         `);
         return;
@@ -4270,14 +4273,19 @@ $("#ap-table")?.addEventListener("click", (e) => {
 
       for (const item of list) {
         const chain = CHAINS[item.net];
-        table.insertAdjacentHTML("beforeend", `
-          <div class="trow">
-            <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
-            <div class="cell">${chain.name}</div>
-            <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen * 1000).toLocaleString() : "—"}</div>
-            <div class="cell">${item.status || "—"}</div>
-          </div>
-        `);
+       table.insertAdjacentHTML("beforeend", `
+  <div class="trow">
+    <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
+    <div class="cell">${chain.name}</div>
+    <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen * 1000).toLocaleString() : "—"}</div>
+    <div class="cell">${item.status || "—"}</div>
+
+    <div class="cell">
+      <button class="mon-remove" data-mon-remove="${item.net}:${item.addr}">Remove</button>
+    </div>
+  </div>
+`);
+
       }
     }
 
