@@ -424,7 +424,7 @@
   #rpc-table .trow.head.rpc .cell:last-child,
   #rpc-table .trow.rpc .cell:last-child{
     white-space:normal;text-overflow:clip;overflow:hidden;overflow-wrap:anywhere;
-    line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;
+    line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
   }
   #rpc-table .trow.rpc .cell:not(:first-child),
   #rpc-table .trow.head.rpc .cell:not(:first-child){text-align:center;justify-self:center}
@@ -486,7 +486,7 @@
   #qs-riskTable .trow.risk{
     display:grid;
     grid-template-columns:.95fr .95fr .95fr .95fr .95fr .95fr .85fr 1.5fr;
-    gap:10px;padding:10px 12px;align-items:center;min-width:780px;
+    gap:10px;padding:10px 12px;align-items:center;min-width:980px;
   }
   #qs-riskTable .trow.head.risk{
     background:rgba(255,255,255,.05);
@@ -499,9 +499,7 @@
   #qs-riskTable .cell:not(:last-child){text-align:center;justify-self:center}
   #qs-riskTable .cell:last-child{
     text-align:left;white-space:normal;overflow-wrap:anywhere;line-height:1.15;
-    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
-    word-break: break-word;
-overflow-wrap: anywhere;
+    display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;
   }
 
   /* signals (QuickScan top row UI) */
@@ -583,18 +581,49 @@ overflow-wrap: anywhere;
     .tool-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
     .trow{min-width:560px}
 
-    /* ✅ FIX: tables where hide-sm removes a column (no "ghost" grid column) */
     #ap-table .trow,
     #ap-table .trow.head{
       grid-template-columns:1.35fr .95fr .85fr;
       min-width:520px;
     }
 
-    #mon-table .trow,
-    #mon-table .trow.head{
-      grid-template-columns:1.7fr 1fr .95fr;
-      min-width:520px;
-    }
+    /* Contract Monitor (local) — compact rows */
+ .trow.head,
+ .trow{
+  padding: 8px 12px !important;
+  gap: 10px !important;
+  min-height: 44px !important;
+}
+
+ .cell{
+  line-height: 1.15 !important;
+  padding: 0 !important;
+}
+
+ .trow{
+  border-radius: 14px !important;
+}
+.icon-x-btn{
+  width:32px;height:32px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  color:rgba(244,246,255,.90);
+  font-size:18px;
+  line-height:1;
+  cursor:pointer;
+  transition:transform .12s ease, border-color .12s ease, background .12s ease;
+}
+.icon-x-btn:hover{
+  transform:translateY(-1px);
+  border-color:rgba(220,53,69,.38);
+  background:rgba(220,53,69,.12);
+}
+.icon-x-btn:active{ transform:translateY(0); }
+
 
     /* RPC: collapses to RPC / ms / status */
     #rpc-table .trow.head.rpc,
@@ -4120,7 +4149,7 @@ function bindLangButtons(){
     }
 
     function renderMonitorTable(){
-      const table = $("#mon-table");
+      const table = $("");
       if (!table) return;
       const head = table.querySelector(".trow.head");
       table.innerHTML = "";
@@ -4138,6 +4167,20 @@ function bindLangButtons(){
         `);
         return;
       }
+      const x = document.createElement("button");
+x.type = "button";
+x.className = "icon-x-btn mon-remove";
+x.innerHTML = "&times;";
+x.addEventListener("click", () => {
+  watchlist.splice(i, 1);
+
+  localStorage.setItem(LS_MON, JSON.stringify(watchlist));
+
+  renderMonitor();
+});
+
+row.appendChild(x);
+
 
       for (const item of list) {
         const chain = CHAINS[item.net];
