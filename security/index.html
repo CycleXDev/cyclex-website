@@ -4346,17 +4346,17 @@ function decodeApprovalLog(log){
   } catch { return null; }
 }
 
-function safeLower(x){ try{ return String(x||"").toLowerCase(); } catch { return ""; } }
-
-function isUnlimitedApprove(vBigInt){
+function tx_isUnlimitedApprove(vBigInt){
   try { return typeof vBigInt === "bigint" && vBigInt === U256_MAX; } catch { return false; }
 }
 
-function getKnownRouterName(net, spenderAddr){
-  const m = KNOWN_ROUTERS?.[net] || {};
-  const k = safeLower(spenderAddr);
+function tx_getKnownRouterName(net, spenderAddr){
+  const m = (KNOWN_ROUTERS && KNOWN_ROUTERS[net]) ? KNOWN_ROUTERS[net] : {};
+  if (!spenderAddr) return "";
+  const k = isAddr(spenderAddr) ? normAddr(spenderAddr) : String(spenderAddr).toLowerCase();
   return m[k] || "";
 }
+
 
 async function runTxDecode(){
   const st = $("#tx-status");
