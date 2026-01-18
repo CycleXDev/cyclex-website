@@ -4441,10 +4441,10 @@ async function runTxDecode(){
         const d = decodeApprovalLog(l);
         if (!d) continue;
 
-        const routerName = getKnownRouterName(net, d.spender);
+        const routerName = tx_getKnownRouterName(net, d.spender);
         if (routerName) knownRouterNames.add(routerName);
 
-        if (isUnlimitedApprove(d.value)) {
+        if (tx_isUnlimitedApprove(d.value)) {
           sawUnlimited = true;
           if (routerName) sawKnownRouterUnlimited = true;
         }
@@ -4573,9 +4573,9 @@ async function runTxDecode(){
       const rows = approvals.map(l => {
         const d = decodeApprovalLog(l);
         if (!d) return "";
-        const routerName = getKnownRouterName(net, d.spender);
+        const routerName = tx_getKnownRouterName(net, d.spender);
         const tag = routerName ? ` <span class="muted">(${routerName})</span>` : "";
-        const inf = isUnlimitedApprove(d.value) ? ` <span class="muted">(unlimited)</span>` : "";
+       const inf = tx_isUnlimitedApprove(d.value) ? ` <span class="muted">(unlimited)</span>` : "";
         return `<div class="small mono" style="margin-top:6px;">Approval ${shortAddr(d.owner)} → ${shortAddr(d.spender)}${tag} • raw: ${d.value.toString()}${inf}</div>`;
       }).join("");
       items.push(`
