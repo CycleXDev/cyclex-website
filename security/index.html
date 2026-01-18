@@ -402,7 +402,7 @@
   .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
   .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
 /* =========================
-   TX DECODER — 4-line Security Summary (BADGES)  [CLEAN + ALIGNED]
+   TX DECODER — 4-line Security Summary (BADGES)  [PILL ONLY]
    ========================= */
 
 #panel-tx .tx-sum{
@@ -417,7 +417,6 @@
   backdrop-filter:blur(16px);
 }
 
-/* line layout: label | value-area (value-area is RIGHT aligned) */
 #panel-tx .tx-sum-line{
   display:grid;
   grid-template-columns: 120px 1fr;
@@ -440,19 +439,32 @@
   white-space:nowrap;
 }
 
-/* ✅ value-area: THIS is what we align (not the badge itself) */
+/* ✅ value-area is ONLY for alignment (no color, no border) */
 #panel-tx .tx-sum-line .v{
-  justify-self:end;           /* pushes the value-area to the right */
-  width:calc(100% - 24px);    /* pulls it קצת שמאלה כדי שלא ייחתך בקצה */
-  max-width:520px;            /* keeps a nice premium column width */
+  justify-self:end;
+  width:calc(100% - 24px);
+  max-width:520px;
   min-width:0;
 
   display:flex;
-  justify-content:flex-end;   /* badge sits at the right inside the area */
+  justify-content:flex-end;
+  align-items:center;
+
+  /* IMPORTANT: keep it transparent */
+  padding:0;
+  border:0;
+  background:transparent;
+  border-radius:0;
+  overflow:visible;
+}
+
+/* ---- The actual badge (pill) ---- */
+/* preferred: if you have <span class="pill">...</span> inside .v */
+#panel-tx .tx-sum-line .v .pill{
+  display:inline-flex;
   align-items:center;
   gap:8px;
 
-  /* keep legacy badge look */
   padding:7px 10px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,.12);
@@ -463,10 +475,37 @@
   letter-spacing:.02em;
   color:rgba(244,246,255,.92);
 
+  max-width:100%;
+  min-width:0;
   overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
 
-/* dot */
+/* fallback: if you DON'T have .pill, style the first element/text inside .v */
+#panel-tx .tx-sum-line .v > :first-child{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.02em;
+  color:rgba(244,246,255,.92);
+
+  max-width:100%;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* dot (works if dot is inside the pill) */
 #panel-tx .tx-sum-line .v .dot{
   width:10px;
   height:10px;
@@ -476,17 +515,39 @@
   flex:0 0 auto;
 }
 
-/* text inside badge (handle long strings nicely) */
-#panel-tx .tx-sum-line .v{
-  white-space:nowrap;
-  text-overflow:ellipsis;
+/* ✅ states: color ONLY the pill (not the whole .v area) */
+#panel-tx .tx-sum-line .v.ok .pill,
+#panel-tx .tx-sum-line .v.ok > :first-child{
+  border-color:rgba(0,230,118,.28);
+  background:rgba(0,230,118,.10);
 }
+#panel-tx .tx-sum-line .v.ok .dot{ background:rgba(0,230,118,.95); }
 
-/* ✅ Action: allow 2 lines (so it won't cut from the left) */
-#tx-sum-action{
-  white-space:normal;
+#panel-tx .tx-sum-line .v.warn .pill,
+#panel-tx .tx-sum-line .v.warn > :first-child{
+  border-color:rgba(255,193,7,.30);
+  background:rgba(255,193,7,.10);
 }
-#tx-sum-action .v{
+#panel-tx .tx-sum-line .v.warn .dot{ background:rgba(255,193,7,.95); }
+
+#panel-tx .tx-sum-line .v.bad .pill,
+#panel-tx .tx-sum-line .v.bad > :first-child{
+  border-color:rgba(220,53,69,.30);
+  background:rgba(220,53,69,.12);
+}
+#panel-tx .tx-sum-line .v.bad .dot{ background:rgba(220,53,69,.95); }
+
+#panel-tx .tx-sum-line .v.unk .pill,
+#panel-tx .tx-sum-line .v.unk > :first-child{
+  border-color:rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:rgba(244,246,255,.78);
+}
+#panel-tx .tx-sum-line .v.unk .dot{ background:rgba(255,255,255,.25); }
+
+/* Action: allow 2 lines (only on the pill) */
+#tx-sum-action .v .pill,
+#tx-sum-action .v > :first-child{
   white-space:normal;
   display:-webkit-box;
   -webkit-box-orient:vertical;
@@ -494,33 +555,7 @@
   line-height:1.2;
 }
 
-/* states */
-#panel-tx .tx-sum-line .v.ok{
-  border-color:rgba(0,230,118,.28);
-  background:rgba(0,230,118,.10);
-}
-#panel-tx .tx-sum-line .v.ok .dot{ background:rgba(0,230,118,.95); }
-
-#panel-tx .tx-sum-line .v.warn{
-  border-color:rgba(255,193,7,.30);
-  background:rgba(255,193,7,.10);
-}
-#panel-tx .tx-sum-line .v.warn .dot{ background:rgba(255,193,7,.95); }
-
-#panel-tx .tx-sum-line .v.bad{
-  border-color:rgba(220,53,69,.30);
-  background:rgba(220,53,69,.12);
-}
-#panel-tx .tx-sum-line .v.bad .dot{ background:rgba(220,53,69,.95); }
-
-#panel-tx .tx-sum-line .v.unk{
-  border-color:rgba(255,255,255,.12);
-  background:rgba(255,255,255,.05);
-  color:rgba(244,246,255,.78);
-}
-#panel-tx .tx-sum-line .v.unk .dot{ background:rgba(255,255,255,.25); }
-
-/* subline: sits under the value-area, aligned with it */
+/* subline aligned with value-area */
 #panel-tx .tx-sum-line .tx-sum-sub{
   grid-column:2;
   justify-self:end;
@@ -555,7 +590,6 @@
     text-align:left;
   }
 }
-
 
 
     /* Bookmarklet tip under the green status */
