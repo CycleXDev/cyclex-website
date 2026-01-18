@@ -5369,11 +5369,17 @@ try {
     }, 400);
   }
 
-        setTimeout(() => {
-  const h = (location.hash || "").trim();
-  if (!h) return;
-  const el = document.querySelector(h);
-  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        // after showing a tool panel, scroll to it (works also for bookmarklet)
+setTimeout(() => {
+  const target = `#panel-${tool}`;   // quick / liq / approvals / rpc / tx / dev
+  const el = document.querySelector(target);
+  if (!el) return;
+
+  // set hash so refresh/back works nicely
+  try { history.replaceState(null, "", target); }
+  catch { location.hash = target; }
+
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
 }, 450);
 
 }
