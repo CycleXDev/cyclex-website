@@ -401,7 +401,7 @@
   .status.warn{display:block;background:rgba(255,193,7,.10);border-color:rgba(255,193,7,.35);color:#ffd166}
   .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
   .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
-    /* =========================
+  /* =========================
    TX DECODER — 4-line Security Summary (badges)
    ========================= */
 
@@ -419,7 +419,7 @@
 
 #panel-tx .tx-sum-line{
   display:flex;
-  align-items:flex-start;
+  align-items:center;
   justify-content:space-between;
   gap:10px;
   padding:10px 12px;
@@ -427,6 +427,9 @@
   border:1px solid rgba(255,255,255,.12);
   background:rgba(255,255,255,.04);
   min-width:0;
+
+  /* ✅ lets subline drop under badge */
+  flex-wrap:wrap;
 }
 
 #panel-tx .tx-sum-line .k{
@@ -438,33 +441,16 @@
   flex:0 0 auto;
 }
 
-/* ✅ RIGHT CELL = vertical container aligned right */
+/* ✅ BADGE (value) – stays premium + sticks to the right */
 #panel-tx .tx-sum-line .v{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:6px;
-
-  margin-left:auto;
-  min-width:0;
-  max-width:72%;
-
-  /* remove pill look from container */
-  padding:0;
-  border:none;
-  background:transparent;
-  border-radius:0;
-  box-shadow:none;
-}
-
-/* ✅ The ACTUAL badge (created by tx_badge) */
-#panel-tx .tx-sum-line .v > .v{
   display:inline-flex;
   align-items:center;
   gap:8px;
 
-  max-width:100%;
-  min-width:0;
+  margin-left:auto;
+  width:auto;
+  max-width:72%;
+  flex:0 1 auto;
 
   font-size:12px;
   font-weight:800;
@@ -481,8 +467,9 @@
   white-space:nowrap;
 }
 
-/* dot inside the INNER badge */
-#panel-tx .tx-sum-line .v > .v .dot{
+/* ✅ Dot (works even if JS doesn’t render <span class="dot">) */
+#panel-tx .tx-sum-line .v::before{
+  content:"";
   width:10px;
   height:10px;
   border-radius:999px;
@@ -491,36 +478,54 @@
   flex:0 0 auto;
 }
 
-/* Risk color states (apply to INNER badge) */
-#panel-tx .tx-sum-line .v > .v.ok{
+/* If your JS DOES render .dot, use it and hide pseudo-dot */
+#panel-tx .tx-sum-line .v:has(.dot)::before{ display:none; }
+#panel-tx .tx-sum-line .v .dot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.25);
+  box-shadow:0 0 0 3px rgba(255,255,255,.06);
+  flex:0 0 auto;
+}
+
+/* Risk color states (apply to badge element) */
+#panel-tx .tx-sum-line .v.ok{
   border-color:rgba(0,230,118,.28);
   background:rgba(0,230,118,.10);
 }
-#panel-tx .tx-sum-line .v > .v.ok .dot{ background:rgba(0,230,118,.95); }
+#panel-tx .tx-sum-line .v.ok::before{ background:rgba(0,230,118,.95); }
+#panel-tx .tx-sum-line .v.ok .dot{ background:rgba(0,230,118,.95); }
 
-#panel-tx .tx-sum-line .v > .v.warn{
+#panel-tx .tx-sum-line .v.warn{
   border-color:rgba(255,193,7,.30);
   background:rgba(255,193,7,.10);
 }
-#panel-tx .tx-sum-line .v > .v.warn .dot{ background:rgba(255,193,7,.95); }
+#panel-tx .tx-sum-line .v.warn::before{ background:rgba(255,193,7,.95); }
+#panel-tx .tx-sum-line .v.warn .dot{ background:rgba(255,193,7,.95); }
 
-#panel-tx .tx-sum-line .v > .v.bad{
+#panel-tx .tx-sum-line .v.bad{
   border-color:rgba(220,53,69,.30);
   background:rgba(220,53,69,.12);
 }
-#panel-tx .tx-sum-line .v > .v.bad .dot{ background:rgba(220,53,69,.95); }
+#panel-tx .tx-sum-line .v.bad::before{ background:rgba(220,53,69,.95); }
+#panel-tx .tx-sum-line .v.bad .dot{ background:rgba(220,53,69,.95); }
 
-#panel-tx .tx-sum-line .v > .v.unk{
+#panel-tx .tx-sum-line .v.unk{
   border-color:rgba(255,255,255,.12);
   background:rgba(255,255,255,.05);
   color:rgba(244,246,255,.78);
 }
-#panel-tx .tx-sum-line .v > .v.unk .dot{ background:rgba(255,255,255,.25); }
+#panel-tx .tx-sum-line .v.unk::before{ background:rgba(255,255,255,.25); }
+#panel-tx .tx-sum-line .v.unk .dot{ background:rgba(255,255,255,.25); }
 
 /* ✅ Subline under the badge (Tokens touched / Allowance) */
 #panel-tx .tx-sum-line .tx-sum-sub{
-  display:block;
-  max-width:100%;
+  /* forces new line under the badge */
+  flex:1 0 100%;
+
+  margin-left:auto;
+  max-width:72%;
   text-align:right;
 
   font-size:12px;
@@ -532,23 +537,25 @@
   word-break:break-word;
 }
 
-/* Mobile: keep it clean */
+/* Mobile */
 @media (max-width:640px){
   #panel-tx .tx-sum-line{
     flex-direction:column;
     align-items:flex-start;
   }
-
   #panel-tx .tx-sum-line .v{
-    align-items:flex-start;
+    margin-left:0;
     max-width:100%;
     width:100%;
+    justify-content:flex-start;
   }
-
   #panel-tx .tx-sum-line .tx-sum-sub{
+    margin-left:0;
+    max-width:100%;
     text-align:left;
   }
 }
+
 
 
     /* Bookmarklet tip under the green status */
