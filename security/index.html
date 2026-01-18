@@ -427,6 +427,63 @@
     overflow-wrap:anywhere;
   }
 
+    /* =========================
+   Contract Monitor (mon-table) — add inline X button column
+   No "Remove" header text, just an empty last cell like screenshot
+   ========================= */
+
+/* Desktop / default: 5th column reserved for X */
+#mon-table .trow,
+#mon-table .trow.head{
+  grid-template-columns: 1.35fr 1fr 1.05fr 1fr 44px;
+}
+
+/* If you prefer a bit more room for status text, use 52px instead of 44px */
+/* #mon-table .trow, #mon-table .trow.head{ grid-template-columns: 1.35fr 1fr 1.05fr 1fr 52px; } */
+
+#mon-table .trow.head .cell:last-child{
+  text-align:center;
+  justify-self:center;
+  opacity:.0; /* header stays visually empty */
+}
+
+/* The X button itself */
+.mon-remove{
+  width:38px;
+  height:38px;
+  border-radius:999px;
+  display:grid;
+  place-items:center;
+
+  border:1px solid rgba(255,80,80,.35);
+  background:rgba(255,80,80,.08);
+  color:rgba(244,246,255,.92);
+
+  cursor:pointer;
+  user-select:none;
+  line-height:1;
+  font-size:22px;
+
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  transition:transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.mon-remove:hover{
+  transform:translateY(-1px);
+  border-color:rgba(255,80,80,.60);
+  background:rgba(255,80,80,.14);
+}
+
+.mon-remove:active{
+  transform:translateY(0px);
+}
+
+.mon-remove:focus-visible{
+  outline:2px solid rgba(0,229,255,.55);
+  outline-offset:2px;
+}
+
+
   /* =========================
      RPC table — EXACT behavior from old code
      (shows long URLs without overlap + swipe on small screens)
@@ -657,9 +714,9 @@
     /* ✅ FIX: tables where hide-sm removes a column (no "ghost" grid column) */
     #ap-table .trow,
     #ap-table .trow.head{
-      grid-template-columns:1.35fr .95fr .85fr;
-      min-width:520px;
-    }
+      grid-template-columns: 1.7fr 1fr 1fr 44px;
+  min-width:520px;
+}
 
     #mon-table .trow,
     #mon-table .trow.head{
