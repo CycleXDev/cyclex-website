@@ -506,15 +506,29 @@
 #mon-table .trow.head{
   grid-template-columns: 1.35fr 1fr 1.05fr 1fr 44px;
 }
+    /* ✅ MON: Last seen should wrap to 2 lines (no ellipsis) */
+#mon-table .trow .cell:nth-child(3){
+  white-space: normal;
+  text-overflow: clip;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
 
-/* If you prefer a bit more room for status text, use 52px instead of 44px */
-/* #mon-table .trow, #mon-table .trow.head{ grid-template-columns: 1.35fr 1fr 1.05fr 1fr 52px; } */
+  /* optional: limit to 2 lines so row doesn't get too tall */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 
 #mon-table .trow.head .cell:last-child{
   visibility:hidden;  /* stays in layout, but truly invisible */
 }
-
-
+    /* MON: make "Last seen" wrap (date on first line, time on second) */
+#mon-table .trow .cell:nth-child(3){
+  white-space: normal;
+  line-height: 1.15;
+}
 /* Small clean X (no weird circle) */
 .mon-remove{
   width:22px;
@@ -4396,7 +4410,11 @@ if (drag) {
   <div class="trow">
     <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
     <div class="cell">${String(item.net || "").toUpperCase()}</div>
-    <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen * 1000).toLocaleString() : "—"}</div>
+    <div class="cell hide-sm">${
+  item.lastSeen
+    ? new Date(item.lastSeen * 1000).toLocaleString().replace(", ", "<br>")
+    : "—"
+}</div>
     <div class="cell">${item.status || "—"}</div>
 
     <div class="cell">
