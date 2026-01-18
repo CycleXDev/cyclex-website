@@ -5332,13 +5332,19 @@ try {
       }
 
       if (tool === "tx") {
-        showPanel("tx");
-        if ($("#tx-net")) $("#tx-net").value = net;
-        if (q.tx && /^0x([A-Fa-f0-9]{64})$/.test(q.tx)) {
-          if ($("#tx-hash")) $("#tx-hash").value = q.tx;
-          setTimeout(() => runTxDecode(), 250);
-        }
-      }
+  showPanel("tx");
+  if ($("#tx-net")) $("#tx-net").value = net;
+
+  if (q.tx && /^0x([A-Fa-f0-9]{64})$/.test(q.tx)) {
+    if ($("#tx-hash")) $("#tx-hash").value = q.tx;
+
+    // Run exactly like a user click (works even if runTxDecode isn't global)
+    setTimeout(() => {
+      const btn = $("#tx-run");
+      if (btn) btn.click();
+    }, 350);
+  }
+}
     }
 
     // =========================
