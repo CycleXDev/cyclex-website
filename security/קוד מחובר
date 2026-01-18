@@ -374,6 +374,110 @@
   .status.warn{display:block;background:rgba(255,193,7,.10);border-color:rgba(255,193,7,.35);color:#ffd166}
   .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
   .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
+    /* =========================
+   TX DECODER — 4-line Security Summary (badges)
+   ========================= */
+
+#panel-tx .tx-sum{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:10px;
+  padding:12px 12px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.04);
+  box-shadow:0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(16px);
+}
+
+#panel-tx .tx-sum-line{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04);
+  min-width:0;
+}
+
+#panel-tx .tx-sum-line .k{
+  font-size:12px;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+  color:rgba(244,246,255,.72);
+  white-space:nowrap;
+}
+
+#panel-tx .tx-sum-line .v{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.02em;
+
+  padding:7px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+
+  color:rgba(244,246,255,.92);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* dot inside the badge */
+#panel-tx .tx-sum-line .v .dot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.25);
+  box-shadow:0 0 0 3px rgba(255,255,255,.06);
+  flex:0 0 auto;
+}
+
+/* Risk color states (apply to badge element) */
+#panel-tx .tx-sum-line .v.ok{
+  border-color:rgba(0,230,118,.28);
+  background:rgba(0,230,118,.10);
+}
+#panel-tx .tx-sum-line .v.ok .dot{ background:rgba(0,230,118,.95); }
+
+#panel-tx .tx-sum-line .v.warn{
+  border-color:rgba(255,193,7,.30);
+  background:rgba(255,193,7,.10);
+}
+#panel-tx .tx-sum-line .v.warn .dot{ background:rgba(255,193,7,.95); }
+
+#panel-tx .tx-sum-line .v.bad{
+  border-color:rgba(220,53,69,.30);
+  background:rgba(220,53,69,.12);
+}
+#panel-tx .tx-sum-line .v.bad .dot{ background:rgba(220,53,69,.95); }
+
+#panel-tx .tx-sum-line .v.unk{
+  border-color:rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:rgba(244,246,255,.78);
+}
+#panel-tx .tx-sum-line .v.unk .dot{ background:rgba(255,255,255,.25); }
+
+/* Mobile: keep it clean */
+@media (max-width:640px){
+  #panel-tx .tx-sum-line{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+  #panel-tx .tx-sum-line .v{
+    width:100%;
+    justify-content:flex-start;
+  }
+}
 
     /* Bookmarklet tip under the green status */
 .bm-tip{
@@ -1312,59 +1416,87 @@
       </section>
 
       <section class="panel-shell hidden" id="panel-tx">
-        <div class="panel-head">
-          <div>
-            <div class="panel-kicker" data-i18n="p_tx_kicker">Tx Decoder</div>
-            <div class="panel-title" data-i18n="p_tx_title">Decode a transaction</div>
-            <div class="panel-sub" data-i18n="p_tx_sub">
-              Paste a tx hash. We fetch tx + receipt and decode common inputs and events (Transfer / Approval + common swap calls).
-            </div>
-          </div>
-          <div class="panel-actions">
-            <button class="btn btn-ghost" id="btnCloseTx" data-i18n="btn_close">Close</button>
-          </div>
+  <div class="panel-head">
+    <div>
+      <div class="panel-kicker" data-i18n="p_tx_kicker">Tx Decoder</div>
+      <div class="panel-title" data-i18n="p_tx_title">Decode a transaction</div>
+      <div class="panel-sub" data-i18n="p_tx_sub">
+        Paste a tx hash. We fetch tx + receipt and decode common inputs and events (Transfer / Approval + common swap calls).
+      </div>
+    </div>
+    <div class="panel-actions">
+      <button class="btn btn-ghost" id="btnCloseTx" data-i18n="btn_close">Close</button>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- LEFT: INPUT -->
+    <div class="card">
+      <h3 data-i18n="tx_input_title">Tx Input</h3>
+
+      <div class="field">
+        <div class="label" data-i18n="net_label">Network</div>
+        <select id="tx-net">
+          <option value="bsc">BSC (BNB Chain)</option>
+          <option value="eth">Ethereum</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="label" data-i18n="tx_hash_label">Transaction hash</div>
+        <input id="tx-hash" class="mono" placeholder="0x..." data-i18n-placeholder="ph_0x" />
+        <div class="small" style="margin-top:8px" data-i18n="tx_tip">
+          Tip: open with <span class="mono">?tool=tx&net=bsc&tx=0x...</span> to auto-run.
         </div>
+      </div>
 
-        <div class="grid-2">
-          <div class="card">
-            <h3 data-i18n="tx_input_title">Tx Input</h3>
-
-            <div class="field">
-              <div class="label" data-i18n="net_label">Network</div>
-              <select id="tx-net">
-                <option value="bsc">BSC (BNB Chain)</option>
-                <option value="eth">Ethereum</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <div class="label" data-i18n="tx_hash_label">Transaction hash</div>
-              <input id="tx-hash" class="mono" placeholder="0x..." data-i18n-placeholder="ph_0x" />
-              <div class="small" style="margin-top:8px" data-i18n="tx_tip">
-                Tip: open with <span class="mono">?tool=tx&net=bsc&tx=0x...</span> to auto-run.
-              </div>
-            </div>
-
-            <div class="field">
-              <div class="row">
-                <button class="btn btn-primary" id="tx-run" data-i18n="btn_decode">Decode</button>
-                <button class="btn btn-ghost" id="tx-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
-              </div>
-            </div>
-
-            <div id="tx-status" class="status info"></div>
-          </div>
-
-          <div class="card">
-            <h3 data-i18n="tx_results_title">Decoded Output</h3>
-            <div id="tx-out" class="status info" style="display:block; margin-top:10px;" data-i18n="tx_ready_html">
-              <strong>Ready.</strong><br>
-              Paste a tx hash and click <b>Decode</b>.
-            </div>
-            <div id="tx-events" style="margin-top:10px;"></div>
-          </div>
+      <div class="field">
+        <div class="row">
+          <button class="btn btn-primary" id="tx-run" data-i18n="btn_decode">Decode</button>
+          <button class="btn btn-ghost" id="tx-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
         </div>
-      </section>
+      </div>
+
+      <div id="tx-status" class="status info"></div>
+    </div>
+
+    <!-- RIGHT: OUTPUT -->
+    <div class="card">
+      <h3 data-i18n="tx_results_title">Decoded Output</h3>
+      
+<!-- 4-line Security Summary (always visible) -->
+<div id="tx-sum" class="tx-sum" style="margin-top:10px;">
+  <div class="tx-sum-line">
+    <span class="tx-sum-k" data-i18n="tx_sum_action_k">Action</span>
+    <span class="tx-sum-v" id="tx-sum-action">—</span>
+  </div>
+
+  <div class="tx-sum-line">
+    <span class="tx-sum-k" data-i18n="tx_sum_risk_k">Risk</span>
+    <span class="tx-sum-v" id="tx-sum-risk">—</span>
+  </div>
+
+  <div class="tx-sum-line">
+    <span class="tx-sum-k" data-i18n="tx_sum_target_k">Target</span>
+    <span class="tx-sum-v mono" id="tx-sum-target">—</span>
+  </div>
+
+  <div class="tx-sum-line">
+    <span class="tx-sum-k" data-i18n="tx_sum_impact_k">Max impact</span>
+    <span class="tx-sum-v" id="tx-sum-impact">—</span>
+  </div>
+</div>
+      <!-- Main decoded text / ready state -->
+      <div id="tx-out" class="status info" style="display:block; margin-top:10px;" data-i18n="tx_ready_html">
+        <strong>Ready.</strong><br>
+        Paste a tx hash and click <b>Decode</b>.
+      </div>
+
+      <!-- Parsed events / extra cards -->
+      <div id="tx-events" style="margin-top:10px;"></div>
+    </div>
+  </div>
+</section>
             <section class="panel-shell hidden" id="panel-dev">
         <div class="panel-head">
           <div>
@@ -2980,6 +3112,10 @@ function bindLangButtons(){
       if (!url) return null;
       try { return new E.JsonRpcProvider(url, chain.chainId); } catch { return null; }
     }
+    // --- Debug exports (safe) ---
+window.CX = window.CX || {};
+window.CX.getReadProvider = getReadProvider;
+
 
     function netFromSelect(selId) {
       const v = ($(selId)?.value || "bsc").toLowerCase();
@@ -4177,147 +4313,520 @@ function bindLangButtons(){
       });
     }
 
-    // =========================
-    // Tx Decoder
-    // =========================
-    const ROUTER_ABI_MIN = [
-      "function swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
-      "function swapExactETHForTokens(uint256,address[],address,uint256) payable",
-      "function swapExactTokensForETH(uint256,uint256,address[],address,uint256)",
-      "function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)",
-      "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256,address[],address,uint256) payable",
-      "function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)"
-    ];
+// =========================
+// Tx Decoder (4-line fixed DOM + Allowance Risk + Token/Asset Target + unlimited approve detection)
+// Drop-in replacement for your whole Tx Decoder block.
+// =========================
 
-    function decodeTransferLog(log){
-      try{
-        const from = "0x" + log.topics[1].slice(26);
-        const to = "0x" + log.topics[2].slice(26);
-        const val = BigInt(log.data);
-        return { from: normAddr(from), to: normAddr(to), value: val };
-      } catch { return null; }
+(() => {
+  // ---- Minimal ABIs ----
+  const tx_ROUTER_ABI_MIN = [
+    "function swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
+    "function swapExactETHForTokens(uint256,address[],address,uint256) payable",
+    "function swapExactTokensForETH(uint256,uint256,address[],address,uint256)",
+    "function swapExactTokensForTokensSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)",
+    "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256,address[],address,uint256) payable",
+    "function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)"
+  ];
+
+  const tx_ERC20_ABI_MIN = [
+    "function symbol() view returns (string)",
+    "function name() view returns (string)",
+    "function decimals() view returns (uint8)"
+  ];
+
+  // ---- Constants ----
+  const tx_U256_MAX = (1n << 256n) - 1n;
+
+  // Known routers (lowercase keys)
+  const tx_KNOWN_ROUTERS = {
+    bsc: {
+      "0x10ed43c718714eb63d5aa57b78b54704e256024e": "PancakeSwap Router",
+      "0x13f4ea83d0bd40e75c8222255bc855a974568dd4": "PancakeSwap V3 Router"
+    },
+    eth: {
+      "0x7a250d5630b4cf539739df2c5dacb4c659f2488d": "Uniswap V2 Router",
+      "0xef1c6e67703c7bd7107eed8303fbe6ec2554bf6b": "Uniswap Universal Router"
     }
-    function decodeApprovalLog(log){
-      try{
-        const owner = "0x" + log.topics[1].slice(26);
-        const spender = "0x" + log.topics[2].slice(26);
-        const val = BigInt(log.data);
-        return { owner: normAddr(owner), spender: normAddr(spender), value: val };
-      } catch { return null; }
+  };
+
+  // ---- Token meta cache ----
+  const tx_TOKEN_META_CACHE = {}; // key: `${net}:${addr}` -> {symbol,name,decimals}
+
+  // ---- Helpers ----
+  function tx_badge(kind, label) {
+    const k = (kind === "ok" || kind === "warn" || kind === "bad" || kind === "unk") ? kind : "unk";
+    return `<span class="v ${k}"><span class="dot"></span>${label}</span>`;
+  }
+
+  function tx_setSum(sel, html) {
+    const el = document.querySelector(sel);
+    if (el) el.innerHTML = html;
+  }
+
+  function tx_setLine(sel, title, badgeHtml) {
+    tx_setSum(sel, `<span class="k">${title}</span>${badgeHtml}`);
+  }
+
+  function tx_resetSummary() {
+    tx_setLine("#tx-sum-action", "Action", tx_badge("unk", "—"));
+    tx_setLine("#tx-sum-risk", "Risk", tx_badge("unk", "—"));
+    tx_setLine("#tx-sum-target", "Target", tx_badge("unk", "—"));
+    tx_setLine("#tx-sum-impact", "Max impact", tx_badge("unk", "—"));
+  }
+
+  function tx_isUnlimitedApprove(vBigInt) {
+    try { return typeof vBigInt === "bigint" && vBigInt === tx_U256_MAX; } catch { return false; }
+  }
+
+  function tx_getKnownRouterName(net, addr) {
+    const m = (tx_KNOWN_ROUTERS && tx_KNOWN_ROUTERS[net]) ? tx_KNOWN_ROUTERS[net] : {};
+    if (!addr) return "";
+    const k = isAddr(addr) ? normAddr(addr) : String(addr).toLowerCase();
+    return m[k] || "";
+  }
+
+  function tx_decodeTransferLog(log) {
+    try {
+      const from = "0x" + log.topics[1].slice(26);
+      const to   = "0x" + log.topics[2].slice(26);
+      const val  = BigInt(log.data);
+      return { token: normAddr(log.address), from: normAddr(from), to: normAddr(to), value: val };
+    } catch { return null; }
+  }
+
+  function tx_decodeApprovalLog(log) {
+    try {
+      const owner   = "0x" + log.topics[1].slice(26);
+      const spender = "0x" + log.topics[2].slice(26);
+      const val     = BigInt(log.data);
+      return { token: normAddr(log.address), owner: normAddr(owner), spender: normAddr(spender), value: val };
+    } catch { return null; }
+  }
+
+  function tx_callSelector(txData) {
+    try {
+      const d = String(txData || "");
+      if (d && d.startsWith("0x") && d.length >= 10) return d.slice(0, 10);
+      return "";
+    } catch { return ""; }
+  }
+
+  async function tx_getTokenMeta(readProvider, net, tokenAddr) {
+    try {
+      if (!tokenAddr || !isAddr(tokenAddr)) return null;
+      const a = normAddr(tokenAddr);
+      const key = `${net}:${a}`;
+      if (tx_TOKEN_META_CACHE[key]) return tx_TOKEN_META_CACHE[key];
+
+      const c = new E.Contract(a, tx_ERC20_ABI_MIN, readProvider);
+
+      const [symbol, name, decimals] = await Promise.allSettled([c.symbol(), c.name(), c.decimals()]);
+
+      const meta = {
+        symbol: symbol.status === "fulfilled" ? String(symbol.value || "") : "",
+        name: name.status === "fulfilled" ? String(name.value || "") : "",
+        decimals: decimals.status === "fulfilled" ? Number(decimals.value) : null
+      };
+
+      tx_TOKEN_META_CACHE[key] = meta; // cache even partial
+      return meta;
+    } catch {
+      return null;
+    }
+  }
+
+  function tx_formatUnitsSafe(valueBigInt, decimals) {
+    try {
+      if (decimals == null || Number.isNaN(decimals)) return null;
+      return E.formatUnits(valueBigInt, decimals);
+    } catch {
+      return null;
+    }
+  }
+
+  function tx_pickPrimaryToken(approvals, transfers) {
+    // Prefer approvals token (allowance risk is often more important), else transfers token
+    return (approvals[0]?.token) || (transfers[0]?.token) || "";
+  }
+
+  // =========================
+  // Main
+  // =========================
+  async function runTxDecode() {
+    const st = $("#tx-status");
+    const out = $("#tx-out");
+    const evWrap = $("#tx-events");
+    clearStatus(st);
+
+    tx_resetSummary();
+
+    const net = netFromSelect("#tx-net");
+    const hash = ($("#tx-hash")?.value || "").trim();
+    if (!hash || !/^0x([A-Fa-f0-9]{64})$/.test(hash)) {
+      setStatus(st, "warn", "Please paste a valid tx hash.");
+      return;
     }
 
-    async function runTxDecode(){
-      const st = $("#tx-status");
-      const out = $("#tx-out");
-      const evWrap = $("#tx-events");
-      clearStatus(st);
+    const read = getReadProvider(net);
+    if (!read) return setStatus(st, "bad", "No RPC available.");
 
-      const net = netFromSelect("#tx-net");
-      const hash = ($("#tx-hash")?.value || "").trim();
-      if (!hash || !/^0x([A-Fa-f0-9]{64})$/.test(hash)) {
-        setStatus(st, "warn", "Please paste a valid tx hash.");
-        return;
+    setStatus(st, "info", "Fetching tx + receipt…");
+
+    try {
+      const [tx, rc] = await Promise.all([
+        read.getTransaction(hash),
+        read.getTransactionReceipt(hash)
+      ]);
+
+      if (!tx) return setStatus(st, "bad", "Tx not found.");
+
+      const chain = CHAINS[net];
+      const txLink = chain.txUrl(hash);
+
+      // best-effort decode (router calls)
+      let decoded = null;
+      try {
+        const iface = new E.Interface(tx_ROUTER_ABI_MIN);
+        decoded = iface.parseTransaction({ data: tx.data, value: tx.value });
+      } catch {}
+
+      const logs = rc?.logs || [];
+      const transfersRaw = logs.filter(l => l.topics?.[0] === TRANSFER_TOPIC0).slice(0, 50);
+      const approvalsRaw = logs.filter(l => l.topics?.[0] === APPROVAL_TOPIC0).slice(0, 50);
+
+      const transfers = transfersRaw.map(tx_decodeTransferLog).filter(Boolean);
+      const approvals = approvalsRaw.map(tx_decodeApprovalLog).filter(Boolean);
+
+      const decodedName = decoded?.name || "";
+      const hasRouterSwap = decodedName.toLowerCase().includes("swap");
+      const hasApproval = approvals.length > 0;
+      const hasTransfers = transfers.length > 0;
+
+      const rcStatus = (rc && typeof rc.status !== "undefined") ? rc.status : undefined;
+      const reverted = (rcStatus === 0 || rcStatus === 0n);
+
+      // -------------------------
+      // Action (with better fallbacks)
+      // -------------------------
+      let actionLabel = "Unknown";
+      let actionKind  = "unk";
+
+      if (!tx.to && rc?.contractAddress) {
+        actionLabel = "Contract creation";
+        actionKind = reverted ? "warn" : "ok";
+      } else if (decodedName) {
+        actionLabel = decodedName;
+        actionKind = hasRouterSwap ? "ok" : "warn";
+      } else if ((tx.data === "0x" || !tx.data) && tx.value && BigInt(tx.value) > 0n) {
+        actionLabel = "Native transfer";
+        actionKind = "warn";
+      } else if (tx.to) {
+        const sel = tx_callSelector(tx.data);
+        actionLabel = sel ? `Contract call (unknown ${sel})` : "Contract call (unknown)";
+        actionKind = "warn";
       }
 
-      const read = getReadProvider(net);
-      if (!read) return setStatus(st, "bad", "No RPC available.");
+      // -------------------------
+      // Approval analysis + routers
+      // -------------------------
+      let sawUnlimited = false;
+      let sawKnownRouterUnlimited = false;
+      let sawFiniteApprove = false;
+      let sawRevoke = false;
 
-      setStatus(st, "info", "Fetching tx + receipt…");
+      const knownRouterNames = new Set();
+      let topSpender = ""; // best-effort for impact label
 
-      try{
-        const [tx, rc] = await Promise.all([
-          read.getTransaction(hash),
-          read.getTransactionReceipt(hash)
-        ]);
+      for (const a of approvals) {
+        if (!a) continue;
 
-        if (!tx) return setStatus(st, "bad", "Tx not found.");
+        const rn = tx_getKnownRouterName(net, a.spender);
+        if (rn) knownRouterNames.add(rn);
 
-        const chain = CHAINS[net];
-        const txLink = chain.txUrl(hash);
+        // choose one spender to mention (prefer known router)
+        if (!topSpender) topSpender = a.spender;
+        if (rn) topSpender = rn; // overwrite with nice name
 
-        // attempt decode with router ABI (best-effort)
-        let decoded = null;
-        try{
-          const iface = new E.Interface(ROUTER_ABI_MIN);
-          decoded = iface.parseTransaction({ data: tx.data, value: tx.value });
-        } catch {}
+        if (tx_isUnlimitedApprove(a.value)) {
+          sawUnlimited = true;
+          if (rn) sawKnownRouterUnlimited = true;
+        } else {
+          if (a.value === 0n) sawRevoke = true;
+          else sawFiniteApprove = true;
+        }
+      }
 
-        // render header
-        out.innerHTML = `
-          <b>Tx:</b> <a href="${txLink}" target="_blank" rel="noopener">${txLink}</a><br>
+      // -------------------------
+      // Target (Token/Asset + Contract creation support)
+      // Priority:
+      // 1) New contract if creation
+      // 2) Known router if tx.to is known router
+      // 3) Token from events (approval/transfer) -> symbol
+      // 4) fallback to tx.to short
+      // -------------------------
+      let targetKind = "unk";
+      let targetLabel = "—";
+
+      if (!tx.to && rc?.contractAddress) {
+        targetLabel = `New contract (${shortAddr(rc.contractAddress)})`;
+        targetKind = reverted ? "warn" : "ok";
+      } else if (tx.to) {
+        const toRouterName = tx_getKnownRouterName(net, tx.to);
+        if (toRouterName) {
+          targetLabel = `${toRouterName} (${shortAddr(tx.to)})`;
+          targetKind = "warn";
+        } else {
+          const primaryToken = tx_pickPrimaryToken(approvals, transfers);
+          if (primaryToken) {
+            // enrich token label
+            const meta = await tx_getTokenMeta(read, net, primaryToken);
+            const nm = meta?.symbol || meta?.name || "";
+            targetLabel = nm ? `${nm} (${shortAddr(primaryToken)})` : shortAddr(primaryToken);
+            targetKind = "ok";
+          } else {
+            targetLabel = shortAddr(tx.to);
+            targetKind = "ok";
+          }
+        }
+      }
+
+      // -------------------------
+      // Risk (heuristics)
+      // -------------------------
+      let riskLabel = "Unknown";
+      let riskKind  = "unk";
+
+      if (reverted) {
+        riskLabel = "Tx reverted (failed)";
+        riskKind = "warn";
+      } else if (hasRouterSwap) {
+        riskLabel = "Likely DEX swap";
+        riskKind = "ok";
+      } else if (sawUnlimited && !sawKnownRouterUnlimited) {
+        riskLabel = "High risk: unlimited approval (unknown spender)";
+        riskKind = "bad";
+      } else if (sawUnlimited && sawKnownRouterUnlimited) {
+        const names = Array.from(knownRouterNames).slice(0, 2).join(", ");
+        riskLabel = `Unlimited approval (known router${names ? ": " + names : ""})`;
+        riskKind = "warn";
+      } else if (hasApproval && !decodedName) {
+        riskLabel = "Approval without decoded call";
+        riskKind = "warn";
+      } else if (!decodedName && hasTransfers) {
+        riskLabel = "Transfer activity (unknown call)";
+        riskKind = "warn";
+      } else if (decodedName) {
+        riskLabel = "Contract interaction";
+        riskKind = "warn";
+      }
+
+      // -------------------------
+      // Max impact (Allowance Risk-aware + largest transfer)
+      // -------------------------
+      let impactLabel = "—";
+      let impactKind = "unk";
+
+      if (sawUnlimited) {
+        if (sawKnownRouterUnlimited) {
+          const names = Array.from(knownRouterNames).slice(0, 2).join(", ");
+          impactLabel = `Unlimited spending approved (known router${names ? ": " + names : ""})`;
+          impactKind = "warn";
+        } else {
+          impactLabel = "Unlimited spending approved (unknown spender)";
+          impactKind = "bad";
+        }
+      } else if (sawFiniteApprove) {
+        // Mention spender if we can
+        const spenderPart = (typeof topSpender === "string" && topSpender.startsWith("0x"))
+          ? shortAddr(topSpender)
+          : (topSpender ? String(topSpender) : "");
+        impactLabel = spenderPart ? `Spending approved (limited) → ${spenderPart}` : "Spending approved (limited)";
+        impactKind = "warn";
+      } else if (sawRevoke && !hasTransfers) {
+        impactLabel = "Allowance revoked";
+        impactKind = "ok";
+      } else if (tx.value && BigInt(tx.value) > 0n) {
+        impactLabel = `Sends ${E.formatEther(tx.value)} native`;
+        impactKind = "warn";
+      } else if (hasTransfers) {
+        // Try to show largest transfer with token symbol if possible
+        let largest = transfers[0];
+        for (const t of transfers) if (t.value > largest.value) largest = t;
+
+        const meta = largest?.token ? await tx_getTokenMeta(read, net, largest.token) : null;
+        const sym = meta?.symbol || "";
+        const dec = meta?.decimals;
+
+        const pretty = (dec != null) ? tx_formatUnitsSafe(largest.value, dec) : null;
+        if (pretty && sym) {
+          impactLabel = `Largest transfer: ${pretty} ${sym}`;
+        } else if (sym) {
+          impactLabel = `Largest transfer: ${sym} (raw)`;
+        } else {
+          impactLabel = `${transfers.length} token transfer(s)`;
+        }
+        impactKind = "ok";
+      } else if (hasApproval) {
+        impactLabel = "Allowance changed";
+        impactKind = "warn";
+      }
+
+      // -------------------------
+      // Fill the 4 fixed lines
+      // -------------------------
+      tx_setLine("#tx-sum-action", "Action", tx_badge(actionKind, actionLabel));
+      tx_setLine("#tx-sum-risk", "Risk", tx_badge(riskKind, riskLabel));
+      tx_setLine("#tx-sum-target", "Target", tx_badge(targetKind, targetLabel));
+      tx_setLine("#tx-sum-impact", "Max impact", tx_badge(impactKind, impactLabel));
+
+      // -------------------------
+      // Details panel (kept clean + more professional)
+      // -------------------------
+      const gasUsed = rc?.gasUsed ? String(rc.gasUsed) : "—";
+      const statusTxt = (typeof rcStatus === "undefined") ? "—" : (reverted ? "FAILED" : "SUCCESS");
+
+      out.innerHTML = `
+        <div class="small" style="margin-bottom:10px;">
+          <b>Tx:</b> <a href="${txLink}" target="_blank" rel="noopener">${shortAddr(hash)}</a>
+          <span class="muted">(${String(net).toUpperCase()})</span><br>
+          <b>Status:</b> <span class="mono">${statusTxt}</span> &nbsp; <b>Gas used:</b> <span class="mono">${gasUsed}</span><br>
           <b>From:</b> <span class="mono">${tx.from}</span><br>
           <b>To:</b> <span class="mono">${tx.to || "—"}</span><br>
-          <b>Value:</b> <span class="mono">${tx.value ? E.formatEther(tx.value) : "0"}</span><br>
-          ${decoded ? `<b>Decoded call:</b> <span class="mono">${decoded.name}</span>` : `<b>Decoded call:</b> <span class="muted">unknown</span>`}
-        `;
-        out.style.display = "block";
+          <b>Value:</b> <span class="mono">${tx.value ? E.formatEther(tx.value) : "0"}</span>
+        </div>
+      `;
+      out.style.display = "block";
 
-        // events
-        const items = [];
-        const logs = rc?.logs || [];
+      // -------------------------
+      // Events (with per-token label best-effort)
+      // -------------------------
+      const items = [];
 
-        const transfers = logs.filter(l => l.topics?.[0] === TRANSFER_TOPIC0).slice(0, 20);
-        const approvals = logs.filter(l => l.topics?.[0] === APPROVAL_TOPIC0).slice(0, 20);
-
-        if (decoded?.args) {
-          const args = [];
-          decoded.args.forEach((v, i) => {
-            args.push(`<div class="small mono" style="margin-top:6px;">arg${i}: ${String(v)}</div>`);
-          });
-          items.push(`
-            <div class="card">
-              <h3>Decoded Inputs</h3>
-              <div class="small">Best-effort decode for common router calls.</div>
-              ${args.join("")}
-            </div>
-          `);
-        }
-
-        if (transfers.length) {
-          const rows = transfers.map(l => {
-            const d = decodeTransferLog(l);
-            if (!d) return "";
-            return `<div class="small mono" style="margin-top:6px;">Transfer ${shortAddr(d.from)} → ${shortAddr(d.to)} • raw: ${d.value.toString()}</div>`;
-          }).join("");
-          items.push(`
-            <div class="card">
-              <h3>Transfer Events</h3>
-              ${rows}
-            </div>
-          `);
-        }
-
-        if (approvals.length) {
-          const rows = approvals.map(l => {
-            const d = decodeApprovalLog(l);
-            if (!d) return "";
-            return `<div class="small mono" style="margin-top:6px;">Approval ${shortAddr(d.owner)} → ${shortAddr(d.spender)} • raw: ${d.value.toString()}</div>`;
-          }).join("");
-          items.push(`
-            <div class="card">
-              <h3>Approval Events</h3>
-              ${rows}
-            </div>
-          `);
-        }
-
-        evWrap.innerHTML = items.length ? `<div class="grid-2">${items.join("")}</div>` : `<div class="small muted">No common events detected (or log count is zero).</div>`;
-        setStatus(st, "ok", "Done.");
-        gtagEvent("sec_tx_decode", { net });
-      } catch (e){
-        setStatus(st, "bad", `Decode failed: ${String(e?.message || e)}`);
+      if (decoded?.args) {
+        const args = [];
+        decoded.args.forEach((v, i) => {
+          args.push(`<div class="small mono" style="margin-top:6px;">arg${i}: ${String(v)}</div>`);
+        });
+        items.push(`
+          <div class="card">
+            <h3>Decoded Inputs</h3>
+            <div class="small">Best-effort decode for common router calls.</div>
+            ${args.join("")}
+          </div>
+        `);
       }
-    }
 
-    function initTxUi(){
-      $("#tx-run")?.addEventListener("click", runTxDecode);
-      $("#tx-copy-md")?.addEventListener("click", async () => {
-        const txt = ($("#tx-out")?.innerText || "").trim();
-        if (!txt) return setStatus($("#tx-status"), "warn", "Nothing to copy yet.");
-        const ok = await copyText(txt);
-        setStatus($("#tx-status"), ok ? "ok" : "warn", ok ? "Copied." : "Copy failed.");
-      });
+      // Preload meta for up to 2 distinct tokens to keep it fast
+      const tokenSet = new Set();
+      for (const t of transfers) tokenSet.add(t.token);
+      for (const a of approvals) tokenSet.add(a.token);
+      const tokenList = Array.from(tokenSet).slice(0, 2);
+
+      const metaMap = {};
+      await Promise.all(tokenList.map(async (addr) => {
+        const meta = await tx_getTokenMeta(read, net, addr);
+        metaMap[addr] = meta || null;
+      }));
+
+      if (transfers.length) {
+        const rows = transfers.map(d => {
+          const meta = metaMap[d.token] || null;
+          const sym = meta?.symbol || "";
+          const tag = sym ? ` <span class="muted">(${sym})</span>` : "";
+          return `<div class="small mono" style="margin-top:6px;">Transfer ${shortAddr(d.from)} → ${shortAddr(d.to)}${tag} • raw: ${d.value.toString()}</div>`;
+        }).join("");
+
+        items.push(`
+          <div class="card">
+            <h3>Transfer Events</h3>
+            ${rows}
+          </div>
+        `);
+      }
+
+      if (approvals.length) {
+        const rows = approvals.map(d => {
+          const routerName = tx_getKnownRouterName(net, d.spender);
+          const routerTag = routerName ? ` <span class="muted">(${routerName})</span>` : "";
+          const meta = metaMap[d.token] || null;
+          const sym = meta?.symbol || "";
+          const tokenTag = sym ? ` <span class="muted">(${sym})</span>` : "";
+
+          const inf = tx_isUnlimitedApprove(d.value)
+            ? ` <span class="muted">(unlimited)</span>`
+            : (d.value === 0n ? ` <span class="muted">(revoked)</span>` : "");
+
+          return `<div class="small mono" style="margin-top:6px;">Approval ${shortAddr(d.owner)} → ${shortAddr(d.spender)}${routerTag}${tokenTag} • raw: ${d.value.toString()}${inf}</div>`;
+        }).join("");
+
+        items.push(`
+          <div class="card">
+            <h3>Approval Events</h3>
+            ${rows}
+          </div>
+        `);
+      }
+
+      evWrap.innerHTML = items.length
+        ? `<div class="grid-2">${items.join("")}</div>`
+        : `<div class="small muted">No common events detected (or log count is zero).</div>`;
+
+      setStatus(st, "ok", "Done.");
+      gtagEvent("sec_tx_decode", { net });
+
+    } catch (e) {
+      setStatus(st, "bad", `Decode failed: ${String(e?.message || e)}`);
     }
+  }
+
+  // =========================
+  // UI wiring (idempotent)
+  // =========================
+  let tx_ui_inited = false;
+
+  function initTxUi() {
+    if (tx_ui_inited) return;
+    tx_ui_inited = true;
+
+    $("#tx-run")?.addEventListener("click", runTxDecode);
+
+    $("#tx-copy-md")?.addEventListener("click", async () => {
+      // copy summary lines as visible text (already includes titles)
+      const a = (document.querySelector("#tx-sum-action")?.innerText || "Action —").trim();
+      const r = (document.querySelector("#tx-sum-risk")?.innerText || "Risk —").trim();
+      const t = (document.querySelector("#tx-sum-target")?.innerText || "Target —").trim();
+      const m = (document.querySelector("#tx-sum-impact")?.innerText || "Max impact —").trim();
+
+      const body = ($("#tx-out")?.innerText || "").trim();
+
+      const txt = [
+        "Tx Decoder Summary",
+        a,
+        r,
+        t,
+        m,
+        "",
+        body
+      ].join("\n");
+
+      const ok = await copyText(txt);
+      setStatus($("#tx-status"), ok ? "ok" : "warn", ok ? "Copied." : "Copy failed.");
+    });
+  }
+
+  // =========================
+  // Export for debugging (optional but VERY useful)
+  // =========================
+  window.CX = window.CX || {};
+  window.CX.runTxDecode = runTxDecode;
+  window.CX.initTxUi = initTxUi;
+  window.CX.txDecoder = window.CX.txDecoder || {};
+  window.CX.txDecoder.getTokenMeta = tx_getTokenMeta;
+  window.CX.txDecoder.metaCache = tx_TOKEN_META_CACHE;
+
+})();
+
 
     // =========================
     // Dev Tools (Bookmarklet + Monitor)
@@ -4599,7 +5108,9 @@ try {
       initLiqUi();
       initApprovalsUi();
       initRpcUi();
-      initTxUi();
+      if (window.CX && typeof window.CX.initTxUi === "function") {
+  window.CX.initTxUi();
+}
       initDevUi();
 
       applyI18n(currentLang);
