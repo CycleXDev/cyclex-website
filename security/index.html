@@ -4691,18 +4691,32 @@ window.CX.getReadProvider = getReadProvider;
       return;
     }
 
-    const read = getReadProvider(net);
-    if (!read) return setStatus(st, "bad", "No RPC available.");
+    const urls = buildRpcCandidates(net);
+if (!urls.length) return setStatus(st, "bad", "No RPC available.");
 
-    setStatus(st, "info", "Fetching tx + receipt…");
+setStatus(st, "info", "Fetching tx + receipt…");
 
-    try {
-      const [tx, rc] = await Promise.all([
-        read.getTransaction(hash),
-        read.getTransactionReceipt(hash)
-      ]);
+try {
+  const r = await withRpcFallback(net, async (provider, url) => {
+    const [tx, rc] = await Promise.all([
+      provider.getTransaction(hash),
+      provider.getTransactionReceipt(hash)
+    ]);
 
-      if (!tx) return setStatus(st, "bad", "Tx not found.");
+    if (!tx) throw new Error("tx_null");
+    return { provider, tx, rc };
+  }, { timeoutMs: 12000 });
+
+  if (!r.ok) {
+    const msg = String(r.err?.message || r.err || "");
+    if (msg.includes("tx_null")) return setStatus(st, "bad", "Tx not found (wrong network / unsynced RPC).");
+    return setStatus(st, "bad", `RPC failed: ${msg}`);
+  }
+
+  const read = r.res.provider;
+  const tx = r.res.tx;
+  const rc = r.res.rc;
+
 
       const chain = CHAINS[net];
       const txLink = chain.txUrl(hash);
