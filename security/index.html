@@ -5338,7 +5338,6 @@ try {
         if ($("#qs-net")) $("#qs-net").value = net;
         if (q.token && isAddr(q.token)) {
           if ($("#qs-token")) $("#qs-token").value = normAddr(q.token);
-          // small delay so UI is ready
           setTimeout(() => runQuickScan(), 250);
         }
       }
@@ -5361,28 +5360,24 @@ try {
     setTimeout(() => {
       const sel = $("#tx-net");
       if (sel) {
-        sel.value = net; // "eth" or "bsc"
+        sel.value = net; 
         sel.dispatchEvent(new Event("change", { bubbles: true }));
       }
       const btn = $("#tx-run");
       if (btn) btn.click();
     }, 400);
   }
-
-        // after showing a tool panel, scroll to it (works also for bookmarklet)
-setTimeout(() => {
-  const target = `#panel-${tool}`;   // quick / liq / approvals / rpc / tx / dev
+}
+      setTimeout(() => {
+  const target = `#panel-${tool}`;   
   const el = document.querySelector(target);
   if (!el) return;
 
-  // set hash so refresh/back works nicely
   try { history.replaceState(null, "", target); }
   catch { location.hash = target; }
 
   el.scrollIntoView({ behavior: "smooth", block: "start" });
 }, 450);
-
-}
     }
 
     // =========================
