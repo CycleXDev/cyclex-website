@@ -1463,15 +1463,29 @@
     <!-- RIGHT: OUTPUT -->
     <div class="card">
       <h3 data-i18n="tx_results_title">Decoded Output</h3>
+      
+<!-- 4-line Security Summary (always visible) -->
+<div id="tx-sum" class="tx-sum" style="margin-top:10px;">
+  <div class="tx-sum-line">
+    <span class="tx-sum-k" data-i18n="tx_sum_action_k">Action</span>
+    <span class="tx-sum-v" id="tx-sum-action">—</span>
+  </div>
 
-      <!-- 4-line Security Summary (always visible) -->
-      <div id="tx-sum" class="tx-sum" style="margin-top:10px;">
-        <div class="tx-sum-line" id="tx-sum-action" data-i18n="tx_sum_action">Action: —</div>
-        <div class="tx-sum-line" id="tx-sum-risk" data-i18n="tx_sum_risk">Risk: —</div>
-        <div class="tx-sum-line" id="tx-sum-target" data-i18n="tx_sum_target">Target: —</div>
-        <div class="tx-sum-line" id="tx-sum-impact" data-i18n="tx_sum_impact">Max impact: —</div>
-      </div>
+  <div class="tx-sum-line">
+    <span class="tx-sum-k" data-i18n="tx_sum_risk_k">Risk</span>
+    <span class="tx-sum-v" id="tx-sum-risk">—</span>
+  </div>
 
+  <div class="tx-sum-line">
+    <span class="tx-sum-k" data-i18n="tx_sum_target_k">Target</span>
+    <span class="tx-sum-v mono" id="tx-sum-target">—</span>
+  </div>
+
+  <div class="tx-sum-line">
+    <span class="tx-sum-k" data-i18n="tx_sum_impact_k">Max impact</span>
+    <span class="tx-sum-v" id="tx-sum-impact">—</span>
+  </div>
+</div>
       <!-- Main decoded text / ready state -->
       <div id="tx-out" class="status info" style="display:block; margin-top:10px;" data-i18n="tx_ready_html">
         <strong>Ready.</strong><br>
@@ -4295,11 +4309,11 @@ function bindLangButtons(){
       });
     }
 
-   // =========================
-// Tx Decoder (upgraded: 4-line summary + unlimited approve detection + known router label)
+ // =========================
+// Tx Decoder (4-line summary via fixed DOM + unlimited approve detection + known router label)
 // =========================
 
-const ROUTER_ABI_MIN = [
+const tx_ROUTER_ABI_MIN = [
   "function swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
   "function swapExactETHForTokens(uint256,address[],address,uint256) payable",
   "function swapExactTokensForETH(uint256,uint256,address[],address,uint256)",
@@ -4308,27 +4322,22 @@ const ROUTER_ABI_MIN = [
   "function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)"
 ];
 
-// --- Unlimited approve constant (uint256 max) ---
-const U256_MAX = (1n << 256n) - 1n;
+// uint256 max
+const tx_U256_MAX = (1n << 256n) - 1n;
 
-// --- Known router addresses (best-effort, per chain) ---
-// You can add more routers later. Keep lowercase.
-const KNOWN_ROUTERS = {
+// Known routers (lowercase keys)
+const tx_KNOWN_ROUTERS = {
   bsc: {
-    // PancakeSwap v2 Router (commonly used)
     "0x10ed43c718714eb63d5aa57b78b54704e256024e": "PancakeSwap Router",
-    // PancakeSwap v3 Router (commonly referenced)
     "0x13f4ea83d0bd40e75c8222255bc855a974568dd4": "PancakeSwap V3 Router"
   },
   eth: {
-    // Uniswap V2 Router02
     "0x7a250d5630b4cf539739df2c5dacb4c659f2488d": "Uniswap V2 Router",
-    // Uniswap Universal Router
     "0xef1c6e67703c7bd7107eed8303fbe6ec2554bf6b": "Uniswap Universal Router"
   }
 };
 
-function decodeTransferLog(log){
+function tx_decodeTransferLog(log){
   try{
     const from = "0x" + log.topics[1].slice(26);
     const to = "0x" + log.topics[2].slice(26);
@@ -4337,7 +4346,7 @@ function decodeTransferLog(log){
   } catch { return null; }
 }
 
-function decodeApprovalLog(log){
+function tx_decodeApprovalLog(log){
   try{
     const owner = "0x" + log.topics[1].slice(26);
     const spender = "0x" + log.topics[2].slice(26);
@@ -4347,22 +4356,37 @@ function decodeApprovalLog(log){
 }
 
 function tx_isUnlimitedApprove(vBigInt){
-  try { return typeof vBigInt === "bigint" && vBigInt === U256_MAX; } catch { return false; }
+  try { return typeof vBigInt === "bigint" && vBigInt === tx_U256_MAX; } catch { return false; }
 }
 
 function tx_getKnownRouterName(net, spenderAddr){
-  const m = (KNOWN_ROUTERS && KNOWN_ROUTERS[net]) ? KNOWN_ROUTERS[net] : {};
+  const m = (tx_KNOWN_ROUTERS && tx_KNOWN_ROUTERS[net]) ? tx_KNOWN_ROUTERS[net] : {};
   if (!spenderAddr) return "";
   const k = isAddr(spenderAddr) ? normAddr(spenderAddr) : String(spenderAddr).toLowerCase();
   return m[k] || "";
 }
 
+function tx_badge(kind, label){
+  const k = (kind === "ok" || kind === "warn" || kind === "bad" || kind === "unk") ? kind : "unk";
+  return `<span class="v ${k}"><span class="dot"></span>${label}</span>`;
+}
+
+function tx_setSum(id, html){
+  const el = $(id);
+  if (el) el.innerHTML = html;
+}
 
 async function runTxDecode(){
   const st = $("#tx-status");
   const out = $("#tx-out");
   const evWrap = $("#tx-events");
   clearStatus(st);
+
+  // reset summary to "—" every run (so it never gets stuck)
+  tx_setSum("#tx-sum-action", "—");
+  tx_setSum("#tx-sum-risk", "—");
+  tx_setSum("#tx-sum-target", "—");
+  tx_setSum("#tx-sum-impact", "—");
 
   const net = netFromSelect("#tx-net");
   const hash = ($("#tx-hash")?.value || "").trim();
@@ -4387,31 +4411,25 @@ async function runTxDecode(){
     const chain = CHAINS[net];
     const txLink = chain.txUrl(hash);
 
-    // attempt decode with router ABI (best-effort)
+    // best-effort decode
     let decoded = null;
     try{
-      const iface = new E.Interface(ROUTER_ABI_MIN);
+      const iface = new E.Interface(tx_ROUTER_ABI_MIN);
       decoded = iface.parseTransaction({ data: tx.data, value: tx.value });
     } catch {}
 
-    // -------------------------
-    // Build summary inputs
-    // -------------------------
     const logs = rc?.logs || [];
     const transfers = logs.filter(l => l.topics?.[0] === TRANSFER_TOPIC0).slice(0, 20);
     const approvals = logs.filter(l => l.topics?.[0] === APPROVAL_TOPIC0).slice(0, 20);
-
-    function badge(kind, label){
-      const k = (kind === "ok" || kind === "warn" || kind === "bad" || kind === "unk") ? kind : "unk";
-      return `<span class="v ${k}"><span class="dot"></span>${label}</span>`;
-    }
 
     const decodedName = decoded?.name || "";
     const hasRouterSwap = decodedName.toLowerCase().includes("swap");
     const hasApproval = approvals.length > 0;
     const hasTransfers = transfers.length > 0;
 
+    // -------------------------
     // 1) Action
+    // -------------------------
     let actionLabel = "Unknown";
     let actionKind  = "unk";
 
@@ -4426,19 +4444,16 @@ async function runTxDecode(){
       actionKind = "unk";
     }
 
-    // 2) Approvals (upgraded)
-    // Detect unlimited approves + detect known router spender
-    let apprLabel = "None detected";
-    let apprKind  = "ok";
-
-    // We’ll compute a “worst” approval state across up to 20 Approval logs
+    // -------------------------
+    // 2) Approvals analysis
+    // -------------------------
     let sawUnlimited = false;
     let sawKnownRouterUnlimited = false;
     let knownRouterNames = new Set();
 
     if (hasApproval) {
       for (const l of approvals) {
-        const d = decodeApprovalLog(l);
+        const d = tx_decodeApprovalLog(l);
         if (!d) continue;
 
         const routerName = tx_getKnownRouterName(net, d.spender);
@@ -4449,48 +4464,40 @@ async function runTxDecode(){
           if (routerName) sawKnownRouterUnlimited = true;
         }
       }
-
-      if (sawUnlimited) {
-        // Unlimited approve: red by default, yellow if spender is known router
-        if (sawKnownRouterUnlimited) {
-          apprKind = "warn";
-          const names = Array.from(knownRouterNames).slice(0, 2).join(", ");
-          apprLabel = "Unlimited approval (known router" + (names ? ": " + names : "") + ")";
-        } else {
-          apprKind = "bad";
-          apprLabel = "Unlimited approval (unknown spender)";
-        }
-      } else {
-        // Normal approvals (finite)
-        apprKind = "warn";
-        const names = Array.from(knownRouterNames).slice(0, 2).join(", ");
-        apprLabel = approvals.length + " approval event(s)" + (names ? " • routers: " + names : "");
-      }
     }
 
-    // 3) Transfers
-    let trLabel = "None detected";
-    let trKind  = "unk";
-    if (hasTransfers) {
-      trLabel = `${transfers.length} transfer event(s)`;
-      trKind  = "ok";
+    // -------------------------
+    // 3) Target (simple + useful)
+    // Target = tx.to (where the call is sent)
+    // -------------------------
+    let targetLabel = tx.to ? shortAddr(tx.to) : "—";
+    let targetKind  = tx.to ? "ok" : "unk";
+
+    // If tx.to itself is a known router (nice bonus)
+    const toRouter = tx.to ? tx_getKnownRouterName(net, tx.to) : "";
+    if (toRouter) {
+      targetLabel = `${shortAddr(tx.to)} (${toRouter})`;
+      targetKind = "warn";
     }
 
-    // 4) Risk (heuristic upgraded to account for approvals)
+    // -------------------------
+    // 4) Risk (heuristics + your new unlimited rule)
+    // -------------------------
     let riskLabel = "Unknown";
     let riskKind  = "unk";
 
     if (hasRouterSwap) {
       riskLabel = "Likely DEX swap";
       riskKind = "ok";
-    } else if (apprKind === "bad") {
+    } else if (sawUnlimited && !sawKnownRouterUnlimited) {
       riskLabel = "High risk: unlimited approval (unknown spender)";
       riskKind = "bad";
-    } else if (apprKind === "warn" && hasApproval && !decodedName) {
-      riskLabel = "Approval without decoded call";
+    } else if (sawUnlimited && sawKnownRouterUnlimited) {
+      const names = Array.from(knownRouterNames).slice(0, 2).join(", ");
+      riskLabel = `Unlimited approval (known router${names ? ": " + names : ""})`;
       riskKind = "warn";
-    } else if (hasApproval && decodedName && !hasRouterSwap) {
-      riskLabel = "Approval + non-swap call";
+    } else if (hasApproval && !decodedName) {
+      riskLabel = "Approval without decoded call";
       riskKind = "warn";
     } else if (!decodedName && hasTransfers) {
       riskLabel = "Transfer activity (unknown call)";
@@ -4501,8 +4508,37 @@ async function runTxDecode(){
     }
 
     // -------------------------
-    // Render summary (4 lines)
+    // 5) Max impact (compact, user-facing)
     // -------------------------
+    let impactLabel = "—";
+    let impactKind = "unk";
+
+    if (sawUnlimited && !sawKnownRouterUnlimited) {
+      impactLabel = "Unlimited token spend possible";
+      impactKind = "bad";
+    } else if (sawUnlimited && sawKnownRouterUnlimited) {
+      impactLabel = "Unlimited allowance to known router";
+      impactKind = "warn";
+    } else if (tx.value && BigInt(tx.value) > 0n) {
+      impactLabel = `Sends ${E.formatEther(tx.value)} native`;
+      impactKind = "warn";
+    } else if (hasApproval) {
+      impactLabel = "Token allowance changed";
+      impactKind = "warn";
+    } else if (hasTransfers) {
+      impactLabel = `${transfers.length} token transfer(s)`;
+      impactKind = "ok";
+    }
+
+    // -------------------------
+    // Fill the 4 fixed lines in your DIV (THIS is the key fix)
+    // -------------------------
+    tx_setSum("#tx-sum-action", tx_badge(actionKind, actionLabel));
+    tx_setSum("#tx-sum-risk", tx_badge(riskKind, riskLabel));
+    tx_setSum("#tx-sum-target", tx_badge(targetKind, targetLabel));
+    tx_setSum("#tx-sum-impact", tx_badge(impactKind, impactLabel));
+
+    // keep tx details in the output panel (optional, but nice)
     out.innerHTML = `
       <div class="small" style="margin-bottom:10px;">
         <b>Tx:</b> <a href="${txLink}" target="_blank" rel="noopener">${shortAddr(hash)}</a>
@@ -4511,33 +4547,11 @@ async function runTxDecode(){
         <b>To:</b> <span class="mono">${tx.to || "—"}</span><br>
         <b>Value:</b> <span class="mono">${tx.value ? E.formatEther(tx.value) : "0"}</span>
       </div>
-
-      <div class="tx-sum">
-        <div class="tx-sum-line">
-          <span class="k">Action</span>
-          ${badge(actionKind, actionLabel)}
-        </div>
-
-        <div class="tx-sum-line">
-          <span class="k">Risk</span>
-          ${badge(riskKind, riskLabel)}
-        </div>
-
-        <div class="tx-sum-line">
-          <span class="k">Approvals</span>
-          ${badge(apprKind, apprLabel)}
-        </div>
-
-        <div class="tx-sum-line">
-          <span class="k">Transfers</span>
-          ${badge(trKind, trLabel)}
-        </div>
-      </div>
     `;
     out.style.display = "block";
 
     // -------------------------
-    // Events (keep your existing output, no duplicates)
+    // Events (same as before)
     // -------------------------
     const items = [];
 
@@ -4557,7 +4571,7 @@ async function runTxDecode(){
 
     if (transfers.length) {
       const rows = transfers.map(l => {
-        const d = decodeTransferLog(l);
+        const d = tx_decodeTransferLog(l);
         if (!d) return "";
         return `<div class="small mono" style="margin-top:6px;">Transfer ${shortAddr(d.from)} → ${shortAddr(d.to)} • raw: ${d.value.toString()}</div>`;
       }).join("");
@@ -4571,11 +4585,11 @@ async function runTxDecode(){
 
     if (approvals.length) {
       const rows = approvals.map(l => {
-        const d = decodeApprovalLog(l);
+        const d = tx_decodeApprovalLog(l);
         if (!d) return "";
         const routerName = tx_getKnownRouterName(net, d.spender);
         const tag = routerName ? ` <span class="muted">(${routerName})</span>` : "";
-       const inf = tx_isUnlimitedApprove(d.value) ? ` <span class="muted">(unlimited)</span>` : "";
+        const inf = tx_isUnlimitedApprove(d.value) ? ` <span class="muted">(unlimited)</span>` : "";
         return `<div class="small mono" style="margin-top:6px;">Approval ${shortAddr(d.owner)} → ${shortAddr(d.spender)}${tag} • raw: ${d.value.toString()}${inf}</div>`;
       }).join("");
       items.push(`
@@ -4600,14 +4614,30 @@ async function runTxDecode(){
 
 function initTxUi(){
   $("#tx-run")?.addEventListener("click", runTxDecode);
+
   $("#tx-copy-md")?.addEventListener("click", async () => {
-    const txt = ($("#tx-out")?.innerText || "").trim();
-    if (!txt) return setStatus($("#tx-status"), "warn", "Nothing to copy yet.");
+    // copy BOTH: tx-out + 4-line summary
+    const action = ($("#tx-sum-action")?.innerText || "—").trim();
+    const risk   = ($("#tx-sum-risk")?.innerText || "—").trim();
+    const target = ($("#tx-sum-target")?.innerText || "—").trim();
+    const impact = ($("#tx-sum-impact")?.innerText || "—").trim();
+
+    const body = ($("#tx-out")?.innerText || "").trim();
+
+    const txt = [
+      "Tx Decoder Summary",
+      `Action: ${action}`,
+      `Risk: ${risk}`,
+      `Target: ${target}`,
+      `Max impact: ${impact}`,
+      "",
+      body
+    ].join("\n");
+
     const ok = await copyText(txt);
     setStatus($("#tx-status"), ok ? "ok" : "warn", ok ? "Copied." : "Copy failed.");
   });
 }
-
 
     // =========================
     // Dev Tools (Bookmarklet + Monitor)
