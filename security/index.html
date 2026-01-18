@@ -3207,8 +3207,12 @@ function bindLangButtons(){
   const key = `${net}|${url}`;
   if (_providerCache.has(key)) return _providerCache.get(key);
 
-  const n = { name: CHAINS[net].name.toLowerCase(), chainId: CHAINS[net].chainId };
-  const p = new E.JsonRpcProvider(url, n, { staticNetwork: n });
+  const n = E.Network.from({
+  name: CHAINS[net].name.toLowerCase(),
+  chainId: CHAINS[net].chainId
+});
+const p = new E.JsonRpcProvider(url, n, { staticNetwork: n });
+
 
   _providerCache.set(key, p);
   return p;
