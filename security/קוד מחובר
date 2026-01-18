@@ -10,16 +10,18 @@
     gtag('config', 'G-BXDFXJWCNQ');
   </script>
 
-  <link rel="icon" href="/logo.png">
   <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" href="/logo.png">
-  <link rel="apple-touch-icon" href="/logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#05060a">
+  <meta name="application-name" content="CycleX">
+  <meta name="apple-mobile-web-app-title" content="CycleX">
 
   <meta charset="UTF-8" />
   <title>CycleX – Security Hub</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <style>
+  <style>
   :root{
     --bg-main:#05060a;
     --bg-gradient-start:#05060a;
@@ -47,7 +49,6 @@
     --container: 1160px;
     --container-wide: 1160px;
 
-
     /* ✅ single source of truth for grid/panel spacing */
     --tool-panel-gap: 18px;
     --tool-grid-gap: 18px;
@@ -67,8 +68,8 @@
     radial-gradient(circle at top right, rgba(0,229,255,.35) 0%, transparent 45%),
     radial-gradient(circle at bottom, rgba(0,58,76,.55) 0%, transparent 55%),
     linear-gradient(160deg,var(--bg-gradient-start),var(--bg-gradient-mid),var(--bg-gradient-end));
-  background-repeat:no-repeat;
-  background-attachment: fixed; /* ✅ makes it feel smooth while scrolling */
+    background-repeat:no-repeat;
+    background-attachment: fixed; /* ✅ makes it feel smooth while scrolling */
   }
 
   body{
@@ -85,13 +86,12 @@
   a{color:inherit;text-decoration:none}
 
   .page-shell{
-  width:100%;
-  max-width:1160px;
-  margin:0 auto;
-  padding:32px 20px 64px;
-  transform:none !important;
- }
-
+    width:100%;
+    max-width:1160px;
+    margin:0 auto;
+    padding:32px 20px 64px;
+    transform:none !important;
+  }
 
   /* helpers */
   .hide-sm{}
@@ -374,24 +374,34 @@
   .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
   .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
 
-  /* tables */
+  /* =========================
+     TABLES — merged in from the "old code" that fixed spacing/readability
+     What you asked to carry over:
+     ✅ proper cell ellipsis
+     ✅ RPC table special grid + 2-line clamp (URL + status)
+     ✅ numeric/icon columns centered
+     ✅ highlight row style
+     ========================= */
+
+  /* generic table shell (keep your look) */
   .table{
     margin-top:10px;
     border:1px solid rgba(255,255,255,.12);
     border-radius:18px;
-    overflow-x:auto;overflow-y:hidden;
-    -webkit-overflow-scrolling:touch;
+    overflow: hidden;                 /* from old code (clean corners) */
     background:rgba(255,255,255,.03);
   }
+
+  /* generic rows */
   .trow{
     display:grid;
     grid-template-columns:1.3fr 1.1fr .9fr .9fr;
     gap:10px;
     padding:10px 12px;
     border-top:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.03);
     align-items:center;
     font-size:13px;
-    min-width:640px;
   }
   .trow.head{
     border-top:none;
@@ -401,35 +411,159 @@
     text-transform:uppercase;
     color:rgba(244,246,255,.75);
   }
-  .trow .cell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .trow .cell.wrap{white-space:normal;text-overflow:clip;overflow-wrap:anywhere}
 
-  /* RPC table */
-  #rpc-table{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* generic cells (from old code) */
+  .trow .cell{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  /* optional wrapping cell */
+  .trow .cell.wrap{
+    white-space:normal;
+    text-overflow:clip;
+    overflow:hidden;
+    overflow-wrap:anywhere;
+  }
+
+    /* =========================
+   Contract Monitor (mon-table) — add inline X button column
+   No "Remove" header text, just an empty last cell like screenshot
+   ========================= */
+
+/* Desktop / default: 5th column reserved for X */
+#mon-table .trow,
+#mon-table .trow.head{
+  grid-template-columns: 1.35fr 1fr 1.05fr 1fr 44px;
+}
+
+/* If you prefer a bit more room for status text, use 52px instead of 44px */
+/* #mon-table .trow, #mon-table .trow.head{ grid-template-columns: 1.35fr 1fr 1.05fr 1fr 52px; } */
+
+#mon-table .trow.head .cell:last-child{
+  visibility:hidden;  /* stays in layout, but truly invisible */
+}
+
+
+/* Small clean X (no weird circle) */
+.mon-remove{
+  width:22px;
+  height:22px;
+  padding:0;
+  margin:0;
+
+  border:none;
+  background:transparent;
+  box-shadow:none;
+
+  color:rgba(244,246,255,.70);
+  cursor:pointer;
+  user-select:none;
+
+  line-height:1;
+  font-size:18px;
+  font-weight:900;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  transition:transform var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+  opacity:.9;
+}
+
+.mon-remove:hover{
+  opacity:1;
+  color:rgba(255,120,138,.95);  /* red-ish but subtle */
+  transform:translateY(-1px);
+}
+
+.mon-remove:active{
+  transform:translateY(0);
+}
+
+
+.mon-remove:focus-visible{
+  outline:2px solid rgba(0,229,255,.55);
+  outline-offset:2px;
+}
+
+
+  /* =========================
+     RPC table — EXACT behavior from old code
+     (shows long URLs without overlap + swipe on small screens)
+     ========================= */
+
+  /* allow horizontal swipe on small screens without breaking the card */
+  #rpc-table{
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* RPC | ms | chain | block | call | logs | status */
   #rpc-table .trow.head.rpc,
   #rpc-table .trow.rpc{
     display:grid;
-    grid-template-columns:minmax(240px,1.8fr) 72px 64px 64px 60px 60px minmax(140px,1fr);
-    gap:10px;align-items:center;min-width:760px;
+    grid-template-columns: minmax(240px, 1.8fr) 72px 64px 64px 60px 60px minmax(140px, 1fr);
+    gap:10px;
+    align-items:center;
+    min-width:760px;
   }
-  #rpc-table .trow.head.rpc .cell,
-  #rpc-table .trow.rpc .cell{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+  /* default RPC cells */
+  #rpc-table .trow.head.rpc .cell,
+  #rpc-table .trow.rpc .cell{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  /* RPC URL column (1st): allow 2 lines, break long URLs nicely */
   #rpc-table .trow.head.rpc .cell:first-child,
   #rpc-table .trow.rpc .cell:first-child{
-    white-space:normal;text-overflow:clip;overflow:hidden;overflow-wrap:anywhere;
-    line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
-    direction:ltr;unicode-bidi:plaintext;
+    white-space:normal;
+    text-overflow:clip;
+    overflow:hidden;
+    overflow-wrap:anywhere;
+    line-height:1.15;
+
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+
+    direction:ltr;
+    unicode-bidi:plaintext;
   }
+
+  /* STATUS column (last): allow 2 lines so "limit exceeded" won’t overlap */
   #rpc-table .trow.head.rpc .cell:last-child,
   #rpc-table .trow.rpc .cell:last-child{
-    white-space:normal;text-overflow:clip;overflow:hidden;overflow-wrap:anywhere;
-    line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
-  }
-  #rpc-table .trow.rpc .cell:not(:first-child),
-  #rpc-table .trow.head.rpc .cell:not(:first-child){text-align:center;justify-self:center}
+    white-space:normal;
+    text-overflow:clip;
+    overflow:hidden;
+    overflow-wrap:anywhere;
+    line-height:1.15;
 
-  .trow.highlight{background:rgba(0,230,118,.10);border-top-color:rgba(0,230,118,.20)}
+    display:-webkit-box;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+  }
+
+  /* keep numeric/icon columns centered */
+  #rpc-table .trow.rpc .cell:not(:first-child),
+  #rpc-table .trow.head.rpc .cell:not(:first-child){
+    text-align:center;
+    justify-self:center;
+  }
+
+  /* keep highlight style */
+  .trow.highlight{
+    background:rgba(0,230,118,.10);
+    border-top-color:rgba(0,230,118,.20);
+  }
 
   /* chips */
   .chip{
@@ -579,20 +713,22 @@
     .hide-sm{display:none!important}
 
     .tool-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
+
+    /* generic table swipe width on medium screens */
     .trow{min-width:560px}
 
     /* ✅ FIX: tables where hide-sm removes a column (no "ghost" grid column) */
     #ap-table .trow,
     #ap-table .trow.head{
-      grid-template-columns:1.35fr .95fr .85fr;
-      min-width:520px;
-    }
+      grid-template-columns: 1.7fr 1fr 1fr 44px;
+  min-width:520px;
+}
 
     #mon-table .trow,
-    #mon-table .trow.head{
-      grid-template-columns:1.7fr 1fr .95fr;
-      min-width:520px;
-    }
+#mon-table .trow.head{
+  grid-template-columns:1.7fr 1fr 1fr 44px; /* contract | net | status | X */
+  min-width:520px;
+}
 
     /* RPC: collapses to RPC / ms / status */
     #rpc-table .trow.head.rpc,
@@ -609,7 +745,8 @@
 
     .tool-grid{grid-template-columns:1fr; gap:14px}
   }
-  </style>
+</style>
+   
 </head>
 <body>
   <div class="page-shell">
@@ -729,6 +866,7 @@
           </div>
         </div>
       </section>
+
       <!-- PANELS -->
       <section class="panel-shell" id="panel-quick">
         <div class="panel-head">
@@ -800,24 +938,22 @@
             </div>
 
             <div class="field">
-  <div class="row qs-actions">
-    <button class="btn btn-primary" id="qs-run" data-i18n="btn_scan">Scan</button>
-    <button class="btn btn-ghost" id="qs-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
-    <button class="btn btn-ghost" id="qs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
-    <button class="btn btn-ghost" id="qs-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
-  </div>
-</div>
+              <div class="row qs-actions">
+                <button class="btn btn-primary" id="qs-run" data-i18n="btn_scan">Scan</button>
+                <button class="btn btn-ghost" id="qs-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
+                <button class="btn btn-ghost" id="qs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
+                <button class="btn btn-ghost" id="qs-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
+              </div>
+            </div>
 
-<div class="qs-share">
-  <button class="btn btn-ghost" id="qs-share-x">Share to X</button>
-  <button class="btn btn-ghost" id="qs-share-tg">Share to Telegram</button>
-  <button class="btn btn-ghost" id="qs-copy-xtext" data-i18n="btn_copy_xtext">Copy X text</button>
-</div>
-
+            <div class="qs-share">
+              <button class="btn btn-ghost" id="qs-share-x">Share to X</button>
+              <button class="btn btn-ghost" id="qs-share-tg">Share to Telegram</button>
+              <button class="btn btn-ghost" id="qs-copy-xtext" data-i18n="btn_copy_xtext">Copy X text</button>
+            </div>
 
             <div id="qs-status" class="status info"></div>
           </div>
-          
 
           <div class="card">
             <h3 data-i18n="results_title">Results</h3>
@@ -826,8 +962,8 @@
             </div>
 
             <div id="qs-out" class="status info" style="display:block; margin-top:10px;" data-i18n="qs_ready_html">
-            <strong>Ready.</strong><br>
-            Paste a token address and click <b>Scan</b>.
+              <strong>Ready.</strong><br>
+              Paste a token address and click <b>Scan</b>.
             </div>
 
             <div id="qs-risk" class="risk-badges"></div>
@@ -894,8 +1030,8 @@
             </div>
 
             <div id="liq-out" class="status info" style="display:block; margin-top:10px;" data-i18n="liq_ready_html">
-            <strong>Ready.</strong><br>
-            Paste a token address and click <b>Scan</b>.
+              <strong>Ready.</strong><br>
+              Paste a token address and click <b>Scan</b>.
             </div>
 
             <div id="liq-risk" class="risk-badges"></div>
@@ -928,7 +1064,6 @@
               <select id="ap-net">
                 <option value="bsc" data-i18n="net_bsc">BSC (BNB Chain)</option>
                 <option value="eth" data-i18n="net_eth">Ethereum</option>
-
               </select>
             </div>
 
@@ -994,14 +1129,6 @@
                 <div class="cell muted">—</div>
                 <div class="cell muted hide-sm">—</div>
                 <div class="cell muted">—</div>
-                <div class="cell">
-    <button class="mon-remove" type="button"
-            data-action="mon-remove"
-            data-addr=""
-            data-i18n-title="remove"
-            data-i18n-aria-label="remove"
-            title="Remove"
-            aria-label="Remove">×</button>
               </div>
             </div>
           </div>
@@ -1152,15 +1279,14 @@
           <div class="card">
             <h3 data-i18n="tx_results_title">Decoded Output</h3>
             <div id="tx-out" class="status info" style="display:block; margin-top:10px;" data-i18n="tx_ready_html">
-            <strong>Ready.</strong><br>
-            Paste a tx hash and click <b>Decode</b>.
+              <strong>Ready.</strong><br>
+              Paste a tx hash and click <b>Decode</b>.
             </div>
             <div id="tx-events" style="margin-top:10px;"></div>
           </div>
         </div>
       </section>
-
-      <section class="panel-shell hidden" id="panel-dev">
+            <section class="panel-shell hidden" id="panel-dev">
         <div class="panel-head">
           <div>
             <div class="panel-kicker" data-i18n="p_dev_kicker">Dev Tools</div>
@@ -1229,7 +1355,24 @@
                 <div class="cell" data-i18n="th_network">Network</div>
                 <div class="cell hide-sm" data-i18n="th_last_seen">Last seen</div>
                 <div class="cell" data-i18n="th_status">Status</div>
-                <div class="cell" data-i18n="th_remove">Remove</div>
+                <div class="cell" aria-hidden="true"></div>
+              </div>
+
+              <!-- ✅ placeholder row (JS will replace/append real rows) -->
+              <div class="trow">
+                <div class="cell muted">—</div>
+                <div class="cell muted">—</div>
+                <div class="cell muted hide-sm">—</div>
+                <div class="cell muted">—</div>
+                <div class="cell">
+                  <button class="mon-remove" type="button"
+                          data-action="mon-remove"
+                          data-addr=""
+                          data-i18n-title="remove"
+                          data-i18n-aria-label="remove"
+                          title="Remove"
+                          aria-label="Remove">×</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1247,6 +1390,8 @@
 
     </main>
   </div>
+</body>
+
   <!-- ethers -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
 
@@ -4142,26 +4287,36 @@ function bindLangButtons(){
       const list = loadMonitor();
       if (!list.length) {
         table.insertAdjacentHTML("beforeend", `
-          <div class="trow">
-            <div class="cell muted">—</div>
-            <div class="cell muted">—</div>
-            <div class="cell muted hide-sm">—</div>
-            <div class="cell muted">—</div>
-          </div>
-        `);
+  <div class="trow">
+    <div class="cell muted">—</div>
+    <div class="cell muted">—</div>
+    <div class="cell muted hide-sm">—</div>
+    <div class="cell muted">—</div>
+    <div class="cell muted">—</div>
+  </div>
+`);
         return;
       }
 
       for (const item of list) {
         const chain = CHAINS[item.net];
         table.insertAdjacentHTML("beforeend", `
-          <div class="trow">
-            <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
-            <div class="cell">${chain.name}</div>
-            <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen * 1000).toLocaleString() : "—"}</div>
-            <div class="cell">${item.status || "—"}</div>
-          </div>
-        `);
+  <div class="trow">
+    <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
+    <div class="cell">${String(item.net || "").toUpperCase()}</div>
+    <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen * 1000).toLocaleString() : "—"}</div>
+    <div class="cell">${item.status || "—"}</div>
+
+    <div class="cell">
+      <button class="mon-remove" type="button"
+              data-action="mon-remove"
+              data-addr="${item.addr}"
+              data-net="${item.net}"
+              title="Remove"
+              aria-label="Remove">×</button>
+    </div>
+  </div>
+`);
       }
     }
 
@@ -4215,6 +4370,35 @@ function bindLangButtons(){
       const ok = await copyText(safeJson(list));
       setStatus($("#mon-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
     }
+    function monRemove(addr, net){
+  const st = $("#mon-status");
+  const addrLower = safeLower(String(addr || "").trim());
+  const netLower  = safeLower(String(net || "").trim());
+
+  const list = loadMonitor();
+  const next = list.filter(it =>
+    !(safeLower(it.net) === netLower && safeLower(it.addr) === addrLower)
+  );
+
+  saveMonitor(next);
+  renderMonitorTable();
+  setStatus(st, "ok", "Removed.");
+  gtagEvent("sec_mon_remove", { net: netLower });
+}
+
+function bindMonRemove(){
+  const table = $("#mon-table");
+  if (!table || table.__cxBoundRemove) return;
+  table.__cxBoundRemove = true;
+
+  table.addEventListener("click", (e) => {
+    const btn = e.target.closest('button[data-action="mon-remove"]');
+    if (!btn) return;
+    e.preventDefault();
+    monRemove(btn.getAttribute("data-addr"), btn.getAttribute("data-net"));
+  });
+}
+
 
     function initDevUi(){
       const base = location.href.split("?")[0];
@@ -4230,6 +4414,7 @@ function bindLangButtons(){
 
       renderBmHelp();
       renderMonitorTable();
+      bindMonRemove();
     }
 
     // =========================
