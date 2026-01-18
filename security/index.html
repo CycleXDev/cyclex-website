@@ -14,6 +14,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#05060a">
   <meta name="application-name" content="CycleX">
   <meta name="apple-mobile-web-app-title" content="CycleX">
@@ -373,6 +374,21 @@
   .status.warn{display:block;background:rgba(255,193,7,.10);border-color:rgba(255,193,7,.35);color:#ffd166}
   .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
   .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
+
+    /* Bookmarklet tip under the green status */
+.bm-tip{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04);
+  color:rgba(244,246,255,.78);
+  font-size:13px;
+  line-height:1.45;
+}
+
+.bm-tip.hidden{display:none;}
+
 
   /* =========================
      TABLES — merged in from the "old code" that fixed spacing/readability
@@ -1320,6 +1336,9 @@
             </div>
 
             <div id="bm-out" class="status info"></div>
+            <div id="bm-tip" class="bm-tip hidden" data-i18n="bm_tip">
+  Add the bookmarklet to your browser, then check any contract from any site with one click.
+</div>
           </div>
 
           <div class="card">
@@ -4261,6 +4280,8 @@ function bindLangButtons(){
       $("#bm-out").dataset.bm = bm;
       renderBmHelp();
       gtagEvent("sec_bm_generate");
+      const tip = $("#bm-tip");
+      if (tip) tip.classList.remove("hidden");
     }
 
     async function bmCopy(){
@@ -4268,6 +4289,8 @@ function bindLangButtons(){
       if (!bm) return setStatus($("#bm-out"), "warn", "Generate first.");
       const ok = await copyText(bm);
       setStatus($("#bm-out"), ok ? "ok" : "warn", ok ? "Copied bookmarklet." : "Copy failed.");
+      const tip = $("#bm-tip");
+      if (tip) tip.classList.remove("hidden");
     }
 
     function loadMonitor(){
