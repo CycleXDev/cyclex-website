@@ -1349,7 +1349,6 @@
                 <div class="cell" data-i18n="th_network">Network</div>
                 <div class="cell hide-sm" data-i18n="th_last_seen">Last seen</div>
                 <div class="cell" data-i18n="th_status">Status</div>
-                <!-- ✅ header cell stays empty (like screenshot) -->
                 <div class="cell" aria-hidden="true"></div>
               </div>
 
@@ -4282,26 +4281,36 @@ function bindLangButtons(){
       const list = loadMonitor();
       if (!list.length) {
         table.insertAdjacentHTML("beforeend", `
-          <div class="trow">
-            <div class="cell muted">—</div>
-            <div class="cell muted">—</div>
-            <div class="cell muted hide-sm">—</div>
-            <div class="cell muted">—</div>
-          </div>
-        `);
+  <div class="trow">
+    <div class="cell muted">—</div>
+    <div class="cell muted">—</div>
+    <div class="cell muted hide-sm">—</div>
+    <div class="cell muted">—</div>
+    <div class="cell muted">—</div>
+  </div>
+`);
         return;
       }
 
       for (const item of list) {
         const chain = CHAINS[item.net];
         table.insertAdjacentHTML("beforeend", `
-          <div class="trow">
-            <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
-            <div class="cell">${chain.name}</div>
-            <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen * 1000).toLocaleString() : "—"}</div>
-            <div class="cell">${item.status || "—"}</div>
-          </div>
-        `);
+  <div class="trow">
+    <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
+    <div class="cell">${String(item.net || "").toUpperCase()}</div>
+    <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen * 1000).toLocaleString() : "—"}</div>
+    <div class="cell">${item.status || "—"}</div>
+
+    <div class="cell">
+      <button class="mon-remove" type="button"
+              data-action="mon-remove"
+              data-addr="${item.addr}"
+              data-net="${item.net}"
+              title="Remove"
+              aria-label="Remove">×</button>
+    </div>
+  </div>
+`);
       }
     }
 
@@ -4355,6 +4364,35 @@ function bindLangButtons(){
       const ok = await copyText(safeJson(list));
       setStatus($("#mon-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
     }
+    function monRemove(addr, net){
+  const st = $("#mon-status");
+  const addrLower = safeLower(String(addr || "").trim());
+  const netLower  = safeLower(String(net || "").trim());
+
+  const list = loadMonitor();
+  const next = list.filter(it =>
+    !(safeLower(it.net) === netLower && safeLower(it.addr) === addrLower)
+  );
+
+  saveMonitor(next);
+  renderMonitorTable();
+  setStatus(st, "ok", "Removed.");
+  gtagEvent("sec_mon_remove", { net: netLower });
+}
+
+function bindMonRemove(){
+  const table = $("#mon-table");
+  if (!table || table.__cxBoundRemove) return;
+  table.__cxBoundRemove = true;
+
+  table.addEventListener("click", (e) => {
+    const btn = e.target.closest('button[data-action="mon-remove"]');
+    if (!btn) return;
+    e.preventDefault();
+    monRemove(btn.getAttribute("data-addr"), btn.getAttribute("data-net"));
+  });
+}
+
 
     function initDevUi(){
       const base = location.href.split("?")[0];
@@ -4370,6 +4408,7 @@ function bindLangButtons(){
 
       renderBmHelp();
       renderMonitorTable();
+      bindMonRemove();
     }
 
     // =========================
