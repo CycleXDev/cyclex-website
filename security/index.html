@@ -1355,14 +1355,9 @@
                 <button class="btn btn-ghost" id="bm-copy" data-i18n="bm_copy">Copy Bookmarklet</button>
               </div>
             </div>
-            <a id="bm-drag"
-   class="bm-drag hidden"
-   href="#"
-   data-i18n="bm_drag_label"
-   aria-label="Drag this to your bookmarks bar">
-  CYCLEX
+            <a id="bm-drag" class="bm-drag" href="#" data-i18n="bm_drag_label">
+  CycleX – Security Hub
 </a>
-
 
             <div id="bm-out" class="status info"></div>
             <div id="bm-tip" class="bm-tip hidden" data-i18n="bm_tip">
@@ -1689,7 +1684,7 @@ th_network: "Network",
 th_last_seen: "Last seen",
     th_remove: "Remove",
     bm_tip: "Add the bookmarklet to your browser, then check any contract from any site with one click.",
-    bm_drag_label: "Drag this to your bookmarks bar (CycleX)",
+bm_drag_label: "CycleX – Security Hub",
 
 qs_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
 liq_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
@@ -1903,7 +1898,7 @@ th_network: "网络",
 th_last_seen: "上次出现",
     th_remove: "移除",
     bm_tip: "将书签小工具添加到浏览器，然后一键从任何网站检查任何合约。",
-    bm_drag_label: "拖动到书签栏（CycleX）",
+bm_drag_label: "CycleX – 安全中心",
 
 qs_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
 liq_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
@@ -2118,7 +2113,7 @@ th_network: "الشبكة",
 th_last_seen: "آخر ظهور",
     th_remove: "إزالة",
     bm_tip: "أضِف أداة الإشارة المرجعية إلى متصفحك، ثم افحص أي عقد من أي موقع بنقرة واحدة.",
-    bm_drag_label: "اسحب هذا إلى شريط الإشارات المرجعية (CycleX)",
+bm_drag_label: "CycleX – مركز الأمان",
 
 qs_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
 liq_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
@@ -2338,7 +2333,7 @@ th_network: "Сеть",
 th_last_seen: "Последний раз",
 th_remove: "Удалить",
     bm_tip: "Добавьте букмарклет в браузер и проверяйте любой контракт с любого сайта одним кликом.",
-    bm_drag_label: "Перетащите в панель закладок (CycleX)",
+bm_drag_label: "CycleX – Security Hub",
 
 qs_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
 liq_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
@@ -4479,6 +4474,32 @@ function bindMonRemove(){
       renderBmHelp();
       renderMonitorTable();
       bindMonRemove();
+      // Always enable the "drag to bookmarks" link (default bookmarklet)
+try {
+  const hubBase = ($("#bm-base")?.value || location.href.split("?")[0]).trim();
+  const js = `
+(function(){
+  try{
+    var href = location.href;
+    var u = new URL(href);
+    var isTx = /\\/tx\\//i.test(u.pathname);
+    var v = href.split("/").pop();
+    var net = /etherscan\\.io/i.test(u.host) ? "eth" : "bsc";
+    var hub = new URL("${hubBase}");
+    hub.searchParams.set("tool", isTx ? "tx" : "quick");
+    hub.searchParams.set("net", net);
+    if (isTx) hub.searchParams.set("tx", v);
+    else hub.searchParams.set("token", v);
+    window.open(hub.toString(), "_blank");
+  }catch(e){ alert("CycleX Hub bookmarklet error"); }
+})();`.trim();
+
+  const bmDefault = `javascript:${encodeURIComponent(js)}`;
+
+  const drag = $("#bm-drag");
+  if (drag) drag.href = bmDefault;
+} catch {}
+
     }
 
     // =========================
