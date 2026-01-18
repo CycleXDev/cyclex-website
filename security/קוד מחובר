@@ -14,6 +14,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
   <meta name="theme-color" content="#05060a">
   <meta name="application-name" content="CycleX">
   <meta name="apple-mobile-web-app-title" content="CycleX">
@@ -374,6 +375,70 @@
   .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
   .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
 
+    /* Bookmarklet tip under the green status */
+.bm-tip{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04);
+  color:rgba(244,246,255,.78);
+  font-size:13px;
+  line-height:1.45;
+}
+    /* Drag-to-bookmarks bookmarklet link */
+.bm-drag{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);
+  box-shadow:0 14px 40px rgba(0,0,0,.35);
+  cursor:grab;
+  user-select:none;
+  margin-top:10px;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-transform:none;
+  width:100%;
+}
+    /* icon inside the drag-to-bookmarks button */
+.bm-drag-icon{
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  object-fit:contain;
+  flex:0 0 auto;
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
+}
+
+/* keep the label clean */
+.bm-drag span{
+  line-height:1;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+/* make sure link doesn't look like a normal link */
+#bm-drag{
+  text-decoration:none;
+  color:inherit;
+}
+
+/* optional: nicer hover */
+#bm-drag:hover{
+  border-color:rgba(0,229,255,.22);
+  background:rgba(255,255,255,.07);
+  transform:translateY(-1px);
+}
+
+.bm-drag:active{ cursor:grabbing; }
+.bm-drag.hidden{ display:none; }
+
   /* =========================
      TABLES — merged in from the "old code" that fixed spacing/readability
      What you asked to carry over:
@@ -437,15 +502,29 @@
 #mon-table .trow.head{
   grid-template-columns: 1.35fr 1fr 1.05fr 1fr 44px;
 }
+    /* ✅ MON: Last seen should wrap to 2 lines (no ellipsis) */
+#mon-table .trow .cell:nth-child(3){
+  white-space: normal;
+  text-overflow: clip;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
 
-/* If you prefer a bit more room for status text, use 52px instead of 44px */
-/* #mon-table .trow, #mon-table .trow.head{ grid-template-columns: 1.35fr 1fr 1.05fr 1fr 52px; } */
+  /* optional: limit to 2 lines so row doesn't get too tall */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 
 #mon-table .trow.head .cell:last-child{
   visibility:hidden;  /* stays in layout, but truly invisible */
 }
-
-
+    /* MON: make "Last seen" wrap (date on first line, time on second) */
+#mon-table .trow .cell:nth-child(3){
+  white-space: normal;
+  line-height: 1.15;
+}
 /* Small clean X (no weird circle) */
 .mon-remove{
   width:22px;
@@ -1318,8 +1397,15 @@
                 <button class="btn btn-ghost" id="bm-copy" data-i18n="bm_copy">Copy Bookmarklet</button>
               </div>
             </div>
+            <a id="bm-drag" class="bm-drag" href="#">
+  <img class="bm-drag-icon" src="/logo.png" alt="CycleX">
+  <span data-i18n="bm_drag_label">CycleX – Security Hub</span>
+</a>
 
             <div id="bm-out" class="status info"></div>
+            <div id="bm-tip" class="bm-tip" data-i18n="bm_tip">
+  Add the bookmarklet to your browser, then check any contract from any site with one click.
+</div>
           </div>
 
           <div class="card">
@@ -1640,7 +1726,8 @@ th_contract: "Contract",
 th_network: "Network",
 th_last_seen: "Last seen",
     th_remove: "Remove",
-
+    bm_tip: "Add the bookmarklet to your browser, then check any contract from any site with one click.",
+bm_drag_label: "CycleX – Security Hub",
 
 qs_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
 liq_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
@@ -1853,6 +1940,8 @@ th_contract: "合约",
 th_network: "网络",
 th_last_seen: "上次出现",
     th_remove: "移除",
+    bm_tip: "将书签小工具添加到浏览器，然后一键从任何网站检查任何合约。",
+bm_drag_label: "CycleX – 安全中心",
 
 qs_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
 liq_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
@@ -2066,7 +2155,8 @@ th_contract: "العقد",
 th_network: "الشبكة",
 th_last_seen: "آخر ظهور",
     th_remove: "إزالة",
-
+    bm_tip: "أضِف أداة الإشارة المرجعية إلى متصفحك، ثم افحص أي عقد من أي موقع بنقرة واحدة.",
+bm_drag_label: "CycleX – مركز الأمان",
 
 qs_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
 liq_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
@@ -2285,6 +2375,8 @@ th_contract: "Контракт",
 th_network: "Сеть",
 th_last_seen: "Последний раз",
 th_remove: "Удалить",
+    bm_tip: "Добавьте букмарклет в браузер и проверяйте любой контракт с любого сайта одним кликом.",
+bm_drag_label: "CycleX – Security Hub",
 
 qs_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
 liq_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
@@ -4259,6 +4351,12 @@ function bindLangButtons(){
       const bm = `javascript:${encodeURIComponent(js)}`;
       setStatus($("#bm-out"), "ok", `Bookmarklet generated. <span class="mono">(copy it)</span>`);
       $("#bm-out").dataset.bm = bm;
+      const drag = $("#bm-drag");
+if (drag) {
+  drag.href = bm;                 
+  drag.classList.remove("hidden");
+  drag.setAttribute("data-ready", "1");
+}
       renderBmHelp();
       gtagEvent("sec_bm_generate");
     }
@@ -4304,7 +4402,11 @@ function bindLangButtons(){
   <div class="trow">
     <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
     <div class="cell">${String(item.net || "").toUpperCase()}</div>
-    <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen * 1000).toLocaleString() : "—"}</div>
+    <div class="cell hide-sm">${
+  item.lastSeen
+    ? new Date(item.lastSeen * 1000).toLocaleString().replace(", ", "<br>")
+    : "—"
+}</div>
     <div class="cell">${item.status || "—"}</div>
 
     <div class="cell">
@@ -4415,6 +4517,32 @@ function bindMonRemove(){
       renderBmHelp();
       renderMonitorTable();
       bindMonRemove();
+      // Always enable the "drag to bookmarks" link (default bookmarklet)
+try {
+  const hubBase = ($("#bm-base")?.value || location.href.split("?")[0]).trim();
+  const js = `
+(function(){
+  try{
+    var href = location.href;
+    var u = new URL(href);
+    var isTx = /\\/tx\\//i.test(u.pathname);
+    var v = href.split("/").pop();
+    var net = /etherscan\\.io/i.test(u.host) ? "eth" : "bsc";
+    var hub = new URL("${hubBase}");
+    hub.searchParams.set("tool", isTx ? "tx" : "quick");
+    hub.searchParams.set("net", net);
+    if (isTx) hub.searchParams.set("tx", v);
+    else hub.searchParams.set("token", v);
+    window.open(hub.toString(), "_blank");
+  }catch(e){ alert("CycleX Hub bookmarklet error"); }
+})();`.trim();
+
+  const bmDefault = `javascript:${encodeURIComponent(js)}`;
+
+  const drag = $("#bm-drag");
+  if (drag) drag.href = bmDefault;
+} catch {}
+
     }
 
     // =========================
