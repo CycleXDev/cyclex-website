@@ -435,16 +435,36 @@
   text-transform:uppercase;
   color:rgba(244,246,255,.72);
   white-space:nowrap;
+  flex:0 0 auto;
 }
 
+/* ✅ RIGHT CELL = vertical container aligned right */
 #panel-tx .tx-sum-line .v{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:6px;
+
+  margin-left:auto;
+  min-width:0;
+  max-width:72%;
+
+  /* remove pill look from container */
+  padding:0;
+  border:none;
+  background:transparent;
+  border-radius:0;
+  box-shadow:none;
+}
+
+/* ✅ The ACTUAL badge (created by tx_badge) */
+#panel-tx .tx-sum-line .v > .v{
   display:inline-flex;
   align-items:center;
   gap:8px;
-  width:auto;
-  max-width:72%;
-  flex:0 1 auto;
-  margin-left:auto;
+
+  max-width:100%;
+  min-width:0;
 
   font-size:12px;
   font-weight:800;
@@ -454,25 +474,15 @@
   border-radius:999px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(255,255,255,.05);
-
   color:rgba(244,246,255,.92);
+
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
 
-#panel-tx .tx-sum-line .tx-sum-sub{
-  display:block;
-  margin-top:6px;
-  text-align:right;
-  white-space:normal;
-  overflow-wrap:anywhere;
-  line-height:1.25;
-  color:rgba(244,246,255,.62);
-}
-
-/* dot inside the badge */
-#panel-tx .tx-sum-line .v .dot{
+/* dot inside the INNER badge */
+#panel-tx .tx-sum-line .v > .v .dot{
   width:10px;
   height:10px;
   border-radius:999px;
@@ -481,50 +491,46 @@
   flex:0 0 auto;
 }
 
-/* Risk color states (apply to badge element) */
-#panel-tx .tx-sum-line .v.ok{
+/* Risk color states (apply to INNER badge) */
+#panel-tx .tx-sum-line .v > .v.ok{
   border-color:rgba(0,230,118,.28);
   background:rgba(0,230,118,.10);
 }
-#panel-tx .tx-sum-line .v.ok .dot{ background:rgba(0,230,118,.95); }
+#panel-tx .tx-sum-line .v > .v.ok .dot{ background:rgba(0,230,118,.95); }
 
-#panel-tx .tx-sum-line .v.warn{
+#panel-tx .tx-sum-line .v > .v.warn{
   border-color:rgba(255,193,7,.30);
   background:rgba(255,193,7,.10);
 }
-#panel-tx .tx-sum-line .v.warn .dot{ background:rgba(255,193,7,.95); }
+#panel-tx .tx-sum-line .v > .v.warn .dot{ background:rgba(255,193,7,.95); }
 
-#panel-tx .tx-sum-line .v.bad{
+#panel-tx .tx-sum-line .v > .v.bad{
   border-color:rgba(220,53,69,.30);
   background:rgba(220,53,69,.12);
 }
-#panel-tx .tx-sum-line .v.bad .dot{ background:rgba(220,53,69,.95); }
+#panel-tx .tx-sum-line .v > .v.bad .dot{ background:rgba(220,53,69,.95); }
 
-#panel-tx .tx-sum-line .v.unk{
+#panel-tx .tx-sum-line .v > .v.unk{
   border-color:rgba(255,255,255,.12);
   background:rgba(255,255,255,.05);
   color:rgba(244,246,255,.78);
 }
-#panel-tx .tx-sum-line .v.unk .dot{ background:rgba(255,255,255,.25); }
-    /* Subline under the badge (Tokens touched / Allowance) */
+#panel-tx .tx-sum-line .v > .v.unk .dot{ background:rgba(255,255,255,.25); }
+
+/* ✅ Subline under the badge (Tokens touched / Allowance) */
 #panel-tx .tx-sum-line .tx-sum-sub{
   display:block;
-  margin-top:6px;
+  max-width:100%;
+  text-align:right;
+
   font-size:12px;
   line-height:1.25;
-  opacity:.78;
+  color:rgba(244,246,255,.62);
+
   white-space:normal;
   overflow-wrap:anywhere;
   word-break:break-word;
 }
-
-/* Mobile: align subline nicely */
-@media (max-width:640px){
-  #panel-tx .tx-sum-line .tx-sum-sub{
-    margin-top:6px;
-  }
-}
-
 
 /* Mobile: keep it clean */
 @media (max-width:640px){
@@ -532,9 +538,15 @@
     flex-direction:column;
     align-items:flex-start;
   }
+
   #panel-tx .tx-sum-line .v{
+    align-items:flex-start;
+    max-width:100%;
     width:100%;
-    justify-content:flex-start;
+  }
+
+  #panel-tx .tx-sum-line .tx-sum-sub{
+    text-align:left;
   }
 }
 
