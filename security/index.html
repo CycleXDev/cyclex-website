@@ -402,12 +402,12 @@
   .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
   .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
 /* =========================
-   TX DECODER — 4-line Security Summary (BADGES) [STABLE + PREMIUM]
+   TX DECODER — 4-line Security Summary (BADGES)  [FINAL ALIGN]
    ========================= */
 
 #panel-tx .tx-sum{
   display:grid;
-  grid-template-columns:1fr;
+  grid-template-columns: 1fr;
   gap:10px;
   padding:12px;
   border-radius:18px;
@@ -417,10 +417,13 @@
   backdrop-filter:blur(16px);
 }
 
-/* Row container */
+/* line layout: label | value-column (value-column is capped so it sits closer to label) */
 #panel-tx .tx-sum-line{
   display:grid;
-  grid-template-columns:120px minmax(0,1fr);
+
+  grid-template-columns: 120px minmax(0, clamp(260px, 46vw, 520px));
+
+  justify-content:start;   
   align-items:center;
   column-gap:12px;
   row-gap:6px;
@@ -440,39 +443,30 @@
   white-space:nowrap;
 }
 
-/* ✅ The badge itself (this is the pill) */
+/* ✅ The badge: stays inside the capped column, aligned right, and never paints the whole row */
 #panel-tx .tx-sum-line .v{
-  justify-self:end;              /* align to right edge of the row */
-  max-width:calc(100% - 8px);    /* pull קצת שמאלה so it never sticks out */
+  justify-self:end;        
+  max-width:100%;
   min-width:0;
+  box-sizing:border-box;
 
   display:inline-flex;
   align-items:center;
   gap:8px;
 
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.02em;
+
   padding:7px 10px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(255,255,255,.05);
-
-  font-size:12px;
-  font-weight:800;
-  letter-spacing:.02em;
   color:rgba(244,246,255,.92);
 
-  /* 🔥 prevents “cut from left / overflow outside” */
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
-
-  /* 🔥 forces correct direction for long method names */
-  direction:ltr;
-  unicode-bidi:plaintext;
-}
-
-/* If your site is RTL globally, keep label RTL but badge LTR */
-html[dir="rtl"] #panel-tx .tx-sum-line .v{
-  direction:ltr;
 }
 
 /* Dot inside badge */
@@ -485,7 +479,7 @@ html[dir="rtl"] #panel-tx .tx-sum-line .v{
   flex:0 0 auto;
 }
 
-/* States (ONLY badge is colored) */
+/* States (ONLY the badge is colored) */
 #panel-tx .tx-sum-line .v.ok{
   border-color:rgba(0,230,118,.28);
   background:rgba(0,230,118,.10);
@@ -511,11 +505,11 @@ html[dir="rtl"] #panel-tx .tx-sum-line .v{
 }
 #panel-tx .tx-sum-line .v.unk .dot{ background:rgba(255,255,255,.25); }
 
-/* Subline under badge */
+/* Subline under the badge (aligned with badge column) */
 #panel-tx .tx-sum-line .tx-sum-sub{
   grid-column:2;
   justify-self:end;
-  max-width:calc(100% - 8px);
+  max-width:100%;
   min-width:0;
 
   margin-top:2px;
@@ -530,19 +524,17 @@ html[dir="rtl"] #panel-tx .tx-sum-line .v{
   word-break:break-word;
 }
 
-/* Action: allow 2 lines but keep it inside */
+/* Action: keep LTR so it truncates nicely (no weird left-cut) */
 #tx-sum-action .v{
-  white-space:normal;
-  display:-webkit-box;
-  -webkit-box-orient:vertical;
-  -webkit-line-clamp:2;
-  line-height:1.2;
+  direction:ltr;
+  unicode-bidi:plaintext;
 }
 
 /* Mobile */
 @media (max-width:640px){
   #panel-tx .tx-sum-line{
-    grid-template-columns:1fr;
+    grid-template-columns: 1fr;
+    justify-content:stretch;
     row-gap:8px;
     align-items:start;
   }
@@ -554,7 +546,6 @@ html[dir="rtl"] #panel-tx .tx-sum-line .v{
     grid-column:1;
     justify-self:start;
     text-align:left;
-    max-width:100%;
   }
 }
 
