@@ -401,8 +401,8 @@
   .status.warn{display:block;background:rgba(255,193,7,.10);border-color:rgba(255,193,7,.35);color:#ffd166}
   .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
   .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
- /* =========================
-   TX DECODER — 4-line Security Summary (badges)  [FIXED + PREMIUM]
+/* =========================
+   TX DECODER — 4-line Security Summary (BADGES)  [CLEAN + ALIGNED]
    ========================= */
 
 #panel-tx .tx-sum{
@@ -417,12 +417,12 @@
   backdrop-filter:blur(16px);
 }
 
-/* Each line: fixed label + flexible value aligned to the right */
+/* line layout: label | value-area (value-area is RIGHT aligned) */
 #panel-tx .tx-sum-line{
   display:grid;
-  grid-template-columns: 120px minmax(0, 1fr);
+  grid-template-columns: 120px 1fr;
   align-items:center;
-  column-gap:10px;
+  column-gap:12px;
   row-gap:6px;
 
   padding:10px 12px;
@@ -440,40 +440,33 @@
   white-space:nowrap;
 }
 
-/* The badge itself */
+/* ✅ value-area: THIS is what we align (not the badge itself) */
 #panel-tx .tx-sum-line .v{
-  justify-self:end;        
-  align-self:center;
-
-  justify-self:end !important;
-  margin-left:auto;
-
-  max-width:100%;
+  justify-self:end;           /* pushes the value-area to the right */
+  width:calc(100% - 24px);    /* pulls it קצת שמאלה כדי שלא ייחתך בקצה */
+  max-width:520px;            /* keeps a nice premium column width */
   min-width:0;
 
-  display:inline-flex;
-  justify-content:flex-end;
-  text-align:right;
-  margin-right:2px; 
+  display:flex;
+  justify-content:flex-end;   /* badge sits at the right inside the area */
   align-items:center;
   gap:8px;
 
-  font-size:12px;
-  font-weight:800;
-  letter-spacing:.02em;
-
+  /* keep legacy badge look */
   padding:7px 10px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(255,255,255,.05);
 
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.02em;
   color:rgba(244,246,255,.92);
+
   overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
 }
 
-/* Dot inside badge */
+/* dot */
 #panel-tx .tx-sum-line .v .dot{
   width:10px;
   height:10px;
@@ -483,7 +476,25 @@
   flex:0 0 auto;
 }
 
-/* States */
+/* text inside badge (handle long strings nicely) */
+#panel-tx .tx-sum-line .v{
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+/* ✅ Action: allow 2 lines (so it won't cut from the left) */
+#tx-sum-action{
+  white-space:normal;
+}
+#tx-sum-action .v{
+  white-space:normal;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  line-height:1.2;
+}
+
+/* states */
 #panel-tx .tx-sum-line .v.ok{
   border-color:rgba(0,230,118,.28);
   background:rgba(0,230,118,.10);
@@ -509,11 +520,12 @@
 }
 #panel-tx .tx-sum-line .v.unk .dot{ background:rgba(255,255,255,.25); }
 
-/* Subline under the badge (Tokens touched / Allowance) */
+/* subline: sits under the value-area, aligned with it */
 #panel-tx .tx-sum-line .tx-sum-sub{
   grid-column:2;
   justify-self:end;
-  max-width:100%;
+  width:calc(100% - 24px);
+  max-width:520px;
   min-width:0;
 
   margin-top:2px;
@@ -528,22 +540,6 @@
   word-break:break-word;
 }
 
-/* Optional: Action badge can be longer without looking broken */
-#tx-sum-action .v{
-  max-width:100%;
-}
-    /* Action badge: allow 2 lines instead of ugly cut */
-#tx-sum-action .v{
-  white-space:normal !important;
-  overflow:hidden;
-  text-overflow:clip;
-  display:-webkit-box;
-  -webkit-box-orient:vertical;
-  -webkit-line-clamp:2;
-  max-width:100%;
-}
-
-
 /* Mobile */
 @media (max-width:640px){
   #panel-tx .tx-sum-line{
@@ -551,16 +547,15 @@
     row-gap:8px;
     align-items:start;
   }
-  #panel-tx .tx-sum-line .v{
-    justify-self:start;
-    max-width:100%;
-  }
+  #panel-tx .tx-sum-line .v,
   #panel-tx .tx-sum-line .tx-sum-sub{
-    grid-column:1;
     justify-self:start;
+    width:100%;
+    max-width:100%;
     text-align:left;
   }
 }
+
 
 
     /* Bookmarklet tip under the green status */
