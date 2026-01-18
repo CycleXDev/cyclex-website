@@ -442,42 +442,47 @@
 /* #mon-table .trow, #mon-table .trow.head{ grid-template-columns: 1.35fr 1fr 1.05fr 1fr 52px; } */
 
 #mon-table .trow.head .cell:last-child{
-  text-align:center;
-  justify-self:center;
-  opacity:.0; /* header stays visually empty */
+  visibility:hidden;  /* stays in layout, but truly invisible */
 }
 
-/* The X button itself */
+
+/* Small clean X (no weird circle) */
 .mon-remove{
-  width:38px;
-  height:38px;
-  border-radius:999px;
-  display:grid;
-  place-items:center;
+  width:22px;
+  height:22px;
+  padding:0;
+  margin:0;
 
-  border:1px solid rgba(255,80,80,.35);
-  background:rgba(255,80,80,.08);
-  color:rgba(244,246,255,.92);
+  border:none;
+  background:transparent;
+  box-shadow:none;
 
+  color:rgba(244,246,255,.70);
   cursor:pointer;
   user-select:none;
-  line-height:1;
-  font-size:22px;
 
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
-  transition:transform var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+  line-height:1;
+  font-size:18px;
+  font-weight:900;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  transition:transform var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+  opacity:.9;
 }
 
 .mon-remove:hover{
+  opacity:1;
+  color:rgba(255,120,138,.95);  /* red-ish but subtle */
   transform:translateY(-1px);
-  border-color:rgba(255,80,80,.60);
-  background:rgba(255,80,80,.14);
 }
-#mon-table .trow .cell:last-child{justify-self:end}
 
 .mon-remove:active{
-  transform:translateY(0px);
+  transform:translateY(0);
 }
+
 
 .mon-remove:focus-visible{
   outline:2px solid rgba(0,229,255,.55);
@@ -720,10 +725,10 @@
 }
 
     #mon-table .trow,
-    #mon-table .trow.head{
-      grid-template-columns:1.7fr 1fr .95fr;
-      min-width:520px;
-    }
+#mon-table .trow.head{
+  grid-template-columns:1.7fr 1fr 1fr 44px; /* contract | net | status | X */
+  min-width:520px;
+}
 
     /* RPC: collapses to RPC / ms / status */
     #rpc-table .trow.head.rpc,
