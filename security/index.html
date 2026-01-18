@@ -5310,7 +5310,8 @@ try {
       if (!q.tool) return;
 
       const tool = q.tool;
-      const net = (q.net === "eth") ? "eth" : "bsc";
+      const netRaw = String(q.net || q.chain || "").toLowerCase();
+      const net = (netRaw === "eth" || netRaw === "ethereum" || netRaw === "1") ? "eth" : "bsc";
 
       if (tool === "quick") {
         showPanel("quick");
@@ -5333,16 +5334,19 @@ try {
 
       if (tool === "tx") {
   showPanel("tx");
-  if ($("#tx-net")) $("#tx-net").value = net;
 
   if (q.tx && /^0x([A-Fa-f0-9]{64})$/.test(q.tx)) {
     if ($("#tx-hash")) $("#tx-hash").value = q.tx;
 
-    // Run exactly like a user click (works even if runTxDecode isn't global)
     setTimeout(() => {
+      const sel = $("#tx-net");
+      if (sel) {
+        sel.value = net; // "eth" or "bsc"
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
       const btn = $("#tx-run");
       if (btn) btn.click();
-    }, 350);
+    }, 400);
   }
 }
     }
