@@ -386,6 +386,27 @@
   font-size:13px;
   line-height:1.45;
 }
+    /* Drag-to-bookmarks bookmarklet link */
+.bm-drag{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);
+  box-shadow:0 14px 40px rgba(0,0,0,.35);
+  cursor:grab;
+  user-select:none;
+  margin-top:10px;
+  font-weight:900;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+  width:100%;
+}
+.bm-drag:active{ cursor:grabbing; }
+.bm-drag.hidden{ display:none; }
+
 
 .bm-tip.hidden{display:none;}
 
@@ -1334,6 +1355,14 @@
                 <button class="btn btn-ghost" id="bm-copy" data-i18n="bm_copy">Copy Bookmarklet</button>
               </div>
             </div>
+            <a id="bm-drag"
+   class="bm-drag hidden"
+   href="#"
+   data-i18n="bm_drag_label"
+   aria-label="Drag this to your bookmarks bar">
+  CYCLEX
+</a>
+
 
             <div id="bm-out" class="status info"></div>
             <div id="bm-tip" class="bm-tip hidden" data-i18n="bm_tip">
@@ -1660,6 +1689,7 @@ th_network: "Network",
 th_last_seen: "Last seen",
     th_remove: "Remove",
     bm_tip: "Add the bookmarklet to your browser, then check any contract from any site with one click.",
+    bm_drag_label: "Drag this to your bookmarks bar (CycleX)",
 
 qs_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
 liq_ready_html: "<strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.",
@@ -1873,6 +1903,7 @@ th_network: "网络",
 th_last_seen: "上次出现",
     th_remove: "移除",
     bm_tip: "将书签小工具添加到浏览器，然后一键从任何网站检查任何合约。",
+    bm_drag_label: "拖动到书签栏（CycleX）",
 
 qs_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
 liq_ready_html: "<strong>准备就绪。</strong><br>粘贴代币地址并点击 <b>扫描</b>。",
@@ -2087,6 +2118,7 @@ th_network: "الشبكة",
 th_last_seen: "آخر ظهور",
     th_remove: "إزالة",
     bm_tip: "أضِف أداة الإشارة المرجعية إلى متصفحك، ثم افحص أي عقد من أي موقع بنقرة واحدة.",
+    bm_drag_label: "اسحب هذا إلى شريط الإشارات المرجعية (CycleX)",
 
 qs_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
 liq_ready_html: "<strong>جاهز.</strong><br>ألصق عنوان التوكن ثم اضغط <b>فحص</b>.",
@@ -2306,6 +2338,7 @@ th_network: "Сеть",
 th_last_seen: "Последний раз",
 th_remove: "Удалить",
     bm_tip: "Добавьте букмарклет в браузер и проверяйте любой контракт с любого сайта одним кликом.",
+    bm_drag_label: "Перетащите в панель закладок (CycleX)",
 
 qs_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
 liq_ready_html: "<strong>Готово.</strong><br>Вставьте адрес токена и нажмите <b>Сканировать</b>.",
@@ -4280,6 +4313,12 @@ function bindLangButtons(){
       const bm = `javascript:${encodeURIComponent(js)}`;
       setStatus($("#bm-out"), "ok", `Bookmarklet generated. <span class="mono">(copy it)</span>`);
       $("#bm-out").dataset.bm = bm;
+      const drag = $("#bm-drag");
+if (drag) {
+  drag.href = bm;                 
+  drag.classList.remove("hidden");
+  drag.setAttribute("data-ready", "1");
+}
       renderBmHelp();
       gtagEvent("sec_bm_generate");
       const tip = $("#bm-tip");
