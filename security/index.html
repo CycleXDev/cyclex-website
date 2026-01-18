@@ -4375,22 +4375,32 @@ window.CX.getReadProvider = getReadProvider;
     if (el) el.innerHTML = html;
   }
 
+  // Titles already exist in HTML on the left; we only set the value HTML.
   function tx_setLine(sel, _title, badgeHtml) {
-  tx_setSum(sel, badgeHtml);
-}
+    tx_setSum(sel, badgeHtml);
+  }
 
-
+  // Impact line supports a subline (Allowance)
   function tx_setImpactLine(badgeHtml, subLineText) {
-  const sub = subLineText
-    ? `<span class="tx-sum-sub small muted" style="display:block;margin-top:6px;opacity:.85;">${tx_esc(subLineText)}</span>`
-    : "";
-  tx_setSum("#tx-sum-impact", `${badgeHtml}${sub}`);
-}
+    const sub = subLineText
+      ? `<span class="tx-sum-sub small muted" style="display:block;margin-top:6px;opacity:.85;">${tx_esc(subLineText)}</span>`
+      : "";
+    tx_setSum("#tx-sum-impact", `${badgeHtml}${sub}`);
+  }
+
+  // NEW: Target line supports a subline (Tokens touched)
+  function tx_setTargetLine(badgeHtml, subLineText) {
+    const sub = subLineText
+      ? `<span class="tx-sum-sub small muted" style="display:block;margin-top:6px;opacity:.85;">${tx_esc(subLineText)}</span>`
+      : "";
+    tx_setSum("#tx-sum-target", `${badgeHtml}${sub}`);
+  }
 
   function tx_resetSummary() {
     tx_setLine("#tx-sum-action", "Action", tx_badge("unk", "—"));
     tx_setLine("#tx-sum-risk", "Risk", tx_badge("unk", "—"));
-    tx_setLine("#tx-sum-target", "Target", tx_badge("unk", "—"));
+    // use Target line with empty subline (keeps same DOM, just value HTML)
+    tx_setTargetLine(tx_badge("unk", "—"), "");
     tx_setImpactLine(tx_badge("unk", "—"), "");
   }
 
@@ -4679,6 +4689,9 @@ window.CX.getReadProvider = getReadProvider;
         }
       }
 
+      // NEW: Tokens touched subline for Summary (only when we have 1–3)
+      const touchedSub = tokensTouched.length ? `Tokens touched: ${tokensTouched.join(", ")}` : "";
+
       // -------------------------
       // Risk (heuristics)
       // -------------------------
@@ -4753,11 +4766,13 @@ window.CX.getReadProvider = getReadProvider;
       }
 
       // -------------------------
-      // Fill the 4 fixed lines (+ allowance subline under Max impact)
+      // Fill the 4 fixed lines
+      // (Target now includes Tokens touched subline)
+      // (+ allowance subline under Max impact)
       // -------------------------
       tx_setLine("#tx-sum-action", "Action", tx_badge(actionKind, actionLabel));
       tx_setLine("#tx-sum-risk", "Risk", tx_badge(riskKind, riskLabel));
-      tx_setLine("#tx-sum-target", "Target", tx_badge(targetKind, targetLabel));
+      tx_setTargetLine(tx_badge(targetKind, targetLabel), touchedSub);
       tx_setImpactLine(tx_badge(impactKind, impactLabel), allowanceSub);
 
       // -------------------------
