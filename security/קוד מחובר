@@ -392,7 +392,7 @@
 
 #panel-tx .tx-sum-line{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:space-between;
   gap:10px;
   padding:10px 12px;
@@ -466,6 +466,25 @@
   color:rgba(244,246,255,.78);
 }
 #panel-tx .tx-sum-line .v.unk .dot{ background:rgba(255,255,255,.25); }
+    /* Subline under the badge (Tokens touched / Allowance) */
+#panel-tx .tx-sum-line .tx-sum-sub{
+  display:block;
+  margin-top:6px;
+  font-size:12px;
+  line-height:1.25;
+  opacity:.78;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+/* Mobile: align subline nicely */
+@media (max-width:640px){
+  #panel-tx .tx-sum-line .tx-sum-sub{
+    margin-top:6px;
+  }
+}
+
 
 /* Mobile: keep it clean */
 @media (max-width:640px){
@@ -478,6 +497,7 @@
     justify-content:flex-start;
   }
 }
+
 
     /* Bookmarklet tip under the green status */
 .bm-tip{
@@ -4314,7 +4334,7 @@ window.CX.getReadProvider = getReadProvider;
     }
 
 // =========================
-// Tx Decoder (4-line fixed DOM + Allowance Risk + Token/Asset Target + unlimited approve detection)
+// Tx Decoder (4-line fixed DOM + Allowance line + MethodId + Tokens touched)
 // Drop-in replacement for your whole Tx Decoder block.
 // =========================
 
@@ -4354,9 +4374,20 @@ window.CX.getReadProvider = getReadProvider;
   const tx_TOKEN_META_CACHE = {}; // key: `${net}:${addr}` -> {symbol,name,decimals}
 
   // ---- Helpers ----
+  function tx_esc(s){
+    try{
+      return String(s ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    } catch { return ""; }
+  }
+
   function tx_badge(kind, label) {
     const k = (kind === "ok" || kind === "warn" || kind === "bad" || kind === "unk") ? kind : "unk";
-    return `<span class="v ${k}"><span class="dot"></span>${label}</span>`;
+    return `<span class="v ${k}"><span class="dot"></span>${tx_esc(label)}</span>`;
   }
 
   function tx_setSum(sel, html) {
@@ -4364,15 +4395,33 @@ window.CX.getReadProvider = getReadProvider;
     if (el) el.innerHTML = html;
   }
 
-  function tx_setLine(sel, title, badgeHtml) {
-    tx_setSum(sel, `<span class="k">${title}</span>${badgeHtml}`);
+  // Titles already exist in HTML on the left; we only set the value HTML.
+  function tx_setLine(sel, _title, badgeHtml) {
+    tx_setSum(sel, badgeHtml);
+  }
+
+  // Impact line supports a subline (Allowance)
+  function tx_setImpactLine(badgeHtml, subLineText) {
+    const sub = subLineText
+      ? `<span class="tx-sum-sub small muted" style="display:block;margin-top:6px;opacity:.85;">${tx_esc(subLineText)}</span>`
+      : "";
+    tx_setSum("#tx-sum-impact", `${badgeHtml}${sub}`);
+  }
+
+  // NEW: Target line supports a subline (Tokens touched)
+  function tx_setTargetLine(badgeHtml, subLineText) {
+    const sub = subLineText
+      ? `<span class="tx-sum-sub small muted" style="display:block;margin-top:6px;opacity:.85;">${tx_esc(subLineText)}</span>`
+      : "";
+    tx_setSum("#tx-sum-target", `${badgeHtml}${sub}`);
   }
 
   function tx_resetSummary() {
     tx_setLine("#tx-sum-action", "Action", tx_badge("unk", "—"));
     tx_setLine("#tx-sum-risk", "Risk", tx_badge("unk", "—"));
-    tx_setLine("#tx-sum-target", "Target", tx_badge("unk", "—"));
-    tx_setLine("#tx-sum-impact", "Max impact", tx_badge("unk", "—"));
+    // use Target line with empty subline (keeps same DOM, just value HTML)
+    tx_setTargetLine(tx_badge("unk", "—"), "");
+    tx_setImpactLine(tx_badge("unk", "—"), "");
   }
 
   function tx_isUnlimitedApprove(vBigInt) {
@@ -4404,6 +4453,7 @@ window.CX.getReadProvider = getReadProvider;
     } catch { return null; }
   }
 
+  // Method selector (4 bytes)
   function tx_callSelector(txData) {
     try {
       const d = String(txData || "");
@@ -4420,7 +4470,6 @@ window.CX.getReadProvider = getReadProvider;
       if (tx_TOKEN_META_CACHE[key]) return tx_TOKEN_META_CACHE[key];
 
       const c = new E.Contract(a, tx_ERC20_ABI_MIN, readProvider);
-
       const [symbol, name, decimals] = await Promise.allSettled([c.symbol(), c.name(), c.decimals()]);
 
       const meta = {
@@ -4446,8 +4495,32 @@ window.CX.getReadProvider = getReadProvider;
   }
 
   function tx_pickPrimaryToken(approvals, transfers) {
-    // Prefer approvals token (allowance risk is often more important), else transfers token
     return (approvals[0]?.token) || (transfers[0]?.token) || "";
+  }
+
+  function tx_pickPrimaryApproval(approvals, net){
+    // Prefer: unlimited > known-router > larger value > first
+    let best = null;
+    let bestIsUnlimited = false;
+    let bestHasRouter = false;
+
+    for (const a of approvals) {
+      if (!a) continue;
+      if (!best) { best = a; bestIsUnlimited = tx_isUnlimitedApprove(a.value); bestHasRouter = !!tx_getKnownRouterName(net, a.spender); continue; }
+
+      const aUnlimited = tx_isUnlimitedApprove(a.value);
+      const aHasRouter = !!tx_getKnownRouterName(net, a.spender);
+
+      if (!bestIsUnlimited && aUnlimited) { best = a; bestIsUnlimited = true; bestHasRouter = aHasRouter; continue; }
+      if (bestIsUnlimited && aUnlimited) {
+        if (!bestHasRouter && aHasRouter) { best = a; bestHasRouter = true; continue; }
+      }
+      if (!bestIsUnlimited && !aUnlimited) {
+        if (!bestHasRouter && aHasRouter) { best = a; bestHasRouter = true; continue; }
+        if (typeof a.value === "bigint" && typeof best.value === "bigint" && a.value > best.value) { best = a; continue; }
+      }
+    }
+    return best;
   }
 
   // =========================
@@ -4506,8 +4579,35 @@ window.CX.getReadProvider = getReadProvider;
       const rcStatus = (rc && typeof rc.status !== "undefined") ? rc.status : undefined;
       const reverted = (rcStatus === 0 || rcStatus === 0n);
 
+      // --- MethodId (selector) for unknown calls ---
+      const methodId = (!decodedName && tx?.to) ? tx_callSelector(tx.data) : "";
+
       // -------------------------
-      // Action (with better fallbacks)
+      // Token meta preload (1–3 tokens touched)
+      // Keep it fast and stable: prefer primary token first.
+      // -------------------------
+      const primaryToken = tx_pickPrimaryToken(approvals, transfers);
+
+      const tokenSet = new Set();
+      if (primaryToken) tokenSet.add(primaryToken);
+      for (const t of transfers) if (t?.token) tokenSet.add(t.token);
+      for (const a of approvals) if (a?.token) tokenSet.add(a.token);
+
+      const tokenList = Array.from(tokenSet).slice(0, 3);
+      const metaMap = {};
+
+      await Promise.all(tokenList.map(async (addr) => {
+        const meta = await tx_getTokenMeta(read, net, addr);
+        metaMap[addr] = meta || null;
+      }));
+
+      const tokensTouched = tokenList
+        .map(addr => (metaMap[addr]?.symbol || metaMap[addr]?.name || "").trim())
+        .filter(Boolean)
+        .slice(0, 3);
+
+      // -------------------------
+      // Action
       // -------------------------
       let actionLabel = "Unknown";
       let actionKind  = "unk";
@@ -4517,18 +4617,17 @@ window.CX.getReadProvider = getReadProvider;
         actionKind = reverted ? "warn" : "ok";
       } else if (decodedName) {
         actionLabel = decodedName;
-        actionKind = hasRouterSwap ? "ok" : "warn";
+        actionKind  = hasRouterSwap ? "ok" : "warn";
       } else if ((tx.data === "0x" || !tx.data) && tx.value && BigInt(tx.value) > 0n) {
         actionLabel = "Native transfer";
         actionKind = "warn";
       } else if (tx.to) {
-        const sel = tx_callSelector(tx.data);
-        actionLabel = sel ? `Contract call (unknown ${sel})` : "Contract call (unknown)";
+        actionLabel = methodId ? `Contract call (unknown • ${methodId})` : "Contract call (unknown)";
         actionKind = "warn";
       }
 
       // -------------------------
-      // Approval analysis + routers
+      // Approval analysis
       // -------------------------
       let sawUnlimited = false;
       let sawKnownRouterUnlimited = false;
@@ -4536,17 +4635,12 @@ window.CX.getReadProvider = getReadProvider;
       let sawRevoke = false;
 
       const knownRouterNames = new Set();
-      let topSpender = ""; // best-effort for impact label
 
       for (const a of approvals) {
         if (!a) continue;
 
         const rn = tx_getKnownRouterName(net, a.spender);
         if (rn) knownRouterNames.add(rn);
-
-        // choose one spender to mention (prefer known router)
-        if (!topSpender) topSpender = a.spender;
-        if (rn) topSpender = rn; // overwrite with nice name
 
         if (tx_isUnlimitedApprove(a.value)) {
           sawUnlimited = true;
@@ -4558,12 +4652,40 @@ window.CX.getReadProvider = getReadProvider;
       }
 
       // -------------------------
-      // Target (Token/Asset + Contract creation support)
-      // Priority:
-      // 1) New contract if creation
-      // 2) Known router if tx.to is known router
-      // 3) Token from events (approval/transfer) -> symbol
-      // 4) fallback to tx.to short
+      // Allowance subline (ONLY when approvals exist)
+      // Allowance: TOKEN → SPENDER (Unlimited / Limited / Revoked)
+      // -------------------------
+      let allowanceSub = "";
+      if (hasApproval) {
+        const bestAppr = tx_pickPrimaryApproval(approvals, net);
+        if (bestAppr) {
+          const tokenAddr = bestAppr.token;
+          const spenderAddr = bestAppr.spender;
+
+          const tokenMeta = metaMap[tokenAddr] || null;
+          const tokName = (tokenMeta?.symbol || tokenMeta?.name || shortAddr(tokenAddr)).trim();
+
+          const spenderRouter = tx_getKnownRouterName(net, spenderAddr);
+          const spenderName = spenderRouter ? spenderRouter : shortAddr(spenderAddr);
+
+          let status = "";
+          if (tx_isUnlimitedApprove(bestAppr.value)) {
+            status = "Unlimited";
+          } else if (bestAppr.value === 0n) {
+            status = "Revoked";
+          } else {
+            // show amount if decimals known
+            const dec = tokenMeta?.decimals;
+            const pretty = (dec != null) ? tx_formatUnitsSafe(bestAppr.value, dec) : null;
+            status = pretty ? `Limited: ${pretty}` : "Limited";
+          }
+
+          allowanceSub = `Allowance: ${tokName} \u2192 ${spenderName} (${status})`;
+        }
+      }
+
+      // -------------------------
+      // Target (Token/Asset + creation support)
       // -------------------------
       let targetKind = "unk";
       let targetLabel = "—";
@@ -4576,20 +4698,19 @@ window.CX.getReadProvider = getReadProvider;
         if (toRouterName) {
           targetLabel = `${toRouterName} (${shortAddr(tx.to)})`;
           targetKind = "warn";
+        } else if (primaryToken) {
+          const meta = metaMap[primaryToken] || null;
+          const nm = (meta?.symbol || meta?.name || "").trim();
+          targetLabel = nm ? `${nm} (${shortAddr(primaryToken)})` : shortAddr(primaryToken);
+          targetKind = "ok";
         } else {
-          const primaryToken = tx_pickPrimaryToken(approvals, transfers);
-          if (primaryToken) {
-            // enrich token label
-            const meta = await tx_getTokenMeta(read, net, primaryToken);
-            const nm = meta?.symbol || meta?.name || "";
-            targetLabel = nm ? `${nm} (${shortAddr(primaryToken)})` : shortAddr(primaryToken);
-            targetKind = "ok";
-          } else {
-            targetLabel = shortAddr(tx.to);
-            targetKind = "ok";
-          }
+          targetLabel = shortAddr(tx.to);
+          targetKind = "ok";
         }
       }
+
+      // NEW: Tokens touched subline for Summary (only when we have 1–3)
+      const touchedSub = tokensTouched.length ? `Tokens touched: ${tokensTouched.join(", ")}` : "";
 
       // -------------------------
       // Risk (heuristics)
@@ -4622,7 +4743,7 @@ window.CX.getReadProvider = getReadProvider;
       }
 
       // -------------------------
-      // Max impact (Allowance Risk-aware + largest transfer)
+      // Max impact (Allowance-aware + largest transfer)
       // -------------------------
       let impactLabel = "—";
       let impactKind = "unk";
@@ -4637,11 +4758,7 @@ window.CX.getReadProvider = getReadProvider;
           impactKind = "bad";
         }
       } else if (sawFiniteApprove) {
-        // Mention spender if we can
-        const spenderPart = (typeof topSpender === "string" && topSpender.startsWith("0x"))
-          ? shortAddr(topSpender)
-          : (topSpender ? String(topSpender) : "");
-        impactLabel = spenderPart ? `Spending approved (limited) → ${spenderPart}` : "Spending approved (limited)";
+        impactLabel = "Spending approved (limited)";
         impactKind = "warn";
       } else if (sawRevoke && !hasTransfers) {
         impactLabel = "Allowance revoked";
@@ -4650,22 +4767,18 @@ window.CX.getReadProvider = getReadProvider;
         impactLabel = `Sends ${E.formatEther(tx.value)} native`;
         impactKind = "warn";
       } else if (hasTransfers) {
-        // Try to show largest transfer with token symbol if possible
         let largest = transfers[0];
         for (const t of transfers) if (t.value > largest.value) largest = t;
 
-        const meta = largest?.token ? await tx_getTokenMeta(read, net, largest.token) : null;
-        const sym = meta?.symbol || "";
+        const meta = metaMap[largest?.token] || null;
+        const sym = (meta?.symbol || "").trim();
         const dec = meta?.decimals;
 
         const pretty = (dec != null) ? tx_formatUnitsSafe(largest.value, dec) : null;
-        if (pretty && sym) {
-          impactLabel = `Largest transfer: ${pretty} ${sym}`;
-        } else if (sym) {
-          impactLabel = `Largest transfer: ${sym} (raw)`;
-        } else {
-          impactLabel = `${transfers.length} token transfer(s)`;
-        }
+        if (pretty && sym) impactLabel = `Largest transfer: ${pretty} ${sym}`;
+        else if (sym) impactLabel = `Largest transfer: ${sym} (raw)`;
+        else impactLabel = `${transfers.length} token transfer(s)`;
+
         impactKind = "ok";
       } else if (hasApproval) {
         impactLabel = "Allowance changed";
@@ -4674,39 +4787,45 @@ window.CX.getReadProvider = getReadProvider;
 
       // -------------------------
       // Fill the 4 fixed lines
+      // (Target now includes Tokens touched subline)
+      // (+ allowance subline under Max impact)
       // -------------------------
       tx_setLine("#tx-sum-action", "Action", tx_badge(actionKind, actionLabel));
       tx_setLine("#tx-sum-risk", "Risk", tx_badge(riskKind, riskLabel));
-      tx_setLine("#tx-sum-target", "Target", tx_badge(targetKind, targetLabel));
-      tx_setLine("#tx-sum-impact", "Max impact", tx_badge(impactKind, impactLabel));
+      tx_setTargetLine(tx_badge(targetKind, targetLabel), touchedSub);
+      tx_setImpactLine(tx_badge(impactKind, impactLabel), allowanceSub);
 
       // -------------------------
-      // Details panel (kept clean + more professional)
+      // Details panel (professional: Status + Gas + MethodId + Tokens touched)
       // -------------------------
       const gasUsed = rc?.gasUsed ? String(rc.gasUsed) : "—";
       const statusTxt = (typeof rcStatus === "undefined") ? "—" : (reverted ? "FAILED" : "SUCCESS");
+      const tokensLine = tokensTouched.length ? `<b>Tokens:</b> <span class="mono">${tx_esc(tokensTouched.join(", "))}</span><br>` : "";
+      const methodLine = (!decodedName && methodId) ? `<b>Method:</b> <span class="mono">${tx_esc(methodId)}</span><br>` : "";
 
       out.innerHTML = `
         <div class="small" style="margin-bottom:10px;">
           <b>Tx:</b> <a href="${txLink}" target="_blank" rel="noopener">${shortAddr(hash)}</a>
-          <span class="muted">(${String(net).toUpperCase()})</span><br>
-          <b>Status:</b> <span class="mono">${statusTxt}</span> &nbsp; <b>Gas used:</b> <span class="mono">${gasUsed}</span><br>
-          <b>From:</b> <span class="mono">${tx.from}</span><br>
-          <b>To:</b> <span class="mono">${tx.to || "—"}</span><br>
-          <b>Value:</b> <span class="mono">${tx.value ? E.formatEther(tx.value) : "0"}</span>
+          <span class="muted">(${tx_esc(String(net).toUpperCase())})</span><br>
+          <b>Status:</b> <span class="mono">${tx_esc(statusTxt)}</span> &nbsp; <b>Gas used:</b> <span class="mono">${tx_esc(gasUsed)}</span><br>
+          ${methodLine}
+          ${tokensLine}
+          <b>From:</b> <span class="mono">${tx_esc(tx.from)}</span><br>
+          <b>To:</b> <span class="mono">${tx_esc(tx.to || "—")}</span><br>
+          <b>Value:</b> <span class="mono">${tx_esc(tx.value ? E.formatEther(tx.value) : "0")}</span>
         </div>
       `;
       out.style.display = "block";
 
       // -------------------------
-      // Events (with per-token label best-effort)
+      // Events (with token labels best-effort)
       // -------------------------
       const items = [];
 
       if (decoded?.args) {
         const args = [];
         decoded.args.forEach((v, i) => {
-          args.push(`<div class="small mono" style="margin-top:6px;">arg${i}: ${String(v)}</div>`);
+          args.push(`<div class="small mono" style="margin-top:6px;">arg${i}: ${tx_esc(String(v))}</div>`);
         });
         items.push(`
           <div class="card">
@@ -4717,24 +4836,12 @@ window.CX.getReadProvider = getReadProvider;
         `);
       }
 
-      // Preload meta for up to 2 distinct tokens to keep it fast
-      const tokenSet = new Set();
-      for (const t of transfers) tokenSet.add(t.token);
-      for (const a of approvals) tokenSet.add(a.token);
-      const tokenList = Array.from(tokenSet).slice(0, 2);
-
-      const metaMap = {};
-      await Promise.all(tokenList.map(async (addr) => {
-        const meta = await tx_getTokenMeta(read, net, addr);
-        metaMap[addr] = meta || null;
-      }));
-
       if (transfers.length) {
         const rows = transfers.map(d => {
           const meta = metaMap[d.token] || null;
-          const sym = meta?.symbol || "";
-          const tag = sym ? ` <span class="muted">(${sym})</span>` : "";
-          return `<div class="small mono" style="margin-top:6px;">Transfer ${shortAddr(d.from)} → ${shortAddr(d.to)}${tag} • raw: ${d.value.toString()}</div>`;
+          const sym = (meta?.symbol || "").trim();
+          const tag = sym ? ` <span class="muted">(${tx_esc(sym)})</span>` : "";
+          return `<div class="small mono" style="margin-top:6px;">Transfer ${shortAddr(d.from)} → ${shortAddr(d.to)}${tag} • raw: ${tx_esc(d.value.toString())}</div>`;
         }).join("");
 
         items.push(`
@@ -4748,16 +4855,16 @@ window.CX.getReadProvider = getReadProvider;
       if (approvals.length) {
         const rows = approvals.map(d => {
           const routerName = tx_getKnownRouterName(net, d.spender);
-          const routerTag = routerName ? ` <span class="muted">(${routerName})</span>` : "";
+          const routerTag = routerName ? ` <span class="muted">(${tx_esc(routerName)})</span>` : "";
           const meta = metaMap[d.token] || null;
-          const sym = meta?.symbol || "";
-          const tokenTag = sym ? ` <span class="muted">(${sym})</span>` : "";
+          const sym = (meta?.symbol || "").trim();
+          const tokenTag = sym ? ` <span class="muted">(${tx_esc(sym)})</span>` : "";
 
           const inf = tx_isUnlimitedApprove(d.value)
             ? ` <span class="muted">(unlimited)</span>`
             : (d.value === 0n ? ` <span class="muted">(revoked)</span>` : "");
 
-          return `<div class="small mono" style="margin-top:6px;">Approval ${shortAddr(d.owner)} → ${shortAddr(d.spender)}${routerTag}${tokenTag} • raw: ${d.value.toString()}${inf}</div>`;
+          return `<div class="small mono" style="margin-top:6px;">Approval ${shortAddr(d.owner)} → ${shortAddr(d.spender)}${routerTag}${tokenTag} • raw: ${tx_esc(d.value.toString())}${inf}</div>`;
         }).join("");
 
         items.push(`
@@ -4792,23 +4899,13 @@ window.CX.getReadProvider = getReadProvider;
     $("#tx-run")?.addEventListener("click", runTxDecode);
 
     $("#tx-copy-md")?.addEventListener("click", async () => {
-      // copy summary lines as visible text (already includes titles)
       const a = (document.querySelector("#tx-sum-action")?.innerText || "Action —").trim();
       const r = (document.querySelector("#tx-sum-risk")?.innerText || "Risk —").trim();
       const t = (document.querySelector("#tx-sum-target")?.innerText || "Target —").trim();
       const m = (document.querySelector("#tx-sum-impact")?.innerText || "Max impact —").trim();
-
       const body = ($("#tx-out")?.innerText || "").trim();
 
-      const txt = [
-        "Tx Decoder Summary",
-        a,
-        r,
-        t,
-        m,
-        "",
-        body
-      ].join("\n");
+      const txt = ["Tx Decoder Summary", a, r, t, m, "", body].join("\n");
 
       const ok = await copyText(txt);
       setStatus($("#tx-status"), ok ? "ok" : "warn", ok ? "Copied." : "Copy failed.");
@@ -4816,7 +4913,7 @@ window.CX.getReadProvider = getReadProvider;
   }
 
   // =========================
-  // Export for debugging (optional but VERY useful)
+  // Export
   // =========================
   window.CX = window.CX || {};
   window.CX.runTxDecode = runTxDecode;
@@ -4826,6 +4923,7 @@ window.CX.getReadProvider = getReadProvider;
   window.CX.txDecoder.metaCache = tx_TOKEN_META_CACHE;
 
 })();
+
 
 
     // =========================
