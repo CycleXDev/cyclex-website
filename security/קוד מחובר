@@ -751,77 +751,132 @@
   outline:2px solid rgba(0,229,255,.55);
   outline-offset:2px;
 }
+/* =========================
+   RPC Results — Card rows (B)
+   No horizontal scroll. Domain on top, metrics in one compact line.
+   ========================= */
 
+#rpc-table{
+  overflow-x:hidden;   /* ✅ no swipe */
+  overflow-y:hidden;
+}
 
-  /* =========================
-     RPC table — EXACT behavior from old code
-     (shows long URLs without overlap + swipe on small screens)
-     ========================= */
+/* header */
+#rpc-table .trow.head.rpc{
+  display:grid;
+  grid-template-columns: 1fr 240px 120px; /* RPC | Metrics | Status */
+  gap:12px;
+  align-items:center;
+}
 
-  /* allow horizontal swipe on small screens without breaking the card */
-  #rpc-table{
-    overflow-x:auto;
-    overflow-y:hidden;
-    -webkit-overflow-scrolling:touch;
+/* each result row becomes a 2-line "card" */
+#rpc-table .trow.rpc{
+  display:grid;
+  grid-template-columns: 1fr auto; /* top row: RPC left, status right */
+  grid-template-rows: auto auto;   /* row 1: rpc+status | row 2: meta */
+  gap:10px 12px;
+  align-items:center;
+
+  padding:12px 12px;
+  border-top:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.03);
+}
+
+/* RPC cell (top-left) */
+#rpc-table .rpc-url{
+  grid-column:1;
+  grid-row:1;
+  min-width:0;
+}
+
+#rpc-table .rpc-url .rpc-host{
+  font-weight:900;
+  letter-spacing:.01em;
+  color:rgba(244,246,255,.92);
+  line-height:1.15;
+}
+
+#rpc-table .rpc-url .rpc-full{
+  margin-top:6px;
+  color:rgba(244,246,255,.62);
+  line-height:1.15;
+
+  /* allow up to 3 lines */
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:3;
+  overflow:hidden;
+  overflow-wrap:anywhere;
+
+  direction:ltr;
+  unicode-bidi:plaintext;
+}
+
+/* STATUS (top-right) */
+#rpc-table .rpc-status{
+  grid-column:2;
+  grid-row:1;
+  justify-self:end;
+  white-space:nowrap;
+}
+
+/* META line (bottom full width) */
+#rpc-table .rpc-meta{
+  grid-column:1 / -1;
+  grid-row:2;
+
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+
+  color:rgba(244,246,255,.85);
+  font-size:12px;
+}
+
+/* compact metric pills */
+#rpc-table .m{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.04);
+
+  white-space:nowrap;
+}
+
+#rpc-table .m b{
+  font-weight:900;
+  color:rgba(244,246,255,.92);
+}
+
+/* keep highlight style */
+#rpc-table .trow.rpc.highlight{
+  background:rgba(0,230,118,.10);
+  border-top-color:rgba(0,230,118,.20);
+}
+
+/* Responsive: tighter header */
+@media (max-width:980px){
+  #rpc-table .trow.head.rpc{
+    grid-template-columns: 1fr 140px; /* RPC | Status */
   }
+  #rpc-table .trow.head.rpc .cell:nth-child(2){ display:none; } /* hide "Metrics" header label */
+}
 
-  /* RPC | ms | chain | block | call | logs | status */
-  #rpc-table .trow.head.rpc,
+/* Small screens: status under host if needed */
+@media (max-width:640px){
   #rpc-table .trow.rpc{
-    display:grid;
-    grid-template-columns: minmax(240px, 1.8fr) 72px 64px 64px 60px 60px minmax(140px, 1fr);
-    gap:10px;
-    align-items:center;
-    min-width:760px;
+    grid-template-columns: 1fr; /* stack */
   }
-
-  /* default RPC cells */
-  #rpc-table .trow.head.rpc .cell,
-  #rpc-table .trow.rpc .cell{
-    min-width:0;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
+  #rpc-table .rpc-status{
+    grid-column:1;
+    justify-self:start;
   }
-
-  /* RPC URL column (1st): allow 2 lines, break long URLs nicely */
-  #rpc-table .trow.head.rpc .cell:first-child,
-  #rpc-table .trow.rpc .cell:first-child{
-    white-space:normal;
-    text-overflow:clip;
-    overflow:hidden;
-    overflow-wrap:anywhere;
-    line-height:1.15;
-
-    display:-webkit-box;
-    -webkit-box-orient:vertical;
-    -webkit-line-clamp:2;
-
-    direction:ltr;
-    unicode-bidi:plaintext;
-  }
-
-  /* STATUS column (last): allow 2 lines so "limit exceeded" won’t overlap */
-  #rpc-table .trow.head.rpc .cell:last-child,
-  #rpc-table .trow.rpc .cell:last-child{
-    white-space:normal;
-    text-overflow:clip;
-    overflow:hidden;
-    overflow-wrap:anywhere;
-    line-height:1.15;
-
-    display:-webkit-box;
-    -webkit-box-orient:vertical;
-    -webkit-line-clamp:2;
-  }
-
-  /* keep numeric/icon columns centered */
-  #rpc-table .trow.rpc .cell:not(:first-child),
-  #rpc-table .trow.head.rpc .cell:not(:first-child){
-    text-align:center;
-    justify-self:center;
-  }
-
+}
   /* keep highlight style */
   .trow.highlight{
     background:rgba(0,230,118,.10);
@@ -1477,16 +1532,12 @@
             <h3 data-i18n="rpc_results">Results</h3>
 
             <div id="rpc-table" class="table">
-              <div class="trow head rpc">
-                <div class="cell">RPC</div>
-                <div class="cell">ms</div>
-                <div class="cell hide-sm">chain</div>
-                <div class="cell hide-sm">block</div>
-                <div class="cell hide-sm">call</div>
-                <div class="cell hide-sm">logs</div>
-                <div class="cell">status</div>
-              </div>
-            </div>
+             <div class="trow head rpc">
+             <div class="cell">RPC</div>
+             <div class="cell">Metrics</div>
+             <div class="cell">Status</div>
+             </div>
+           </div>
 
             <div class="small" style="margin-top:10px" data-i18n="rpc_tip">
               Tip: Some RPCs fail due to CORS/timeouts. Run the test and pick the stable fastest.
@@ -4206,20 +4257,42 @@ window.CX.getReadProvider = getReadProvider;
     // RPC Health Checker
     // =========================
     function rpcRowHtml(url, ms, chain, block, callOk, logsOk, status){
-      const ok = status === "ok";
-      const cls = ok ? "highlight" : "";
-      return `
-        <div class="trow rpc ${cls}">
-          <div class="cell mono" title="${url}">${url}</div>
-          <div class="cell">${ms ?? "—"}</div>
-          <div class="cell hide-sm">${chain ?? "—"}</div>
-          <div class="cell hide-sm">${block ?? "—"}</div>
-          <div class="cell hide-sm">${callOk ?? "—"}</div>
-          <div class="cell hide-sm">${logsOk ?? "—"}</div>
-          <div class="cell">${status}</div>
-        </div>
-      `;
-    }
+  const ok = status === "ok";
+  const cls = ok ? "highlight" : "";
+
+  // Host label
+  let host = url;
+  try { host = new URL(url).host; } catch {}
+
+  const msTxt    = (ms ?? "—");
+  const blockTxt = (block ?? "—");
+  const callTxt  = (callOk ?? "—");
+  const logsTxt  = (logsOk ?? "—");
+
+  return `
+    <div class="trow rpc ${cls}">
+      <div class="cell rpc-url">
+        <div class="rpc-host mono">${host}</div>
+        <div class="rpc-full mono" title="${url}">${url}</div>
+      </div>
+
+      <div class="cell rpc-status">
+        <span class="sig ${ok ? "ok" : "unk"}">
+          <span class="dot"></span>
+          ${ok ? "ok" : "fail"}
+        </span>
+      </div>
+
+      <div class="cell rpc-meta">
+        <span class="m"><b>MS</b> ${msTxt}</span>
+        <span class="m"><b>Block</b> ${blockTxt}</span>
+        <span class="m"><b>Call</b> ${callTxt}</span>
+        <span class="m"><b>Logs</b> ${logsTxt}</span>
+      </div>
+    </div>
+  `;
+}
+
 
     async function rpcTestOne(net, url){
       const chainIdExpected = CHAINS[net].chainId;
