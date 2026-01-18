@@ -4309,10 +4309,12 @@ function bindLangButtons(){
       });
     }
 
- // =========================
-// Tx Decoder (4-line summary via fixed DOM + unlimited approve detection + known router label)
+// =========================
+// Tx Decoder (4-line fixed DOM + Allowance Risk + Token/Asset Target + unlimited approve detection)
+// Drop-in replacement for your whole Tx Decoder block.
 // =========================
 
+// ---- Minimal ABIs ----
 const tx_ROUTER_ABI_MIN = [
   "function swapExactTokensForTokens(uint256,uint256,address[],address,uint256)",
   "function swapExactETHForTokens(uint256,address[],address,uint256) payable",
@@ -4322,7 +4324,13 @@ const tx_ROUTER_ABI_MIN = [
   "function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256,uint256,address[],address,uint256)"
 ];
 
-// uint256 max
+const tx_ERC20_ABI_MIN = [
+  "function symbol() view returns (string)",
+  "function name() view returns (string)",
+  "function decimals() view returns (uint8)"
+];
+
+// ---- Constants ----
 const tx_U256_MAX = (1n << 256n) - 1n;
 
 // Known routers (lowercase keys)
@@ -4337,21 +4345,25 @@ const tx_KNOWN_ROUTERS = {
   }
 };
 
+// ---- Small cache for token meta ----
+const tx_TOKEN_META_CACHE = {}; // key: `${net}:${addr}` -> {symbol,name,decimals}
+
+// ---- Helpers ----
 function tx_decodeTransferLog(log){
   try{
     const from = "0x" + log.topics[1].slice(26);
-    const to = "0x" + log.topics[2].slice(26);
-    const val = BigInt(log.data);
-    return { from: normAddr(from), to: normAddr(to), value: val };
+    const to   = "0x" + log.topics[2].slice(26);
+    const val  = BigInt(log.data);
+    return { token: normAddr(log.address), from: normAddr(from), to: normAddr(to), value: val };
   } catch { return null; }
 }
 
 function tx_decodeApprovalLog(log){
   try{
-    const owner = "0x" + log.topics[1].slice(26);
+    const owner   = "0x" + log.topics[1].slice(26);
     const spender = "0x" + log.topics[2].slice(26);
-    const val = BigInt(log.data);
-    return { owner: normAddr(owner), spender: normAddr(spender), value: val };
+    const val     = BigInt(log.data);
+    return { token: normAddr(log.address), owner: normAddr(owner), spender: normAddr(spender), value: val };
   } catch { return null; }
 }
 
@@ -4359,10 +4371,10 @@ function tx_isUnlimitedApprove(vBigInt){
   try { return typeof vBigInt === "bigint" && vBigInt === tx_U256_MAX; } catch { return false; }
 }
 
-function tx_getKnownRouterName(net, spenderAddr){
+function tx_getKnownRouterName(net, addr){
   const m = (tx_KNOWN_ROUTERS && tx_KNOWN_ROUTERS[net]) ? tx_KNOWN_ROUTERS[net] : {};
-  if (!spenderAddr) return "";
-  const k = isAddr(spenderAddr) ? normAddr(spenderAddr) : String(spenderAddr).toLowerCase();
+  if (!addr) return "";
+  const k = isAddr(addr) ? normAddr(addr) : String(addr).toLowerCase();
   return m[k] || "";
 }
 
@@ -4376,18 +4388,57 @@ function tx_setSum(sel, html){
   if (el) el.innerHTML = html;
 }
 
+function tx_setLine(sel, title, badgeHtml){
+  tx_setSum(sel, `<span class="k">${title}</span>${badgeHtml}`);
+}
 
+function tx_resetSummary(){
+  tx_setLine("#tx-sum-action", "Action", `<span class="muted">—</span>`);
+  tx_setLine("#tx-sum-risk",   "Risk",   `<span class="muted">—</span>`);
+  tx_setLine("#tx-sum-target", "Target", `<span class="muted">—</span>`);
+  tx_setLine("#tx-sum-impact", "Max impact", `<span class="muted">—</span>`);
+}
+
+async function tx_getTokenMeta(readProvider, net, tokenAddr){
+  try{
+    if (!tokenAddr || !isAddr(tokenAddr)) return null;
+    const a = normAddr(tokenAddr);
+    const key = `${net}:${a}`;
+    if (tx_TOKEN_META_CACHE[key]) return tx_TOKEN_META_CACHE[key];
+
+    const c = new E.Contract(a, tx_ERC20_ABI_MIN, readProvider);
+
+    // Do best-effort parallel calls (each may fail on non-ERC20 contracts)
+    const [symbol, name, decimals] = await Promise.allSettled([
+      c.symbol(),
+      c.name(),
+      c.decimals()
+    ]);
+
+    const meta = {
+      symbol: symbol.status === "fulfilled" ? String(symbol.value || "") : "",
+      name: name.status === "fulfilled" ? String(name.value || "") : "",
+      decimals: decimals.status === "fulfilled" ? Number(decimals.value) : null
+    };
+
+    // Cache even partial
+    tx_TOKEN_META_CACHE[key] = meta;
+    return meta;
+  } catch {
+    return null;
+  }
+}
+
+// =========================
+// Main
+// =========================
 async function runTxDecode(){
   const st = $("#tx-status");
   const out = $("#tx-out");
   const evWrap = $("#tx-events");
   clearStatus(st);
 
-  // reset summary to "—" every run (so it never gets stuck)
-  tx_setSum("#tx-sum-action", "—");
-  tx_setSum("#tx-sum-risk", "—");
-  tx_setSum("#tx-sum-target", "—");
-  tx_setSum("#tx-sum-impact", "—");
+  tx_resetSummary();
 
   const net = netFromSelect("#tx-net");
   const hash = ($("#tx-hash")?.value || "").trim();
@@ -4420,8 +4471,11 @@ async function runTxDecode(){
     } catch {}
 
     const logs = rc?.logs || [];
-    const transfers = logs.filter(l => l.topics?.[0] === TRANSFER_TOPIC0).slice(0, 20);
-    const approvals = logs.filter(l => l.topics?.[0] === APPROVAL_TOPIC0).slice(0, 20);
+    const transfersRaw = logs.filter(l => l.topics?.[0] === TRANSFER_TOPIC0).slice(0, 20);
+    const approvalsRaw = logs.filter(l => l.topics?.[0] === APPROVAL_TOPIC0).slice(0, 20);
+
+    const transfers = transfersRaw.map(tx_decodeTransferLog).filter(Boolean);
+    const approvals = approvalsRaw.map(tx_decodeApprovalLog).filter(Boolean);
 
     const decodedName = decoded?.name || "";
     const hasRouterSwap = decodedName.toLowerCase().includes("swap");
@@ -4429,7 +4483,7 @@ async function runTxDecode(){
     const hasTransfers = transfers.length > 0;
 
     // -------------------------
-    // 1) Action
+    // Action
     // -------------------------
     let actionLabel = "Unknown";
     let actionKind  = "unk";
@@ -4446,43 +4500,77 @@ async function runTxDecode(){
     }
 
     // -------------------------
-    // 2) Approvals analysis
+    // Approval analysis + allowance risk (this will drive Max impact)
     // -------------------------
     let sawUnlimited = false;
     let sawKnownRouterUnlimited = false;
-    let knownRouterNames = new Set();
+    let sawFiniteApprove = false;
+    let sawRevoke = false;
 
-    if (hasApproval) {
-      for (const l of approvals) {
-        const d = tx_decodeApprovalLog(l);
-        if (!d) continue;
+    const knownRouterNames = new Set();
+    const spenderAddrs = new Set();
+    const tokenAddrsFromApprovals = new Set();
 
-        const routerName = tx_getKnownRouterName(net, d.spender);
-        if (routerName) knownRouterNames.add(routerName);
+    for (const a of approvals) {
+      if (!a) continue;
+      spenderAddrs.add(a.spender);
+      tokenAddrsFromApprovals.add(a.token);
 
-        if (tx_isUnlimitedApprove(d.value)) {
-          sawUnlimited = true;
-          if (routerName) sawKnownRouterUnlimited = true;
-        }
+      const rn = tx_getKnownRouterName(net, a.spender);
+      if (rn) knownRouterNames.add(rn);
+
+      if (tx_isUnlimitedApprove(a.value)) {
+        sawUnlimited = true;
+        if (rn) sawKnownRouterUnlimited = true;
+      } else {
+        // finite
+        if (a.value === 0n) sawRevoke = true;
+        else sawFiniteApprove = true;
       }
     }
 
     // -------------------------
-    // 3) Target (simple + useful)
-    // Target = tx.to (where the call is sent)
+    // Target (human): Router name OR Token symbol OR address
+    // Priority:
+    // 1) Known router if tx.to is known router
+    // 2) Token from approvals/transfers (first token) => symbol (best-effort)
+    // 3) fallback to tx.to (or —)
     // -------------------------
+    let targetAddr = tx.to ? normAddr(tx.to) : "";
+    let targetKind = tx.to ? "ok" : "unk";
     let targetLabel = tx.to ? shortAddr(tx.to) : "—";
-    let targetKind  = tx.to ? "ok" : "unk";
 
-    // If tx.to itself is a known router (nice bonus)
-    const toRouter = tx.to ? tx_getKnownRouterName(net, tx.to) : "";
-    if (toRouter) {
-      targetLabel = `${shortAddr(tx.to)} (${toRouter})`;
+    const toRouterName = tx.to ? tx_getKnownRouterName(net, tx.to) : "";
+    if (toRouterName) {
+      targetLabel = `${toRouterName} (${shortAddr(tx.to)})`;
       targetKind = "warn";
+    } else {
+      // If we saw token activity, prefer token contract as "Target"
+      const tokenCandidate =
+        (approvals[0]?.token) ||
+        (transfers[0]?.token) ||
+        "";
+
+      if (tokenCandidate) {
+        targetAddr = tokenCandidate;
+        targetLabel = shortAddr(tokenCandidate);
+        targetKind = "ok";
+      }
+    }
+
+    // We'll best-effort enrich target with token meta (async but awaited here for simplicity)
+    // Only if target looks like an ERC20 address (from events) and NOT already a known router label.
+    if (!toRouterName && targetAddr && isAddr(targetAddr) && (targetAddr === approvals[0]?.token || targetAddr === transfers[0]?.token)) {
+      const meta = await tx_getTokenMeta(read, net, targetAddr);
+      if (meta && (meta.symbol || meta.name)) {
+        const nm = meta.symbol || meta.name;
+        targetLabel = `${nm} (${shortAddr(targetAddr)})`;
+        targetKind = "ok";
+      }
     }
 
     // -------------------------
-    // 4) Risk (heuristics + your new unlimited rule)
+    // Risk (heuristics)
     // -------------------------
     let riskLabel = "Unknown";
     let riskKind  = "unk";
@@ -4509,41 +4597,50 @@ async function runTxDecode(){
     }
 
     // -------------------------
-    // 5) Max impact (compact, user-facing)
+    // Max impact (Allowance Risk-aware)
     // -------------------------
     let impactLabel = "—";
     let impactKind = "unk";
 
-    if (sawUnlimited && !sawKnownRouterUnlimited) {
-      impactLabel = "Unlimited token spend possible";
-      impactKind = "bad";
-    } else if (sawUnlimited && sawKnownRouterUnlimited) {
-      impactLabel = "Unlimited allowance to known router";
+    if (sawUnlimited) {
+      if (sawKnownRouterUnlimited) {
+        const names = Array.from(knownRouterNames).slice(0, 2).join(", ");
+        impactLabel = `Unlimited spending approved (known router${names ? ": " + names : ""})`;
+        impactKind = "warn";
+      } else {
+        impactLabel = "Unlimited spending approved (unknown spender)";
+        impactKind = "bad";
+      }
+    } else if (sawFiniteApprove) {
+      impactLabel = "Spending approved (limited)";
       impactKind = "warn";
+    } else if (sawRevoke && !hasTransfers) {
+      impactLabel = "Allowance revoked";
+      impactKind = "ok";
     } else if (tx.value && BigInt(tx.value) > 0n) {
       impactLabel = `Sends ${E.formatEther(tx.value)} native`;
-      impactKind = "warn";
-    } else if (hasApproval) {
-      impactLabel = "Token allowance changed";
       impactKind = "warn";
     } else if (hasTransfers) {
       impactLabel = `${transfers.length} token transfer(s)`;
       impactKind = "ok";
+    } else if (hasApproval) {
+      impactLabel = "Allowance changed";
+      impactKind = "warn";
     }
 
     // -------------------------
-    // Fill the 4 fixed lines in your DIV (THIS is the key fix)
+    // Fill the 4 fixed lines
     // -------------------------
-    tx_setSum("#tx-sum-action", tx_badge(actionKind, actionLabel));
-    tx_setSum("#tx-sum-risk", tx_badge(riskKind, riskLabel));
-    tx_setSum("#tx-sum-target", tx_badge(targetKind, targetLabel));
-    tx_setSum("#tx-sum-impact", tx_badge(impactKind, impactLabel));
+    tx_setLine("#tx-sum-action", "Action", tx_badge(actionKind, actionLabel));
+    tx_setLine("#tx-sum-risk", "Risk", tx_badge(riskKind, riskLabel));
+    tx_setLine("#tx-sum-target", "Target", tx_badge(targetKind, targetLabel));
+    tx_setLine("#tx-sum-impact", "Max impact", tx_badge(impactKind, impactLabel));
 
-    // keep tx details in the output panel (optional, but nice)
+    // keep tx details in the output panel
     out.innerHTML = `
       <div class="small" style="margin-bottom:10px;">
         <b>Tx:</b> <a href="${txLink}" target="_blank" rel="noopener">${shortAddr(hash)}</a>
-        <span class="muted">(${net.toUpperCase()})</span><br>
+        <span class="muted">(${String(net).toUpperCase()})</span><br>
         <b>From:</b> <span class="mono">${tx.from}</span><br>
         <b>To:</b> <span class="mono">${tx.to || "—"}</span><br>
         <b>Value:</b> <span class="mono">${tx.value ? E.formatEther(tx.value) : "0"}</span>
@@ -4552,7 +4649,7 @@ async function runTxDecode(){
     out.style.display = "block";
 
     // -------------------------
-    // Events (same as before)
+    // Events (same as before, but with token label if possible)
     // -------------------------
     const items = [];
 
@@ -4571,11 +4668,18 @@ async function runTxDecode(){
     }
 
     if (transfers.length) {
-      const rows = transfers.map(l => {
-        const d = tx_decodeTransferLog(l);
-        if (!d) return "";
-        return `<div class="small mono" style="margin-top:6px;">Transfer ${shortAddr(d.from)} → ${shortAddr(d.to)} • raw: ${d.value.toString()}</div>`;
+      // Best-effort: label token for the first transfer token address
+      let tokLabel = "";
+      const t0 = transfers[0]?.token;
+      if (t0) {
+        const meta = await tx_getTokenMeta(read, net, t0);
+        tokLabel = meta?.symbol ? ` <span class="muted">(${meta.symbol})</span>` : "";
+      }
+
+      const rows = transfers.map(d => {
+        return `<div class="small mono" style="margin-top:6px;">Transfer ${shortAddr(d.from)} → ${shortAddr(d.to)}${tokLabel} • raw: ${d.value.toString()}</div>`;
       }).join("");
+
       items.push(`
         <div class="card">
           <h3>Transfer Events</h3>
@@ -4585,14 +4689,21 @@ async function runTxDecode(){
     }
 
     if (approvals.length) {
-      const rows = approvals.map(l => {
-        const d = tx_decodeApprovalLog(l);
-        if (!d) return "";
+      // Best-effort: label token for the first approval token address
+      let tokLabel = "";
+      const a0 = approvals[0]?.token;
+      if (a0) {
+        const meta = await tx_getTokenMeta(read, net, a0);
+        tokLabel = meta?.symbol ? ` <span class="muted">(${meta.symbol})</span>` : "";
+      }
+
+      const rows = approvals.map(d => {
         const routerName = tx_getKnownRouterName(net, d.spender);
         const tag = routerName ? ` <span class="muted">(${routerName})</span>` : "";
-        const inf = tx_isUnlimitedApprove(d.value) ? ` <span class="muted">(unlimited)</span>` : "";
-        return `<div class="small mono" style="margin-top:6px;">Approval ${shortAddr(d.owner)} → ${shortAddr(d.spender)}${tag} • raw: ${d.value.toString()}${inf}</div>`;
+        const inf = tx_isUnlimitedApprove(d.value) ? ` <span class="muted">(unlimited)</span>` : (d.value === 0n ? ` <span class="muted">(revoked)</span>` : "");
+        return `<div class="small mono" style="margin-top:6px;">Approval ${shortAddr(d.owner)} → ${shortAddr(d.spender)}${tag}${tokLabel} • raw: ${d.value.toString()}${inf}</div>`;
       }).join("");
+
       items.push(`
         <div class="card">
           <h3>Approval Events</h3>
@@ -4617,20 +4728,18 @@ function initTxUi(){
   $("#tx-run")?.addEventListener("click", runTxDecode);
 
   $("#tx-copy-md")?.addEventListener("click", async () => {
-    // copy BOTH: tx-out + 4-line summary
-    const action = ($("#tx-sum-action")?.innerText || "—").trim();
-    const risk   = ($("#tx-sum-risk")?.innerText || "—").trim();
-    const target = ($("#tx-sum-target")?.innerText || "—").trim();
-    const impact = ($("#tx-sum-impact")?.innerText || "—").trim();
-
+    const a = (document.querySelector("#tx-sum-action")?.innerText || "—").trim();
+    const r = (document.querySelector("#tx-sum-risk")?.innerText || "—").trim();
+    const t = (document.querySelector("#tx-sum-target")?.innerText || "—").trim();
+    const m = (document.querySelector("#tx-sum-impact")?.innerText || "—").trim();
     const body = ($("#tx-out")?.innerText || "").trim();
 
     const txt = [
       "Tx Decoder Summary",
-      `Action: ${action}`,
-      `Risk: ${risk}`,
-      `Target: ${target}`,
-      `Max impact: ${impact}`,
+      a,
+      r,
+      t,
+      m,
       "",
       body
     ].join("\n");
@@ -4639,6 +4748,7 @@ function initTxUi(){
     setStatus($("#tx-status"), ok ? "ok" : "warn", ok ? "Copied." : "Copy failed.");
   });
 }
+
 
     // =========================
     // Dev Tools (Bookmarklet + Monitor)
