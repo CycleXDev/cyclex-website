@@ -5119,6 +5119,7 @@ try {
     hub.searchParams.set("net", net);
     if (isTx) hub.searchParams.set("tx", v);
     else hub.searchParams.set("token", v);
+    hub.hash = isTx ? "#panel-tx" : "#panel-quick";
     window.open(hub.toString(), "_blank");
   }catch(e){ alert("CycleX Hub bookmarklet error"); }
 })();`.trim();
@@ -5308,6 +5309,7 @@ try {
     hub.searchParams.set("net", net);
     if (isTx) hub.searchParams.set("tx", v);
     else hub.searchParams.set("token", v);
+    hub.hash = isTx ? "#panel-tx" : "#panel-quick";
     window.open(hub.toString(), "_blank");
   }catch(e){ alert("CycleX Hub bookmarklet error"); }
 })();`.trim();
@@ -5366,6 +5368,14 @@ try {
       if (btn) btn.click();
     }, 400);
   }
+
+        setTimeout(() => {
+  const h = (location.hash || "").trim();
+  if (!h) return;
+  const el = document.querySelector(h);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}, 450);
+
 }
     }
 
