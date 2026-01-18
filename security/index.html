@@ -402,12 +402,12 @@
   .status.bad{display:block;background:rgba(220,53,69,.10);border-color:rgba(220,53,69,.35);color:#ff7a8a}
   .status.info{display:block;background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.30);color:#7df2ff}
 /* =========================
-   TX DECODER — 4-line Security Summary (BADGES)  [PILL ONLY]
+   TX DECODER — 4-line Security Summary (BADGES) [STABLE + PREMIUM]
    ========================= */
 
 #panel-tx .tx-sum{
   display:grid;
-  grid-template-columns: 1fr;
+  grid-template-columns:1fr;
   gap:10px;
   padding:12px;
   border-radius:18px;
@@ -417,9 +417,10 @@
   backdrop-filter:blur(16px);
 }
 
+/* Row container */
 #panel-tx .tx-sum-line{
   display:grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns:120px minmax(0,1fr);
   align-items:center;
   column-gap:12px;
   row-gap:6px;
@@ -439,28 +440,12 @@
   white-space:nowrap;
 }
 
-/* ✅ value-area is ONLY for alignment (no color, no border) */
+/* ✅ The badge itself (this is the pill) */
 #panel-tx .tx-sum-line .v{
-  justify-self:end;
-  width:calc(100% - 24px);
-  max-width:520px;
+  justify-self:end;              /* align to right edge of the row */
+  max-width:calc(100% - 8px);    /* pull קצת שמאלה so it never sticks out */
   min-width:0;
 
-  display:flex;
-  justify-content:flex-end;
-  align-items:center;
-
-  /* IMPORTANT: keep it transparent */
-  padding:0;
-  border:0;
-  background:transparent;
-  border-radius:0;
-  overflow:visible;
-}
-
-/* ---- The actual badge (pill) ---- */
-/* preferred: if you have <span class="pill">...</span> inside .v */
-#panel-tx .tx-sum-line .v .pill{
   display:inline-flex;
   align-items:center;
   gap:8px;
@@ -475,37 +460,22 @@
   letter-spacing:.02em;
   color:rgba(244,246,255,.92);
 
-  max-width:100%;
-  min-width:0;
+  /* 🔥 prevents “cut from left / overflow outside” */
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
+
+  /* 🔥 forces correct direction for long method names */
+  direction:ltr;
+  unicode-bidi:plaintext;
 }
 
-/* fallback: if you DON'T have .pill, style the first element/text inside .v */
-#panel-tx .tx-sum-line .v > :first-child{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-
-  padding:7px 10px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.05);
-
-  font-size:12px;
-  font-weight:800;
-  letter-spacing:.02em;
-  color:rgba(244,246,255,.92);
-
-  max-width:100%;
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+/* If your site is RTL globally, keep label RTL but badge LTR */
+html[dir="rtl"] #panel-tx .tx-sum-line .v{
+  direction:ltr;
 }
 
-/* dot (works if dot is inside the pill) */
+/* Dot inside badge */
 #panel-tx .tx-sum-line .v .dot{
   width:10px;
   height:10px;
@@ -515,52 +485,37 @@
   flex:0 0 auto;
 }
 
-/* ✅ states: color ONLY the pill (not the whole .v area) */
-#panel-tx .tx-sum-line .v.ok .pill,
-#panel-tx .tx-sum-line .v.ok > :first-child{
+/* States (ONLY badge is colored) */
+#panel-tx .tx-sum-line .v.ok{
   border-color:rgba(0,230,118,.28);
   background:rgba(0,230,118,.10);
 }
 #panel-tx .tx-sum-line .v.ok .dot{ background:rgba(0,230,118,.95); }
 
-#panel-tx .tx-sum-line .v.warn .pill,
-#panel-tx .tx-sum-line .v.warn > :first-child{
+#panel-tx .tx-sum-line .v.warn{
   border-color:rgba(255,193,7,.30);
   background:rgba(255,193,7,.10);
 }
 #panel-tx .tx-sum-line .v.warn .dot{ background:rgba(255,193,7,.95); }
 
-#panel-tx .tx-sum-line .v.bad .pill,
-#panel-tx .tx-sum-line .v.bad > :first-child{
+#panel-tx .tx-sum-line .v.bad{
   border-color:rgba(220,53,69,.30);
   background:rgba(220,53,69,.12);
 }
 #panel-tx .tx-sum-line .v.bad .dot{ background:rgba(220,53,69,.95); }
 
-#panel-tx .tx-sum-line .v.unk .pill,
-#panel-tx .tx-sum-line .v.unk > :first-child{
+#panel-tx .tx-sum-line .v.unk{
   border-color:rgba(255,255,255,.12);
   background:rgba(255,255,255,.05);
   color:rgba(244,246,255,.78);
 }
 #panel-tx .tx-sum-line .v.unk .dot{ background:rgba(255,255,255,.25); }
 
-/* Action: allow 2 lines (only on the pill) */
-#tx-sum-action .v .pill,
-#tx-sum-action .v > :first-child{
-  white-space:normal;
-  display:-webkit-box;
-  -webkit-box-orient:vertical;
-  -webkit-line-clamp:2;
-  line-height:1.2;
-}
-
-/* subline aligned with value-area */
+/* Subline under badge */
 #panel-tx .tx-sum-line .tx-sum-sub{
   grid-column:2;
   justify-self:end;
-  width:calc(100% - 24px);
-  max-width:520px;
+  max-width:calc(100% - 8px);
   min-width:0;
 
   margin-top:2px;
@@ -575,19 +530,31 @@
   word-break:break-word;
 }
 
+/* Action: allow 2 lines but keep it inside */
+#tx-sum-action .v{
+  white-space:normal;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  line-height:1.2;
+}
+
 /* Mobile */
 @media (max-width:640px){
   #panel-tx .tx-sum-line{
-    grid-template-columns: 1fr;
+    grid-template-columns:1fr;
     row-gap:8px;
     align-items:start;
   }
-  #panel-tx .tx-sum-line .v,
-  #panel-tx .tx-sum-line .tx-sum-sub{
+  #panel-tx .tx-sum-line .v{
     justify-self:start;
-    width:100%;
     max-width:100%;
+  }
+  #panel-tx .tx-sum-line .tx-sum-sub{
+    grid-column:1;
+    justify-self:start;
     text-align:left;
+    max-width:100%;
   }
 }
 
