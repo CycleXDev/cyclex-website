@@ -441,7 +441,10 @@
   display:inline-flex;
   align-items:center;
   gap:8px;
-  min-width:0;
+  width:auto;
+  max-width:72%;
+  flex:0 1 auto;
+  margin-left:auto;
 
   font-size:12px;
   font-weight:800;
@@ -456,6 +459,16 @@
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
+}
+
+#panel-tx .tx-sum-line .tx-sum-sub{
+  display:block;
+  margin-top:6px;
+  text-align:right;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.25;
+  color:rgba(244,246,255,.62);
 }
 
 /* dot inside the badge */
@@ -960,71 +973,13 @@
   min-width:520px;
 }
 
-    /* RPC (<=980px): keep ALL columns, no horizontal scroll */
-#rpc-table .trow.head.rpc,
-#rpc-table .trow.rpc{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px 10px;
-  min-width:0;         /* <- removes forced horizontal scroll */
-}
-
-/* Order + sizing by column index:
-   1 RPC | 2 MS | 7 STATUS on first line
-   3 CHAIN | 4 BLOCK | 5 CALL | 6 LOGS on second line */
-#rpc-table .trow.head.rpc .cell:nth-child(1),
-#rpc-table .trow.rpc      .cell:nth-child(1){
-  order:1;
-  flex:1 1 240px;
-  min-width:0;
-}
-
-#rpc-table .trow.head.rpc .cell:nth-child(2),
-#rpc-table .trow.rpc      .cell:nth-child(2){
-  order:2;
-  flex:0 0 72px;
-  text-align:center;
-}
-
-#rpc-table .trow.head.rpc .cell:nth-child(7),
-#rpc-table .trow.rpc      .cell:nth-child(7){
-  order:3;
-  flex:0 0 84px;
-  text-align:center;
-}
-
-/* The “tests” chips */
-#rpc-table .trow.head.rpc .cell:nth-child(3),
-#rpc-table .trow.head.rpc .cell:nth-child(4),
-#rpc-table .trow.head.rpc .cell:nth-child(5),
-#rpc-table .trow.head.rpc .cell:nth-child(6),
-#rpc-table .trow.rpc      .cell:nth-child(3),
-#rpc-table .trow.rpc      .cell:nth-child(4),
-#rpc-table .trow.rpc      .cell:nth-child(5),
-#rpc-table .trow.rpc      .cell:nth-child(6){
-  order:4;
-  flex:1 1 calc(25% - 10px);   /* 4 chips across when possible */
-  min-width:110px;
-  text-align:center;
-
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.04);
-  border-radius:12px;
-  padding:6px 8px;
-}
-
-/* Head row chips look like labels */
-#rpc-table .trow.head.rpc .cell:nth-child(3),
-#rpc-table .trow.head.rpc .cell:nth-child(4),
-#rpc-table .trow.head.rpc .cell:nth-child(5),
-#rpc-table .trow.head.rpc .cell:nth-child(6){
-  font-size:11px;
-  letter-spacing:.08em;
-  text-transform:uppercase;
-  color:rgba(244,246,255,.72);
-  background:rgba(255,255,255,.03);
-}
-
+    /* RPC: collapses to RPC / ms / status */
+    #rpc-table .trow.head.rpc,
+    #rpc-table .trow.rpc{
+      grid-template-columns:minmax(220px,1.6fr) 72px minmax(140px,1fr);
+      min-width:560px;
+    }
+  }
 
   @media (max-width:640px){
     .top-bar{top:10px;padding:10px 12px}
