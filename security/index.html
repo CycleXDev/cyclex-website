@@ -4141,6 +4141,16 @@ window.CX.getReadProvider = getReadProvider;
         window.open(u.toString(), "_blank", "noopener,noreferrer");
       });
     }
+// ---- Safe HTML escape (prevents injection + fixes "escapeHtml is not defined") ----
+function escapeHtml(s) {
+  if (s === null || s === undefined) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
   // =========================
 // Wallet Security DNA (replaces Approval Guardian)
