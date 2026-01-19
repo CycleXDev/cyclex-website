@@ -4141,8 +4141,8 @@ window.CX.getReadProvider = getReadProvider;
         window.open(u.toString(), "_blank", "noopener,noreferrer");
       });
     }
-// ---- Safe HTML escape (prevents injection + fixes "escapeHtml is not defined") ----
-function escapeHtml(s) {
+// ---- Safe HTML escape (global) ----
+window.escapeHtml = window.escapeHtml || function (s) {
   if (s === null || s === undefined) return "";
   return String(s)
     .replace(/&/g, "&amp;")
@@ -4150,7 +4150,8 @@ function escapeHtml(s) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
+};
+
 
   // =========================
 // Wallet Security DNA (replaces Approval Guardian)
@@ -4247,7 +4248,7 @@ function dnaRowRiskChip(risk) {
   if (r.includes("med")) return `<span class="chip chip-warn">Medium</span>`;
   if (r.includes("low")) return `<span class="chip chip-ok">Low</span>`;
   if (r === "—") return `<span class="muted">—</span>`;
-  return `<span class="chip">${escapeHtml(String(risk))}</span>`;
+  return `<span class="chip">${window.escapeHtml(String(risk))}</span>`;
 }
 
 // ✅ FIX: "unverified" includes "verif" so must check UNVERIFIED first
@@ -4326,7 +4327,7 @@ function dnaRenderTips(list) {
     tips.innerHTML = `<li class="muted">—</li>`;
     return;
   }
-  tips.innerHTML = list.map(t => `<li>${escapeHtml(String(t))}</li>`).join("");
+  tips.innerHTML = list.map(t => `<li>${window.escapeHtml(String(t))}</li>`).join("");
 }
 
 function dnaRenderTable(rows) {
@@ -4358,7 +4359,7 @@ function dnaRenderTable(rows) {
     const spTxt = r.spender ? shortAddr(r.spender) : "—";
     const alwTxt = dnaFormatAllowance(r.allowanceStr);
     const verTxt = dnaVerifiedChip(r.verified);
-    const flagsTxt = r.flags && r.flags !== "—" ? escapeHtml(String(r.flags)) : "—";
+    const flagsTxt = r.flags && r.flags !== "—" ? window.escapeHtml(String(r.flags)) : "—";
     const riskChip = dnaRowRiskChip(r.risk);
 
     // allow revoke if non-zero / infinite
@@ -4375,9 +4376,9 @@ function dnaRenderTable(rows) {
       <div class="trow">
         <div class="cell mono">${tkTxt}</div>
         <div class="cell mono hide-sm">${spTxt}</div>
-        <div class="cell">${escapeHtml(String(alwTxt))}</div>
+        <div class="cell">${window.escapeHtml(String(alwTxt))}</div>
         <div class="cell hide-sm">${verTxt}</div>
-        <div class="cell hide-sm">${escapeHtml(String(r.lastUpdated || "—"))}</div>
+        <div class="cell hide-sm">${window.escapeHtml(String(r.lastUpdated || "—"))}</div>
         <div class="cell hide-sm">${flagsTxt}</div>
         <div class="cell">${riskChip}</div>
         <div class="cell">${actionHtml}</div>
