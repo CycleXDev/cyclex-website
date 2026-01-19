@@ -4213,27 +4213,37 @@ function dnaRiskLevelFromScore(score) {
 }
 
 function dnaNormalizeApiRow(row) {
-  const token = row?.token && isAddr(row.token) ? normAddr(row.token) : "";
-  const spender = row?.spender && isAddr(row.spender) ? normAddr(row.spender) : "";
-  const symbol = row?.symbol || "—";
+  // Moralis-like keys (common)
+  const tokenRaw =
+    row?.token || row?.token_address || row?.tokenAddress || row?.contract_address || row?.contractAddress || "";
+  const spenderRaw =
+    row?.spender || row?.spender_address || row?.spenderAddress || row?.operator || "";
 
-  const allowanceRaw = row?.allowance ?? "0";
+  const token = isAddr(tokenRaw) ? normAddr(tokenRaw) : "";
+  const spender = isAddr(spenderRaw) ? normAddr(spenderRaw) : "";
+
+  const symbol = row?.symbol || row?.token_symbol || row?.tokenSymbol || row?.token_name || "—";
+
+  const allowanceRaw =
+    row?.allowance ?? row?.value ?? row?.amount ?? row?.approved_amount ?? row?.approvedAmount ?? "0";
   const allowanceStr = String(allowanceRaw);
 
   const verified =
     row?.verified === true ? "Verified" :
     row?.verified === false ? "Unverified" :
-    (row?.verifiedStatus || row?.verified || "—");
+    row?.verifiedStatus || row?.verification || row?.verified || "—";
 
-  const lastUpdated = row?.lastUpdated || row?.updatedAt || row?.last_update || "—";
+  const lastUpdated =
+    row?.lastUpdated || row?.updatedAt || row?.block_timestamp || row?.blockTimestamp || "—";
 
-  let flags = row?.flags ?? row?.suspicious ?? "—";
+  let flags = row?.flags ?? row?.suspicious ?? row?.risk_flags ?? "—";
   if (Array.isArray(flags)) flags = flags.length ? flags.join(", ") : "—";
 
   const risk = row?.risk || row?.riskLevel || "—";
 
   return { token, spender, symbol, allowanceStr, verified, lastUpdated, flags, risk };
 }
+
 
 function dnaFormatAllowance(allowanceStr) {
   if (!allowanceStr) return "—";
@@ -4419,7 +4429,13 @@ async function dnaScan() {
   try {
     const data = await dnaFetchApprovals(net, address);
 
-    const approvals = Array.isArray(data) ? data : (data?.approvals || []);
+    const approvals =
+  Array.isArray(data) ? data :
+  Array.isArray(data?.approvals) ? data.approvals :
+  Array.isArray(data?.result) ? data.result :
+  Array.isArray(data?.data) ? data.data :
+  [];
+
     const rows = approvals.map(dnaNormalizeApiRow);
 
     dnaRenderTable(rows);
@@ -4447,6 +4463,16 @@ async function dnaScan() {
       $("#dna-score") && ($("#dna-score").textContent = String(s));
       $("#dna-risk") && ($("#dna-risk").textContent = dnaRiskLevelFromScore(s));
     }
+    try {
+  const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
+  const u = new URL("/api/saveScore", DNA_API_BASE);
+  await fetch(u.toString(), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ net, score: scoreNow })
+  });
+} catch {}
+
 
     const tips = (Array.isArray(data) ? null : data?.tips);
     dnaRenderTips(Array.isArray(tips) ? tips : dnaComputeFallbackTips(rows));
@@ -4632,7 +4658,10 @@ async function dnaShowLeaderboard() {
   setStatus(st, "info", "Loading leaderboard…");
 
   try {
-    const res = await fetch(`/api/leaderboard?net=${encodeURIComponent(net)}`);
+    const u = new URL("/api/leaderboard", DNA_API_BASE);
+u.searchParams.set("net", net);
+const res = await fetch(u.toString());
+
     if (!res.ok) throw new Error(`API error: ${res.status}`);
     const data = await res.json();
 
