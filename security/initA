@@ -4139,196 +4139,463 @@ window.CX.getReadProvider = getReadProvider;
       });
     }
 
-    // =========================
-    // Approval Guardian
-    // =========================
-    function setSpenderFromPreset(){
-      const net = netFromSelect("#ap-net");
-      const preset = ($("#ap-spender-preset")?.value || "custom");
-      const dex = DEX[net];
+   // =========================
+// Wallet Security DNA (replaces Approval Guardian)
+// =========================
 
-      let v = "";
-      if (preset === "pcs_router" && net === "bsc") v = dex.routerV2;
-      if (preset === "uni_router" && net === "eth") v = dex.routerV2;
+function dnaNet() {
+  // dna-net is the new select; fallback to ap-net if exists
+  return netFromSelect("#dna-net") || netFromSelect("#ap-net") || "bsc";
+}
 
-      if (preset !== "custom") {
-        const inEl = $("#ap-spender");
-        if (inEl) inEl.value = v;
-      }
+function dnaInputAddress() {
+  const raw = ($("#dna-walletAddress")?.value || "").trim();
+  if (raw && isAddr(raw)) return normAddr(raw);
+  if (wallet?.address && isAddr(wallet.address)) return normAddr(wallet.address);
+  return "";
+}
+
+function dnaSetWalletBadges() {
+  const w = wallet?.address ? shortAddr(wallet.address) : "not connected";
+  const addr = wallet?.address ? wallet.address : "—";
+  const net = dnaNet();
+
+  const elWallet = $("#dna-wallet");
+  const elAddr = $("#dna-address");
+
+  if (elWallet) elWallet.textContent = w;
+  if (elAddr) elAddr.textContent = addr;
+
+  // optional: keep legacy ap-wallet/ap-address if you still have them somewhere
+  if ($("#ap-wallet")) $("#ap-wallet").textContent = w;
+  if ($("#ap-address")) $("#ap-address").textContent = addr;
+
+  gtagEvent?.("sec_dna_wallet_badge", { net, connected: !!wallet?.address });
+}
+
+function dnaClearOutputs() {
+  $("#dna-score") && ($("#dna-score").textContent = "—");
+  $("#dna-risk") && ($("#dna-risk").textContent = "—");
+
+  const tips = $("#dna-tips");
+  if (tips) tips.innerHTML = `<li class="muted" data-i18n="dna_tips_placeholder">—</li>`;
+
+  // clear approvals table but keep header
+  const table = $("#ap-table");
+  const head = table?.querySelector(".trow.head");
+  if (table) table.innerHTML = "";
+  if (table && head) table.appendChild(head);
+
+  clearStatus?.($("#dna-status"));
+  clearStatus?.($("#ap-status"));
+}
+
+function dnaRiskLevelFromScore(score) {
+  const s = Number(score);
+  if (!Number.isFinite(s)) return "—";
+  if (s >= 80) return "Low";
+  if (s >= 50) return "Medium";
+  return "High";
+}
+
+function dnaNormalizeApiRow(row) {
+  const token = row?.token && isAddr(row.token) ? normAddr(row.token) : "";
+  const spender = row?.spender && isAddr(row.spender) ? normAddr(row.spender) : "";
+  const symbol = row?.symbol || "—";
+
+  // allowance can be string/number/bigint; keep as string for display
+  const allowanceRaw = row?.allowance ?? "0";
+  const allowanceStr = String(allowanceRaw);
+
+  const verified =
+    row?.verified === true ? "Verified" :
+    row?.verified === false ? "Unverified" :
+    (row?.verifiedStatus || row?.verified || "—");
+
+  const lastUpdated = row?.lastUpdated || row?.updatedAt || row?.last_update || "—";
+
+  // flags: array or string
+  let flags = row?.flags ?? row?.suspicious ?? "—";
+  if (Array.isArray(flags)) flags = flags.length ? flags.join(", ") : "—";
+
+  const risk = row?.risk || row?.riskLevel || "—";
+
+  return { token, spender, symbol, allowanceStr, verified, lastUpdated, flags, risk };
+}
+
+function dnaFormatAllowance(allowanceStr) {
+  // backend may already format; keep simple
+  if (!allowanceStr) return "—";
+  const v = String(allowanceStr).toLowerCase();
+  if (v === "infinite" || v === "∞" || v.includes("inf")) return "∞";
+  return allowanceStr;
+}
+
+function dnaRowRiskChip(risk) {
+  const r = String(risk || "—").toLowerCase();
+  if (r.includes("high")) return `<span class="chip chip-danger">High</span>`;
+  if (r.includes("med")) return `<span class="chip chip-warn">Medium</span>`;
+  if (r.includes("low")) return `<span class="chip chip-ok">Low</span>`;
+  if (r === "—") return `<span class="muted">—</span>`;
+  return `<span class="chip">${escapeHtml(String(risk))}</span>`;
+}
+
+function dnaVerifiedChip(verified) {
+  const v = String(verified || "—").toLowerCase();
+  if (v.includes("verif")) return `<span class="chip chip-ok">Verified</span>`;
+  if (v.includes("unver")) return `<span class="chip chip-warn">Unverified</span>`;
+  return `<span class="muted">—</span>`;
+}
+
+function dnaBindRevokeButtons(net) {
+  $$("#ap-table [data-revoke]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const tk = btn.getAttribute("data-token");
+      const sp = btn.getAttribute("data-spender");
+      await dnaRevokeOne(net, tk, sp);
+    });
+  });
+}
+
+async function dnaFetchApprovals(net, address) {
+  // PDF: /api/getApprovals
+  const url = `/api/getApprovals?net=${encodeURIComponent(net)}&address=${encodeURIComponent(address)}`;
+  const res = await fetch(url, { method: "GET" });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return await res.json();
+}
+
+function dnaRenderTips(list) {
+  const tips = $("#dna-tips");
+  if (!tips) return;
+  if (!Array.isArray(list) || !list.length) {
+    tips.innerHTML = `<li class="muted">—</li>`;
+    return;
+  }
+  tips.innerHTML = list.map(t => `<li>${escapeHtml(String(t))}</li>`).join("");
+}
+
+function dnaRenderTable(rows) {
+  const table = $("#ap-table");
+  const head = table?.querySelector(".trow.head");
+  if (table) table.innerHTML = "";
+  if (table && head) table.appendChild(head);
+
+  if (!table) return;
+
+  if (!rows.length) {
+    table.insertAdjacentHTML("beforeend", `
+      <div class="trow">
+        <div class="cell muted">—</div>
+        <div class="cell muted hide-sm">—</div>
+        <div class="cell muted">—</div>
+        <div class="cell muted hide-sm">—</div>
+        <div class="cell muted hide-sm">—</div>
+        <div class="cell muted hide-sm">—</div>
+        <div class="cell muted">—</div>
+        <div class="cell muted">—</div>
+      </div>
+    `);
+    return;
+  }
+
+  const html = rows.map(r => {
+    const tkTxt = r.token ? shortAddr(r.token) : "—";
+    const spTxt = r.spender ? shortAddr(r.spender) : "—";
+    const alwTxt = dnaFormatAllowance(r.allowanceStr);
+    const verTxt = dnaVerifiedChip(r.verified);
+    const flagsTxt = r.flags && r.flags !== "—" ? escapeHtml(String(r.flags)) : "—";
+    const riskChip = dnaRowRiskChip(r.risk);
+
+    const canRevoke = r.token && r.spender && (alwTxt !== "0" && alwTxt !== "—");
+    const actionHtml = canRevoke
+      ? `<button class="chip chip-danger" data-revoke="1" data-token="${r.token}" data-spender="${r.spender}">Revoke</button>`
+      : `<span class="muted">—</span>`;
+
+    return `
+      <div class="trow">
+        <div class="cell mono">${tkTxt}</div>
+        <div class="cell mono hide-sm">${spTxt}</div>
+        <div class="cell">${escapeHtml(String(alwTxt))}</div>
+        <div class="cell hide-sm">${verTxt}</div>
+        <div class="cell hide-sm">${escapeHtml(String(r.lastUpdated || "—"))}</div>
+        <div class="cell hide-sm">${flagsTxt}</div>
+        <div class="cell">${riskChip}</div>
+        <div class="cell">${actionHtml}</div>
+      </div>
+    `;
+  }).join("");
+
+  table.insertAdjacentHTML("beforeend", html);
+}
+
+function dnaComputeFallbackTips(rows) {
+  // If backend doesn't return tips, we generate simple ones based on flags/risk/infinite
+  const tips = [];
+  const high = rows.filter(r => String(r.risk).toLowerCase().includes("high")).length;
+  const unverified = rows.filter(r => String(r.verified).toLowerCase().includes("unver")).length;
+  const flagged = rows.filter(r => r.flags && r.flags !== "—").length;
+  const infinite = rows.filter(r => String(r.allowanceStr).toLowerCase().includes("inf") || String(r.allowanceStr) === "∞").length;
+
+  if (high) tips.push(`Revoke high-risk approvals first (${high}).`);
+  if (infinite) tips.push(`Consider revoking infinite approvals you don’t fully trust (${infinite}).`);
+  if (unverified) tips.push(`Review unverified spender contracts before keeping approvals (${unverified}).`);
+  if (flagged) tips.push(`Check flagged interactions and bridges before signing again (${flagged}).`);
+  if (!tips.length) tips.push("No major red flags detected. Keep monitoring regularly.");
+
+  return tips;
+}
+
+async function dnaScan() {
+  const st = $("#dna-status");
+  clearStatus?.(st);
+
+  const net = dnaNet();
+  const address = dnaInputAddress();
+
+  if (!address) return setStatus(st, "warn", "Enter a valid wallet address or connect a wallet.");
+
+  setStatus(st, "info", "Scanning approvals…");
+
+  try {
+    const data = await dnaFetchApprovals(net, address);
+
+    // support both formats:
+    // 1) { score, riskLevel, tips, approvals: [...] }
+    // 2) [ ...rows ]
+    const approvals = Array.isArray(data) ? data : (data?.approvals || []);
+    const rows = approvals.map(dnaNormalizeApiRow);
+
+    // render table
+    dnaRenderTable(rows);
+    dnaBindRevokeButtons(net);
+
+    // score & risk
+    const score = (Array.isArray(data) ? null : data?.score);
+    const riskLevel = (Array.isArray(data) ? null : data?.riskLevel);
+
+    if (score != null) $("#dna-score") && ($("#dna-score").textContent = String(score));
+    if (riskLevel) $("#dna-risk") && ($("#dna-risk").textContent = String(riskLevel));
+
+    // if backend didn't give score, do minimal fallback:
+    if (score == null) {
+      // crude fallback scoring: start 100, subtract per high/flag/unverified/infinite
+      let s = 100;
+      const high = rows.filter(r => String(r.risk).toLowerCase().includes("high")).length;
+      const unverified = rows.filter(r => String(r.verified).toLowerCase().includes("unver")).length;
+      const flagged = rows.filter(r => r.flags && r.flags !== "—").length;
+      const infinite = rows.filter(r => String(r.allowanceStr).toLowerCase().includes("inf") || String(r.allowanceStr) === "∞").length;
+
+      s -= high * 20;
+      s -= unverified * 10;
+      s -= flagged * 8;
+      s -= infinite * 12;
+      s = Math.max(0, Math.min(100, s));
+
+      $("#dna-score") && ($("#dna-score").textContent = String(s));
+      $("#dna-risk") && ($("#dna-risk").textContent = dnaRiskLevelFromScore(s));
     }
 
-    async function apCheckAllowances(){
-      const st = $("#ap-status");
-      clearStatus(st);
+    // tips
+    const tips = (Array.isArray(data) ? null : data?.tips);
+    dnaRenderTips(Array.isArray(tips) ? tips : dnaComputeFallbackTips(rows));
 
-      const net = netFromSelect("#ap-net");
-      const spenderRaw = ($("#ap-spender")?.value || "").trim();
-      if (!isAddr(spenderRaw)) return setStatus(st, "warn", "Enter a valid spender address.");
+    setStatus(st, "ok", "Done.");
+    gtagEvent?.("sec_dna_scan", { net });
 
-      if (!wallet.address || !wallet.signer) {
-        setStatus(st, "warn", "Connect a wallet first.");
-        return;
-      }
+  } catch (e) {
+    setStatus(st, "bad", `Scan failed: ${String(e?.message || e)}. Make sure /api/getApprovals exists.`);
+  }
+}
 
-      const spender = normAddr(spenderRaw);
-      const tokenLines = ($("#ap-tokens")?.value || "").split("\n").map(s => s.trim()).filter(Boolean);
-      const tokens = tokenLines.filter(isAddr).map(normAddr);
+async function dnaConnectWallet() {
+  const st = $("#dna-status");
+  clearStatus?.(st);
 
-      if (!tokens.length) return setStatus(st, "warn", "Paste at least one token address.");
-
-      setStatus(st, "info", "Reading allowances…");
-
-      const provider = getReadProvider(net);
-      if (!provider) return setStatus(st, "bad", "No RPC available.");
-
-      const table = $("#ap-table");
-      const head = table?.querySelector(".trow.head");
-      if (table) table.innerHTML = "";
-      if (table && head) table.appendChild(head);
-
-      const rows = [];
-      let anyNonZero = false;
-
-      for (const tk of tokens) {
-        try{
-          const c = new E.Contract(tk, ERC20_ABI, provider);
-          const [sym, dec, alw] = await Promise.all([
-            c.symbol().catch(()=> "—"),
-            c.decimals().catch(()=> 18),
-            c.allowance(wallet.address, spender).catch(()=> 0n)
-          ]);
-          const nz = BigInt(alw) > 0n;
-          if (nz) anyNonZero = true;
-
-          const inf = looksInfiniteAllowance(alw);
-          const alwTxt = inf ? "∞" : fmtBig(BigInt(alw), Number(dec), 4);
-
-          rows.push(`
-            <div class="trow">
-              <div class="cell mono">${shortAddr(tk)}</div>
-              <div class="cell">${alwTxt}</div>
-              <div class="cell hide-sm">${sym}</div>
-              <div class="cell">
-                ${nz ? `<button class="chip chip-danger" data-revoke="${tk}" data-spender="${spender}">Revoke</button>` : `<span class="muted">—</span>`}
-              </div>
-            </div>
-          `);
-        } catch {
-          rows.push(`
-            <div class="trow">
-              <div class="cell mono">${shortAddr(tk)}</div>
-              <div class="cell muted">—</div>
-              <div class="cell muted hide-sm">—</div>
-              <div class="cell muted">error</div>
-            </div>
-          `);
-        }
-      }
-
-      if (table) table.insertAdjacentHTML("beforeend", rows.join(""));
-
-      // bind revoke buttons
-      $$("#ap-table [data-revoke]").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const tk = btn.getAttribute("data-revoke");
-          const sp = btn.getAttribute("data-spender");
-          await apRevokeOne(net, tk, sp);
-        });
-      });
-
-      setStatus(st, anyNonZero ? "ok" : "ok", anyNonZero ? "Done. Non-zero allowances found." : "Done. No non-zero allowances found.");
-      gtagEvent("sec_ap_check", { net });
+  try {
+    // Use your existing wallet connect flow if exists
+    if (typeof connectWallet === "function") {
+      await connectWallet();
+    } else if (wallet?.connect) {
+      await wallet.connect();
+    } else {
+      setStatus(st, "warn", "No wallet connect function found.");
+      return;
     }
 
-    async function apRevokeOne(net, token, spender){
-      const st = $("#ap-status");
+    dnaSetWalletBadges();
+    setStatus(st, "ok", "Wallet connected.");
+    gtagEvent?.("sec_dna_connect", { net: dnaNet() });
 
-      if (!wallet.signer) return setStatus(st, "warn", "Connect a wallet first.");
-      const chainId = CHAINS[net].chainId;
-      if (wallet.chainId && wallet.chainId !== chainId) {
-        const ok = await ensureChain(chainId);
-        if (!ok) return setStatus(st, "warn", `Please switch network to ${CHAINS[net].name}.`);
-      }
+  } catch (e) {
+    setStatus(st, "bad", `Connect failed: ${String(e?.message || e)}`);
+  }
+}
 
-      try{
-        setStatus(st, "info", "Sending revoke tx (approve → 0)…");
-        const c = new E.Contract(normAddr(token), ERC20_ABI, wallet.signer);
-        const tx = await c.approve(normAddr(spender), 0n);
-        setStatus(st, "info", `Pending: <span class="mono">${tx.hash}</span>`);
-        await tx.wait();
-        setStatus(st, "ok", "Revoke confirmed.");
-        gtagEvent("sec_ap_revoke_one", { net });
-        await apCheckAllowances();
-      } catch (e){
-        setStatus(st, "bad", `Revoke failed: ${String(e?.message || e)}`);
-      }
+async function dnaRevokeOne(net, token, spender) {
+  const st = $("#dna-status");
+
+  if (!wallet?.signer || !wallet?.address) {
+    setStatus(st, "warn", "Connect a wallet first to revoke.");
+    return;
+  }
+
+  // If user typed a different address, warn (revoke affects connected wallet only)
+  const typed = ($("#dna-walletAddress")?.value || "").trim();
+  if (typed && isAddr(typed) && normAddr(typed) !== normAddr(wallet.address)) {
+    setStatus(st, "warn", "You are connected with a different wallet than the address you scanned. Revoke affects ONLY the connected wallet.");
+    return;
+  }
+
+  const chainId = CHAINS[net]?.chainId;
+  if (chainId && wallet.chainId && wallet.chainId !== chainId) {
+    const ok = await ensureChain(chainId);
+    if (!ok) return setStatus(st, "warn", `Please switch network to ${CHAINS[net].name}.`);
+  }
+
+  try {
+    setStatus(st, "info", "Sending revoke tx (approve → 0)…");
+    const c = new E.Contract(normAddr(token), ERC20_ABI, wallet.signer);
+    const tx = await c.approve(normAddr(spender), 0n);
+    setStatus(st, "info", `Pending: <span class="mono">${tx.hash}</span>`);
+    await tx.wait();
+    setStatus(st, "ok", "Revoke confirmed.");
+
+    gtagEvent?.("sec_dna_revoke_one", { net });
+
+    // refresh scan after revoke
+    await dnaScan();
+
+  } catch (e) {
+    setStatus(st, "bad", `Revoke failed: ${String(e?.message || e)}`);
+  }
+}
+
+async function dnaRevokeAll() {
+  const st = $("#dna-status");
+  const net = dnaNet();
+
+  if (!wallet?.signer || !wallet?.address) return setStatus(st, "warn", "Connect a wallet first to revoke.");
+
+  const typed = ($("#dna-walletAddress")?.value || "").trim();
+  if (typed && isAddr(typed) && normAddr(typed) !== normAddr(wallet.address)) {
+    return setStatus(st, "warn", "You are connected with a different wallet than the address you scanned. Revoke affects ONLY the connected wallet.");
+  }
+
+  const btns = $$("#ap-table [data-revoke]");
+  if (!btns.length) return setStatus(st, "ok", "Nothing to revoke.");
+
+  const chainId = CHAINS[net]?.chainId;
+  if (chainId && wallet.chainId && wallet.chainId !== chainId) {
+    const ok = await ensureChain(chainId);
+    if (!ok) return setStatus(st, "warn", `Please switch network to ${CHAINS[net].name}.`);
+  }
+
+  setStatus(st, "info", `Revoking ${btns.length} approval(s)…`);
+
+  for (let i = 0; i < btns.length; i++) {
+    const tk = btns[i].getAttribute("data-token");
+    const sp = btns[i].getAttribute("data-spender");
+    try {
+      const c = new E.Contract(normAddr(tk), ERC20_ABI, wallet.signer);
+      const tx = await c.approve(normAddr(sp), 0n);
+      setStatus(st, "info", `(${i + 1}/${btns.length}) Pending: <span class="mono">${tx.hash}</span>`);
+      await tx.wait();
+    } catch (e) {
+      setStatus(st, "warn", `(${i + 1}/${btns.length}) Failed: ${shortAddr(tk)} — ${String(e?.message || e)}`);
     }
+  }
 
-    async function apRevokeAll(){
-      const st = $("#ap-status");
-      const net = netFromSelect("#ap-net");
-      const spenderRaw = ($("#ap-spender")?.value || "").trim();
-      if (!isAddr(spenderRaw)) return setStatus(st, "warn", "Enter a valid spender address.");
-      if (!wallet.signer) return setStatus(st, "warn", "Connect a wallet first.");
+  setStatus(st, "ok", "Revoke-all finished.");
+  gtagEvent?.("sec_dna_revoke_all", { net });
 
-      // Gather tokens from current table with non-zero entries
-      const btns = $$("#ap-table [data-revoke]");
-      if (!btns.length) return setStatus(st, "ok", "Nothing to revoke.");
+  await dnaScan();
+}
 
-      const chainId = CHAINS[net].chainId;
-      if (wallet.chainId && wallet.chainId !== chainId) {
-        const ok = await ensureChain(chainId);
-        if (!ok) return setStatus(st, "warn", `Please switch network to ${CHAINS[net].name}.`);
-      }
+function dnaSeedCommon() {
+  const net = dnaNet();
+  const chain = CHAINS[net];
+  const list = [chain?.wrapped, chain?.usdt].filter(Boolean);
+  const ta = $("#dna-tokens");
+  if (ta) ta.value = list.join("\n");
+  setStatus($("#dna-status"), "ok", "Seeded common tokens (wrapped + USDT).");
+}
 
-      setStatus(st, "info", `Revoking ${btns.length} token(s)…`);
+function dnaSeedHistory() {
+  const hist = loadQsHistory?.() || [];
+  const net = dnaNet();
+  const tokens = hist.filter(x => x?.net === net).slice(0, 20).map(x => x.token).filter(Boolean);
+  const ta = $("#dna-tokens");
+  if (ta) ta.value = tokens.join("\n");
+  setStatus($("#dna-status"), tokens.length ? "ok" : "warn", tokens.length ? "Seeded from scan history." : "No scan history found for this network.");
+}
 
-      for (let i=0;i<btns.length;i++){
-        const tk = btns[i].getAttribute("data-revoke");
-        try{
-          const c = new E.Contract(normAddr(tk), ERC20_ABI, wallet.signer);
-          const tx = await c.approve(normAddr(spenderRaw), 0n);
-          setStatus(st, "info", `(${i+1}/${btns.length}) Pending: <span class="mono">${tx.hash}</span>`);
-          await tx.wait();
-        } catch (e){
-          setStatus(st, "warn", `(${i+1}/${btns.length}) Failed: ${shortAddr(tk)} — ${String(e?.message || e)}`);
-        }
-      }
+function dnaShareScore() {
+  const score = ($("#dna-score")?.textContent || "—").trim();
+  const risk = ($("#dna-risk")?.textContent || "—").trim();
+  const net = dnaNet();
+  const addr = dnaInputAddress() ? shortAddr(dnaInputAddress()) : "wallet";
 
-      setStatus(st, "ok", "Revoke-all finished.");
-      gtagEvent("sec_ap_revoke_all", { net });
-      await apCheckAllowances();
-    }
+  const text = `Wallet Security DNA (${net.toUpperCase()}): ${addr} — Score: ${score}/100, Risk: ${risk}.`;
+  const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(location.href)}`;
+  window.open(shareUrl, "_blank", "noopener,noreferrer");
+  gtagEvent?.("sec_dna_share", { net });
+}
 
-    function apSeedCommon(){
-      const net = netFromSelect("#ap-net");
-      const chain = CHAINS[net];
-      // Minimal useful seeds (wrapped + usdt)
-      const list = [chain.wrapped, chain.usdt];
-      const ta = $("#ap-tokens");
-      if (ta) ta.value = list.join("\n");
-      setStatus($("#ap-status"), "ok", "Seeded common tokens (wrapped + USDT).");
-    }
+async function dnaShowLeaderboard() {
+  const st = $("#dna-status");
+  const net = dnaNet();
+  setStatus(st, "info", "Loading leaderboard…");
 
-    function apSeedHistory(){
-      const hist = loadQsHistory();
-      const net = netFromSelect("#ap-net");
-      const tokens = hist.filter(x => x?.net === net).slice(0, 20).map(x => x.token);
-      const ta = $("#ap-tokens");
-      if (ta) ta.value = tokens.join("\n");
-      setStatus($("#ap-status"), tokens.length ? "ok" : "warn", tokens.length ? "Seeded from scan history." : "No scan history found for this network.");
-    }
+  try {
+    const res = await fetch(`/api/leaderboard?net=${encodeURIComponent(net)}`);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const data = await res.json();
 
-    function initApprovalsUi(){
-      $("#ap-spender-preset")?.addEventListener("change", setSpenderFromPreset);
-      $("#ap-net")?.addEventListener("change", setSpenderFromPreset);
-      setSpenderFromPreset();
+    // If you later add a real UI container, we’ll render there.
+    // For now: show concise text in status
+    const top = Array.isArray(data) ? data : (data?.top || []);
+    if (!top.length) return setStatus(st, "warn", "Leaderboard is empty.");
 
-      $("#ap-check")?.addEventListener("click", apCheckAllowances);
-      $("#ap-revoke-all")?.addEventListener("click", apRevokeAll);
-      $("#ap-seed-common")?.addEventListener("click", apSeedCommon);
-      $("#ap-seed-history")?.addEventListener("click", apSeedHistory);
-    }
+    const lines = top.slice(0, 10).map((x, i) => {
+      const s = x?.score ?? "—";
+      return `${i + 1}) ${s}`;
+    }).join(" · ");
+
+    setStatus(st, "ok", `Leaderboard: ${lines}`);
+    gtagEvent?.("sec_dna_leaderboard", { net });
+
+  } catch (e) {
+    setStatus(st, "warn", `Leaderboard unavailable: ${String(e?.message || e)}`);
+  }
+}
+
+function initWalletSecurityDNAUi() {
+  // keep badges synced
+  dnaSetWalletBadges();
+
+  $("#dna-run")?.addEventListener("click", dnaScan);
+  $("#dna-reset")?.addEventListener("click", dnaClearOutputs);
+  $("#dna-connect")?.addEventListener("click", dnaConnectWallet);
+
+  $("#dna-revoke-all")?.addEventListener("click", dnaRevokeAll);
+
+  $("#dna-seed-common")?.addEventListener("click", dnaSeedCommon);
+  $("#dna-seed-history")?.addEventListener("click", dnaSeedHistory);
+
+  $("#dna-share")?.addEventListener("click", dnaShareScore);
+  $("#dna-leaderboard")?.addEventListener("click", dnaShowLeaderboard);
+
+  // when network changes, clear outputs (prevents mixing rows)
+  $("#dna-net")?.addEventListener("change", () => {
+    dnaClearOutputs();
+    dnaSetWalletBadges();
+  });
+
+  // if you still call initApprovalsUi() elsewhere, point it here:
+  window.initApprovalsUi = initWalletSecurityDNAUi;
+}
+
 
     // =========================
     // RPC Health Checker
@@ -5465,7 +5732,7 @@ try {
 
       initQuickScanUi();
       initLiqUi();
-      initApprovalsUi();
+      initWalletSecurityDNAUi();
       initRpcUi();
       if (window.CX && typeof window.CX.initTxUi === "function") {
   window.CX.initTxUi();
