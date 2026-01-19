@@ -1414,7 +1414,6 @@
 
         <div class="row" style="margin-top:10px; gap:10px; flex-wrap:wrap">
           <button class="btn btn-ghost" id="dna-share" data-i18n="dna_share">Share score</button>
-          <button class="btn btn-ghost" id="dna-leaderboard" data-i18n="dna_leaderboard">Leaderboard</button>
         </div>
       </div>
 
@@ -4652,34 +4651,34 @@ function dnaShareScore() {
   gtagEvent?.("sec_dna_share", { net });
 }
 
-async function dnaShowLeaderboard() {
-  const st = $("#dna-status");
-  const net = dnaNet();
-  setStatus(st, "info", "Loading leaderboard…");
+//async function dnaShowLeaderboard() {
+  //const st = $("#dna-status");
+  //const net = dnaNet();
+  //setStatus(st, "info", "Loading leaderboard…");
 
-  try {
-    const u = new URL("/api/leaderboard", DNA_API_BASE);
-u.searchParams.set("net", net);
-const res = await fetch(u.toString());
+  //try {
+    //const u = new URL("/api/leaderboard", DNA_API_BASE);
+//u.searchParams.set("net", net);
+//const res = await fetch(u.toString());
 
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    const data = await res.json();
+  //  if (!res.ok) throw new Error(`API error: ${res.status}`);
+   // const data = await res.json();
 
-    const top = Array.isArray(data) ? data : (data?.top || []);
-    if (!top.length) return setStatus(st, "warn", "Leaderboard is empty.");
+    //const top = Array.isArray(data) ? data : (data?.top || []);
+    //if (!top.length) return setStatus(st, "warn", "Leaderboard is empty.");
 
-    const lines = top.slice(0, 10).map((x, i) => {
-      const s = x?.score ?? "—";
-      return `${i + 1}) ${s}`;
-    }).join(" · ");
+    //const lines = top.slice(0, 10).map((x, i) => {
+      //const s = x?.score ?? "—";
+      //return `${i + 1}) ${s}`;
+    //}).join(" · ");
 
-    setStatus(st, "ok", `Leaderboard: ${lines}`);
-    gtagEvent?.("sec_dna_leaderboard", { net });
+    //setStatus(st, "ok", `Leaderboard: ${lines}`);
+    //gtagEvent?.("sec_dna_leaderboard", { net });
 
-  } catch (e) {
-    setStatus(st, "warn", `Leaderboard unavailable: ${String(e?.message || e)}`);
-  }
-}
+  //} catch (e) {
+    //setStatus(st, "warn", `Leaderboard unavailable: ${String(e?.message || e)}`);
+  //}
+//}
 
 function initWalletSecurityDNAUi() {
   dnaSetWalletBadges();
@@ -4694,7 +4693,7 @@ function initWalletSecurityDNAUi() {
   $("#dna-seed-history")?.addEventListener("click", dnaSeedHistory);
 
   $("#dna-share")?.addEventListener("click", dnaShareScore);
-  $("#dna-leaderboard")?.addEventListener("click", dnaShowLeaderboard);
+  //$("#dna-leaderboard")?.addEventListener("click", dnaShowLeaderboard);
 
   $("#dna-net")?.addEventListener("change", () => {
     dnaClearOutputs();
