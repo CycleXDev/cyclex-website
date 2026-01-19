@@ -4466,23 +4466,43 @@ async function dnaConnectWallet() {
   clearStatus?.(st);
 
   try {
-    if (typeof connectWallet === "function") {
-      await connectWallet();
-    } else if (wallet?.connect) {
+    // 1) Use your existing CycleX wallet connect (AppKit/Web3Modal)
+    if (typeof window.cxConnectWallet === "function") {
+      const ok = await window.cxConnectWallet({ silent: true });
+      if (!ok) {
+        setStatus(st, "warn", "Wallet connect cancelled or timed out. Try again.");
+        return;
+      }
+    }
+    // 2) fallback if you ever add a generic connectWallet()
+    else if (typeof window.connectWallet === "function") {
+      await window.connectWallet();
+    }
+    // 3) last fallback (if you ever expose wallet.connect)
+    else if (wallet?.connect) {
       await wallet.connect();
     } else {
       setStatus(st, "warn", "No wallet connect function found.");
       return;
     }
 
+    // wallet object should now be populated by cxConnectWallet:
     dnaSetWalletBadges();
-    setStatus(st, "ok", "Wallet connected.");
-    gtagEvent?.("sec_dna_connect", { net: dnaNet() });
 
+    setStatus(
+      st,
+      "ok",
+      wallet?.address
+        ? `Wallet connected: <span class="mono">${wallet.address}</span>`
+        : "Wallet connected."
+    );
+
+    gtagEvent?.("sec_dna_connect", { net: dnaNet(), chainId: wallet?.chainId || 0 });
   } catch (e) {
     setStatus(st, "bad", `Connect failed: ${String(e?.message || e)}`);
   }
 }
+
 
 async function dnaRevokeOne(net, token, spender) {
   const st = $("#dna-status");
