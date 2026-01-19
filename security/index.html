@@ -3716,6 +3716,30 @@ function dnaRiskLevelFromScore(score) {
   if (s >= 50) return "Medium";
   return "High";
 }
+    // -------------------------
+// UI: paint Score/Risk pills (adds CSS classes)
+// -------------------------
+function dnaPaintBadges(score, riskLevel){
+  const s = Number(score);
+  const scorePill = document.querySelector("#dna-score")?.closest(".pill");
+  const riskPill  = document.querySelector("#dna-risk")?.closest(".pill");
+
+  // SCORE
+  if (scorePill) {
+    scorePill.classList.remove("score-low","score-med","score-high","score-unk");
+    if (!Number.isFinite(s)) scorePill.classList.add("score-unk");
+    else scorePill.classList.add(s >= 80 ? "score-low" : s >= 50 ? "score-med" : "score-high");
+  }
+
+  // RISK
+  const r = String(riskLevel || "").toLowerCase();
+  if (riskPill) {
+    riskPill.classList.remove("risk-low","risk-med","risk-high","risk-unk");
+    if (!r || r === "—") riskPill.classList.add("risk-unk");
+    else riskPill.classList.add(r.includes("low") ? "risk-low" : r.includes("med") ? "risk-med" : "risk-high");
+  }
+}
+
 
 function dnaNormalizeApiRow(row) {
   // Moralis-like keys (common)
@@ -3850,20 +3874,20 @@ function dnaRenderTable(rows) {
   const head = table?.querySelector(".trow.head");
   if (table) table.innerHTML = "";
   if (table && head) table.appendChild(head);
-
   if (!table) return;
 
   if (!rows.length) {
     table.insertAdjacentHTML("beforeend", `
       <div class="trow">
-        <div class="cell muted">—</div>
-        <div class="cell muted hide-sm">—</div>
-        <div class="cell muted">—</div>
-        <div class="cell muted hide-sm">—</div>
-        <div class="cell muted hide-sm">—</div>
-        <div class="cell muted hide-sm">—</div>
-        <div class="cell muted">—</div>
-        <div class="cell muted">—</div>
+        <div class="ap-main">
+          <div class="mono muted">—</div>
+          <div class="ap-sub">
+            <span class="m"><b>Allowance</b> —</span>
+            <span class="m"><b>Verified</b> —</span>
+          </div>
+        </div>
+        <div class="ap-actions"><span class="muted">—</span></div>
+        <div class="ap-meta"><span class="muted">—</span></div>
       </div>
     `);
     return;
@@ -3873,15 +3897,16 @@ function dnaRenderTable(rows) {
     const tkTxt = r.token ? shortAddr(r.token) : "—";
     const spTxt = r.spender ? shortAddr(r.spender) : "—";
     const alwTxt = dnaFormatAllowance(r.allowanceStr);
-    const verTxt = dnaVerifiedChip(r.verified);
-    const flagsTxt = r.flags && r.flags !== "—" ? window.escapeHtml(String(r.flags)) : "—";
-    const riskChip = dnaRowRiskChip(r.risk);
 
-    // allow revoke if non-zero / infinite
+    const verifiedHtml = dnaVerifiedChip(r.verified);
+    const riskHtml = dnaRowRiskChip(r.risk);
+
+    const flagsTxt = r.flags && r.flags !== "—" ? window.escapeHtml(String(r.flags)) : "—";
+    const updatedTxt = r.lastUpdated ? window.escapeHtml(String(r.lastUpdated)) : "—";
+
     const canRevoke =
       r.token && r.spender &&
-      alwTxt !== "—" &&
-      alwTxt !== "0";
+      alwTxt !== "—" && alwTxt !== "0";
 
     const actionHtml = canRevoke
       ? `<button class="chip chip-danger" data-revoke="1" data-token="${r.token}" data-spender="${r.spender}">Revoke</button>`
@@ -3889,20 +3914,31 @@ function dnaRenderTable(rows) {
 
     return `
       <div class="trow">
-        <div class="cell mono">${tkTxt}</div>
-        <div class="cell mono hide-sm">${spTxt}</div>
-        <div class="cell">${window.escapeHtml(String(alwTxt))}</div>
-        <div class="cell hide-sm">${verTxt}</div>
-        <div class="cell hide-sm">${window.escapeHtml(String(r.lastUpdated || "—"))}</div>
-        <div class="cell hide-sm">${flagsTxt}</div>
-        <div class="cell">${riskChip}</div>
-        <div class="cell">${actionHtml}</div>
+        <div class="ap-main">
+          <div class="mono">${tkTxt} <span class="muted">→</span> <span class="mono">${spTxt}</span></div>
+
+          <div class="ap-sub">
+            <span class="m"><b>Allowance</b> ${window.escapeHtml(String(alwTxt))}</span>
+            <span class="m"><b>Verified</b> ${verifiedHtml}</span>
+          </div>
+        </div>
+
+        <div class="ap-actions">
+          ${riskHtml}
+          ${actionHtml}
+        </div>
+
+        <div class="ap-meta">
+          <span class="m"><b>Updated</b> ${updatedTxt}</span>
+          <span class="m"><b>Flags</b> ${flagsTxt}</span>
+        </div>
       </div>
     `;
   }).join("");
 
   table.insertAdjacentHTML("beforeend", html);
 }
+
 
 function dnaComputeFallbackTips(rows) {
   const tips = [];
@@ -3981,6 +4017,11 @@ async function dnaScan() {
 
     const tips = (Array.isArray(data) ? null : data?.tips);
     dnaRenderTips(Array.isArray(tips) ? tips : dnaComputeFallbackTips(rows));
+    dnaPaintBadges(
+  Number(($("#dna-score")?.textContent || "0").trim()),
+  ($("#dna-risk")?.textContent || "—").trim()
+);
+
 
     setStatus(st, "ok", "Done.");
     gtagEvent?.("sec_dna_scan", { net });
