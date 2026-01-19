@@ -4139,7 +4139,7 @@ window.CX.getReadProvider = getReadProvider;
       });
     }
 
-   // =========================
+  // =========================
 // Wallet Security DNA (replaces Approval Guardian)
 // =========================
 
@@ -4203,7 +4203,6 @@ function dnaNormalizeApiRow(row) {
   const spender = row?.spender && isAddr(row.spender) ? normAddr(row.spender) : "";
   const symbol = row?.symbol || "—";
 
-  // allowance can be string/number/bigint; keep as string for display
   const allowanceRaw = row?.allowance ?? "0";
   const allowanceStr = String(allowanceRaw);
 
@@ -4214,7 +4213,6 @@ function dnaNormalizeApiRow(row) {
 
   const lastUpdated = row?.lastUpdated || row?.updatedAt || row?.last_update || "—";
 
-  // flags: array or string
   let flags = row?.flags ?? row?.suspicious ?? "—";
   if (Array.isArray(flags)) flags = flags.length ? flags.join(", ") : "—";
 
@@ -4224,7 +4222,6 @@ function dnaNormalizeApiRow(row) {
 }
 
 function dnaFormatAllowance(allowanceStr) {
-  // backend may already format; keep simple
   if (!allowanceStr) return "—";
   const v = String(allowanceStr).toLowerCase();
   if (v === "infinite" || v === "∞" || v.includes("inf")) return "∞";
@@ -4240,10 +4237,11 @@ function dnaRowRiskChip(risk) {
   return `<span class="chip">${escapeHtml(String(risk))}</span>`;
 }
 
+// ✅ FIX: "unverified" includes "verif" so must check UNVERIFIED first
 function dnaVerifiedChip(verified) {
   const v = String(verified || "—").toLowerCase();
-  if (v.includes("verif")) return `<span class="chip chip-ok">Verified</span>`;
   if (v.includes("unver")) return `<span class="chip chip-warn">Unverified</span>`;
+  if (v.includes("verif")) return `<span class="chip chip-ok">Verified</span>`;
   return `<span class="muted">—</span>`;
 }
 
@@ -4257,11 +4255,54 @@ function dnaBindRevokeButtons(net) {
   });
 }
 
+// -------------------------
+// API fetch (handles 429 + JSON error bodies) ✅
+// -------------------------
+const DNA_API_BASE =
+  (window.CYCLEX_API_BASE && String(window.CYCLEX_API_BASE).trim()) || location.origin;
+
 async function dnaFetchApprovals(net, address) {
-  // PDF: /api/getApprovals
-  const url = `/api/getApprovals?net=${encodeURIComponent(net)}&address=${encodeURIComponent(address)}`;
-  const res = await fetch(url, { method: "GET" });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const u = new URL("/api/getApprovals", DNA_API_BASE);
+  u.searchParams.set("net", net);
+  u.searchParams.set("address", address);
+
+  // optional timeout (keeps UI responsive)
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 15000);
+
+  let res;
+  try {
+    res = await fetch(u.toString(), { method: "GET", signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+
+  // Try read json, else text
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  const readBody = async () => {
+    if (ct.includes("application/json")) {
+      try { return await res.json(); } catch { /* ignore */ }
+    }
+    const txt = await res.text().catch(() => "");
+    return txt;
+  };
+
+  if (res.status === 429) {
+    const body = await readBody();
+    const err = new Error("RATE_LIMIT");
+    err.status = 429;
+    err.body = body;
+    return Promise.reject(err);
+  }
+
+  if (!res.ok) {
+    const body = await readBody();
+    const err = new Error(`API_ERROR_${res.status}`);
+    err.status = res.status;
+    err.body = body;
+    return Promise.reject(err);
+  }
+
   return await res.json();
 }
 
@@ -4307,7 +4348,12 @@ function dnaRenderTable(rows) {
     const flagsTxt = r.flags && r.flags !== "—" ? escapeHtml(String(r.flags)) : "—";
     const riskChip = dnaRowRiskChip(r.risk);
 
-    const canRevoke = r.token && r.spender && (alwTxt !== "0" && alwTxt !== "—");
+    // allow revoke if non-zero / infinite
+    const canRevoke =
+      r.token && r.spender &&
+      alwTxt !== "—" &&
+      alwTxt !== "0";
+
     const actionHtml = canRevoke
       ? `<button class="chip chip-danger" data-revoke="1" data-token="${r.token}" data-spender="${r.spender}">Revoke</button>`
       : `<span class="muted">—</span>`;
@@ -4330,7 +4376,6 @@ function dnaRenderTable(rows) {
 }
 
 function dnaComputeFallbackTips(rows) {
-  // If backend doesn't return tips, we generate simple ones based on flags/risk/infinite
   const tips = [];
   const high = rows.filter(r => String(r.risk).toLowerCase().includes("high")).length;
   const unverified = rows.filter(r => String(r.verified).toLowerCase().includes("unver")).length;
@@ -4360,26 +4405,19 @@ async function dnaScan() {
   try {
     const data = await dnaFetchApprovals(net, address);
 
-    // support both formats:
-    // 1) { score, riskLevel, tips, approvals: [...] }
-    // 2) [ ...rows ]
     const approvals = Array.isArray(data) ? data : (data?.approvals || []);
     const rows = approvals.map(dnaNormalizeApiRow);
 
-    // render table
     dnaRenderTable(rows);
     dnaBindRevokeButtons(net);
 
-    // score & risk
     const score = (Array.isArray(data) ? null : data?.score);
     const riskLevel = (Array.isArray(data) ? null : data?.riskLevel);
 
     if (score != null) $("#dna-score") && ($("#dna-score").textContent = String(score));
     if (riskLevel) $("#dna-risk") && ($("#dna-risk").textContent = String(riskLevel));
 
-    // if backend didn't give score, do minimal fallback:
     if (score == null) {
-      // crude fallback scoring: start 100, subtract per high/flag/unverified/infinite
       let s = 100;
       const high = rows.filter(r => String(r.risk).toLowerCase().includes("high")).length;
       const unverified = rows.filter(r => String(r.verified).toLowerCase().includes("unver")).length;
@@ -4396,7 +4434,6 @@ async function dnaScan() {
       $("#dna-risk") && ($("#dna-risk").textContent = dnaRiskLevelFromScore(s));
     }
 
-    // tips
     const tips = (Array.isArray(data) ? null : data?.tips);
     dnaRenderTips(Array.isArray(tips) ? tips : dnaComputeFallbackTips(rows));
 
@@ -4404,7 +4441,23 @@ async function dnaScan() {
     gtagEvent?.("sec_dna_scan", { net });
 
   } catch (e) {
-    setStatus(st, "bad", `Scan failed: ${String(e?.message || e)}. Make sure /api/getApprovals exists.`);
+    // ✅ Friendly 429 handling
+    if (e?.status === 429) {
+      return setStatus(
+        st,
+        "warn",
+        "Rate limit: max 2 checks per hour per IP. Please try again later."
+      );
+    }
+
+    // other errors
+    const msg = e?.status
+      ? `Scan failed (${e.status}). Make sure /api/getApprovals works.`
+      : `Scan failed: ${String(e?.message || e)}`;
+
+    setStatus(st, "bad", msg);
+    // optional debug
+    // console.log("dnaScan error:", e);
   }
 }
 
@@ -4413,7 +4466,6 @@ async function dnaConnectWallet() {
   clearStatus?.(st);
 
   try {
-    // Use your existing wallet connect flow if exists
     if (typeof connectWallet === "function") {
       await connectWallet();
     } else if (wallet?.connect) {
@@ -4440,7 +4492,6 @@ async function dnaRevokeOne(net, token, spender) {
     return;
   }
 
-  // If user typed a different address, warn (revoke affects connected wallet only)
   const typed = ($("#dna-walletAddress")?.value || "").trim();
   if (typed && isAddr(typed) && normAddr(typed) !== normAddr(wallet.address)) {
     setStatus(st, "warn", "You are connected with a different wallet than the address you scanned. Revoke affects ONLY the connected wallet.");
@@ -4463,7 +4514,6 @@ async function dnaRevokeOne(net, token, spender) {
 
     gtagEvent?.("sec_dna_revoke_one", { net });
 
-    // refresh scan after revoke
     await dnaScan();
 
   } catch (e) {
@@ -4552,8 +4602,6 @@ async function dnaShowLeaderboard() {
     if (!res.ok) throw new Error(`API error: ${res.status}`);
     const data = await res.json();
 
-    // If you later add a real UI container, we’ll render there.
-    // For now: show concise text in status
     const top = Array.isArray(data) ? data : (data?.top || []);
     if (!top.length) return setStatus(st, "warn", "Leaderboard is empty.");
 
@@ -4571,7 +4619,6 @@ async function dnaShowLeaderboard() {
 }
 
 function initWalletSecurityDNAUi() {
-  // keep badges synced
   dnaSetWalletBadges();
 
   $("#dna-run")?.addEventListener("click", dnaScan);
@@ -4586,13 +4633,11 @@ function initWalletSecurityDNAUi() {
   $("#dna-share")?.addEventListener("click", dnaShareScore);
   $("#dna-leaderboard")?.addEventListener("click", dnaShowLeaderboard);
 
-  // when network changes, clear outputs (prevents mixing rows)
   $("#dna-net")?.addEventListener("change", () => {
     dnaClearOutputs();
     dnaSetWalletBadges();
   });
 
-  // if you still call initApprovalsUi() elsewhere, point it here:
   window.initApprovalsUi = initWalletSecurityDNAUi;
 }
 
