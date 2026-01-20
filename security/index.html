@@ -3832,14 +3832,15 @@ function fmtTokenAmount(rawBn, decimals = 18, opts = {}){
     return fmtNum(v, d);
   } catch { return "—"; }
 }
-function safeLower(x){ return String(x || "").toLowerCase(); }
+function _qsSafeLower(x){ return String(x || "").toLowerCase(); }
 function _qsClamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 function _qsNowTs(){ return Math.floor(Date.now()/1000); }
 
-// stringify BigInt-safe
+// stringify BigInt-safe (scoped for QuickScan)
 function _qsSafeJson(obj){
   return JSON.stringify(obj, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2);
 }
+
 
 // fallback escapeHtml if missing
 window.escapeHtml = window.escapeHtml || function (s) {
@@ -3907,7 +3908,7 @@ function addQsHistory(net, token){
   } catch {}
 }
 function qsCacheKey(net, token, useApis){
-  return `${net}:${safeLower(token)}:${useApis ? 1 : 0}`;
+  return `${net}:${_qsSafeLower((token)}:${useApis ? 1 : 0}`;
 }
 
 function qsBuildShareLink(net, token){
