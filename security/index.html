@@ -3813,680 +3813,713 @@ window.CX.getReadProvider = getReadProvider;
         raw: row
       };
     }
-// =========================
-// Formatting helpers
-// =========================
-function fmtNum(x, digits = 4){
-  const n = Number(x);
-  if (!Number.isFinite(n)) return "—";
-  const d = Math.max(0, Math.min(8, Number(digits || 0)));
-  return n.toLocaleString(undefined, { maximumFractionDigits: d });
-}
-function fmtTokenAmount(rawBn, decimals = 18, opts = {}){
-  const { maxSmall = 6, maxMid = 4, maxBig = 2 } = opts || {};
-  try{
-    const v = Number(E.formatUnits(rawBn, decimals));
-    if (!Number.isFinite(v)) return "—";
-    const abs = Math.abs(v);
-    const d = abs < 1 ? maxSmall : abs < 1000 ? maxMid : maxBig;
-    return fmtNum(v, d);
-  } catch { return "—"; }
-}
-function _qsSafeLower(x){ return String(x || "").toLowerCase(); }
-function _qsClamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
-function _qsNowTs(){ return Math.floor(Date.now()/1000); }
+/* ============================================================
+   CycleX Quick Scan — Clean UI (Bubble + Mini Badges + Liq Table)
+   V4 — namespaced, no redeclare conflicts, safe to paste once.
+   ============================================================ */
+;(function(){
+  // Prevent double-load (avoids redeclare even if pasted twice by mistake)
+  if (window.CX_QS_V4 && window.CX_QS_V4.__loaded) return;
 
-// stringify BigInt-safe (scoped for QuickScan)
-function _qsSafeJson(obj){
-  return JSON.stringify(obj, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2);
-}
+  const MOD = {};
+  MOD.__loaded = true;
 
-
-// fallback escapeHtml if missing
-window.escapeHtml = window.escapeHtml || function (s) {
-  if (s === null || s === undefined) return "";
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-};
-
-// =========================
-// Quick Scan (clean UI + liquidity table like screenshot)
-// =========================
-
-
-// Minimal ERC20 ABI for reads
-const ERC20_MIN_ABI = [
-  "function name() view returns (string)",
-  "function symbol() view returns (string)",
-  "function decimals() view returns (uint8)",
-  "function totalSupply() view returns (uint256)",
-  "function balanceOf(address) view returns (uint256)"
-];
-
-// Owner / Pausable / basic
-const OWNER_ABI = ["function owner() view returns (address)"];
-const PAUSABLE_ABI = ["function paused() view returns (bool)"];
-
-// EIP-1967 implementation slot
-const EIP1967_IMPL_SLOT =
-  "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
-
-// function selectors (PUSH4 pattern = 0x63 + 4 bytes)
-const SEL = {
-  mint:     ["40c10f19", "a0712d68"], // mint(address,uint256) + mint(uint256) variants
-  pause:    ["8456cb59"],             // pause()
-  unpause:  ["3f4ba83a"],             // unpause()
-  owner:    ["8da5cb5b"],             // owner()
-  transferOwnership: ["f2fde38b"]
-};
-
-function loadQsCache(){
-  try { return JSON.parse(localStorage.getItem(LS_QS_CACHE) || "{}"); } catch { return {}; }
-}
-function saveQsCache(obj){
-  try { localStorage.setItem(LS_QS_CACHE, JSON.stringify(obj || {})); } catch {}
-}
-function loadQsHistory(){
-  try { return JSON.parse(localStorage.getItem(LS_QS_HISTORY) || "[]"); } catch { return []; }
-}
-function saveQsHistory(arr){
-  try { localStorage.setItem(LS_QS_HISTORY, JSON.stringify(arr || [])); } catch {}
-}
-function addQsHistory(net, token){
-  try{
-    const arr = loadQsHistory();
-    const key = `${net}:${safeLower(token)}`;
-    const filtered = arr.filter(x => x?.key !== key);
-    filtered.unshift({ key, net, token: normAddr(token), ts: nowTs() });
-    saveQsHistory(filtered.slice(0, 80));
-  } catch {}
-}
-function qsCacheKey(net, token, useApis){
-  return `${net}:${_qsSafeLower((token)}:${useApis ? 1 : 0}`;
-}
-
-function qsBuildShareLink(net, token){
-  const u = new URL(location.href);
-  u.searchParams.set("tool", "quick");
-  u.searchParams.set("net", net);
-  u.searchParams.set("token", token);
-  return u.toString();
-}
-
-function riskBadge(type, title, value){
-  // type: ok|warn|bad
-  const cls = (type === "ok" || type === "bad" || type === "warn") ? type : "warn";
-  return `<div class="risk ${cls}"><span class="dot"></span><span><b>${escapeHtml(title)}</b> — ${escapeHtml(value)}</span></div>`;
-}
-
-function codeHasSelector(bytecode, selHex){
-  try{
-    const code = safeLower(bytecode || "");
-    const sel = safeLower(selHex || "").replace(/^0x/,"");
-    if (!sel || sel.length !== 8) return false;
-    return code.includes("63" + sel); // PUSH4 <selector>
-  } catch { return false; }
-}
-function anySelector(bytecode, sels){
-  for (const s of (sels || [])) if (codeHasSelector(bytecode, s)) return true;
-  return false;
-}
-
-function explorerKeyFor(net){
-  try{
-    const obj = JSON.parse(localStorage.getItem(LS_API_KEYS) || "{}");
-    if (net === "bsc") return obj?.bscscan || "";
-    if (net === "eth") return obj?.etherscan || "";
-    return "";
-  } catch { return ""; }
-}
-function explorerBaseFor(net){
-  // expects your app uses BscScan/Etherscan-compatible APIs
-  if (net === "bsc") return "https://api.bscscan.com/api";
-  if (net === "eth") return "https://api.etherscan.io/api";
-  return "";
-}
-
-async function explorerGetSource(net, token, apiKey){
-  // optional: only works if apiKey exists
-  const base = explorerBaseFor(net);
-  if (!base || !apiKey) return { ok:false, verified:null, isProxy:null, implementation:"", contractName:"" };
-
-  const u = new URL(base);
-  u.searchParams.set("module", "contract");
-  u.searchParams.set("action", "getsourcecode");
-  u.searchParams.set("address", token);
-  u.searchParams.set("apikey", apiKey);
-
-  const r = await fetch(u.toString(), { cache: "no-store" });
-  const j = await r.json().catch(()=>null);
-  const row = j?.result?.[0] || null;
-  if (!row) return { ok:false, verified:null, isProxy:null, implementation:"", contractName:"" };
-
-  const src = String(row.SourceCode || "");
-  const abi = String(row.ABI || "");
-  const name = String(row.ContractName || "");
-  const impl = String(row.Implementation || "");
-  const proxy = String(row.Proxy || "0");
-
-  const verified = !!(src && src.trim().length > 0 && abi && abi !== "Contract source code not verified");
-  const isProxy = proxy === "1" || (!!impl && isAddr(impl));
-
-  return {
-    ok: true,
-    verified,
-    isProxy,
-    implementation: isAddr(impl) ? normAddr(impl) : "",
-    contractName: name || ""
-  };
-}
-
-async function getCodeSafe(net, token){
-  const read = getReadProvider(net);
-  if (!read) return { ok:false, code:"", msg:"No RPC" };
-  try{
-    const code = await read.getCode(token);
-    return { ok:true, code: code || "0x" };
-  } catch(e){
-    return { ok:false, code:"", msg:String(e?.message || e) };
-  }
-}
-
-async function tryReadOwner(net, token){
-  const read = getReadProvider(net);
-  if (!read) return "";
-  try{
-    const c = new E.Contract(token, OWNER_ABI, read);
-    const o = await c.owner();
-    return isAddr(o) ? normAddr(o) : "";
-  } catch { return ""; }
-}
-
-async function tryReadPaused(net, token){
-  const read = getReadProvider(net);
-  if (!read) return null;
-  try{
-    const c = new E.Contract(token, PAUSABLE_ABI, read);
-    const p = await c.paused();
-    return !!p;
-  } catch { return null; }
-}
-
-async function tryEip1967Impl(net, token){
-  const read = getReadProvider(net);
-  if (!read) return "";
-  try{
-    const raw = await read.getStorage(token, EIP1967_IMPL_SLOT);
-    // last 20 bytes is address
-    const hex = String(raw || "0x");
-    if (!hex || hex === "0x") return "";
-    const addr = "0x" + hex.slice(-40);
-    return isAddr(addr) ? normAddr(addr) : "";
-  } catch { return ""; }
-}
-
-// Liquidity snapshot for Quick Scan (table like screenshot)
-// Uses DEX[net] + CHAINS[net] from your existing app.
-async function qsLiquidityTable(net, token){
-  const chain = CHAINS[net];
-  const dex = DEX[net];
-  const read = getReadProvider(net);
-
-  const out = {
-    rows: [], // {addr,type,target,result,highlight}
-    summary: { hasLiq:false, v2Pairs:0, v3Pools:0 }
+  // -------------------------
+  // Local (scoped) helpers
+  // -------------------------
+  const _fmtNum = (x, digits = 4) => {
+    const n = Number(x);
+    if (!Number.isFinite(n)) return "—";
+    const d = Math.max(0, Math.min(8, Number(digits || 0)));
+    return n.toLocaleString(undefined, { maximumFractionDigits: d });
   };
 
-  if (!read || !chain || !dex) return out;
-
-  const tAddr = normAddr(token);
-  const targets = [
-    { label: "Wrapped", addr: chain.wrapped },
-    { label: "USDT",    addr: chain.usdt }
-  ];
-  const fees = [500, 3000, 10000];
-
-  // small meta cache for symbols/decimals
-  const metaCache = new Map();
-  async function getMeta(addr){
-    const a = normAddr(addr);
-    if (metaCache.has(a)) return metaCache.get(a);
-    const m = { symbol:"", decimals:18 };
+  const _fmtTokenAmount = (rawBn, decimals = 18, opts = {}) => {
+    const { maxSmall = 6, maxMid = 4, maxBig = 2 } = opts || {};
     try{
-      const c = new E.Contract(a, ERC20_MIN_ABI, read);
-      const [sym, dec] = await Promise.all([
-        c.symbol().catch(()=> ""),
-        c.decimals().catch(()=> 18)
-      ]);
-      m.symbol = String(sym || "");
-      m.decimals = Number(dec);
+      const v = Number(E.formatUnits(rawBn, decimals));
+      if (!Number.isFinite(v)) return "—";
+      const abs = Math.abs(v);
+      const d = abs < 1 ? maxSmall : abs < 1000 ? maxMid : maxBig;
+      return _fmtNum(v, d);
+    } catch { return "—"; }
+  };
+
+  const _lower = (x) => String(x || "").toLowerCase();
+  const _clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const _nowTs = () => Math.floor(Date.now() / 1000);
+
+  const _safeJson = (obj) => {
+    return JSON.stringify(obj, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2);
+  };
+
+  // escapeHtml fallback (global-safe)
+  window.escapeHtml = window.escapeHtml || function (s) {
+    if (s === null || s === undefined) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
+  const _depOk = () => {
+    const need = [
+      ["E", window.E],
+      ["ZERO", window.ZERO],
+      ["CHAINS", window.CHAINS],
+      ["DEX", window.DEX],
+      ["getReadProvider", window.getReadProvider],
+      ["V2_FACTORY_ABI", window.V2_FACTORY_ABI],
+      ["V2_PAIR_ABI", window.V2_PAIR_ABI],
+      ["V3_FACTORY_ABI", window.V3_FACTORY_ABI],
+      ["isAddr", window.isAddr],
+      ["normAddr", window.normAddr],
+      ["shortAddr", window.shortAddr],
+      ["netFromSelect", window.netFromSelect],
+      ["$", window.$],
+      ["setStatus", window.setStatus],
+      ["clearStatus", window.clearStatus],
+      ["copyText", window.copyText],
+    ];
+    const missing = need.filter(x => !x[1]).map(x => x[0]);
+    return { ok: missing.length === 0, missing };
+  };
+
+  // -------------------------
+  // Storage keys (scoped)
+  // -------------------------
+  const LS_QS_CACHE   = "cx_qs_cache_v4";
+  const LS_QS_HISTORY = "cx_qs_history_v4";
+  const LS_API_KEYS   = "cx_explorer_keys_v1"; // { bscscan:"...", etherscan:"..." }
+
+  const _loadCache = () => { try { return JSON.parse(localStorage.getItem(LS_QS_CACHE) || "{}"); } catch { return {}; } };
+  const _saveCache = (obj) => { try { localStorage.setItem(LS_QS_CACHE, JSON.stringify(obj || {})); } catch {} };
+
+  const _loadHist = () => { try { return JSON.parse(localStorage.getItem(LS_QS_HISTORY) || "[]"); } catch { return []; } };
+  const _saveHist = (arr) => { try { localStorage.setItem(LS_QS_HISTORY, JSON.stringify(arr || [])); } catch {} };
+
+  const _addHist = (net, token) => {
+    try{
+      const arr = _loadHist();
+      const key = `${net}:${_lower(token)}`;
+      const filtered = arr.filter(x => x?.key !== key);
+      filtered.unshift({ key, net, token: normAddr(token), ts: _nowTs() });
+      _saveHist(filtered.slice(0, 80));
     } catch {}
-    metaCache.set(a, m);
-    return m;
-  }
+  };
 
-  // --- V2: always show 2 rows (Wrapped + USDT) ---
-  for (const tgt of targets){
-    let pair = ZERO;
+  const _cacheKey = (net, token, useApis) => `${net}:${_lower(token)}:${useApis ? 1 : 0}`;
+
+  // -------------------------
+  // Explorer API (optional)
+  // -------------------------
+  const _explorerKeyFor = (net) => {
     try{
-      const f = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, read);
-      pair = await f.getPair(tAddr, tgt.addr).catch(()=>ZERO);
-    } catch { pair = ZERO; }
+      const obj = JSON.parse(localStorage.getItem(LS_API_KEYS) || "{}");
+      if (net === "bsc") return obj?.bscscan || "";
+      if (net === "eth") return obj?.etherscan || "";
+      return "";
+    } catch { return ""; }
+  };
 
-    if (!pair || pair === ZERO){
-      out.rows.push({
-        addr: "—",
-        type: "V2",
-        target: tgt.label,
-        result: "— no pair",
-        highlight: false
-      });
-      continue;
-    }
+  const _explorerBaseFor = (net) => {
+    if (net === "bsc") return "https://api.bscscan.com/api";
+    if (net === "eth") return "https://api.etherscan.io/api";
+    return "";
+  };
 
+  const _explorerGetSource = async (net, token, apiKey) => {
+    const base = _explorerBaseFor(net);
+    if (!base || !apiKey) return { ok:false, verified:null, isProxy:null, implementation:"", contractName:"" };
+
+    const u = new URL(base);
+    u.searchParams.set("module", "contract");
+    u.searchParams.set("action", "getsourcecode");
+    u.searchParams.set("address", token);
+    u.searchParams.set("apikey", apiKey);
+
+    const r = await fetch(u.toString(), { cache: "no-store" });
+    const j = await r.json().catch(()=>null);
+    const row = j?.result?.[0] || null;
+    if (!row) return { ok:false, verified:null, isProxy:null, implementation:"", contractName:"" };
+
+    const src = String(row.SourceCode || "");
+    const abi = String(row.ABI || "");
+    const name = String(row.ContractName || "");
+    const impl = String(row.Implementation || "");
+    const proxy = String(row.Proxy || "0");
+
+    const verified = !!(src && src.trim().length > 0 && abi && abi !== "Contract source code not verified");
+    const isProxy = proxy === "1" || (!!impl && isAddr(impl));
+
+    return {
+      ok: true,
+      verified,
+      isProxy,
+      implementation: isAddr(impl) ? normAddr(impl) : "",
+      contractName: name || ""
+    };
+  };
+
+  // -------------------------
+  // Contract checks
+  // -------------------------
+  const ERC20_MIN_ABI = [
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint8)",
+    "function totalSupply() view returns (uint256)",
+    "function balanceOf(address) view returns (uint256)"
+  ];
+  const OWNER_ABI   = ["function owner() view returns (address)"];
+  const PAUSABLE_ABI= ["function paused() view returns (bool)"];
+
+  const EIP1967_IMPL_SLOT =
+    "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+
+  const SEL = {
+    mint:     ["40c10f19", "a0712d68"],
+    pause:    ["8456cb59"],
+    unpause:  ["3f4ba83a"],
+    owner:    ["8da5cb5b"],
+    transferOwnership: ["f2fde38b"]
+  };
+
+  const _codeHasSelector = (bytecode, selHex) => {
     try{
-      const p = new E.Contract(pair, V2_PAIR_ABI, read);
-      const [t0, t1, r] = await Promise.all([p.token0(), p.token1(), p.getReserves()]);
-      const r0 = BigInt(r[0]), r1 = BigInt(r[1]);
+      const code = _lower(bytecode || "");
+      const sel = _lower(selHex || "").replace(/^0x/,"");
+      if (!sel || sel.length !== 8) return false;
+      return code.includes("63" + sel); // PUSH4 <selector>
+    } catch { return false; }
+  };
 
-      // figure which reserve is token and which is target
-      const tokenIs0 = safeLower(t0) === safeLower(tAddr);
-      const tokRes = tokenIs0 ? r0 : r1;
-      const tgtRes = tokenIs0 ? r1 : r0;
+  const _anySelector = (bytecode, sels) => {
+    for (const s of (sels || [])) if (_codeHasSelector(bytecode, s)) return true;
+    return false;
+  };
 
-      const tokMeta = await getMeta(tAddr);
-      const tgtMeta = await getMeta(tgt.addr);
-
-      const ok = (tokRes > 0n && tgtRes > 0n);
-      if (ok) out.summary.hasLiq = true;
-
-      out.rows.push({
-        addr: shortAddr(pair),
-        type: "V2",
-        target: tgt.label,
-        result: ok
-          ? `✅ reserves: ${fmtTokenAmount(tgtRes, tgtMeta.decimals)} ${tgtMeta.symbol || tgt.label} / ${fmtTokenAmount(tokRes, tokMeta.decimals)} ${tokMeta.symbol || "TOKEN"}`
-          : "— reserves: 0",
-        highlight: ok
-      });
-
-      if (ok) out.summary.v2Pairs += 1;
-    } catch {
-      out.rows.push({
-        addr: shortAddr(pair),
-        type: "V2",
-        target: tgt.label,
-        result: "— pair read failed",
-        highlight: false
-      });
+  const _getCodeSafe = async (net, token) => {
+    const read = getReadProvider(net);
+    if (!read) return { ok:false, code:"", msg:"No RPC" };
+    try{
+      const code = await read.getCode(token);
+      return { ok:true, code: code || "0x" };
+    } catch(e){
+      return { ok:false, code:"", msg:String(e?.message || e) };
     }
-  }
+  };
 
-  // --- V3: only show pools that exist (like screenshot) ---
-  // check both targets (Wrapped + USDT), each fee tier
-  try{
-    const vf = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, read);
+  const _tryReadOwner = async (net, token) => {
+    const read = getReadProvider(net);
+    if (!read) return "";
+    try{
+      const c = new E.Contract(token, OWNER_ABI, read);
+      const o = await c.owner();
+      return isAddr(o) ? normAddr(o) : "";
+    } catch { return ""; }
+  };
 
+  const _tryReadPaused = async (net, token) => {
+    const read = getReadProvider(net);
+    if (!read) return null;
+    try{
+      const c = new E.Contract(token, PAUSABLE_ABI, read);
+      const p = await c.paused();
+      return !!p;
+    } catch { return null; }
+  };
+
+  const _tryEip1967Impl = async (net, token) => {
+    const read = getReadProvider(net);
+    if (!read) return "";
+    try{
+      // ethers v6: getStorage(address, position)
+      const raw = await read.getStorage(token, EIP1967_IMPL_SLOT);
+      const hex = String(raw || "0x");
+      if (!hex || hex === "0x") return "";
+      const addr = "0x" + hex.slice(-40);
+      return isAddr(addr) ? normAddr(addr) : "";
+    } catch { return ""; }
+  };
+
+  // -------------------------
+  // UI builders
+  // -------------------------
+  const _shareLink = (net, token) => {
+    const u = new URL(location.href);
+    u.searchParams.set("tool", "quick");
+    u.searchParams.set("net", net);
+    u.searchParams.set("token", token);
+    return u.toString();
+  };
+
+  const _riskBadge = (type, title, value) => {
+    const cls = (type === "ok" || type === "bad" || type === "warn") ? type : "warn";
+    return `<div class="risk ${cls}"><span class="dot"></span><span><b>${escapeHtml(title)}</b> — ${escapeHtml(value)}</span></div>`;
+  };
+
+  // -------------------------
+  // Liquidity table (like screenshot)
+  // Uses DEX[net] + CHAINS[net]
+  // -------------------------
+  const _liqTable = async (net, token) => {
+    const chain = CHAINS[net];
+    const dex   = DEX[net];
+    const read  = getReadProvider(net);
+
+    const out = { rows: [], summary: { hasLiq:false, v2Pairs:0, v3Pools:0 } };
+    if (!read || !chain || !dex) return out;
+
+    const tAddr = normAddr(token);
+    const targets = [
+      { label: "Wrapped", addr: chain.wrapped },
+      { label: "USDT",    addr: chain.usdt }
+    ];
+    const fees = [500, 3000, 10000];
+
+    const metaCache = new Map();
+    const getMeta = async (addr) => {
+      const a = normAddr(addr);
+      if (metaCache.has(a)) return metaCache.get(a);
+      const m = { symbol:"", decimals:18 };
+      try{
+        const c = new E.Contract(a, ERC20_MIN_ABI, read);
+        const [sym, dec] = await Promise.all([
+          c.symbol().catch(()=> ""),
+          c.decimals().catch(()=> 18)
+        ]);
+        m.symbol = String(sym || "");
+        m.decimals = Number(dec);
+      } catch {}
+      metaCache.set(a, m);
+      return m;
+    };
+
+    // V2: always show 2 rows
     for (const tgt of targets){
-      for (const fee of fees){
-        const pool = await vf.getPool(tAddr, tgt.addr, fee).catch(()=>ZERO);
-        if (!pool || pool === ZERO) continue;
+      let pair = ZERO;
+      try{
+        const f = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, read);
+        pair = await f.getPair(tAddr, tgt.addr).catch(()=>ZERO);
+      } catch { pair = ZERO; }
 
-        try{
-          // balances (cleaner than raw liquidity)
-          const tokMeta = await getMeta(tAddr);
-          const tgtMeta = await getMeta(tgt.addr);
+      if (!pair || pair === ZERO){
+        out.rows.push({ addr:"—", type:"V2", target:tgt.label, result:"— no pair", highlight:false });
+        continue;
+      }
 
-          const tokC = new E.Contract(tAddr, ERC20_MIN_ABI, read);
-          const tgtC = new E.Contract(tgt.addr, ERC20_MIN_ABI, read);
+      try{
+        const p = new E.Contract(pair, V2_PAIR_ABI, read);
+        const [t0, t1, r] = await Promise.all([p.token0(), p.token1(), p.getReserves()]);
+        const r0 = BigInt(r[0]), r1 = BigInt(r[1]);
 
-          const [bTok, bTgt] = await Promise.all([
-            tokC.balanceOf(pool).catch(()=>0n),
-            tgtC.balanceOf(pool).catch(()=>0n)
-          ]);
+        const tokenIs0 = _lower(t0) === _lower(tAddr);
+        const tokRes = tokenIs0 ? r0 : r1;
+        const tgtRes = tokenIs0 ? r1 : r0;
 
-          const ok = (BigInt(bTok) > 0n && BigInt(bTgt) > 0n);
-          if (ok) out.summary.hasLiq = true;
+        const tokMeta = await getMeta(tAddr);
+        const tgtMeta = await getMeta(tgt.addr);
 
-          out.rows.push({
-            addr: shortAddr(pool),
-            type: `V3 ${fee}`,
-            target: tgt.label,
-            result: ok
-              ? `✅ balances: ${fmtTokenAmount(bTok, tokMeta.decimals)} ${tokMeta.symbol || "TOKEN"} / ${fmtTokenAmount(bTgt, tgtMeta.decimals)} ${tgtMeta.symbol || tgt.label} · V3 active`
-              : "— balances: 0",
-            highlight: ok
-          });
+        const ok = (tokRes > 0n && tgtRes > 0n);
+        if (ok) { out.summary.hasLiq = true; out.summary.v2Pairs += 1; }
 
-          if (ok) out.summary.v3Pools += 1;
-        } catch {
-          out.rows.push({
-            addr: shortAddr(pool),
-            type: `V3 ${fee}`,
-            target: tgt.label,
-            result: "— pool read failed",
-            highlight: false
-          });
+        out.rows.push({
+          addr: shortAddr(pair),
+          type: "V2",
+          target: tgt.label,
+          result: ok
+            ? `✅ reserves: ${_fmtTokenAmount(tgtRes, tgtMeta.decimals)} ${tgtMeta.symbol || tgt.label} / ${_fmtTokenAmount(tokRes, tokMeta.decimals)} ${tokMeta.symbol || "TOKEN"}`
+            : "— reserves: 0",
+          highlight: ok
+        });
+      } catch {
+        out.rows.push({ addr: shortAddr(pair), type:"V2", target:tgt.label, result:"— pair read failed", highlight:false });
+      }
+    }
+
+    // V3: show only existing pools
+    try{
+      const vf = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, read);
+
+      for (const tgt of targets){
+        for (const fee of fees){
+          const pool = await vf.getPool(tAddr, tgt.addr, fee).catch(()=>ZERO);
+          if (!pool || pool === ZERO) continue;
+
+          try{
+            const tokMeta = await getMeta(tAddr);
+            const tgtMeta = await getMeta(tgt.addr);
+
+            const tokC = new E.Contract(tAddr, ERC20_MIN_ABI, read);
+            const tgtC = new E.Contract(tgt.addr, ERC20_MIN_ABI, read);
+
+            const [bTok, bTgt] = await Promise.all([
+              tokC.balanceOf(pool).catch(()=>0n),
+              tgtC.balanceOf(pool).catch(()=>0n)
+            ]);
+
+            const ok = (BigInt(bTok) > 0n && BigInt(bTgt) > 0n);
+            if (ok) { out.summary.hasLiq = true; out.summary.v3Pools += 1; }
+
+            out.rows.push({
+              addr: shortAddr(pool),
+              type: `V3 ${fee}`,
+              target: tgt.label,
+              result: ok
+                ? `✅ balances: ${_fmtTokenAmount(bTok, tokMeta.decimals)} ${tokMeta.symbol || "TOKEN"} / ${_fmtTokenAmount(bTgt, tgtMeta.decimals)} ${tgtMeta.symbol || tgt.label} · V3 active`
+                : "— balances: 0",
+              highlight: ok
+            });
+          } catch {
+            out.rows.push({ addr: shortAddr(pool), type:`V3 ${fee}`, target:tgt.label, result:"— pool read failed", highlight:false });
+          }
         }
       }
-    }
-  } catch {
-    // ignore v3 errors: table still shows v2 rows
-  }
-
-  return out;
-}
-
-function qsBuildMarkdownReport(rep){
-  const lines = [];
-  lines.push(`## Quick Scan — ${rep.chainName}`);
-  lines.push(`Token: \`${rep.token}\``);
-  lines.push(`Explorer: ${rep.explorer}`);
-  lines.push(`Score: **${rep.score}/100** (${rep.overallText})`);
-  lines.push("");
-  lines.push(`### Signals`);
-  for (const b of rep.badges) lines.push(`- ${b.title}: ${b.value}`);
-  if (rep.liquidity?.rows?.length){
-    lines.push("");
-    lines.push(`### Liquidity`);
-    for (const r of rep.liquidity.rows){
-      lines.push(`- ${r.type} ${r.target}: ${r.addr} — ${r.result.replaceAll("✅ ","")}`);
-    }
-  }
-  lines.push("");
-  lines.push(`> Informational checks only. Not an audit. No guarantee.`);
-  return lines.join("\n");
-}
-
-function qsBuildXText(rep){
-  const base = `Quick Scan (${rep.chainName})\nToken: ${shortAddr(rep.token)}\nScore: ${rep.score}/100 (${rep.overallText})\n`;
-  return `${base}${rep.shareLink}`.trim();
-}
-
-function renderQuickScanResult(rep){
-  const out = $("#qs-out");
-  const badgesEl = $("#qs-badges") || $("#qs-risk");
-  const tableWrap = $("#qs-liq-tablewrap") || $("#qs-pairsWrap");
-
-  // Bubble header (like screenshot)
-  const title = `${escapeHtml(rep.symbol || "Token")} — ${escapeHtml(rep.name || "")}`.trim().replace(/\s+—\s*$/,"");
-  const html = `
-    <div style="font-size:18px;font-weight:900;letter-spacing:-0.01em;">
-      ${title || "Token"}
-    </div>
-    <div class="small" style="margin-top:8px;">
-      Network: <b>${escapeHtml(rep.chainName)}</b> • Score: <b>${rep.score}/100</b>
-    </div>
-    <div class="small" style="margin-top:8px;">
-      Token: <span class="mono">${escapeHtml(rep.token)}</span>
-    </div>
-    <div class="small" style="margin-top:8px;">
-      Explorer: <a href="${escapeHtml(rep.explorer)}" target="_blank" rel="noopener">open</a>
-    </div>
-  `;
-  out.className = "status info";
-  out.style.display = "block";
-  out.innerHTML = html;
-
-  // Mini badges row
-  if (badgesEl){
-    badgesEl.innerHTML = rep.badges.map(b => riskBadge(b.type, b.title, b.value)).join("");
-  }
-
-  // Liquidity table
-  if (tableWrap){
-    const rows = [];
-    rows.push(`
-      <div class="trow head">
-        <div class="cell">PAIR/POOL</div>
-        <div class="cell">TYPE</div>
-        <div class="cell">TARGET</div>
-        <div class="cell">RESULT</div>
-      </div>
-    `);
-
-    for (const r of (rep.liquidity?.rows || [])){
-      rows.push(`
-        <div class="trow ${r.highlight ? "highlight" : ""}">
-          <div class="cell mono">${escapeHtml(r.addr)}</div>
-          <div class="cell">${escapeHtml(r.type)}</div>
-          <div class="cell">${escapeHtml(r.target)}</div>
-          <div class="cell">${escapeHtml(r.result)}</div>
-        </div>
-      `);
+    } catch {
+      // ignore V3 errors; V2 still displays
     }
 
-    tableWrap.innerHTML = `<div class="table">${rows.join("")}</div>`;
-  }
-
-  // If old risk table exists and you want it hidden now:
-  const oldRiskTable = $("#qsRiskTable");
-  if (oldRiskTable) oldRiskTable.remove();
-}
-
-async function runQuickScan(){
-  const st = $("#qs-status");
-  clearStatus(st);
-
-  const net = netFromSelect("#qs-net");
-  const tokenRaw = ($("#qs-token")?.value || "").trim();
-  const useApis = !!$("#api-use")?.checked;
-
-  if (!isAddr(tokenRaw)) {
-    setStatus(st, "warn", "Please paste a valid token address.");
-    return;
-  }
-  const token = normAddr(tokenRaw);
-
-  setStatus(st, "info", "Scanning…");
-
-  const cache = loadQsCache();
-  const key = qsCacheKey(net, token, useApis);
-  const cached = cache?.[key];
-  if (cached?.rep && cached?.ts && (nowTs() - cached.ts) < 600){
-    setStatus(st, "ok", "Loaded cached result (≤10 min).");
-    renderQuickScanResult(cached.rep);
-    return;
-  }
-
-  const chain = CHAINS[net];
-  const rep = {
-    ts: nowTs(),
-    net,
-    chainName: chain?.name || net,
-    token,
-    explorer: chain?.addressUrl ? chain.addressUrl(token) : "",
-    shareLink: qsBuildShareLink(net, token),
-    name: "",
-    symbol: "",
-    score: 62, // baseline similar to screenshot
-    overallText: "Mixed signals",
-    badges: [],
-    liquidity: null,
-    json: ""
+    return out;
   };
 
-  // 1) Bytecode / selectors
-  const codeRes = await getCodeSafe(net, token);
-  const code = codeRes?.code || "0x";
-  const hasCode = (code && code !== "0x");
-  if (!hasCode){
-    rep.score = 0;
-    rep.overallText = "Invalid";
-    rep.badges = [
-      { type:"bad", title:"Overall", value:"No contract code" },
-      { type:"warn", title:"Verified", value:"No/Unknown" },
-      { type:"warn", title:"Proxy", value:"No/Unknown" },
-      { type:"warn", title:"Owner", value:"No/Unknown" },
-      { type:"warn", title:"Liquidity", value:"No signal" },
-      { type:"warn", title:"Mint", value:"Unknown" },
-      { type:"warn", title:"Pause", value:"Unknown" }
-    ];
-    rep.json = _qsSafeJson(rep);
-    cache[key] = { ts: nowTs(), rep };
-    saveQsCache(cache);
-    addQsHistory(net, token);
-    setStatus(st, "bad", "No contract code detected.");
-    renderQuickScanResult(rep);
-    return;
-  }
-
-  const mintDetected  = anySelector(code, SEL.mint);
-  const pauseDetected = anySelector(code, SEL.pause) || anySelector(code, SEL.unpause) || anySelector(code, SEL.owner);
-
-  // 2) ERC20 basic meta (best effort)
-  const read = getReadProvider(net);
-  if (read){
-    try{
-      const c = new E.Contract(token, ERC20_MIN_ABI, read);
-      const [nm, sym] = await Promise.all([c.name().catch(()=>""), c.symbol().catch(()=>"" )]);
-      rep.name = String(nm || "");
-      rep.symbol = String(sym || "");
-    } catch {}
-  }
-
-  // 3) Proxy heuristic (no API needed)
-  let proxyImpl = await tryEip1967Impl(net, token);
-  const isProxy = !!proxyImpl;
-
-  // 4) Owner (best effort)
-  const owner = await tryReadOwner(net, token);
-
-  // 5) Paused state (optional)
-  const pausedState = await tryReadPaused(net, token); // true/false/null
-  const pauseStateText = pausedState === true ? "Detected (paused)" : pausedState === false ? "Detected" : (pauseDetected ? "Detected" : "No/Unknown");
-
-  // 6) Liquidity table (like screenshot)
-  const liq = await qsLiquidityTable(net, token);
-  rep.liquidity = liq;
-
-  // 7) Verified (optional via API)
-  let verified = null;
-  if (useApis){
-    const apiKey = explorerKeyFor(net);
-    try{
-      const src = await explorerGetSource(net, token, apiKey);
-      if (src?.ok){
-        verified = !!src.verified;
-        // if explorer indicates proxy, accept too
-        if (!isProxy && src.isProxy) proxyImpl = src.implementation || "";
+  // -------------------------
+  // Copy helpers
+  // -------------------------
+  const _buildMarkdown = (rep) => {
+    const lines = [];
+    lines.push(`## Quick Scan — ${rep.chainName}`);
+    lines.push(`Token: \`${rep.token}\``);
+    lines.push(`Explorer: ${rep.explorer}`);
+    lines.push(`Score: **${rep.score}/100** (${rep.overallText})`);
+    lines.push("");
+    lines.push(`### Signals`);
+    for (const b of rep.badges) lines.push(`- ${b.title}: ${b.value}`);
+    if (rep.liquidity?.rows?.length){
+      lines.push("");
+      lines.push(`### Liquidity`);
+      for (const r of rep.liquidity.rows){
+        lines.push(`- ${r.type} ${r.target}: ${r.addr} — ${String(r.result).replace(/✅\s*/g,"")}`);
       }
-    } catch {}
-  }
+    }
+    lines.push("");
+    lines.push(`> Informational checks only. Not an audit. No guarantee.`);
+    return lines.join("\n");
+  };
 
-  // 8) Score model (simple + stable)
-  let score = 70;
-  if (!liq?.summary?.hasLiq) score -= 18;
-  if (mintDetected) score -= 14;
-  if (isProxy) score -= 12;
-  if (pauseDetected) score -= 6;
-  if (verified === true) score += 10;
-  if (verified === false) score -= 6;
-  score = _qsClamp(score, 0, 100);
+  const _buildXText = (rep) => {
+    const base =
+`Quick Scan (${rep.chainName})
+Token: ${shortAddr(rep.token)}
+Score: ${rep.score}/100 (${rep.overallText})
+`;
+    return `${base}${rep.shareLink}`.trim();
+  };
 
-  rep.score = score;
-  rep.overallText = score >= 80 ? "Good" : score >= 55 ? "Mixed signals" : score >= 30 ? "Caution" : "High risk";
+  // -------------------------
+  // Render
+  // -------------------------
+  const _render = (rep) => {
+    const out = $("#qs-out");
+    const badgesEl = $("#qs-badges") || $("#qs-risk");
+    const tableWrap = $("#qs-liq-tablewrap") || $("#qs-pairsWrap");
 
-  // 9) Build mini badges (colors match screenshot vibe)
-  const overallType = score >= 80 ? "ok" : score >= 55 ? "warn" : "bad";
+    if (out){
+      const title = `${escapeHtml(rep.symbol || "Token")}${rep.name ? " — " + escapeHtml(rep.name) : ""}`;
+      out.className = "status info";
+      out.style.display = "block";
+      out.innerHTML = `
+        <div style="font-size:18px;font-weight:900;letter-spacing:-0.01em;">
+          ${title}
+        </div>
+        <div class="small" style="margin-top:8px;">
+          Network: <b>${escapeHtml(rep.chainName)}</b> • Score: <b>${rep.score}/100</b>
+        </div>
+        <div class="small" style="margin-top:8px;">
+          Token: <span class="mono">${escapeHtml(rep.token)}</span>
+        </div>
+        <div class="small" style="margin-top:8px;">
+          Explorer: <a href="${escapeHtml(rep.explorer)}" target="_blank" rel="noopener">open</a>
+        </div>
+      `;
+    }
 
-  rep.badges = [
-    { type: overallType, title:"Overall",   value: rep.overallText },
-    { type: (verified === true ? "ok" : "warn"), title:"Verified", value: verified === true ? "Yes" : "No/Unknown" },
-    { type: (isProxy ? "warn" : "ok"), title:"Proxy", value: isProxy ? "Detected" : "No/Unknown" },
-    { type: (owner ? "warn" : "warn"), title:"Owner", value: owner ? shortAddr(owner) : "No/Unknown" },
-    { type: (liq?.summary?.hasLiq ? "ok" : "warn"), title:"Liquidity", value: liq?.summary?.hasLiq ? "V2/V3 pairs exist" : "No signal" },
-    { type: (mintDetected ? "bad" : "ok"), title:"Mint", value: mintDetected ? "Detected" : "No/Unknown" },
-    { type: (pauseDetected ? "warn" : "ok"), title:"Pause", value: pauseStateText }
-  ];
+    if (badgesEl){
+      badgesEl.innerHTML = (rep.badges || []).map(b => _riskBadge(b.type, b.title, b.value)).join("");
+    }
 
-  rep.json = _qsSafeJson(rep);
+    if (tableWrap){
+      const rows = [];
+      rows.push(`
+        <div class="trow head">
+          <div class="cell">PAIR/POOL</div>
+          <div class="cell">TYPE</div>
+          <div class="cell">TARGET</div>
+          <div class="cell">RESULT</div>
+        </div>
+      `);
 
-  // Cache + history
-  cache[key] = { ts: nowTs(), rep };
-  saveQsCache(cache);
-  addQsHistory(net, token);
+      for (const r of (rep.liquidity?.rows || [])){
+        rows.push(`
+          <div class="trow ${r.highlight ? "highlight" : ""}">
+            <div class="cell mono">${escapeHtml(r.addr)}</div>
+            <div class="cell">${escapeHtml(r.type)}</div>
+            <div class="cell">${escapeHtml(r.target)}</div>
+            <div class="cell">${escapeHtml(r.result)}</div>
+          </div>
+        `);
+      }
 
-  setStatus(st, score >= 55 ? "ok" : score >= 30 ? "warn" : "bad", `Done. Score: <b>${score}/100</b> (${rep.overallText}).`);
-  renderQuickScanResult(rep);
-  gtagEvent("sec_qs_run", { net });
-}
+      tableWrap.innerHTML = `<div class="table">${rows.join("")}</div>`;
+    }
 
-function initQuickScanUi(){
-  $("#qs-run")?.addEventListener("click", () => runQuickScan());
+    // Remove old legacy table if exists
+    const oldRiskTable = document.getElementById("qsRiskTable");
+    if (oldRiskTable) oldRiskTable.remove();
+  };
 
-  $("#qs-copy-link")?.addEventListener("click", async () => {
+  // -------------------------
+  // Main run
+  // -------------------------
+  MOD.runQuickScan = async function(){
+    const dep = _depOk();
+    const st = $("#qs-status");
+
+    if (!dep.ok){
+      if (st) setStatus(st, "bad", `Missing deps: ${dep.missing.join(", ")}`);
+      return;
+    }
+
+    clearStatus(st);
+
     const net = netFromSelect("#qs-net");
-    const token = ($("#qs-token")?.value || "").trim();
-    if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
-    const link = qsBuildShareLink(net, normAddr(token));
-    const ok = await copyText(link);
-    setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
-  });
-
-  $("#qs-copy-json")?.addEventListener("click", async () => {
-    const net = netFromSelect("#qs-net");
-    const token = ($("#qs-token")?.value || "").trim();
-    if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Run scan first (enter token).");
-
+    const tokenRaw = ($("#qs-token")?.value || "").trim();
     const useApis = !!$("#api-use")?.checked;
-    const cache = loadQsCache();
-    const key = qsCacheKey(net, normAddr(token), useApis);
-    const rep = cache?.[key]?.rep;
-    if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
-    const ok = await copyText(rep.json || _qsSafeJson(rep));
-    setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
-  });
 
-  $("#qs-copy-md")?.addEventListener("click", async () => {
-    const net = netFromSelect("#qs-net");
-    const token = ($("#qs-token")?.value || "").trim();
-    if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Run scan first (enter token).");
+    if (!isAddr(tokenRaw)) {
+      setStatus(st, "warn", "Please paste a valid token address.");
+      return;
+    }
+    const token = normAddr(tokenRaw);
 
-    const useApis = !!$("#api-use")?.checked;
-    const cache = loadQsCache();
-    const key = qsCacheKey(net, normAddr(token), useApis);
-    const rep = cache?.[key]?.rep;
-    if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
-    const md = qsBuildMarkdownReport(rep);
-    const ok = await copyText(md);
-    setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied Markdown report." : "Copy failed.");
-  });
+    setStatus(st, "info", "Scanning…");
 
-  $("#qs-share-x")?.addEventListener("click", () => {
-    const net = netFromSelect("#qs-net");
-    const token = ($("#qs-token")?.value || "").trim();
-    if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Run scan first (enter token).");
+    const cache = _loadCache();
+    const key = _cacheKey(net, token, useApis);
+    const cached = cache?.[key];
 
-    const useApis = !!$("#api-use")?.checked;
-    const cache = loadQsCache();
-    const key = qsCacheKey(net, normAddr(token), useApis);
-    const rep = cache?.[key]?.rep;
-    if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
-    const text = qsBuildXText(rep);
-    const u = new URL("https://twitter.com/intent/tweet");
-    u.searchParams.set("text", text);
-    window.open(u.toString(), "_blank", "noopener,noreferrer");
-  });
+    if (cached?.rep && cached?.ts && (_nowTs() - cached.ts) < 600){
+      setStatus(st, "ok", "Loaded cached result (≤10 min).");
+      _render(cached.rep);
+      return;
+    }
 
-  $("#qs-copy-xtext")?.addEventListener("click", async () => {
-    const net = netFromSelect("#qs-net");
-    const token = ($("#qs-token")?.value || "").trim();
-    if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Run scan first (enter token).");
+    const chain = CHAINS[net];
+    const rep = {
+      ts: _nowTs(),
+      net,
+      chainName: chain?.name || net,
+      token,
+      explorer: chain?.addressUrl ? chain.addressUrl(token) : "",
+      shareLink: _shareLink(net, token),
+      name: "",
+      symbol: "",
+      score: 62,
+      overallText: "Mixed signals",
+      badges: [],
+      liquidity: null,
+      json: ""
+    };
 
-    const useApis = !!$("#api-use")?.checked;
-    const cache = loadQsCache();
-    const key = qsCacheKey(net, normAddr(token), useApis);
-    const rep = cache?.[key]?.rep;
-    if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
-    const ok = await copyText(qsBuildXText(rep));
-    setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied X text." : "Copy failed.");
-  });
-}
+    // 1) Bytecode
+    const codeRes = await _getCodeSafe(net, token);
+    const code = codeRes?.code || "0x";
+    const hasCode = (code && code !== "0x");
+    if (!hasCode){
+      rep.score = 0;
+      rep.overallText = "Invalid";
+      rep.badges = [
+        { type:"bad",  title:"Overall",   value:"No contract code" },
+        { type:"warn", title:"Verified",  value:"No/Unknown" },
+        { type:"warn", title:"Proxy",     value:"No/Unknown" },
+        { type:"warn", title:"Owner",     value:"No/Unknown" },
+        { type:"warn", title:"Liquidity", value:"No signal" },
+        { type:"warn", title:"Mint",      value:"Unknown" },
+        { type:"warn", title:"Pause",     value:"Unknown" }
+      ];
+      rep.json = _safeJson(rep);
+      cache[key] = { ts: _nowTs(), rep };
+      _saveCache(cache);
+      _addHist(net, token);
+      setStatus(st, "bad", "No contract code detected.");
+      _render(rep);
+      return;
+    }
+
+    const mintDetected  = _anySelector(code, SEL.mint);
+    const pauseSurface  = _anySelector(code, SEL.pause) || _anySelector(code, SEL.unpause);
+
+    // 2) ERC20 meta
+    const read = getReadProvider(net);
+    if (read){
+      try{
+        const c = new E.Contract(token, ERC20_MIN_ABI, read);
+        const [nm, sym] = await Promise.all([c.name().catch(()=>""), c.symbol().catch(()=>"" )]);
+        rep.name = String(nm || "");
+        rep.symbol = String(sym || "");
+      } catch {}
+    }
+
+    // 3) Proxy heuristic
+    let proxyImpl = await _tryEip1967Impl(net, token);
+    const isProxy = !!proxyImpl;
+
+    // 4) Owner
+    const owner = await _tryReadOwner(net, token);
+
+    // 5) Paused state (best effort)
+    const pausedState = await _tryReadPaused(net, token); // true/false/null
+    const pauseText =
+      pausedState === true ? "Detected (paused)" :
+      pausedState === false ? "Detected" :
+      (pauseSurface ? "Detected" : "No/Unknown");
+
+    // 6) Liquidity table
+    const liq = await _liqTable(net, token);
+    rep.liquidity = liq;
+
+    // 7) Verified (optional)
+    let verified = null;
+    if (useApis){
+      const apiKey = _explorerKeyFor(net);
+      try{
+        const src = await _explorerGetSource(net, token, apiKey);
+        if (src?.ok){
+          verified = !!src.verified;
+          if (!isProxy && src.isProxy) proxyImpl = src.implementation || "";
+        }
+      } catch {}
+    }
+
+    // 8) Score model
+    let score = 70;
+    if (!liq?.summary?.hasLiq) score -= 18;
+    if (mintDetected) score -= 14;
+    if (isProxy) score -= 12;
+    if (pauseSurface) score -= 6;
+    if (verified === true) score += 10;
+    if (verified === false) score -= 6;
+
+    score = _clamp(score, 0, 100);
+
+    rep.score = score;
+    rep.overallText = score >= 80 ? "Good" : score >= 55 ? "Mixed signals" : score >= 30 ? "Caution" : "High risk";
+
+    const overallType = score >= 80 ? "ok" : score >= 55 ? "warn" : "bad";
+
+    rep.badges = [
+      { type: overallType, title:"Overall",   value: rep.overallText },
+      { type: (verified === true ? "ok" : "warn"), title:"Verified", value: verified === true ? "Yes" : "No/Unknown" },
+      { type: (isProxy ? "warn" : "ok"), title:"Proxy", value: isProxy ? "Detected" : "No/Unknown" },
+      { type: "warn", title:"Owner", value: owner ? shortAddr(owner) : "No/Unknown" },
+      { type: (liq?.summary?.hasLiq ? "ok" : "warn"), title:"Liquidity", value: liq?.summary?.hasLiq ? "V2/V3 pairs exist" : "No signal" },
+      { type: (mintDetected ? "bad" : "ok"), title:"Mint", value: mintDetected ? "Detected" : "No/Unknown" },
+      { type: (pauseSurface ? "warn" : "ok"), title:"Pause", value: pauseText }
+    ];
+
+    rep.json = _safeJson(rep);
+
+    cache[key] = { ts: _nowTs(), rep };
+    _saveCache(cache);
+    _addHist(net, token);
+
+    setStatus(st, score >= 55 ? "ok" : score >= 30 ? "warn" : "bad", `Done. Score: <b>${score}/100</b> (${rep.overallText}).`);
+    _render(rep);
+
+    try { window.gtagEvent && gtagEvent("sec_qs_run", { net }); } catch {}
+  };
+
+  MOD.initQuickScanUi = function(){
+    const dep = _depOk();
+    if (!dep.ok) return;
+
+    $("#qs-run")?.addEventListener("click", () => MOD.runQuickScan());
+
+    $("#qs-copy-link")?.addEventListener("click", async () => {
+      const net = netFromSelect("#qs-net");
+      const token = ($("#qs-token")?.value || "").trim();
+      if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
+      const link = _shareLink(net, normAddr(token));
+      const ok = await copyText(link);
+      setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
+    });
+
+    $("#qs-copy-json")?.addEventListener("click", async () => {
+      const net = netFromSelect("#qs-net");
+      const token = ($("#qs-token")?.value || "").trim();
+      if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Run scan first (enter token).");
+
+      const useApis = !!$("#api-use")?.checked;
+      const cache = _loadCache();
+      const key = _cacheKey(net, normAddr(token), useApis);
+      const rep = cache?.[key]?.rep;
+      if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
+      const ok = await copyText(rep.json || _safeJson(rep));
+      setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
+    });
+
+    $("#qs-copy-md")?.addEventListener("click", async () => {
+      const net = netFromSelect("#qs-net");
+      const token = ($("#qs-token")?.value || "").trim();
+      if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Run scan first (enter token).");
+
+      const useApis = !!$("#api-use")?.checked;
+      const cache = _loadCache();
+      const key = _cacheKey(net, normAddr(token), useApis);
+      const rep = cache?.[key]?.rep;
+      if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
+      const md = _buildMarkdown(rep);
+      const ok = await copyText(md);
+      setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied Markdown report." : "Copy failed.");
+    });
+
+    $("#qs-share-x")?.addEventListener("click", () => {
+      const net = netFromSelect("#qs-net");
+      const token = ($("#qs-token")?.value || "").trim();
+      if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Run scan first (enter token).");
+
+      const useApis = !!$("#api-use")?.checked;
+      const cache = _loadCache();
+      const key = _cacheKey(net, normAddr(token), useApis);
+      const rep = cache?.[key]?.rep;
+      if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
+      const text = _buildXText(rep);
+      const u = new URL("https://twitter.com/intent/tweet");
+      u.searchParams.set("text", text);
+      window.open(u.toString(), "_blank", "noopener,noreferrer");
+    });
+
+    $("#qs-copy-xtext")?.addEventListener("click", async () => {
+      const net = netFromSelect("#qs-net");
+      const token = ($("#qs-token")?.value || "").trim();
+      if (!isAddr(token)) return setStatus($("#qs-status"), "warn", "Run scan first (enter token).");
+
+      const useApis = !!$("#api-use")?.checked;
+      const cache = _loadCache();
+      const key = _cacheKey(net, normAddr(token), useApis);
+      const rep = cache?.[key]?.rep;
+      if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
+      const ok = await copyText(_buildXText(rep));
+      setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied X text." : "Copy failed.");
+    });
+  };
+
+  // expose module
+  window.CX_QS_V4 = MOD;
+
+})(); // end module
 
 
  // =========================
@@ -6643,6 +6676,7 @@ try {
       if (window.CX && typeof window.CX.initTxUi === "function") {
   window.CX.initTxUi();
 }
+      window.CX_QS_V4?.initQuickScanUi?.();
       initDevUi();
 
       applyI18n(currentLang);
