@@ -1519,7 +1519,7 @@
           </div>
         </div>
 
-        <div class="row" style="gap:8px; flex-wrap:wrap">
+        <div class="row dna-metrics">
           <div class="pill">
             <span data-i18n="dna_score">Score</span>:
             <span class="mono" id="dna-score">—</span>
@@ -4335,6 +4335,44 @@ function dnaRiskLevelFromScore(score) {
   if (s >= 50) return "Medium";
   return "High";
 }
+// Score tier -> ok (green) | warn (orange) | bad (red) | unk
+function dnaScoreTierFromScore(score){
+  const s = Number(score);
+  if (!Number.isFinite(s)) return "unk";
+  if (s >= 80) return "ok";
+  if (s >= 50) return "warn";
+  return "bad";
+}
+
+// Apply text + color classes to the pills
+function dnaApplyPills(score, riskText){
+  const scoreEl = $("#dna-score");
+  const riskEl  = $("#dna-risk");
+
+  // --- SCORE ---
+  if (scoreEl){
+    const s = Number(score);
+    scoreEl.textContent = Number.isFinite(s) ? String(Math.round(s)) : "—";
+
+    scoreEl.classList.remove("score-ok","score-warn","score-bad","score-unk");
+    scoreEl.classList.add("score-" + dnaScoreTierFromScore(s));
+  }
+
+  // --- RISK ---
+  if (riskEl){
+    const txt = (riskText == null ? "—" : String(riskText));
+    riskEl.textContent = txt;
+
+    riskEl.classList.remove("risk-low","risk-med","risk-high","risk-unk");
+    const t = txt.toLowerCase();
+    let lvl = "unk";
+    if (t.includes("low")) lvl = "low";
+    else if (t.includes("med")) lvl = "med";
+    else if (t.includes("high")) lvl = "high";
+    riskEl.classList.add("risk-" + lvl);
+  }
+}
+
 
 function dnaNormalizeApiRow(row) {
   // Moralis-like keys (common)
