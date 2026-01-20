@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -655,6 +656,41 @@ a.tool-card[data-tool="approvals"] .badge-row{
     overflow: hidden;                 /* from old code (clean corners) */
     background:rgba(255,255,255,.03);
   }
+
+  /* generic rows */
+  .trow{
+    display:grid;
+    grid-template-columns:1.3fr 1.1fr .9fr .9fr;
+    gap:10px;
+    padding:10px 12px;
+    border-top:1px solid rgba(255,255,255,.10);
+    background:rgba(255,255,255,.03);
+    align-items:center;
+    font-size:13px;
+  }
+  .trow.head{
+    border-top:none;
+    background:rgba(255,255,255,.05);
+    font-size:12px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:rgba(244,246,255,.75);
+  }
+
+  /* generic cells (from old code) */
+  .trow .cell{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  /* optional wrapping cell */
+  .trow .cell.wrap{
+    white-space:normal;
+    text-overflow:clip;
+    overflow:hidden;
+    overflow-wrap:anywhere;
+  }
     /* =========================
    Wallet Security DNA — Approvals table (A)
    Flags go to a second full-width row
@@ -693,41 +729,6 @@ a.tool-card[data-tool="approvals"] .badge-row{
   color: rgba(244,246,255,.78);
 }
 
-
-  /* generic rows */
-  .trow{
-    display:grid;
-    grid-template-columns:1.3fr 1.1fr .9fr .9fr;
-    gap:10px;
-    padding:10px 12px;
-    border-top:1px solid rgba(255,255,255,.10);
-    background:rgba(255,255,255,.03);
-    align-items:center;
-    font-size:13px;
-  }
-  .trow.head{
-    border-top:none;
-    background:rgba(255,255,255,.05);
-    font-size:12px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    color:rgba(244,246,255,.75);
-  }
-
-  /* generic cells (from old code) */
-  .trow .cell{
-    min-width:0;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  /* optional wrapping cell */
-  .trow .cell.wrap{
-    white-space:normal;
-    text-overflow:clip;
-    overflow:hidden;
-    overflow-wrap:anywhere;
-  }
 
     /* =========================
    Contract Monitor (mon-table) — add inline X button column
@@ -4775,14 +4776,13 @@ function dnaRenderTable(rows) {
     return;
   }
 
-   const html = rows.map(r => {
+    const html = rows.map(r => {
     const tkTxt = r.token ? shortAddr(r.token) : "—";
     const spTxt = r.spender ? shortAddr(r.spender) : "—";
     const alwTxt = dnaFormatAllowance(r.allowanceStr);
     const verTxt = dnaVerifiedChip(r.verified);
     const riskChip = dnaRowRiskChip(r.risk);
 
-    // flags go to a full-width row (so they won't break layout)
     const flagsTxtRaw = (r.flags && r.flags !== "—") ? String(r.flags) : "";
     const flagsTxt = flagsTxtRaw ? window.escapeHtml(flagsTxtRaw) : "—";
 
@@ -4818,6 +4818,8 @@ function dnaRenderTable(rows) {
   }).join("");
 
   table.insertAdjacentHTML("beforeend", html);
+
+}
 
 function dnaComputeFallbackTips(rows) {
   const tips = [];
