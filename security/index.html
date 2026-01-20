@@ -3837,7 +3837,7 @@ function _qsClamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 function _qsNowTs(){ return Math.floor(Date.now()/1000); }
 
 // stringify BigInt-safe
-function safeJson(obj){
+function _qsSafeJson(obj){
   return JSON.stringify(obj, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2);
 }
 
@@ -4327,7 +4327,7 @@ async function runQuickScan(){
       { type:"warn", title:"Mint", value:"Unknown" },
       { type:"warn", title:"Pause", value:"Unknown" }
     ];
-    rep.json = safeJson(rep);
+    rep.json = _qsSafeJson(rep);
     cache[key] = { ts: nowTs(), rep };
     saveQsCache(cache);
     addQsHistory(net, token);
@@ -4405,7 +4405,7 @@ async function runQuickScan(){
     { type: (pauseDetected ? "warn" : "ok"), title:"Pause", value: pauseStateText }
   ];
 
-  rep.json = safeJson(rep);
+  rep.json = _qsSafeJson(rep);
 
   // Cache + history
   cache[key] = { ts: nowTs(), rep };
@@ -4439,7 +4439,7 @@ function initQuickScanUi(){
     const key = qsCacheKey(net, normAddr(token), useApis);
     const rep = cache?.[key]?.rep;
     if (!rep) return setStatus($("#qs-status"), "warn", "Run scan first.");
-    const ok = await copyText(rep.json || safeJson(rep));
+    const ok = await copyText(rep.json || _qsSafeJson(rep));
     setStatus($("#qs-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
   });
 
