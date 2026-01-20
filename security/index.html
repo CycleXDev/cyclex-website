@@ -28,6 +28,8 @@
     --bg-gradient-start:#05060a;
     --bg-gradient-mid:#1a0d3a;
     --bg-gradient-end:#003a4c;
+    --accent-gold:#f2d38a;
+    --accent-gold-2:#d9b46a;
 
     --text-main:#f4f6ff;
     --text-muted:rgba(244,246,255,.7);
@@ -848,13 +850,6 @@
   font-weight:900;
   color:rgba(244,246,255,.92);
 }
-
-/* keep highlight style */
-#rpc-table .trow.rpc.highlight{
-  background:rgba(0,230,118,.10);
-  border-top-color:rgba(0,230,118,.20);
-}
-
 /* Responsive: tighter header */
 @media (max-width:980px){
   #rpc-table .trow.head.rpc{
@@ -1028,12 +1023,17 @@
 
     .tool-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
 
+    /* generic table swipe width on medium screens */
+    .trow{min-width:560px}
+
+
     #mon-table .trow,
 #mon-table .trow.head{
   grid-template-columns:1.7fr 1fr 1fr 44px; /* contract | net | status | X */
   min-width:520px;
 }
 
+  
   }
 
   @media (max-width:640px){
@@ -1043,7 +1043,7 @@
 
     .tool-grid{grid-template-columns:1fr; gap:14px}
   }
-    /* ===== CycleX — Wallet Security DNA (SAFE PATCH) ===== */
+/* ===== CycleX — Wallet Security DNA (SAFE PATCH) ===== */
 
 /* DNA cube: subtle gold frame + glow */
 .tool-card.dna,
@@ -1187,6 +1187,7 @@
   #ap-table .ap-actions{ grid-column: 1; justify-self: start; }
 }
 
+    
 </style>
    
 </head>
@@ -4334,14 +4335,6 @@ function dnaRiskLevelFromScore(score) {
   if (s >= 50) return "Medium";
   return "High";
 }
-    function dnaScoreTierFromScore(score){
-  const s = Number(score);
-  if (!Number.isFinite(s)) return "unk";
-  if (s >= 80) return "ok";
-  if (s >= 50) return "warn";   
-  return "bad";                 
-}
-
 
 function dnaNormalizeApiRow(row) {
   // Moralis-like keys (common)
@@ -4782,19 +4775,6 @@ function dnaShareScore() {
   window.open(shareUrl, "_blank", "noopener,noreferrer");
   gtagEvent?.("sec_dna_share", { net });
 }
-    function cxSetDnaPill(el, kind, level){
-  if(!el) return;
-  el.classList.remove(
-    `${kind}-low`, `${kind}-med`, `${kind}-high`,
-    `${kind}-ok`, `${kind}-warn`, `${kind}-bad`,
-    `${kind}-unk`
-  );
-  el.classList.add(`${kind}-${level}`);
-}
-
-cxSetDnaPill(document.querySelector('#dna-score'), 'score', 'med'); // low|med|high|unk
-cxSetDnaPill(document.querySelector('#dna-risk'),  'risk',  'low'); // low|med|high|unk
-
 
 //async function dnaShowLeaderboard() {
   //const st = $("#dna-status");
