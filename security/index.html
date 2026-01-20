@@ -704,11 +704,7 @@
 #mon-table .trow.head .cell:last-child{
   visibility:hidden;  /* stays in layout, but truly invisible */
 }
-    /* MON: make "Last seen" wrap (date on first line, time on second) */
-#mon-table .trow .cell:nth-child(3){
-  white-space: normal;
-  line-height: 1.15;
-}
+
 /* Small clean X (no weird circle) */
 .mon-remove{
   width:22px;
@@ -1032,28 +1028,12 @@
 
     .tool-grid{grid-template-columns:repeat(2, minmax(0, 1fr))}
 
-    /* generic table swipe width on medium screens */
-    .trow{min-width:560px}
-
-    /* ✅ FIX: tables where hide-sm removes a column (no "ghost" grid column) */
-    #ap-table .trow,
-    #ap-table .trow.head{
-      grid-template-columns: 1.7fr 1fr 1fr 44px;
-  min-width:520px;
-}
-
     #mon-table .trow,
 #mon-table .trow.head{
   grid-template-columns:1.7fr 1fr 1fr 44px; /* contract | net | status | X */
   min-width:520px;
 }
 
-    /* RPC: collapses to RPC / ms / status */
-    #rpc-table .trow.head.rpc,
-    #rpc-table .trow.rpc{
-      grid-template-columns:minmax(220px,1.6fr) 72px minmax(140px,1fr);
-      min-width:560px;
-    }
   }
 
   @media (max-width:640px){
@@ -1063,6 +1043,150 @@
 
     .tool-grid{grid-template-columns:1fr; gap:14px}
   }
+    /* ===== CycleX — Wallet Security DNA (SAFE PATCH) ===== */
+
+/* DNA cube: subtle gold frame + glow */
+.tool-card.dna,
+.tool-card[data-tool="dna"],
+#tool-dna,
+#dna-card{
+  border-color: rgba(242,211,138,.20) !important;
+  background: linear-gradient(165deg, rgba(242,211,138,.06), rgba(255,255,255,.04)) !important;
+  box-shadow:
+    0 20px 55px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 0 0 1px rgba(242,211,138,.06),
+    0 0 28px rgba(242,211,138,.07) !important;
+}
+
+.tool-card.dna::before,
+.tool-card[data-tool="dna"]::before,
+#tool-dna::before,
+#dna-card::before{
+  background:
+    radial-gradient(520px 180px at 18% -5%, rgba(242,211,138,.16), transparent 62%),
+    radial-gradient(520px 180px at 85% 0%, rgba(124,92,255,.14), transparent 62%) !important;
+}
+
+/* DNA panel: subtle gold outline */
+#panel-dna.panel-shell,
+#panel-wallet-dna.panel-shell,
+#panel-dna,
+#panel-wallet-dna{
+  border-color: rgba(242,211,138,.18) !important;
+  box-shadow:
+    0 26px 70px rgba(0,0,0,.60),
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 0 0 1px rgba(242,211,138,.08),
+    0 0 34px rgba(242,211,138,.06) !important;
+}
+
+/* Score/Risk pills (hooks) */
+#dna-score,
+#dna-risk{
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 7px 11px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  background: rgba(255,255,255,.05) !important;
+  color: rgba(244,246,255,.92) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: .02em !important;
+  white-space: nowrap !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05) !important;
+}
+
+/* Color states (only if classes exist) */
+#dna-score.score-low,  #dna-score.score-ok,
+#dna-risk.risk-low,    #dna-risk.risk-ok{
+  border-color: rgba(0,230,118,.28) !important;
+  background: rgba(0,230,118,.10) !important;
+  color: #a8ffd5 !important;
+}
+
+#dna-score.score-med,  #dna-score.score-warn,
+#dna-risk.risk-med,    #dna-risk.risk-warn{
+  border-color: rgba(255,193,7,.30) !important;
+  background: rgba(255,193,7,.10) !important;
+  color: #ffe29a !important;
+}
+
+#dna-score.score-high, #dna-score.score-bad,
+#dna-risk.risk-high,   #dna-risk.risk-bad{
+  border-color: rgba(220,53,69,.30) !important;
+  background: rgba(220,53,69,.12) !important;
+  color: #ffb3bd !important;
+}
+
+#dna-score.score-unk,
+#dna-risk.risk-unk{
+  opacity: .88 !important;
+}
+
+/* DNA approvals table: card rows */
+#ap-table .trow{
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  grid-template-rows: auto auto !important;
+  gap: 10px 12px !important;
+  align-items: center !important;
+  padding: 12px 12px !important;
+  min-width: 0 !important;
+}
+
+#ap-table .trow.head{
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  padding: 10px 12px !important;
+  min-width: 0 !important;
+}
+
+#ap-table .ap-main{ grid-column: 1; grid-row: 1; min-width: 0; }
+#ap-table .ap-actions{
+  grid-column: 2; grid-row: 1;
+  justify-self: end;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  white-space: nowrap;
+}
+#ap-table .ap-meta{
+  grid-column: 1 / -1; grid-row: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  color: rgba(244,246,255,.78);
+  font-size: 12px;
+}
+
+#ap-table .ap-sub{
+  margin-top: 6px;
+  color: rgba(244,246,255,.62);
+  line-height: 1.15;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+#ap-table .ap-sub .m{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px){
+  #ap-table .trow{ grid-template-columns: 1fr !important; }
+  #ap-table .ap-actions{ grid-column: 1; justify-self: start; }
+}
+
 </style>
    
 </head>
@@ -4650,6 +4774,19 @@ function dnaShareScore() {
   window.open(shareUrl, "_blank", "noopener,noreferrer");
   gtagEvent?.("sec_dna_share", { net });
 }
+    function cxSetDnaPill(el, kind, level){
+  if(!el) return;
+  el.classList.remove(
+    `${kind}-low`, `${kind}-med`, `${kind}-high`,
+    `${kind}-ok`, `${kind}-warn`, `${kind}-bad`,
+    `${kind}-unk`
+  );
+  el.classList.add(`${kind}-${level}`);
+}
+
+cxSetDnaPill(document.querySelector('#dna-score'), 'score', 'med'); // low|med|high|unk
+cxSetDnaPill(document.querySelector('#dna-risk'),  'risk',  'low'); // low|med|high|unk
+
 
 //async function dnaShowLeaderboard() {
   //const st = $("#dna-status");
