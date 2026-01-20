@@ -1320,6 +1320,16 @@ a.tool-card[data-tool="approvals"]::after{
 #panel-approvals .grid-2 > .card:nth-child(2) > .row:first-child > .row .pill{
   flex: 0 0 auto !important;
 }
+    /* Mobile fix: long connected address shouldn't shift layout */
+#dna-address,
+#dna-wallet,
+#dna-status .mono{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
 </style>
    
 </head>
@@ -4575,7 +4585,7 @@ function dnaInputAddress() {
 
 function dnaSetWalletBadges() {
   const w = wallet?.address ? shortAddr(wallet.address) : "not connected";
-  const addr = wallet?.address ? wallet.address : "—";
+  const addr = wallet?.address ? shortAddr(wallet.address) : "—";
   const net = dnaNet();
 
   const elWallet = $("#dna-wallet");
@@ -4985,7 +4995,7 @@ async function dnaConnectWallet() {
       st,
       "ok",
       wallet?.address
-        ? `Wallet connected: <span class="mono">${wallet.address}</span>`
+        ? `Wallet connected: <span class="mono">${shortAddr(wallet.address)}</span>`
         : "Wallet connected."
     );
 
