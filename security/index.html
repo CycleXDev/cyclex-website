@@ -4374,187 +4374,376 @@ window.CX.getReadProvider = getReadProvider;
       });
     }
 
-    // =========================
-    // Liquidity Scan panel
-    // =========================
-    function liqBuildShareLink(net, token){
-      const u = new URL(location.href);
-      u.searchParams.set("tool", "liq");
-      u.searchParams.set("net", net);
-      u.searchParams.set("token", token);
-      return u.toString();
+   // =========================
+// Liquidity Scan panel (Multi-DEX Sources, Safe Unknown)
+// =========================
+
+function liqBuildShareLink(net, token){
+  const u = new URL(location.href);
+  u.searchParams.set("tool", "liq");
+  u.searchParams.set("net", net);
+  u.searchParams.set("token", token);
+  return u.toString();
+}
+
+// --- Optional extra ABIs for Algebra/THENA style pools (safe to keep even if unused) ---
+const ALG_FACTORY_ABI = [
+  "function poolByPair(address tokenA, address tokenB) view returns (address pool)"
+];
+const ALG_POOL_ABI = [
+  "function token0() view returns (address)",
+  "function token1() view returns (address)",
+  "function liquidity() view returns (uint128)"
+];
+
+function liqNormalizeSources(dex){
+  // Backward compatible:
+  // 1) If dex.sources exists -> use it
+  // 2) Else build single source from dex.v2Factory / dex.v3Factory
+  // Also supports optional global append: window.DEX_SOURCES_EXTRA[net]
+  const base = [];
+  if (dex && Array.isArray(dex.sources) && dex.sources.length){
+    for (const s of dex.sources) base.push(s);
+  } else {
+    base.push({
+      id: "primary",
+      label: dex?.label || "DEX",
+      v2Factory: dex?.v2Factory || null,
+      v3Factory: dex?.v3Factory || null,
+      kind: "uni" // default assumption for current implementation
+    });
+  }
+
+  // Optional: you can define window.DEX_SOURCES_EXTRA = { bsc:[...], eth:[...] } elsewhere
+  // We merge here without requiring UI changes.
+  return base;
+}
+
+async function runLiqScan(){
+  const st = $("#liq-status");
+  const out = $("#liq-out");
+  const risk = $("#liq-risk");
+  const wrap = $("#liq-tablewrap");
+
+  clearStatus(st);
+  risk.innerHTML = "";
+
+  const net = netFromSelect("#liq-net");
+  const tokenRaw = ($("#liq-token")?.value || "").trim();
+  if (!isAddr(tokenRaw)) {
+    setStatus(st, "warn", "Please paste a valid token address.");
+    return;
+  }
+  const token = normAddr(tokenRaw);
+
+  setStatus(st, "info", "Scanning liquidity…");
+  const chain = CHAINS[net];
+  const dexCfg = DEX[net];
+  const read = getReadProvider(net);
+
+  if (!read) {
+    setStatus(st, "bad", "No RPC available.");
+    return;
+  }
+
+  // Multi-source list (backward compatible)
+  let sources = liqNormalizeSources(dexCfg);
+  const extra = (window.DEX_SOURCES_EXTRA && window.DEX_SOURCES_EXTRA[net]) ? window.DEX_SOURCES_EXTRA[net] : null;
+  if (Array.isArray(extra) && extra.length) sources = sources.concat(extra);
+
+  // Results
+  const res = {
+    net,
+    token,
+    label: dexCfg?.label || chain?.name || net,
+    v2: [],
+    v3: [],
+    sources: sources.map(s => ({
+      id: s.id || s.label || "src",
+      label: s.label || "Source",
+      status: "pending",       // ok | checked-empty | unknown | not-checked
+      note: ""
+    })),
+    ts: nowTs()
+  };
+
+  const pairs = [
+    { other: chain.wrapped, label: "Wrapped" },
+    { other: chain.usdt, label: "USDT" }
+  ];
+
+  const markSource = (src, status, note) => {
+    const row = res.sources.find(x => x.id === (src.id || src.label || "src"));
+    if (!row) return;
+    row.status = status;
+    row.note = note || "";
+  };
+
+  async function scanV2(src){
+    if (!src.v2Factory) return { checked:false, found:0, err:null };
+
+    try {
+      const f = new E.Contract(src.v2Factory, V2_FACTORY_ABI, read);
+      let found = 0;
+
+      for (const p of pairs) {
+        const pair = await f.getPair(token, p.other).catch(()=>ZERO);
+        if (pair && pair !== ZERO) {
+          const pairC = new E.Contract(pair, V2_PAIR_ABI, read);
+          const [t0, t1, r] = await Promise.all([
+            pairC.token0().catch(()=>ZERO),
+            pairC.token1().catch(()=>ZERO),
+            pairC.getReserves().catch(()=>[0n,0n,0n])
+          ]);
+
+          res.v2.push({
+            source: src.label || "Source",
+            pair,
+            token0: t0,
+            token1: t1,
+            reserve0: String(r[0]),
+            reserve1: String(r[1]),
+            otherLabel: p.label,
+            other: p.other
+          });
+          found++;
+        }
+      }
+      return { checked:true, found, err:null };
+    } catch (e) {
+      return { checked:true, found:0, err:e };
     }
+  }
 
-    async function runLiqScan(){
-      const st = $("#liq-status");
-      const out = $("#liq-out");
-      const risk = $("#liq-risk");
-      const wrap = $("#liq-tablewrap");
+  async function scanV3Uni(src){
+    if (!src.v3Factory) return { checked:false, found:0, err:null };
 
-      clearStatus(st);
-      risk.innerHTML = "";
+    try {
+      const vf = new E.Contract(src.v3Factory, V3_FACTORY_ABI, read);
+      const fees = [500, 3000, 10000];
+      let found = 0;
 
-      const net = netFromSelect("#liq-net");
-      const tokenRaw = ($("#liq-token")?.value || "").trim();
-      if (!isAddr(tokenRaw)) {
-        setStatus(st, "warn", "Please paste a valid token address.");
-        return;
-      }
-      const token = normAddr(tokenRaw);
+      for (const fee of fees) {
+        const pool = await vf.getPool(token, chain.wrapped, fee).catch(()=>ZERO);
+        if (pool && pool !== ZERO) {
+          const vp = new E.Contract(pool, V3_POOL_ABI, read);
+          const [t0, t1, liq, slot0] = await Promise.all([
+            vp.token0().catch(()=>ZERO),
+            vp.token1().catch(()=>ZERO),
+            vp.liquidity().catch(()=>0n),
+            vp.slot0().catch(()=>null)
+          ]);
 
-      setStatus(st, "info", "Scanning liquidity…");
-      const chain = CHAINS[net];
-      const dex = DEX[net];
-      const read = getReadProvider(net);
-
-      if (!read) {
-        setStatus(st, "bad", "No RPC available.");
-        return;
-      }
-
-      const res = { net, token, dex: dex.label, v2: [], v3: [], ts: nowTs() };
-
-      // V2 pairs: token vs wrapped + token vs usdt
-      try {
-        const f = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, read);
-        const pairs = [
-          { other: chain.wrapped, label: "Wrapped" },
-          { other: chain.usdt, label: "USDT" }
-        ];
-        for (const p of pairs) {
-          const pair = await f.getPair(token, p.other).catch(()=>ZERO);
-          if (pair && pair !== ZERO) {
-            const pairC = new E.Contract(pair, V2_PAIR_ABI, read);
-            const [t0, t1, r] = await Promise.all([
-              pairC.token0(),
-              pairC.token1(),
-              pairC.getReserves()
-            ]);
-            res.v2.push({
-              pair,
-              token0: t0,
-              token1: t1,
-              reserve0: String(r[0]),
-              reserve1: String(r[1]),
-              otherLabel: p.label,
-              other: p.other
-            });
-          }
+          res.v3.push({
+            source: src.label || "Source",
+            kind: "V3",
+            fee,
+            pool,
+            token0: t0,
+            token1: t1,
+            liquidity: String(liq),
+            tick: slot0 ? String(slot0[1]) : "—"
+          });
+          found++;
         }
-      } catch (e) {}
+      }
+      return { checked:true, found, err:null };
+    } catch (e) {
+      return { checked:true, found:0, err:e };
+    }
+  }
 
-      // V3 pools: token vs wrapped, fee tiers
-      try {
-        const vf = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, read);
-        const fees = [500, 3000, 10000];
-        for (const fee of fees) {
-          const pool = await vf.getPool(token, chain.wrapped, fee).catch(()=>ZERO);
-          if (pool && pool !== ZERO) {
-            const vp = new E.Contract(pool, V3_POOL_ABI, read);
-            const [t0, t1, liq, slot0] = await Promise.all([
-              vp.token0().catch(()=>ZERO),
-              vp.token1().catch(()=>ZERO),
-              vp.liquidity().catch(()=>0n),
-              vp.slot0().catch(()=>null)
-            ]);
-            res.v3.push({
-              fee,
-              pool,
-              token0: t0,
-              token1: t1,
-              liquidity: String(liq),
-              tick: slot0 ? String(slot0[1]) : "—"
-            });
-          }
+  async function scanAlgebra(src){
+    if (!src.algFactory) return { checked:false, found:0, err:null };
+
+    try {
+      const af = new E.Contract(src.algFactory, ALG_FACTORY_ABI, read);
+      let found = 0;
+
+      for (const p of pairs) {
+        const pool = await af.poolByPair(token, p.other).catch(()=>ZERO);
+        if (pool && pool !== ZERO) {
+          const ap = new E.Contract(pool, ALG_POOL_ABI, read);
+          const [t0, t1, liq] = await Promise.all([
+            ap.token0().catch(()=>ZERO),
+            ap.token1().catch(()=>ZERO),
+            ap.liquidity().catch(()=>0n),
+          ]);
+
+          res.v3.push({
+            source: src.label || "Source",
+            kind: "ALG",
+            fee: "—",
+            pool,
+            token0: t0,
+            token1: t1,
+            liquidity: String(liq),
+            tick: "—",
+            otherLabel: p.label
+          });
+          found++;
         }
-      } catch (e) {}
+      }
+      return { checked:true, found, err:null };
+    } catch (e) {
+      return { checked:true, found:0, err:e };
+    }
+  }
 
-      // Render
-      const chips = [];
-      if (res.v2.length) chips.push(qsRiskChip("ok", `V2 pairs found: ${res.v2.length}`));
-      else chips.push(qsRiskChip("warn", "No V2 pairs found (wrapped/USDT)."));
+  // Scan sources sequentially (RPC-safe; no false-green)
+  for (const src of sources) {
+    const id = src.id || src.label || "src";
+    try {
+      const v2r = await scanV2(src);
 
-      if (res.v3.length) chips.push(qsRiskChip("ok", `V3 pools found: ${res.v3.length}`));
-      else chips.push(qsRiskChip("warn", "No V3 pools found (fee tiers)."));
+      let v3r = { checked:false, found:0, err:null };
+      const kind = (src.kind || "uni").toLowerCase();
+      if (kind === "algebra") v3r = await scanAlgebra(src);
+      else v3r = await scanV3Uni(src);
 
-      risk.innerHTML = chips.join("");
+      const anyChecked = v2r.checked || v3r.checked;
+      const anyFound = (v2r.found || 0) + (v3r.found || 0);
 
-      const rows = [];
+      if (!anyChecked) {
+        markSource({id}, "not-checked", "Not checked (no supported factory configured).");
+      } else if (v2r.err || v3r.err) {
+        // Important: do not green; mark unknown
+        markSource({id}, "unknown", "Checked but failed (ABI mismatch / RPC error / unsupported).");
+      } else if (!anyFound) {
+        markSource({id}, "checked-empty", "Checked — no pools/pairs found for Wrapped/USDT.");
+      } else {
+        markSource({id}, "ok", "OK");
+      }
+    } catch (e) {
+      markSource({id}, "unknown", "Unexpected scan error.");
+    }
+  }
+
+  // Render chips (same style)
+  const chips = [];
+  if (res.v2.length) chips.push(qsRiskChip("ok", `V2 pairs found: ${res.v2.length}`));
+  else chips.push(qsRiskChip("warn", "No V2 pairs found (wrapped/USDT)."));
+
+  if (res.v3.length) chips.push(qsRiskChip("ok", `V3 pools found: ${res.v3.length}`));
+  else chips.push(qsRiskChip("warn", "No V3 pools found (fee tiers / CL)."));
+
+  const unknownCount = res.sources.filter(s => s.status === "unknown" || s.status === "not-checked").length;
+  if (unknownCount) chips.push(qsRiskChip("warn", `Sources unknown/not checked: ${unknownCount}`));
+
+  risk.innerHTML = chips.join("");
+
+  // Render table (same UI)
+  const rows = [];
+  rows.push(`
+    <div class="trow head">
+      <div class="cell">Pool / Pair</div>
+      <div class="cell">Type</div>
+      <div class="cell">Detail</div>
+      <div class="cell">Link</div>
+    </div>
+  `);
+
+  // V2 rows
+  for (const v of res.v2) {
+    const hasRes = (() => {
+      try { return (BigInt(v.reserve0) > 0n && BigInt(v.reserve1) > 0n); }
+      catch { return false; }
+    })();
+
+    rows.push(`
+      <div class="trow ${hasRes ? "highlight" : ""}">
+        <div class="cell mono">${shortAddr(v.pair)}</div>
+        <div class="cell">V2</div>
+        <div class="cell">${escapeHtml(v.source)} • Reserves: ${hasRes ? "✅" : "—"} • ${escapeHtml(v.otherLabel)}</div>
+        <div class="cell"><a href="${chain.addressUrl(v.pair)}" target="_blank" rel="noopener">Explorer</a></div>
+      </div>
+    `);
+  }
+
+  // V3/ALG rows
+  for (const v of res.v3) {
+    const liqOk = (() => { try { return BigInt(v.liquidity) > 0n; } catch { return false; } })();
+    const typeLabel = v.kind === "ALG" ? "V3" : "V3"; // keep UI consistent (same column labels)
+    const detail = (v.kind === "ALG")
+      ? `${escapeHtml(v.source)} • Pair: ${escapeHtml(v.otherLabel || "—")} • Liquidity: ${liqOk ? "✅" : "—"}`
+      : `${escapeHtml(v.source)} • Fee: ${v.fee} • Liquidity: ${liqOk ? "✅" : "—"} • Tick: ${escapeHtml(v.tick)}`;
+
+    rows.push(`
+      <div class="trow ${liqOk ? "highlight" : ""}">
+        <div class="cell mono">${shortAddr(v.pool)}</div>
+        <div class="cell">${typeLabel}</div>
+        <div class="cell">${detail}</div>
+        <div class="cell"><a href="${chain.addressUrl(v.pool)}" target="_blank" rel="noopener">Explorer</a></div>
+      </div>
+    `);
+  }
+
+  // Unknown / Not checked rows (explicit, to avoid false-green)
+  for (const s of res.sources) {
+    if (s.status === "unknown" || s.status === "not-checked") {
       rows.push(`
-        <div class="trow head">
-          <div class="cell">Pool / Pair</div>
-          <div class="cell">Type</div>
-          <div class="cell">Detail</div>
-          <div class="cell">Link</div>
+        <div class="trow">
+          <div class="cell mono">—</div>
+          <div class="cell">Unknown</div>
+          <div class="cell">${escapeHtml(s.label)} • ${escapeHtml(s.note || "Unknown / Not checked")}</div>
+          <div class="cell">—</div>
         </div>
       `);
-
-      for (const v of res.v2) {
-        const hasRes = (BigInt(v.reserve0) > 0n && BigInt(v.reserve1) > 0n);
-        rows.push(`
-          <div class="trow ${hasRes ? "highlight" : ""}">
-            <div class="cell mono">${shortAddr(v.pair)}</div>
-            <div class="cell">V2</div>
-            <div class="cell">Reserves: ${hasRes ? "✅" : "—"} • ${v.otherLabel}</div>
-            <div class="cell"><a href="${chain.addressUrl(v.pair)}" target="_blank" rel="noopener">Explorer</a></div>
-          </div>
-        `);
-      }
-
-      for (const v of res.v3) {
-        const liq = (() => { try { return BigInt(v.liquidity) > 0n; } catch { return false; } })();
-        rows.push(`
-          <div class="trow ${liq ? "highlight" : ""}">
-            <div class="cell mono">${shortAddr(v.pool)}</div>
-            <div class="cell">V3</div>
-            <div class="cell">Fee: ${v.fee} • Liquidity: ${liq ? "✅" : "—"} • Tick: ${v.tick}</div>
-            <div class="cell"><a href="${chain.addressUrl(v.pool)}" target="_blank" rel="noopener">Explorer</a></div>
-          </div>
-        `);
-      }
-
-      wrap.innerHTML = `<div class="table">${rows.join("")}</div>`;
-      out.innerHTML = `
-        <b>${dex.label}</b> liquidity scan completed.<br>
-        Token: <span class="mono">${token}</span><br>
-        Share: <span class="mono">${liqBuildShareLink(net, token)}</span>
-      `;
-      out.style.display = "block";
-
-      setStatus(st, (res.v2.length || res.v3.length) ? "ok" : "warn", "Done.");
-      gtagEvent("sec_liq_run", { net });
     }
+  }
 
-    function initLiqUi(){
-      // Note for which DEX is scanned
-      const updateDexNote = () => {
-        const net = netFromSelect("#liq-net");
-        const dex = DEX[net];
-        const el = $("#liq-dex-note");
-        if (el) el.textContent = `${dex.label}: V2 Factory + V3 Factory (wrapped + USDT pairs)`;
-      };
-      $("#liq-net")?.addEventListener("change", updateDexNote);
-      updateDexNote();
+  wrap.innerHTML = `<div class="table">${rows.join("")}</div>`;
 
-      $("#liq-run")?.addEventListener("click", runLiqScan);
-      $("#liq-copy-link")?.addEventListener("click", async () => {
-        const net = netFromSelect("#liq-net");
-        const token = ($("#liq-token")?.value || "").trim();
-        if (!isAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
-        const link = liqBuildShareLink(net, normAddr(token));
-        const ok = await copyText(link);
-        setStatus($("#liq-status"), ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
-      });
-      $("#liq-share-x")?.addEventListener("click", () => {
-        const net = netFromSelect("#liq-net");
-        const token = ($("#liq-token")?.value || "").trim();
-        if (!isAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
-        const link = liqBuildShareLink(net, normAddr(token));
-        const u = new URL("https://twitter.com/intent/tweet");
-        u.searchParams.set("text", `Liquidity scan (${CHAINS[net].name})\nToken: ${shortAddr(token)}\n${link}`);
-        window.open(u.toString(), "_blank", "noopener,noreferrer");
-      });
-    }
+  const okSources = res.sources.filter(s => s.status === "ok" || s.status === "checked-empty").map(s => s.label).join(", ");
+  out.innerHTML = `
+    <b>${escapeHtml(res.label)}</b> liquidity scan completed.<br>
+    Token: <span class="mono">${token}</span><br>
+    Sources: <span class="mono">${escapeHtml(okSources || "—")}</span><br>
+    Share: <span class="mono">${liqBuildShareLink(net, token)}</span>
+  `;
+  out.style.display = "block";
+
+  setStatus(st, (res.v2.length || res.v3.length) ? "ok" : "warn", "Done.");
+  gtagEvent("sec_liq_run", { net, sources: sources.length, unknown: unknownCount });
+}
+
+function initLiqUi(){
+  // Note for which DEX is scanned
+  const updateDexNote = () => {
+    const net = netFromSelect("#liq-net");
+    const dexCfg = DEX[net];
+    const srcs = liqNormalizeSources(dexCfg);
+    const extra = (window.DEX_SOURCES_EXTRA && window.DEX_SOURCES_EXTRA[net]) ? window.DEX_SOURCES_EXTRA[net] : null;
+    const total = srcs.length + (Array.isArray(extra) ? extra.length : 0);
+
+    const el = $("#liq-dex-note");
+    if (el) el.textContent = `${dexCfg.label}: scanning ${total} source(s) (Wrapped + USDT). Unsupported/failed sources show as "Unknown / Not checked".`;
+  };
+  $("#liq-net")?.addEventListener("change", updateDexNote);
+  updateDexNote();
+
+  $("#liq-run")?.addEventListener("click", runLiqScan);
+
+  $("#liq-copy-link")?.addEventListener("click", async () => {
+    const net = netFromSelect("#liq-net");
+    const token = ($("#liq-token")?.value || "").trim();
+    if (!isAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
+    const link = liqBuildShareLink(net, normAddr(token));
+    const ok = await copyText(link);
+    setStatus($("#liq-status"), ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
+  });
+
+  $("#liq-share-x")?.addEventListener("click", () => {
+    const net = netFromSelect("#liq-net");
+    const token = ($("#liq-token")?.value || "").trim();
+    if (!isAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
+    const link = liqBuildShareLink(net, normAddr(token));
+    const u = new URL("https://twitter.com/intent/tweet");
+    u.searchParams.set("text", `Liquidity scan (${CHAINS[net].name})\nToken: ${shortAddr(token)}\n${link}`);
+    window.open(u.toString(), "_blank", "noopener,noreferrer");
+  });
+}
+
 // ---- Safe HTML escape (global) ----
 window.escapeHtml = window.escapeHtml || function (s) {
   if (s === null || s === undefined) return "";
