@@ -704,7 +704,7 @@
 #mon-table .trow.head .cell:last-child{
   visibility:hidden;  /* stays in layout, but truly invisible */
 }
-
+    
 /* Small clean X (no weird circle) */
 .mon-remove{
   width:22px;
@@ -848,6 +848,9 @@
   font-weight:900;
   color:rgba(244,246,255,.92);
 }
+
+
+
 /* Responsive: tighter header */
 @media (max-width:980px){
   #rpc-table .trow.head.rpc{
@@ -1024,6 +1027,7 @@
     /* generic table swipe width on medium screens */
     .trow{min-width:560px}
 
+  
 
     #mon-table .trow,
 #mon-table .trow.head{
@@ -1031,7 +1035,6 @@
   min-width:520px;
 }
 
-  
   }
 
   @media (max-width:640px){
@@ -1041,7 +1044,7 @@
 
     .tool-grid{grid-template-columns:1fr; gap:14px}
   }
-/* ===== CycleX — Wallet Security DNA (SAFE PATCH) ===== */
+    /* ===== CycleX — Wallet Security DNA (SAFE PATCH) ===== */
 
 /* DNA cube: subtle gold frame + glow */
 .tool-card.dna,
@@ -1066,7 +1069,18 @@
     radial-gradient(520px 180px at 85% 0%, rgba(124,92,255,.14), transparent 62%) !important;
 }
 
-
+/* DNA panel: subtle gold outline */
+#panel-dna.panel-shell,
+#panel-wallet-dna.panel-shell,
+#panel-dna,
+#panel-wallet-dna{
+  border-color: rgba(242,211,138,.18) !important;
+  box-shadow:
+    0 26px 70px rgba(0,0,0,.60),
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 0 0 1px rgba(242,211,138,.08),
+    0 0 34px rgba(242,211,138,.06) !important;
+}
 
 /* Score/Risk pills (hooks) */
 #dna-score,
@@ -1173,65 +1187,7 @@
   #ap-table .trow{ grid-template-columns: 1fr !important; }
   #ap-table .ap-actions{ grid-column: 1; justify-self: start; }
 }
-/* DNA cube ONLY (tool tile) — subtle premium gold frame */
-#tool-dna{
-  border-color: rgba(242,211,138,.22) !important;
-  box-shadow:
-    0 20px 55px rgba(0,0,0,.55),
-    inset 0 1px 0 rgba(255,255,255,.05),
-    0 0 0 1px rgba(242,211,138,.08),
-    0 0 26px rgba(242,211,138,.07) !important;
-}
 
-/* keep your original tile background (no whitening) */
-#tool-dna{
-  background: rgba(255,255,255,.05) !important;
-}
-
-/* tiny gold glow in the overlay */
-#tool-dna::before{
-  background:
-    radial-gradient(520px 180px at 18% -5%, rgba(242,211,138,.14), transparent 62%),
-    radial-gradient(520px 180px at 85% 0%, rgba(124,92,255,.18), transparent 60%) !important;
-}
-.dna-metrics{
-  display:flex;
-  align-items:center;
-  justify-content:flex-end; /* ✅ stays on the right */
-  gap:10px;
-  flex-wrap:nowrap;         /* ✅ no jumping */
-  margin-top:10px;
-}
-
-@media (max-width:640px){
-  .dna-metrics{justify-content:flex-start; flex-wrap:wrap;}
-}
-/* Gold frame ONLY for the small right DNA card */
-#dna-card.dna-box{
-  border-color: rgba(242,211,138,.22) !important;
-  background: linear-gradient(165deg, rgba(242,211,138,.05), rgba(255,255,255,.03)) !important;
-  box-shadow:
-    0 24px 70px rgba(0,0,0,.55),
-    inset 0 1px 0 rgba(255,255,255,.05),
-    0 0 0 1px rgba(242,211,138,.08),
-    0 0 26px rgba(242,211,138,.07) !important;
-}
-/* Keep Score/Risk pinned and stable */
-.dna-metrics{
-  justify-content:flex-end;
-  align-items:center;
-  flex-wrap:nowrap !important;
-  white-space:nowrap;
-}
-
-@media (max-width:640px){
-  .dna-metrics{
-    justify-content:flex-start;
-    flex-wrap:wrap !important;
-  }
-}
-
-    
 </style>
    
 </head>
@@ -1554,7 +1510,7 @@
     </div>
 
     <!-- RIGHT -->
-    <div class="card dna-box" id="dna-card">
+    <div class="card">
       <div class="row" style="justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap">
         <div>
           <h3 data-i18n="dna_results_title">Wallet Security DNA</h3>
@@ -1563,7 +1519,7 @@
           </div>
         </div>
 
-        <div class="dna-metrics row" style="gap:8px; flex-wrap:nowrap">
+        <div class="row" style="gap:8px; flex-wrap:wrap">
           <div class="pill">
             <span data-i18n="dna_score">Score</span>:
             <span class="mono" id="dna-score">—</span>
@@ -4356,8 +4312,8 @@ function dnaSetWalletBadges() {
 }
 
 function dnaClearOutputs() {
- dnaApplyScoreRiskUI(null, "—");
-
+  $("#dna-score") && ($("#dna-score").textContent = "—");
+  $("#dna-risk") && ($("#dna-risk").textContent = "—");
 
   const tips = $("#dna-tips");
   if (tips) tips.innerHTML = `<li class="muted" data-i18n="dna_tips_placeholder">—</li>`;
@@ -4379,7 +4335,6 @@ function dnaRiskLevelFromScore(score) {
   if (s >= 50) return "Medium";
   return "High";
 }
-    
 
 function dnaNormalizeApiRow(row) {
   // Moralis-like keys (common)
@@ -4583,39 +4538,6 @@ function dnaComputeFallbackTips(rows) {
 
   return tips;
 }
-    function dnaApplyScoreRiskUI(score, riskText){
-  const scoreEl = $("#dna-score");
-  const riskEl  = $("#dna-risk");
-
-  // --- SCORE ---
-  if (scoreEl){
-    const s = Number(score);
-    scoreEl.textContent = (Number.isFinite(s) ? String(Math.round(s)) : "—");
-
-    let tier = "unk";
-    if (Number.isFinite(s)){
-      if (s >= 80) tier = "ok";       
-      else if (s >= 50) tier = "warn"; 
-      else tier = "bad";              
-    }
-    cxSetDnaPill(scoreEl, "score", tier);
-  }
-
-  // --- RISK (Low/Medium/High) ---
-  if (riskEl){
-    const txt = String(riskText ?? "—");
-    riskEl.textContent = txt;
-
-    const t = txt.toLowerCase();
-    let lvl = "unk";
-    if (t.includes("low")) lvl = "low";
-    else if (t.includes("med")) lvl = "med";
-    else if (t.includes("high")) lvl = "high";
-
-    cxSetDnaPill(riskEl, "risk", lvl);
-  }
-}
-
 
 async function dnaScan() {
   const st = $("#dna-status");
@@ -4644,13 +4566,10 @@ async function dnaScan() {
     dnaBindRevokeButtons(net);
 
     const score = (Array.isArray(data) ? null : data?.score);
-const riskLevel = (Array.isArray(data) ? null : data?.riskLevel);
+    const riskLevel = (Array.isArray(data) ? null : data?.riskLevel);
 
-if (score != null || riskLevel) {
-  const riskTxt = riskLevel || dnaRiskLevelFromScore(score);
-  dnaApplyScoreRiskUI(score, riskTxt);
-}
-
+    if (score != null) $("#dna-score") && ($("#dna-score").textContent = String(score));
+    if (riskLevel) $("#dna-risk") && ($("#dna-risk").textContent = String(riskLevel));
 
     if (score == null) {
       let s = 100;
@@ -4665,7 +4584,8 @@ if (score != null || riskLevel) {
       s -= infinite * 12;
       s = Math.max(0, Math.min(100, s));
 
-      dnaApplyScoreRiskUI(s, dnaRiskLevelFromScore(s));
+      $("#dna-score") && ($("#dna-score").textContent = String(s));
+      $("#dna-risk") && ($("#dna-risk").textContent = dnaRiskLevelFromScore(s));
     }
     try {
   const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
@@ -4855,30 +4775,6 @@ function dnaShareScore() {
   window.open(shareUrl, "_blank", "noopener,noreferrer");
   gtagEvent?.("sec_dna_share", { net });
 }
-    function dnaApplyScoreRiskUI(score, riskText){
-  const scoreEl = $("#dna-score");
-  const riskEl  = $("#dna-risk");
-
-  if (scoreEl){
-    const s = Number(score);
-    scoreEl.textContent = (Number.isFinite(s) ? String(Math.round(s)) : "—");
-    cxSetDnaPill(scoreEl, "score", dnaScoreTierFromScore(s)); // ok|warn|bad|unk
-  }
-
-  if (riskEl){
-    const txt = String(riskText ?? "—");
-    riskEl.textContent = txt;
-
-    const t = txt.toLowerCase();
-    let lvl = "unk";
-    if (t.includes("low")) lvl = "low";
-    else if (t.includes("med")) lvl = "med";
-    else if (t.includes("high")) lvl = "high";
-
-    cxSetDnaPill(riskEl, "risk", lvl); // low|med|high|unk
-  }
-}
-
 
 //async function dnaShowLeaderboard() {
   //const st = $("#dna-status");
