@@ -4312,8 +4312,7 @@ function dnaSetWalletBadges() {
 }
 
 function dnaClearOutputs() {
-  $("#dna-score") && ($("#dna-score").textContent = "—");
-  $("#dna-risk") && ($("#dna-risk").textContent = "—");
+  dnaApplyPills(null, "—");
 
   const tips = $("#dna-tips");
   if (tips) tips.innerHTML = `<li class="muted" data-i18n="dna_tips_placeholder">—</li>`;
@@ -4606,8 +4605,9 @@ async function dnaScan() {
     const score = (Array.isArray(data) ? null : data?.score);
     const riskLevel = (Array.isArray(data) ? null : data?.riskLevel);
 
-    if (score != null) $("#dna-score") && ($("#dna-score").textContent = String(score));
-    if (riskLevel) $("#dna-risk") && ($("#dna-risk").textContent = String(riskLevel));
+    if (score != null || riskLevel) {
+  dnaApplyPills(score, riskLevel || dnaRiskLevelFromScore(score));
+}
 
     if (score == null) {
       let s = 100;
@@ -4622,8 +4622,8 @@ async function dnaScan() {
       s -= infinite * 12;
       s = Math.max(0, Math.min(100, s));
 
-      $("#dna-score") && ($("#dna-score").textContent = String(s));
-      $("#dna-risk") && ($("#dna-risk").textContent = dnaRiskLevelFromScore(s));
+      dnaApplyPills(s, dnaRiskLevelFromScore(s));
+
     }
     try {
   const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
