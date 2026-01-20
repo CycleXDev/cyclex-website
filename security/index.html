@@ -655,6 +655,44 @@ a.tool-card[data-tool="approvals"] .badge-row{
     overflow: hidden;                 /* from old code (clean corners) */
     background:rgba(255,255,255,.03);
   }
+    /* =========================
+   Wallet Security DNA — Approvals table (A)
+   Flags go to a second full-width row
+   ========================= */
+
+/* Desktop: 7 columns (Token, Spender, Allowance, Verified, Last Updated, Risk, Action) */
+#ap-table .trow.head,
+#ap-table .trow.ap-main{
+  grid-template-columns: 1.15fr 1.15fr 1.35fr .95fr 1.25fr .75fr .75fr;
+}
+
+/* Mobile/Tablet: hide-sm disappears => 4 columns (Token, Allowance, Risk, Action) */
+@media (max-width: 980px){
+  #ap-table .trow.head,
+  #ap-table .trow.ap-main{
+    grid-template-columns: 1.25fr 1.35fr .75fr .75fr;
+  }
+}
+
+/* Flags row: single column full-width, nice wrapping */
+#ap-table .trow.ap-flags-row{
+  grid-template-columns: 1fr;
+  padding-top: 8px;
+  padding-bottom: 12px;
+  background: rgba(255,255,255,.02);
+}
+
+#ap-table .ap-flags-cell{
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
+  font-size: 12px;
+  color: rgba(244,246,255,.78);
+}
+
 
   /* generic rows */
   .trow{
@@ -1235,10 +1273,6 @@ a.tool-card[data-tool="approvals"]::after{
   white-space: nowrap;
 }
 
-@media (max-width: 640px){
-  #ap-table .trow{ grid-template-columns: 1fr !important; }
-  #ap-table .ap-actions{ grid-column: 1; justify-self: start; }
-}
 
 /* ===== DNA: lock Score/Risk position (no wrap jump) ===== */
 #panel-approvals .grid-2 > .card:nth-child(2) > .row:first-child{
@@ -1626,7 +1660,6 @@ a.tool-card[data-tool="approvals"]::after{
             <div class="cell">Allowance</div>
             <div class="cell hide-sm">Verified</div>
             <div class="cell hide-sm">Last Updated</div>
-            <div class="cell hide-sm">Flags</div>
             <div class="cell">Risk</div>
             <div class="cell">Action</div>
           </div>
@@ -4742,15 +4775,17 @@ function dnaRenderTable(rows) {
     return;
   }
 
-  const html = rows.map(r => {
+   const html = rows.map(r => {
     const tkTxt = r.token ? shortAddr(r.token) : "—";
     const spTxt = r.spender ? shortAddr(r.spender) : "—";
     const alwTxt = dnaFormatAllowance(r.allowanceStr);
     const verTxt = dnaVerifiedChip(r.verified);
-    const flagsTxt = r.flags && r.flags !== "—" ? window.escapeHtml(String(r.flags)) : "—";
     const riskChip = dnaRowRiskChip(r.risk);
 
-    // allow revoke if non-zero / infinite
+    // flags go to a full-width row (so they won't break layout)
+    const flagsTxtRaw = (r.flags && r.flags !== "—") ? String(r.flags) : "";
+    const flagsTxt = flagsTxtRaw ? window.escapeHtml(flagsTxtRaw) : "—";
+
     const canRevoke =
       r.token && r.spender &&
       alwTxt !== "—" &&
@@ -4761,21 +4796,28 @@ function dnaRenderTable(rows) {
       : `<span class="muted">—</span>`;
 
     return `
-      <div class="trow">
+      <!-- MAIN ROW (no Flags column) -->
+      <div class="trow ap-main">
         <div class="cell mono">${tkTxt}</div>
         <div class="cell mono hide-sm">${spTxt}</div>
         <div class="cell">${window.escapeHtml(String(alwTxt))}</div>
         <div class="cell hide-sm">${verTxt}</div>
         <div class="cell hide-sm">${window.escapeHtml(String(r.lastUpdated || "—"))}</div>
-        <div class="cell hide-sm">${flagsTxt}</div>
         <div class="cell">${riskChip}</div>
         <div class="cell">${actionHtml}</div>
+      </div>
+
+      <!-- FLAGS ROW (full width; only visible on desktop where flags exist in head) -->
+      <div class="trow ap-flags-row hide-sm">
+        <div class="cell ap-flags-cell">
+          <span class="muted" style="margin-right:10px;">Flags:</span>
+          <span class="mono">${flagsTxt}</span>
+        </div>
       </div>
     `;
   }).join("");
 
   table.insertAdjacentHTML("beforeend", html);
-}
 
 function dnaComputeFallbackTips(rows) {
   const tips = [];
