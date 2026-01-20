@@ -1,0 +1,436 @@
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    // -------------------------
+    // CORS
+    // -------------------------
+    const origin = request.headers.get("Origin") || "";
+    const allowOrigin =
+      origin === "https://cyclex.network" || origin === "https://www.cyclex.network"
+        ? origin
+        : "https://cyclex.network";
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders(allowOrigin) });
+    }
+
+    // -------------------------
+    // Routing
+    // -------------------------
+    if (url.pathname !== "/api/getApprovals") {
+      return json({ error: "Not found" }, 404, allowOrigin);
+    }
+
+    // -------------------------
+    // Rate Limit (per IP / per hour)
+    // -------------------------
+    const rateEnabled = (env.RATE_LIMIT_ENABLED || "1") !== "0"; // default ON
+    const maxPerHour = Number(env.RATE_LIMIT_MAX_PER_HOUR || "200"); // default 200/hour
+    const bypassToken = (env.RATE_LIMIT_BYPASS_TOKEN || "").trim();
+    const bypassHeader = (request.headers.get("x-cx-bypass") || "").trim();
+
+    const ip =
+      request.headers.get("CF-Connecting-IP") ||
+      (request.headers.get("X-Forwarded-For") || "").split(",")[0].trim() ||
+      "unknown";
+
+    if (rateEnabled && maxPerHour > 0) {
+      const bypassOk = bypassToken && bypassHeader && bypassHeader === bypassToken;
+
+      if (!bypassOk) {
+        if (!env.RATE_KV) {
+          return json({ error: "Server missing RATE_KV binding" }, 500, allowOrigin);
+        }
+
+        const nowMs = Date.now();
+        const hourBucket = Math.floor(nowMs / 3600000);
+        const key = `rl:${hourBucket}:${ip}`;
+
+        const nowSec = Math.floor(nowMs / 1000);
+        const ttl = 3600 - (nowSec % 3600);
+
+        const current = await env.RATE_KV.get(key);
+        const count = current ? (parseInt(current, 10) || 0) : 0;
+
+        if (count >= maxPerHour) {
+          return json(
+            { error: "Rate limit exceeded", detail: `Max ${maxPerHour} checks per hour per IP` },
+            429,
+            allowOrigin
+          );
+        }
+
+        await env.RATE_KV.put(key, String(count + 1), { expirationTtl: ttl });
+      }
+    }
+
+    // -------------------------
+    // Inputs
+    // -------------------------
+    const net = (url.searchParams.get("net") || "bsc").toLowerCase();
+    const address = (url.searchParams.get("address") || "").trim();
+
+    if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+      return json({ error: "Invalid address" }, 400, allowOrigin);
+    }
+
+    const MORALIS_API_KEY = (env.MORALIS_API_KEY || "").trim();
+    if (!MORALIS_API_KEY) {
+      return json({ error: "Server missing MORALIS_API_KEY" }, 500, allowOrigin);
+    }
+
+    const chain =
+      net === "bsc" ? "0x38" :
+      net === "eth" ? "0x1" :
+      net === "polygon" ? "0x89" :
+      "0x38";
+
+    const CACHE_KV = env.VERIFY_KV || env.RATE_KV || null;
+    const highRiskSpend = parseHighRiskList(env.HIGH_RISK_SPENDERS);
+
+    // explorer verify (optional)
+    const explorerKey = getExplorerKey(net, env);
+    const shouldVerify = !!explorerKey;
+    const verifyConc = Math.max(1, Math.min(6, Number(env.VERIFY_CONCURRENCY || "3")));
+
+    // -------------------------
+    // Moralis: get approvals
+    // -------------------------
+    try {
+      const moralisUrl =
+        `https://deep-index.moralis.io/api/v2.2/wallets/${address}/approvals?chain=${chain}`;
+
+      const r = await fetch(moralisUrl, {
+        headers: {
+          accept: "application/json",
+          "X-API-Key": MORALIS_API_KEY,
+        },
+      });
+
+      if (!r.ok) {
+        const txt = await r.text().catch(() => "");
+        return json(
+          { error: "Moralis request failed", status: r.status, body: txt.slice(0, 500) },
+          502,
+          allowOrigin
+        );
+      }
+
+      const raw = await r.json();
+
+      // Moralis formats may vary — normalize to array:
+      const items = extractArray(raw);
+
+      // Normalize
+      const rows = items.map((it) => normalizeApprovalRow(it));
+
+      // Verified enrichment (spender)
+      if (shouldVerify && rows.length) {
+        await mapWithConcurrency(rows, verifyConc, async (row) => {
+          row.verified = await getContractVerified(net, row.spender, explorerKey, CACHE_KV);
+          return row;
+        });
+      } else {
+        rows.forEach((row) => (row.verified = null));
+      }
+
+      // Flags + risk
+      for (const row of rows) {
+        const flags = [];
+
+        if (isInfiniteAllowance(row.allowance)) flags.push("infinite");
+        if (row.verified === false) flags.push("unverified_spender");
+        if (row.verified === true) flags.push("verified_spender");
+
+        if (row.spender && highRiskSpend.has(row.spender.toLowerCase())) {
+          flags.push("high_risk_spender");
+        }
+
+        row.flags = flags;                 // array
+        row.risk = riskFromFlags(flags);   // "Low/Medium/High"
+      }
+
+      const { score, riskLevel, tips } = computeWalletScoreAndTips(rows);
+
+      return json(
+        {
+          net,
+          address,
+          score,
+          riskLevel,
+          tips,
+          approvals: rows,
+        },
+        200,
+        allowOrigin
+      );
+    } catch (e) {
+      return json({ error: "Server error", detail: String(e?.message || e) }, 500, allowOrigin);
+    }
+  },
+};
+
+// ======================================================
+// Helpers
+// ======================================================
+
+function corsHeaders(allowOrigin) {
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, x-cx-bypass",
+    "Access-Control-Max-Age": "86400",
+  };
+}
+
+function json(obj, status, allowOrigin) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...corsHeaders(allowOrigin),
+      "cache-control": "no-store",
+    },
+  });
+}
+
+function extractArray(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.result)) return raw.result;
+  if (Array.isArray(raw?.approvals)) return raw.approvals;
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.items)) return raw.items;
+  return [];
+}
+
+// --- Parse HIGH_RISK_SPENDERS from ENV (CSV or JSON) ---
+function parseHighRiskList(v) {
+  const set = new Set();
+  const raw = (v || "").trim();
+  if (!raw) return set;
+
+  try {
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) {
+      for (const x of arr) if (typeof x === "string") set.add(x.toLowerCase());
+      return set;
+    }
+  } catch {}
+
+  raw.split(",").map(s => s.trim()).filter(Boolean).forEach((x) => set.add(x.toLowerCase()));
+  return set;
+}
+
+// ---------- Normalization ----------
+function normalizeApprovalRow(it) {
+  // Token address can be flat or nested
+  const token = pickAddr(
+    it?.token,
+    it?.token_address,
+    it?.tokenAddress,
+    it?.contract_address,
+    it?.contractAddress,
+    it?.token?.address,
+    it?.token?.contract_address,
+    it?.asset?.address
+  );
+
+  const spender = pickAddr(
+    it?.spender,
+    it?.spender_address,
+    it?.spenderAddress,
+    it?.operator,
+    it?.spender?.address
+  );
+
+  // Symbol/name can be flat or nested
+  const symbol =
+    it?.symbol ||
+    it?.token_symbol ||
+    it?.tokenSymbol ||
+    it?.token?.symbol ||
+    it?.token?.token_symbol ||
+    it?.token?.ticker ||
+    it?.token_name ||
+    it?.token?.name ||
+    "—";
+
+  // Allowance/value can be in multiple keys
+  const allowanceRaw =
+    it?.allowance ??
+    it?.value ??
+    it?.amount ??
+    it?.approved_amount ??
+    it?.approvedAmount ??
+    it?.approval ??
+    it?.approved ??
+    "0";
+
+  const allowance = normalizeAllowance(allowanceRaw);
+
+  // timestamp
+  const lastUpdated =
+    it?.lastUpdated ||
+    it?.updatedAt ||
+    it?.block_timestamp ||
+    it?.transaction_timestamp ||
+    it?.timestamp ||
+    it?.blockTimestamp ||
+    "—";
+
+  return {
+    token: token || "",
+    spender: spender || "",
+    symbol: symbol || "—",
+    allowance,          // string; can be "infinite" / big number
+    verified: null,     // true/false/null
+    lastUpdated,
+    flags: [],
+    risk: "—",
+  };
+}
+
+function pickAddr(...cands) {
+  for (const c of cands) {
+    if (typeof c === "string" && /^0x[a-fA-F0-9]{40}$/.test(c)) return c;
+  }
+  return "";
+}
+
+function normalizeAllowance(v) {
+  if (v === null || v === undefined) return "0";
+  if (typeof v === "bigint") return v.toString();
+
+  const s = String(v).trim();
+  if (!s) return "0";
+
+  // MAX_UINT256 as decimal
+  if (s === "115792089237316195423570985008687907853269984665640564039457584007913129639935") {
+    return "infinite";
+  }
+
+  // hex max-like
+  if (/^0x[fF]{20,}$/.test(s)) return "infinite";
+  if (s.toLowerCase().includes("inf") || s === "∞") return "infinite";
+
+  if (/^\d+$/.test(s)) return s;
+
+  if (/^0x[0-9a-fA-F]+$/.test(s)) {
+    try { return BigInt(s).toString(); } catch { return "0"; }
+  }
+
+  return s;
+}
+
+function isInfiniteAllowance(allowance) {
+  const s = String(allowance || "").toLowerCase();
+  return s === "infinite" || s === "∞" || s.includes("inf");
+}
+
+// ---------- Scoring ----------
+function riskFromFlags(flags) {
+  const f = new Set((flags || []).map(x => String(x).toLowerCase()));
+  if (f.has("high_risk_spender")) return "High";
+  if (f.has("unverified_spender")) return "Medium";
+  if (f.has("infinite")) return "Medium";
+  return "Low";
+}
+
+function computeWalletScoreAndTips(rows) {
+  let score = 100;
+
+  const infinite = rows.filter(r => isInfiniteAllowance(r.allowance)).length;
+  const unverified = rows.filter(r => r.verified === false).length;
+  const highRisk = rows.filter(r => (r.flags || []).includes("high_risk_spender")).length;
+  const total = rows.length;
+
+  score -= infinite * 10;
+  score -= unverified * 12;
+  score -= highRisk * 20;
+  if (total >= 20) score -= 10;
+
+  score = Math.max(0, Math.min(100, score));
+  const riskLevel = score >= 80 ? "Low" : score >= 50 ? "Medium" : "High";
+
+  const tips = [];
+  if (highRisk) tips.push(`Revoke approvals to high-risk spenders first (${highRisk}).`);
+  if (infinite) tips.push(`Consider revoking “infinite” approvals you don’t fully trust (${infinite}).`);
+  if (unverified) tips.push(`Review unverified spender contracts before keeping approvals (${unverified}).`);
+  if (total >= 20) tips.push("You have many active approvals. Reducing them lowers attack surface.");
+  if (!tips.length) tips.push("No major red flags detected. Keep monitoring regularly.");
+
+  return { score, riskLevel, tips };
+}
+
+// ---------- Explorer verification ----------
+function getExplorerKey(net, env) {
+  if (net === "bsc") return (env.BSCSCAN_KEY || "").trim();
+  if (net === "eth") return (env.ETHERSCAN_KEY || "").trim();
+  if (net === "polygon") return (env.POLYGONSCAN_KEY || "").trim();
+  return "";
+}
+
+function explorerApiBase(net) {
+  if (net === "bsc") return "https://api.bscscan.com/api";
+  if (net === "eth") return "https://api.etherscan.io/api";
+  if (net === "polygon") return "https://api.polygonscan.com/api";
+  return "";
+}
+
+async function getContractVerified(net, contractAddr, apiKey, KV) {
+  if (!contractAddr) return null;
+  const addr = contractAddr.toLowerCase();
+  const ck = `ver:${net}:${addr}`;
+
+  if (KV) {
+    const cached = await KV.get(ck);
+    if (cached === "1") return true;
+    if (cached === "0") return false;
+  }
+
+  const base = explorerApiBase(net);
+  if (!base || !apiKey) return null;
+
+  const u = new URL(base);
+  u.searchParams.set("module", "contract");
+  u.searchParams.set("action", "getsourcecode");
+  u.searchParams.set("address", contractAddr);
+  u.searchParams.set("apikey", apiKey);
+
+  try {
+    const r = await fetch(u.toString(), { headers: { accept: "application/json" } });
+    if (!r.ok) return null;
+
+    const j = await r.json().catch(() => null);
+    const row = Array.isArray(j?.result) ? j.result[0] : null;
+    if (!row) return null;
+
+    const abi = String(row?.ABI || "");
+    const isUnverified = abi.includes("Contract source code not verified") || abi === "[]";
+    const verified = !isUnverified;
+
+    if (KV) {
+      await KV.put(ck, verified ? "1" : "0", { expirationTtl: 7 * 24 * 3600 });
+    }
+    return verified;
+  } catch {
+    return null;
+  }
+}
+
+// ---------- Concurrency ----------
+async function mapWithConcurrency(arr, limit, fn) {
+  const out = new Array(arr.length);
+  let i = 0;
+
+  const workers = Array.from({ length: limit }, async () => {
+    while (i < arr.length) {
+      const idx = i++;
+      out[idx] = await fn(arr[idx], idx);
+    }
+  });
+
+  await Promise.all(workers);
+  for (let k = 0; k < arr.length; k++) arr[k] = out[k] || arr[k];
+}
