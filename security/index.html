@@ -4458,7 +4458,8 @@ if (!pool || pool === ZERO) {
     const net = netFromSelect("#qs-net");
     const tokenRaw = ($("#qs-token")?.value || "").trim();
     const requireLiq = !!$("#qs-require-liq")?.checked;
-    const useApis = !!$("#api-use")?.checked;
+    const useApis = !!($("#api-use")?.checked) || !!($("#api-unified")?.value || "").trim();
+    //const useApis = !!$("#api-use")?.checked;//
 
     if (!tokenRaw || !qsIsAddr(tokenRaw)) {
       setStatus(st, "warn", "Please paste a valid token address.");
@@ -4584,9 +4585,15 @@ if (!pool || pool === ZERO) {
 let verified = null;
 
 if (useApis) {
-  const k = qsExplorerKeyFor(net);
-  const apiKey = k.key;
-  const isUnified = k.isUnified;
+  const uiKey = ($("#api-unified")?.value || "").trim();
+let apiKey = uiKey;
+let isUnified = !!uiKey;
+
+if (!apiKey) {
+  const k = qsExplorerKeyFor(net);   
+  apiKey = k.key;
+  isUnified = k.isUnified;
+}
 
 
   // A) try existing helper first (if present)
