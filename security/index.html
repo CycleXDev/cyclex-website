@@ -1572,8 +1572,6 @@ a.tool-card[data-tool="approvals"]::after{
                 Tip: open with <span class="mono">?tool=quick&net=bsc&token=0x...</span> to auto-run (rate-limited).
               </div>
             </div>
-                    <div id="qs-liq-tablewrap"></div>
-
 
             <div class="field">
               <div class="label" data-i18n="options_label">Options</div>
@@ -3922,21 +3920,21 @@ window.CX.getReadProvider = getReadProvider;
     function safeLower(x){ return String(x || "").toLowerCase(); }
 
 // =========================
-// Quick Scan (client-only) ✅ SAFE + minimal impact
+// Quick Scan (client-only) ✅ FIXED: no collisions, no TDZ, clean table
 // =========================
 (function () {
   "use strict";
 
   // ✅ Unique LS keys (avoid collisions with other features)
-  const QS_LS_CACHE    = "cx_sec_qs_cache_safe_v3";
-  const QS_LS_HISTORY  = "cx_sec_qs_history_safe_v3";
+  const QS_LS_CACHE    = "cx_sec_qs_cache_safe_v6";
+  const QS_LS_HISTORY  = "cx_sec_qs_history_safe_v6";
   const QS_LS_API_KEYS = "cx_sec_explorer_keys"; // {use,bscscan,etherscan} if exists
 
   // EIP-1967 implementation slot
   const EIP1967_IMPL_SLOT =
     "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 
-  // Minimal ABIs
+  // Minimal ABIs (self-contained — does NOT depend on Liquidity Scan script)
   const ERC20_MIN_ABI = [
     "function name() view returns (string)",
     "function symbol() view returns (string)",
@@ -3945,6 +3943,21 @@ window.CX.getReadProvider = getReadProvider;
   ];
   const OWNER_ABI = ["function owner() view returns (address)"];
   const PAUSABLE_ABI = ["function paused() view returns (bool)"];
+
+  // V2/V3 minimal ABIs for the small liquidity table
+  const QS_V2_FACTORY_ABI = ["function getPair(address,address) view returns (address)"];
+  const QS_V2_PAIR_ABI = [
+    "function token0() view returns (address)",
+    "function token1() view returns (address)",
+    "function getReserves() view returns (uint112,uint112,uint32)"
+  ];
+  const QS_V3_FACTORY_ABI = ["function getPool(address,address,uint24) view returns (address)"];
+  const QS_V3_POOL_ABI = [
+    "function token0() view returns (address)",
+    "function token1() view returns (address)",
+    "function liquidity() view returns (uint128)",
+    "function slot0() view returns (uint160,int24,uint16,uint16,uint16,uint8,bool)"
+  ];
 
   // PUSH4 selector scan (bytecode heuristic)
   const SEL = {
@@ -3960,6 +3973,26 @@ window.CX.getReadProvider = getReadProvider;
     "0x0000000000000000000000000000000000000000",
     "0x000000000000000000000000000000000000dead"
   ]);
+
+  // QuickScan DEX targets (single “main” DEX for the compact table)
+  const QS_NET = {
+    bsc: {
+      name: "BSC (BNB Chain)",
+      wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
+      usdt:    "0x55d398326f99059fF775485246999027B3197955", // USDT (BSC)
+      v2Factory: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73", // Pancake V2
+      v3Factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865", // Pancake V3
+      addressUrl: (a)=> `https://bscscan.com/address/${a}`
+    },
+    eth: {
+      name: "Ethereum",
+      wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
+      usdt:    "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT (ETH)
+      v2Factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", // Uniswap V2
+      v3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984", // Uniswap V3
+      addressUrl: (a)=> `https://etherscan.io/address/${a}`
+    }
+  };
 
   // -------------------------
   // Tiny safe helpers (local)
@@ -3997,7 +4030,6 @@ window.CX.getReadProvider = getReadProvider;
     return s.length > 12 ? (s.slice(0, 6) + "…" + s.slice(-4)) : s;
   }
 
-  // number formatting (safe)
   function qsFmtNum(x, digits = 2){
     const n = Number(x);
     if (!Number.isFinite(n)) return "—";
@@ -4046,7 +4078,7 @@ window.CX.getReadProvider = getReadProvider;
     return u.toString();
   }
 
-  // ✅ safe explorer key read (won't crash if structure differs)
+  // ✅ safe explorer key read
   function qsExplorerKeyFor(net){
     try{
       if (typeof explorerKeyFor === "function") return String(explorerKeyFor(net) || "");
@@ -4062,7 +4094,7 @@ window.CX.getReadProvider = getReadProvider;
     } catch { return ""; }
   }
 
-  // Chip UI (matches your screenshot style)
+  // Chip UI
   function qsMiniChip(type, title, value){
     const map = { ok:"ok", warn:"warn", bad:"bad", info:"warn" };
     const cls = map[type] || "warn";
@@ -4115,11 +4147,10 @@ window.CX.getReadProvider = getReadProvider;
   }
 
   // =========================
-  // Liquidity table (EXACT look like your screenshot)
-  // Uses your "liqCheckBasic" logic (reserves/balances text)
+  // Compact Liquidity table (ONLY QuickScan)
+  // - shows ONLY existing pairs/pools (reduces rows)
+  // - does NOT touch Liquidity Scan panel
   // =========================
-
-  // meta ABI for balances formatting (internal + cached)
   const QS_ERC20_META_ABI = [
     "function decimals() view returns (uint8)",
     "function symbol() view returns (string)",
@@ -4130,7 +4161,6 @@ window.CX.getReadProvider = getReadProvider;
   function _qsToBI(x){
     try { return (typeof x === "bigint") ? x : BigInt(x); } catch { return 0n; }
   }
-
   async function _qsGetErc20Meta(addr, provider){
     const key = String(addr || "").toLowerCase();
     if (_qsErc20MetaCache.has(key)) return _qsErc20MetaCache.get(key);
@@ -4194,156 +4224,163 @@ window.CX.getReadProvider = getReadProvider;
     }
   }
 
-  async function liqCheckBasic(net, token, provider) {
-    const chain = CHAINS?.[net];
-    const dex = DEX?.[net];
+  async function qsLiqCheckBasic(net, token, provider) {
+    const cfg = QS_NET?.[net];
+    if (!cfg || !provider) return { any:false, hint:"none", rows:[] };
+
     const rows = [];
     let any = false;
+    const ZERO = "0x0000000000000000000000000000000000000000";
 
-    if (!chain || !dex || !provider) {
-      return { any: false, hint: "none", rows: [] };
-    }
-    if (typeof V2_FACTORY_ABI === "undefined" || typeof V2_PAIR_ABI === "undefined" ||
-        typeof V3_FACTORY_ABI === "undefined" || typeof V3_POOL_ABI === "undefined") {
-      return { any: false, hint: "none", rows: [] };
-    }
+    const targets = [
+      { label: "Wrapped", addr: cfg.wrapped },
+      { label: "USDT", addr: cfg.usdt }
+    ];
 
-    const ZERO_ADDR = (typeof ZERO !== "undefined") ? ZERO : "0x0000000000000000000000000000000000000000";
-
-    // ---------- V2: RESERVES ----------
+    // ---------- V2 ----------
     try {
-      const fac = new E.Contract(dex.v2Factory, V2_FACTORY_ABI, provider);
-      const targets = [
-        { label: "Wrapped", addr: chain.wrapped },
-        { label: "USDT", addr: chain.usdt }
-      ];
+      const fac = new E.Contract(cfg.v2Factory, QS_V2_FACTORY_ABI, provider);
+      for (const t of targets) {
+        const pair = await fac.getPair(token, t.addr).catch(()=> ZERO);
+if (!pair || pair === ZERO) {
+  rows.push({
+    type: "V2",
+    target: t.label,
+    addr: "—",
+    ok: false,
+    note: "pair not found"
+  });
+  continue;
+}
+
+
+        const p = new E.Contract(pair, QS_V2_PAIR_ABI, provider);
+
+        let token0 = token, token1 = t.addr;
+        try { token0 = await p.token0(); } catch {}
+        try { token1 = await p.token1(); } catch {}
+
+        const [r0Raw, r1Raw] = await p.getReserves().catch(()=> [0n,0n,0n]);
+        const r0 = _qsToBI(r0Raw), r1 = _qsToBI(r1Raw);
+
+        const m0 = await _qsGetErc20Meta(token0, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token0)}));
+        const m1 = await _qsGetErc20Meta(token1, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token1)}));
+
+        const ok = (r0 > 0n || r1 > 0n);
+        any = any || ok;
+
+        const a0 = _qsFmtUnits(r0, m0.decimals, 2);
+        const a1 = _qsFmtUnits(r1, m1.decimals, 2);
+
+        rows.push({
+          type: "V2",
+          target: t.label,
+          addr: pair,
+          ok,
+          note: ok ? `reserves: ${a0} ${m0.symbol} / ${a1} ${m1.symbol}` : "reserves: 0"
+        });
+      }
+    } catch {
+      // ignore (don’t spam rows)
+    }
+
+    // ---------- V3 ----------
+    try {
+      const fac3 = new E.Contract(cfg.v3Factory, QS_V3_FACTORY_ABI, provider);
+      const feeTiers = [500, 3000, 10000];
 
       for (const t of targets) {
-        const pair = await fac.getPair(token, t.addr);
+        for (const fee of feeTiers) {
+          const pool = await fac3.getPool(token, t.addr, fee).catch(()=> ZERO);
+if (!pool || pool === ZERO) {
+  rows.push({
+    type: `V3 ${fee}`,
+    target: t.label,
+    addr: "—",
+    ok: false,
+    note: "pool not found"
+  });
+  continue;
+}
 
-        if (pair && pair !== ZERO_ADDR) {
-          const p = new E.Contract(pair, V2_PAIR_ABI, provider);
+
+          const p = new E.Contract(pool, QS_V3_POOL_ABI, provider);
 
           let token0 = token, token1 = t.addr;
           try { token0 = await p.token0(); } catch {}
           try { token1 = await p.token1(); } catch {}
 
-          const [r0Raw, r1Raw] = await p.getReserves();
-          const r0 = _qsToBI(r0Raw), r1 = _qsToBI(r1Raw);
+          const m0 = await _qsGetErc20Meta(token0, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token0)}));
+          const m1 = await _qsGetErc20Meta(token1, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token1)}));
 
-          const m0 = await _qsGetErc20Meta(token0, provider).catch(() => ({ decimals: 18, symbol: qsShortAddr(token0) }));
-          const m1 = await _qsGetErc20Meta(token1, provider).catch(() => ({ decimals: 18, symbol: qsShortAddr(token1) }));
+          const c0 = new E.Contract(token0, QS_ERC20_META_ABI, provider);
+          const c1 = new E.Contract(token1, QS_ERC20_META_ABI, provider);
 
-          const ok = (r0 > 0n || r1 > 0n);
+          let b0 = 0n, b1 = 0n;
+          try { b0 = _qsToBI(await c0.balanceOf(pool)); } catch {}
+          try { b1 = _qsToBI(await c1.balanceOf(pool)); } catch {}
+
+          let liq = 0n;
+          try { liq = _qsToBI(await p.liquidity()); } catch {}
+
+          const ok = (b0 > 0n || b1 > 0n || liq > 0n);
           any = any || ok;
 
-          const a0 = _qsFmtUnits(r0, m0.decimals, 2);
-          const a1 = _qsFmtUnits(r1, m1.decimals, 2);
+          const fb0 = _qsFmtUnits(b0, m0.decimals, 2);
+          const fb1 = _qsFmtUnits(b1, m1.decimals, 2);
 
           rows.push({
-            type: "V2",
+            type: `V3 ${fee}`,
             target: t.label,
-            addr: pair,
+            addr: pool,
             ok,
-            note: ok
-              ? `reserves: ${a0} ${m0.symbol} / ${a1} ${m1.symbol}`
-              : "empty"
+            note: ok ? `balances: ${fb0} ${m0.symbol} / ${fb1} ${m1.symbol}` : "balances: 0"
           });
-        } else {
-          rows.push({ type: "V2", target: t.label, addr: "", ok: false, note: "no pair" });
         }
       }
     } catch {
-      rows.push({ type: "V2", target: "Wrapped/USDT", addr: "", ok: false, note: "factory call failed" });
+      // ignore
     }
 
-    // ---------- V3: BALANCES ----------
-    try {
-      const fac3 = new E.Contract(dex.v3Factory, V3_FACTORY_ABI, provider);
-      const feeTiers = [500, 3000, 10000];
-      const targets = [
-        { label: "Wrapped", addr: chain.wrapped },
-        { label: "USDT", addr: chain.usdt }
-      ];
-
-      for (const t of targets) {
-        for (const fee of feeTiers) {
-          const pool = await fac3.getPool(token, t.addr, fee);
-
-          if (pool && pool !== ZERO_ADDR) {
-            const p = new E.Contract(pool, V3_POOL_ABI, provider);
-
-            let token0 = token, token1 = t.addr;
-            try { token0 = await p.token0(); } catch {}
-            try { token1 = await p.token1(); } catch {}
-
-            const m0 = await _qsGetErc20Meta(token0, provider).catch(() => ({ decimals: 18, symbol: qsShortAddr(token0) }));
-            const m1 = await _qsGetErc20Meta(token1, provider).catch(() => ({ decimals: 18, symbol: qsShortAddr(token1) }));
-
-            const c0 = new E.Contract(token0, QS_ERC20_META_ABI, provider);
-            const c1 = new E.Contract(token1, QS_ERC20_META_ABI, provider);
-
-            let b0 = 0n, b1 = 0n;
-            try { b0 = _qsToBI(await c0.balanceOf(pool)); } catch {}
-            try { b1 = _qsToBI(await c1.balanceOf(pool)); } catch {}
-
-            let liq = 0n;
-            try { liq = _qsToBI(await p.liquidity()); } catch {}
-
-            const ok = (b0 > 0n || b1 > 0n || liq > 0n);
-            any = any || ok;
-
-            const fb0 = _qsFmtUnits(b0, m0.decimals, 2);
-            const fb1 = _qsFmtUnits(b1, m1.decimals, 2);
-
-            rows.push({
-              type: `V3 ${fee}`,
-              target: t.label,
-              addr: pool,
-              ok,
-              note: ok
-                ? `balances: ${fb0} ${m0.symbol} / ${fb1} ${m1.symbol} · V3 active`
-                : "0"
-            });
-          }
-        }
-      }
-    } catch {
-      rows.push({ type: "V3", target: "Wrapped/USDT", addr: "", ok: false, note: "factory call failed" });
-    }
-
-    const hint = any ? "V2/V3 pairs exist" : "none";
-    return { any, hint, rows };
+    return { any, hint: any ? "V2/V3 pairs exist" : "none", rows };
   }
 
   function qsRenderLiquidityTable(container, liqRes){
     if (!container) return;
 
     const rows = (liqRes?.rows || []);
-    const html = `
-      <div class="table">
+    const body = rows.length ? rows.map(r => `
+      <div class="trow ${r.ok ? "highlight" : ""}">
+        <div class="cell wrap"><span class="mono">${r.addr ? qsEscapeHtml(qsShortAddr(r.addr)) : "—"}</span></div>
+        <div class="cell">${qsEscapeHtml(r.type)}</div>
+        <div class="cell">${qsEscapeHtml(r.target)}</div>
+        <div class="cell">${r.ok ? "✅" : "—"} ${qsEscapeHtml(r.note || "")}</div>
+      </div>
+    `).join("") : `
+      <div class="trow">
+        <div class="cell muted">—</div>
+        <div class="cell muted">—</div>
+        <div class="cell muted">—</div>
+        <div class="cell muted">No pairs/pools detected</div>
+      </div>
+    `;
+
+    container.innerHTML = `
+      <div id="qsLiqTable" class="table">
         <div class="trow head">
           <div class="cell">PAIR/POOL</div>
           <div class="cell">TYPE</div>
           <div class="cell">TARGET</div>
           <div class="cell">RESULT</div>
         </div>
-        ${rows.map(r => `
-          <div class="trow ${r.ok ? "highlight" : ""}">
-            <div class="cell wrap"><span class="mono">${r.addr ? qsEscapeHtml(qsShortAddr(r.addr)) : "—"}</span></div>
-            <div class="cell">${qsEscapeHtml(r.type)}</div>
-            <div class="cell">${qsEscapeHtml(r.target)}</div>
-            <div class="cell">${r.ok ? "✅" : "—"} ${qsEscapeHtml(r.note || "")}</div>
-          </div>
-        `).join("")}
+        ${body}
       </div>
     `;
-    container.innerHTML = html;
   }
 
   function qsBuildMarkdownReport(rep){
     const lines = [];
-    lines.push(`## Quick Scan — ${rep.chain?.name || rep.net}`);
+    lines.push(`## Quick Scan — ${rep.chainName || rep.net}`);
     lines.push(`Token: \`${rep.token}\``);
     lines.push(`Explorer: ${rep.explorer}`);
     lines.push(`Score: **${rep.score}/100** (${rep.overallText})`);
@@ -4361,15 +4398,15 @@ window.CX.getReadProvider = getReadProvider;
   }
 
   function qsBuildXText(rep){
-    const base = `Quick Scan (${rep.chain?.name || rep.net})\nToken: ${qsShortAddr(rep.token)}\nScore: ${rep.score}/100 (${rep.overallText})\n`;
+    const base = `Quick Scan (${rep.chainName || rep.net})\nToken: ${qsShortAddr(rep.token)}\nScore: ${rep.score}/100 (${rep.overallText})\n`;
     return `${base}${rep.shareLink || ""}`.trim();
   }
 
   async function runQuickScan(){
     const st = $("#qs-status");
     const out = $("#qs-out");
-    const chipsWrap = $("#qs-risk");      // mini chips container
-    const pairsWrap = $("#qs-pairsWrap"); // ✅ THIS will be the liquidity table (right, under chips)
+    const chipsWrap = $("#qs-risk");
+    const pairsWrap = $("#qs-pairsWrap");
 
     clearStatus(st);
 
@@ -4384,7 +4421,6 @@ window.CX.getReadProvider = getReadProvider;
     }
     const token = qsNormAddr(tokenRaw);
 
-    // basic deps check (avoid crashing other cubes)
     if (typeof E === "undefined" || !E?.Contract) {
       setStatus(st, "bad", "Ethers not loaded.");
       return;
@@ -4399,28 +4435,36 @@ window.CX.getReadProvider = getReadProvider;
     const cache = loadQsCache();
     const ckey = qsCacheKey(net, token, requireLiq, useApis);
     const cached = cache?.[ckey];
+
+    // ✅ Render is SAFE now (no TDZ vars)
     if (cached?.rep && cached?.ts && (qsNowTs() - cached.ts) < 600) {
       setStatus(st, "ok", "Loaded cached result (≤10 min).");
       render(cached.rep);
       return;
     }
 
-    const chain = CHAINS?.[net];
+    const cfg = QS_NET?.[net];
+    const read = getReadProvider(net);
+    if (!cfg || !read) {
+      setStatus(st, "bad", "No network config / RPC available.");
+      return;
+    }
+
     const rep = {
       ts: qsNowTs(),
       net,
-      chain,
+      chainName: cfg.name,
       token,
-      explorer: (chain?.addressUrl ? chain.addressUrl(token) : ""),
+      explorer: cfg.addressUrl(token),
       shareLink: qsBuildShareLink(net, token),
       disclaimer: "Informational checks only. Not an audit. No safety guarantee.",
       score: 0,
       overallText: "Unknown",
       meta: {},
-      liq: null,
+      liq: { any:false, hint:"none", rows:[] },
       mini: [],
       redFlags: [],
-      json: "" // for copy
+      json: ""
     };
 
     // 1) Bytecode exists
@@ -4430,8 +4474,7 @@ window.CX.getReadProvider = getReadProvider;
         const codeRes = await getCodeSafe(net, token);
         code = codeRes?.code || "0x";
       } else {
-        const rp = getReadProvider(net);
-        code = rp ? await rp.getCode(token) : "0x";
+        code = await read.getCode(token);
       }
     } catch {}
 
@@ -4451,32 +4494,27 @@ window.CX.getReadProvider = getReadProvider;
 
     // 2) ERC-20 basics
     let name = "", symbol = "", decimals = 18, totalSupply = 0n;
-    const read = getReadProvider(net);
-    if (read) {
-      try {
-        const c = new E.Contract(token, ERC20_MIN_ABI, read);
-        const r = await Promise.all([
-          c.name().catch(()=> ""),
-          c.symbol().catch(()=> ""),
-          c.decimals().catch(()=> 18),
-          c.totalSupply().catch(()=> 0n)
-        ]);
-        name = String(r[0] || "");
-        symbol = String(r[1] || "");
-        decimals = Number(r[2] ?? 18);
-        totalSupply = BigInt(r[3] ?? 0n);
-        rep.meta = { name, symbol, decimals, totalSupply: totalSupply.toString() };
-      } catch {}
-    }
-
-    // 3) Liquidity rows (your screenshot style)
-    let liqRes = { any:false, hint:"none", rows:[] };
     try {
-      liqRes = await liqCheckBasic(net, token, read);
+      const c = new E.Contract(token, ERC20_MIN_ABI, read);
+      const r = await Promise.all([
+        c.name().catch(()=> ""),
+        c.symbol().catch(()=> ""),
+        c.decimals().catch(()=> 18),
+        c.totalSupply().catch(()=> 0n)
+      ]);
+      name = String(r[0] || "");
+      symbol = String(r[1] || "");
+      decimals = Number(r[2] ?? 18);
+      totalSupply = BigInt(r[3] ?? 0n);
+      rep.meta = { name, symbol, decimals, totalSupply: totalSupply.toString() };
     } catch {}
-    rep.liq = liqRes;
 
-    // 4) Proxy (EIP-1967 + explorer optional)
+    // 3) Liquidity rows (compact table)
+    try {
+      rep.liq = await qsLiqCheckBasic(net, token, read);
+    } catch {}
+
+    // 4) Proxy
     let impl = await tryEip1967Impl(net, token);
     let isProxy = !!impl;
 
@@ -4485,8 +4523,8 @@ window.CX.getReadProvider = getReadProvider;
     const ownerIsRenounced = owner && DEAD_ADDRESSES.has(qsLower(owner));
     const ownerShown = owner ? qsShortAddr(owner) : "No/Unknown";
 
-    // 6) Pause (INFO only, NO score impact)
-    const pausedState = await tryReadPaused(net, token); // true/false/null
+    // 6) Pause (INFO)
+    const pausedState = await tryReadPaused(net, token);
     const pauseDetected =
       (pausedState !== null) ||
       anySelector(code, SEL.pause) ||
@@ -4494,12 +4532,12 @@ window.CX.getReadProvider = getReadProvider;
       anySelector(code, SEL.paused);
     const pauseText = pausedState === true ? "Detected (paused)" : pauseDetected ? "Detected" : "No/Unknown";
 
-    // 7) Mint (score impact)
+    // 7) Mint
     const mintDetected = anySelector(code, SEL.mint);
 
-    // 8) Verified (optional)
+    // 8) Verified (optional — depends on your existing explorerGetSource)
     let verified = null;
-    if (useApis) {
+    if (useApis && typeof explorerGetSource === "function") {
       const apiKey = qsExplorerKeyFor(net);
       try {
         const src = await explorerGetSource(net, token, apiKey);
@@ -4511,34 +4549,24 @@ window.CX.getReadProvider = getReadProvider;
       } catch {}
     }
 
-    // =========================
-    // Score model (fair + safe)
-    // - לא “מעניש” חזק על Unknown
-    // - משקל גבוה לליקווידיטי + מינט + פרוקסי
-    // =========================
-    let score = 75; // בסיס הגיוני
+    // Score model
+    let score = 75;
 
-    // Liquidity = major signal
-    if (liqRes?.any) score += 10;
+    if (rep.liq?.any) score += 10;
     else score -= (requireLiq ? 30 : 20);
 
-    // Mint = major risk
     if (mintDetected) score -= 22;
 
-    // Proxy = meaningful risk
     if (isProxy) score -= 12;
     else score += 3;
 
-    // Owner: renounced helps a bit, "set owner" small penalty, unknown tiny penalty
     if (!owner) score -= 3;
     else if (ownerIsRenounced) score += 5;
     else score -= 6;
 
-    // Verified: only affects if API enabled; unknown = no penalty
     if (verified === true) score += 8;
     if (verified === false) score -= 6;
 
-    // Missing ERC20 meta (symbol+name missing) small penalty
     if (!symbol && !name) score -= 5;
 
     score = qsClamp(score, 0, 100);
@@ -4552,30 +4580,22 @@ window.CX.getReadProvider = getReadProvider;
     rep.score = score;
     rep.overallText = overallText;
 
-    // Supply text (✅ goes into the main bubble)
-    const supplyTxt = (totalSupply && totalSupply > 0n)
-      ? qsFmtBig(totalSupply, decimals, 4)
-      : "—";
-
-    // Mini chips (exact set you asked; Supply REMOVED from chips)
     rep.mini = [
       { type: score >= 85 ? "ok" : score >= 70 ? "warn" : score >= 50 ? "warn" : "bad", title: "Overall", value: overallText },
       { type: verified === true ? "ok" : "warn", title: "Verified", value: verified === true ? "Yes" : "No/Unknown" },
       { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
       { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown },
-      { type: liqRes?.any ? "ok" : "warn", title: "Liquidity", value: liqRes?.any ? "V2/V3 pairs exist" : "No/Unknown" },
+      { type: rep.liq?.any ? "ok" : "warn", title: "Liquidity", value: rep.liq?.any ? "V2/V3 pairs exist" : "No/Unknown" },
       { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
       { type: pauseDetected ? "warn" : "ok", title: "Pause", value: pauseText }
     ];
 
-    // Red flags (minimal)
     if (mintDetected) rep.redFlags.push("Mint surface detected (supply risk).");
     if (isProxy) rep.redFlags.push("Proxy detected (upgrade risk).");
-    if (!liqRes?.any) rep.redFlags.push("No clear DEX liquidity signal detected.");
+    if (!rep.liq?.any) rep.redFlags.push("No clear DEX liquidity signal detected.");
 
     rep.json = safeJson(rep);
 
-    // Cache + history
     cache[ckey] = { ts: qsNowTs(), rep };
     saveQsCache(cache);
     addQsHistory(net, token);
@@ -4583,14 +4603,17 @@ window.CX.getReadProvider = getReadProvider;
     setStatus(st, score >= 70 ? "ok" : score >= 50 ? "warn" : "bad", `Done. Score: <b>${score}/100</b> (${overallText}).`);
     render(rep);
 
-    // -------------------------
-    // Render (NO JSON on screen)
-    // Supply inside bubble ✅
-    // Liquidity table under chips ✅
-    // -------------------------
     function render(rep){
       const sym = rep.meta?.symbol || "Token";
       const nm = rep.meta?.name ? ` — ${rep.meta.name}` : "";
+
+      // ✅ compute supply inside render (no TDZ, safe for cached rep)
+      let supplyTxt = "—";
+      try {
+        const ts = rep?.meta?.totalSupply;
+        const dec = Number(rep?.meta?.decimals ?? 18);
+        if (ts != null) supplyTxt = qsFmtBig(BigInt(ts), dec, 4);
+      } catch {}
 
       out.className = "status info";
       out.style.display = "block";
@@ -4599,7 +4622,7 @@ window.CX.getReadProvider = getReadProvider;
           ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}
         </div>
         <div class="small" style="margin-top:6px;">
-          Network: <b>${qsEscapeHtml(rep.chain?.name || rep.net)}</b> • Score: <b>${rep.score}/100</b> (${qsEscapeHtml(rep.overallText)})
+          Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b> • Score: <b>${rep.score}/100</b> (${qsEscapeHtml(rep.overallText)})
         </div>
         <div class="small" style="margin-top:8px;">
           Token: <span class="mono">${qsEscapeHtml(rep.token)}</span>
@@ -4612,12 +4635,10 @@ window.CX.getReadProvider = getReadProvider;
         </div>
       `;
 
-      // mini chips
       if (chipsWrap){
         chipsWrap.innerHTML = (rep.mini || []).map(x => qsMiniChip(x.type, x.title, x.value)).join("");
       }
 
-      // liquidity table (right, under chips)
       if (pairsWrap){
         qsRenderLiquidityTable(pairsWrap, rep.liq);
       }
@@ -4625,9 +4646,8 @@ window.CX.getReadProvider = getReadProvider;
   }
 
   function initQuickScanUi(){
-    // ✅ prevent double-binding
-    if (window.__cx_qs_bound_v3) return;
-    window.__cx_qs_bound_v3 = true;
+    if (window.__cx_qs_bound_v6) return;
+    window.__cx_qs_bound_v6 = true;
 
     $("#qs-run")?.addEventListener("click", () => {
       runQuickScan();
@@ -4644,7 +4664,6 @@ window.CX.getReadProvider = getReadProvider;
       try { gtagEvent("sec_qs_copy_link"); } catch {}
     });
 
-    // ✅ Copy JSON WITHOUT showing it on screen
     $("#qs-copy-json")?.addEventListener("click", async () => {
       const cache = loadQsCache();
       const net = netFromSelect("#qs-net");
@@ -4736,15 +4755,16 @@ window.CX.getReadProvider = getReadProvider;
     });
   }
 
-  // ✅ expose in a safe namespace + keep compatibility with old boot calls
-  window.CX_QS_V5 = window.CX_QS_V5 || {};
-  window.CX_QS_V5.initQuickScanUi = initQuickScanUi;
-  window.CX_QS_V5.runQuickScan = runQuickScan;
+  // expose safely
+  window.CX_QS_V6 = window.CX_QS_V6 || {};
+  window.CX_QS_V6.initQuickScanUi = initQuickScanUi;
+  window.CX_QS_V6.runQuickScan = runQuickScan;
 
-  // keep plain global name if boot() calls it directly
+  // keep compatibility
   window.initQuickScanUi = initQuickScanUi;
 
 })();
+
 
 
  // =========================
