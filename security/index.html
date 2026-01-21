@@ -1593,7 +1593,7 @@ a.tool-card[data-tool="approvals"]::after{
 
               <div class="row" style="margin-top:10px">
                 <input id="api-bscscan" class="mono" placeholder="BscScan API key (stored locally)" data-i18n-placeholder="ph_bscscan_key" />
-                <input id="api-unified" type="password" placeholder="Unified API key (V2) — stored locally">
+                <input id="api-unified" type="text" placeholder="Unified API key (V2) — stored locally">
                 <input id="api-etherscan" class="mono" placeholder="Etherscan API key (stored locally)" data-i18n-placeholder="ph_etherscan_key" />
               </div>
 
@@ -4084,45 +4084,45 @@ window.CX.getReadProvider = getReadProvider;
 
   // ✅ safe explorer key read
   function qsExplorerKeyFor(net){
-    try{
-  if (typeof explorerKeyFor === "function") {
-    const k = String(explorerKeyFor(net) || "").trim();
-    if (k) return k;
-  }
-} catch {}
+  try{
+    if (typeof explorerKeyFor === "function") {
+      const k = String(explorerKeyFor(net) || "").trim();
+      return { key: k, isUnified: false };
+    }
+  } catch {}
 
-      try{
+  try{
     const raw = localStorage.getItem(QS_LS_API_KEYS) || "";
-    if (!raw) return "";
+    if (!raw) return { key: "", isUnified: false };
+
     const o = JSON.parse(raw);
+    if (o && typeof o.use === "boolean" && o.use === false) return { key: "", isUnified: false };
 
-    // אם המשתמש כיבה שימוש במפתחות
-    if (o && typeof o.use === "boolean" && o.use === false) return "";
-
-    // ✅ Unified V2 key (עדיפות ראשונה)
+    // ✅ Unified V2 key has priority (one key for both nets)
     const unified = String(o?.unified || "").trim();
-    if (unified) return unified;
+    if (unified) return { key: unified, isUnified: true };
 
-    // V1 keys (לפי רשת)
-    if (net === "bsc") return String(o?.bscscan || "").trim();
-    if (net === "eth") return String(o?.etherscan || "").trim();
-    return "";
-  } catch { 
-    return ""; 
+    // V1 keys (per network)
+    if (net === "bsc") return { key: String(o?.bscscan || "").trim(), isUnified: false };
+    if (net === "eth") return { key: String(o?.etherscan || "").trim(), isUnified: false };
+    return { key: "", isUnified: false };
+  } catch {
+    return { key: "", isUnified: false };
   }
-
-  function qsExplorerApiBase(net){
-  if (net === "bsc") return "https://api.bscscan.com/api";
-  if (net === "eth") return "https://api.etherscan.io/api";
-  return "";
 }
+
 
 // direct call fallback
 async function qsExplorerGetSourceDirect(net, addr, apiKey){
   const base = qsExplorerApiBase(net);
   if (!base) return { ok:false };
 
-  const u = new URL(base);
+  const V2_BASE = "https://api.etherscan.io/v2/api";
+  const chainId = (net === "bsc") ? 56 : 1; // bsc=56, eth=1
+
+  const u = new URL(isUnified ? V2_BASE : explorerApiBase(net));
+  if (isUnified) u.searchParams.set("chainid", String(chainId));
+
   u.searchParams.set("module", "contract");
   u.searchParams.set("action", "getsourcecode");
   u.searchParams.set("address", addr);
@@ -4619,12 +4619,15 @@ if (!pool || pool === ZERO) {
 let verified = null;
 
 if (useApis) {
-  const apiKey = qsExplorerKeyFor(net);
+  const k = qsExplorerKeyFor(net);
+  const apiKey = k.key;
+  const isUnified = k.isUnified;
+
 
   // A) try existing helper first (if present)
   if (typeof explorerGetSource === "function") {
     try {
-      const src = await explorerGetSource(net, token, apiKey);
+      const src = await explorerGetSource(net, token, apiKey, isUnified);
       if (src?.ok) {
         verified = (src.verified === true) ? true : (src.verified === false) ? false : null;
         if (!isProxy && src.isProxy) isProxy = true;
