@@ -4091,24 +4091,24 @@ window.CX.getReadProvider = getReadProvider;
   }
 } catch {}
 
-    try{
-      const raw = localStorage.getItem(QS_LS_API_KEYS) || "";
-      if (!raw) return "";
-      const o = JSON.parse(raw);
-      if (o && typeof o.use === "boolean" && o.use === false) return "";
-      // ✅ unified key (V2): works for both nets if provided
-      const unified = String(o?.unified || "").trim();
-      if (unified) return unified;
+      try{
+    const raw = localStorage.getItem(QS_LS_API_KEYS) || "";
+    if (!raw) return "";
+    const o = JSON.parse(raw);
 
-            // ✅ Unified V2 key has priority (one key for both nets)
-      if (o?.unified && String(o.unified).trim()) return String(o.unified).trim();
+    // אם המשתמש כיבה שימוש במפתחות
+    if (o && typeof o.use === "boolean" && o.use === false) return "";
 
-      if (net === "bsc") return String(o?.bscscan || "");
-      if (net === "eth") return String(o?.etherscan || "");
-      return "";
+    // ✅ Unified V2 key (עדיפות ראשונה)
+    const unified = String(o?.unified || "").trim();
+    if (unified) return unified;
 
-      return "";
-    } catch { return ""; }
+    // V1 keys (לפי רשת)
+    if (net === "bsc") return String(o?.bscscan || "").trim();
+    if (net === "eth") return String(o?.etherscan || "").trim();
+    return "";
+  } catch { 
+    return ""; 
   }
 
   function qsExplorerApiBase(net){
