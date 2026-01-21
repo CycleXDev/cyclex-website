@@ -4112,7 +4112,12 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
     if (!raw) return { key: "", isUnified: false };
 
     const o = JSON.parse(raw);
-    if (o && typeof o.use === "boolean" && o.use === false) return { key: "", isUnified: false };
+    const unified = String(o?.unified || "").trim();
+if (unified) return { key: unified, isUnified: true };
+
+if (o && typeof o.use === "boolean" && o.use === false)
+  return { key: "", isUnified: false };
+
 
     // ✅ Unified V2 key has priority (one key for both nets)
     const unified = String(o?.unified || "").trim();
