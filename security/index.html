@@ -4094,6 +4094,57 @@ window.CX.getReadProvider = getReadProvider;
     } catch { return ""; }
   }
 
+  function qsExplorerApiBase(net){
+  if (net === "bsc") return "https://api.bscscan.com/api";
+  if (net === "eth") return "https://api.etherscan.io/api";
+  return "";
+}
+
+// direct call fallback
+async function qsExplorerGetSourceDirect(net, addr, apiKey){
+  const base = qsExplorerApiBase(net);
+  if (!base) return { ok:false };
+
+  const u = new URL(base);
+  u.searchParams.set("module", "contract");
+  u.searchParams.set("action", "getsourcecode");
+  u.searchParams.set("address", addr);
+  if (apiKey) u.searchParams.set("apikey", apiKey);
+
+  const r = await fetch(u.toString());
+  const j = await r.json();
+
+  if (!j || j.status !== "1" || !j.result || !j.result[0]) {
+    return { ok:false, raw:j };
+  }
+
+  const row = j.result[0];
+  const abiRaw = row.ABI || "";
+  let verified = false;
+
+  try {
+    if (abiRaw && abiRaw !== "Contract source code not verified" && abiRaw !== "[]") {
+      const abiJson = JSON.parse(abiRaw);
+      verified = Array.isArray(abiJson) && abiJson.length > 0;
+    }
+  } catch {
+    verified = false;
+  }
+
+  // safer proxy detection (no regex)
+  const isProxy = String(row.Proxy || row.proxy || "").trim() === "1";
+  const implementation = (row.Implementation || row.implementation || "").trim();
+
+  return {
+    ok: true,
+    verified,
+    isProxy,
+    implementation,
+    raw: row
+  };
+}
+
+
   // Chip UI
   function qsMiniChip(type, title, value){
     const map = { ok:"ok", warn:"warn", bad:"bad", info:"warn" };
@@ -4142,7 +4193,11 @@ window.CX.getReadProvider = getReadProvider;
       const hex = String(raw || "0x");
       if (!hex || hex === "0x") return "";
       const addr = "0x" + hex.slice(-40);
-      return qsIsAddr(addr) ? qsNormAddr(addr) : "";
+      if (!qsIsAddr(addr)) return "";
+      const norm = qsNormAddr(addr);
+      if (qsLower(norm) === "0x0000000000000000000000000000000000000000") return "";
+      return norm;
+
     } catch { return ""; }
   }
 
@@ -4535,19 +4590,37 @@ if (!pool || pool === ZERO) {
     // 7) Mint
     const mintDetected = anySelector(code, SEL.mint);
 
-    // 8) Verified (optional — depends on your existing explorerGetSource)
-    let verified = null;
-    if (useApis && typeof explorerGetSource === "function") {
-      const apiKey = qsExplorerKeyFor(net);
-      try {
-        const src = await explorerGetSource(net, token, apiKey);
-        if (src?.ok) {
-          verified = !!src.verified;
-          if (!isProxy && src.isProxy) isProxy = true;
-          if (!impl && src.implementation) impl = String(src.implementation || "");
-        }
-      } catch {}
-    }
+    // 8) Verified (optional)
+let verified = null;
+
+if (useApis) {
+  const apiKey = qsExplorerKeyFor(net);
+
+  // A) try existing helper first (if present)
+  if (typeof explorerGetSource === "function") {
+    try {
+      const src = await explorerGetSource(net, token, apiKey);
+      if (src?.ok) {
+        verified = (src.verified === true) ? true : (src.verified === false) ? false : null;
+        if (!isProxy && src.isProxy) isProxy = true;
+        if (!impl && src.implementation) impl = String(src.implementation || "");
+      }
+    } catch {}
+  }
+
+  // B) fallback: direct explorer call (ONLY if still unknown)
+  if (verified === null && typeof qsExplorerGetSourceDirect === "function") {
+    try {
+      const src2 = await qsExplorerGetSourceDirect(net, token, apiKey);
+      if (src2?.ok) {
+        verified = (src2.verified === true) ? true : (src2.verified === false) ? false : null;
+        if (!isProxy && src2.isProxy) isProxy = true;
+        if (!impl && src2.implementation) impl = String(src2.implementation || "");
+      }
+    } catch {}
+  }
+}
+
 
     // Score model
     let score = 75;
@@ -4560,7 +4633,7 @@ if (!pool || pool === ZERO) {
     if (isProxy) score -= 12;
     else score += 3;
 
-    if (!owner) score -= 3;
+    if (!owner) score += 0;
     else if (ownerIsRenounced) score += 5;
     else score -= 6;
 
