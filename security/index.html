@@ -1593,7 +1593,7 @@ a.tool-card[data-tool="approvals"]::after{
 
               <div class="row" style="margin-top:10px">
                 <input id="api-bscscan" class="mono" placeholder="BscScan API key (stored locally)" data-i18n-placeholder="ph_bscscan_key" />
-                <input id="api-unified" type="text" placeholder="Unified API key (V2) — stored locally">
+                <input id="api-unified" class="mono" placeholder="Unified API key (stored locally)" data-i18n-placeholder="ph_unified_key" />
                 <input id="api-etherscan" class="mono" placeholder="Etherscan API key (stored locally)" data-i18n-placeholder="ph_etherscan_key" />
               </div>
 
@@ -3573,6 +3573,9 @@ window.connectWallet = cxConnectWallet;
   }
 }
 
+    function saveApiKeys(keys) {
+  try { localStorage.setItem(LS_KEYS, JSON.stringify(keys || {})); } catch {}
+}
     
     function initApiKeysUi() {
       const keys = loadApiKeys();
@@ -3857,21 +3860,15 @@ window.CX.getReadProvider = getReadProvider;
 }
 
 async function explorerGetSource(net, addr, apiKey, isUnified) {
-  // Detect unified V2 key (one key for both chains)
-  let unifiedKey = "";
-  try {
-    const keys = (typeof loadApiKeys === "function") ? (loadApiKeys() || {}) : {};
-    unifiedKey = String(keys.unified || "").trim();
-  } catch {}
-
   const keyTrim = String(apiKey || "").trim();
-  const isUnified = !!unifiedKey && keyTrim && keyTrim === unifiedKey;
 
   const v2Base = "https://api.etherscan.io/v2/api";
-  const chainid = (net === "bsc") ? "56" : "1"; // BSC=56, ETH=1
+  const chainid = (net === "bsc") ? "56" : "1"; 
 
-  const u = new URL(isUnified ? v2Base : explorerApiBase(net));
-  if (isUnified) u.searchParams.set("chainid", chainid);
+  const useV2 = !!isUnified; 
+
+  const u = new URL(useV2 ? v2Base : explorerApiBase(net));
+  if (useV2) u.searchParams.set("chainid", chainid);
 
   u.searchParams.set("module", "contract");
   u.searchParams.set("action", "getsourcecode");
@@ -3910,6 +3907,7 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
     raw: row
   };
 }
+
 
 
     // =========================
