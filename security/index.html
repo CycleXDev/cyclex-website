@@ -1593,6 +1593,7 @@ a.tool-card[data-tool="approvals"]::after{
 
               <div class="row" style="margin-top:10px">
                 <input id="api-bscscan" class="mono" placeholder="BscScan API key (stored locally)" data-i18n-placeholder="ph_bscscan_key" />
+                <input id="api-unified" type="password" placeholder="Unified API key (V2) — stored locally">
                 <input id="api-etherscan" class="mono" placeholder="Etherscan API key (stored locally)" data-i18n-placeholder="ph_etherscan_key" />
               </div>
 
@@ -3577,20 +3578,23 @@ window.connectWallet = cxConnectWallet;
       const useEl = $("#api-use"); if (useEl) useEl.checked = keys.use;
       const b1 = $("#api-bscscan"); if (b1) b1.value = keys.bscscan;
       const b2 = $("#api-etherscan"); if (b2) b2.value = keys.etherscan;
+      const u1 = $("#api-unified"); if (u1) u1.value = keys.unified || "";
 
       $("#api-save")?.addEventListener("click", () => {
         const nk = {
-          use: !!$("#api-use")?.checked,
-          bscscan: ($("#api-bscscan")?.value || "").trim(),
-          etherscan: ($("#api-etherscan")?.value || "").trim()
-        };
+        use: !!$("#api-use")?.checked,
+        unified: ($("#api-unified")?.value || "").trim(),   
+        bscscan: ($("#api-bscscan")?.value || "").trim(),   
+        etherscan: ($("#api-etherscan")?.value || "").trim()
+      };
         saveApiKeys(nk);
         setStatus($("#qs-status"), "ok", "Saved keys to localStorage.");
         gtagEvent("sec_keys_saved", { use: nk.use ? 1 : 0 });
       });
 
       $("#api-clear")?.addEventListener("click", () => {
-        saveApiKeys({ use: false, bscscan: "", etherscan: "" });
+        saveApiKeys({ use: false, unified: "", bscscan: "", etherscan: "" });
+        const iu = $("#api-unified"); if (iu) iu.value = "";
         const u = $("#api-use"); if (u) u.checked = false;
         const i1 = $("#api-bscscan"); if (i1) i1.value = "";
         const i2 = $("#api-etherscan"); if (i2) i2.value = "";
@@ -4092,8 +4096,15 @@ window.CX.getReadProvider = getReadProvider;
       if (!raw) return "";
       const o = JSON.parse(raw);
       if (o && typeof o.use === "boolean" && o.use === false) return "";
+      // ✅ unified key (V2): works for both nets if provided
+      const unified = String(o?.unified || "").trim();
+      if (unified) return unified;
+
+      // fallback to legacy per-network keys (V1)
       if (net === "bsc") return String(o?.bscscan || "");
       if (net === "eth") return String(o?.etherscan || "");
+      return "";
+
       return "";
     } catch { return ""; }
   }
