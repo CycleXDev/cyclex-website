@@ -3852,51 +3852,64 @@ window.CX.getReadProvider = getReadProvider;
     // Explorer API (optional)
     // =========================
     function explorerApiBase(net) {
-      return net === "bsc" ? "https://api.bscscan.com/api" : "https://api.etherscan.io/api";
-    }
+  return net === "bsc" ? "https://api.bscscan.com/api" : "https://api.etherscan.io/api";
+}
 
-    async function explorerGetSource(net, addr, apiKey) {
-      const u = new URL(isUnified ? v2Base : explorerApiBase(net));
-      if (isUnified) u.searchParams.set("chainid", chainId);
-      u.searchParams.set("module", "contract");
-      u.searchParams.set("action", "getsourcecode");
-      u.searchParams.set("address", addr);
-      if (apiKey) u.searchParams.set("apikey", apiKey);
+async function explorerGetSource(net, addr, apiKey) {
+  // Detect unified V2 key (one key for both chains)
+  let unifiedKey = "";
+  try {
+    const keys = (typeof loadApiKeys === "function") ? (loadApiKeys() || {}) : {};
+    unifiedKey = String(keys.unified || "").trim();
+  } catch {}
 
-      const r = await fetch(u.toString());
-      const j = await r.json();
-      if (!j || j.status !== "1" || !j.result || !j.result[0]) return { ok: false, raw: j };
+  const keyTrim = String(apiKey || "").trim();
+  const isUnified = !!unifiedKey && keyTrim && keyTrim === unifiedKey;
 
-      const row = j.result[0];
-      const abiRaw = String(row.ABI || "").trim();
-      
+  const v2Base = "https://api.etherscan.io/v2/api";
+  const chainid = (net === "bsc") ? "56" : "1"; // BSC=56, ETH=1
 
-      // ✅ robust verified check without JSON.parse
-      const isVerified =
-      !!abiRaw &&
-      abiRaw !== "Contract source code not verified" &&
-      abiRaw !== "[]" &&
-      abiRaw.startsWith("[");
+  const u = new URL(isUnified ? v2Base : explorerApiBase(net));
+  if (isUnified) u.searchParams.set("chainid", chainid);
 
-      let abiJson = null;
-      try { abiJson = isVerified ? JSON.parse(abiRaw) : null; } catch { abiJson = null; }
+  u.searchParams.set("module", "contract");
+  u.searchParams.set("action", "getsourcecode");
+  u.searchParams.set("address", addr);
+  if (keyTrim) u.searchParams.set("apikey", keyTrim);
 
+  const r = await fetch(u.toString());
+  const j = await r.json().catch(() => null);
+  if (!j || j.status !== "1" || !j.result || !j.result[0]) return { ok: false, raw: j };
 
-      // Heuristics (BscScan/Etherscan fields differ but usually include these)
-      const isProxy = String(row.Proxy || row.proxy || "").toLowerCase() === "1" || /proxy/i.test(String(row.ContractName || "")) && /proxy/i.test(String(row.SourceCode || ""));
-      const impl = (row.Implementation || row.implementation || "").trim();
-      const contractName = (row.ContractName || row.contractName || "").trim();
+  const row = j.result[0];
 
-      return {
-        ok: true,
-        verified: isVerified,
-        abi: abiJson,
-        isProxy,
-        implementation: impl,
-        contractName,
-        raw: row
-      };
-    }
+  const abiRaw = String(row.ABI || "").trim();
+  const isVerified =
+    !!abiRaw &&
+    abiRaw !== "Contract source code not verified" &&
+    abiRaw !== "[]" &&
+    abiRaw.startsWith("[");
+
+  let abiJson = null;
+  if (isVerified) {
+    try { abiJson = JSON.parse(abiRaw); } catch { abiJson = null; }
+  }
+
+  const isProxy = String(row.Proxy || row.proxy || "").trim() === "1";
+  const impl = String(row.Implementation || row.implementation || "").trim();
+  const contractName = String(row.ContractName || row.contractName || "").trim();
+
+  return {
+    ok: true,
+    verified: isVerified,
+    abi: abiJson,
+    isProxy,
+    implementation: impl,
+    contractName,
+    raw: row
+  };
+}
+
 
     // =========================
     // Formatting helpers
@@ -4110,65 +4123,6 @@ window.CX.getReadProvider = getReadProvider;
     return { key: "", isUnified: false };
   }
 }
-
-
-// direct call fallback
-async function qsExplorerGetSourceDirect(net, addr, apiKey){
-  const base = qsExplorerApiBase(net);
-  if (!base) return { ok:false };
-
-  const V2_BASE = "https://api.etherscan.io/v2/api";
-  const chainId = (net === "bsc") ? 56 : 1; // bsc=56, eth=1
-
-  const u = new URL(isUnified ? V2_BASE : explorerApiBase(net));
-  if (isUnified) u.searchParams.set("chainid", String(chainId));
-
-  u.searchParams.set("module", "contract");
-  u.searchParams.set("action", "getsourcecode");
-  u.searchParams.set("address", addr);
-  if (apiKey) u.searchParams.set("apikey", apiKey);
-
-  const r = await fetch(u.toString());
-  const j = await r.json();
-
-  if (!j || j.status !== "1" || !j.result || !j.result[0]) {
-    return { ok:false, raw:j };
-  }
-      const keys = loadApiKeys?.() || {};
-      const unifiedKey = (keys.unified || "").trim();
-      const isUnified = !!unifiedKey && (String(apiKey || "").trim() === unifiedKey);
-
-      // Etherscan V2 endpoint (unified across chains)
-      const v2Base = "https://api.etherscan.io/v2/api";
-      const chainId = (net === "bsc") ? "56" : "1";
-
-
-  const row = j.result[0];
-  const abiRaw = row.ABI || "";
-  let verified = false;
-
-  try {
-    if (abiRaw && abiRaw !== "Contract source code not verified" && abiRaw !== "[]") {
-      const abiJson = JSON.parse(abiRaw);
-      verified = Array.isArray(abiJson) && abiJson.length > 0;
-    }
-  } catch {
-    verified = false;
-  }
-
-  // safer proxy detection (no regex)
-  const isProxy = String(row.Proxy || row.proxy || "").trim() === "1";
-  const implementation = (row.Implementation || row.implementation || "").trim();
-
-  return {
-    ok: true,
-    verified,
-    isProxy,
-    implementation,
-    raw: row
-  };
-}
-
 
   // Chip UI
   function qsMiniChip(type, title, value){
