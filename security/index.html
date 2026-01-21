@@ -4098,8 +4098,9 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
     return u.toString();
   }
 
-  // ✅ safe explorer key read
-  function qsExplorerKeyFor(net){
+ // ✅ safe explorer key read
+function qsExplorerKeyFor(net){
+  // 1) optional legacy helper
   try{
     if (typeof explorerKeyFor === "function") {
       const k = String(explorerKeyFor(net) || "").trim();
@@ -4107,30 +4108,32 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
     }
   } catch {}
 
+  // 2) localStorage (V2 unified first, then per-net)
   try{
     const raw = localStorage.getItem(QS_LS_API_KEYS) || "";
     if (!raw) return { key: "", isUnified: false };
 
-    const o = JSON.parse(raw);
-    const unified = String(o?.unified || "").trim();
-if (unified) return { key: unified, isUnified: true };
+    const o = JSON.parse(raw) || {};
 
-if (o && typeof o.use === "boolean" && o.use === false)
-  return { key: "", isUnified: false };
+    // ✅ FIRST: if user disabled API usage
+    if (typeof o.use === "boolean" && o.use === false) {
+      return { key: "", isUnified: false };
+    }
 
-
-    // ✅ Unified V2 key has priority (one key for both nets)
-    const unified = String(o?.unified || "").trim();
+    // ✅ THEN: unified key has priority
+    const unified = String(o.unified || "").trim();
     if (unified) return { key: unified, isUnified: true };
 
-    // V1 keys (per network)
-    if (net === "bsc") return { key: String(o?.bscscan || "").trim(), isUnified: false };
-    if (net === "eth") return { key: String(o?.etherscan || "").trim(), isUnified: false };
+    // ✅ fallback: per-network keys
+    if (net === "bsc") return { key: String(o.bscscan || "").trim(), isUnified: false };
+    if (net === "eth") return { key: String(o.etherscan || "").trim(), isUnified: false };
+
     return { key: "", isUnified: false };
   } catch {
     return { key: "", isUnified: false };
   }
 }
+
 
   // Chip UI
   function qsMiniChip(type, title, value){
