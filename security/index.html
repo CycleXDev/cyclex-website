@@ -3865,18 +3865,18 @@ window.CX.getReadProvider = getReadProvider;
 
       const row = j.result[0];
       const abiRaw = row.ABI || "";
-      let abiJson = null;
-      let isVerified = false;
+      const abiRaw = String(row.ABI || "").trim();
 
-      try {
-        if (abiRaw && abiRaw !== "Contract source code not verified" && abiRaw !== "[]") {
-          abiJson = JSON.parse(abiRaw);
-          isVerified = Array.isArray(abiJson) && abiJson.length > 0;
-        }
-      } catch {
-        abiJson = null;
-        isVerified = false;
-      }
+      // ✅ robust verified check without JSON.parse
+      const isVerified =
+      !!abiRaw &&
+      abiRaw !== "Contract source code not verified" &&
+      abiRaw !== "[]" &&
+      abiRaw.startsWith("[");
+
+      let abiJson = null;
+      try { abiJson = isVerified ? JSON.parse(abiRaw) : null; } catch { abiJson = null; }
+
 
       // Heuristics (BscScan/Etherscan fields differ but usually include these)
       const isProxy = String(row.Proxy || row.proxy || "").toLowerCase() === "1" || /proxy/i.test(String(row.ContractName || "")) && /proxy/i.test(String(row.SourceCode || ""));
@@ -4081,8 +4081,12 @@ window.CX.getReadProvider = getReadProvider;
   // ✅ safe explorer key read
   function qsExplorerKeyFor(net){
     try{
-      if (typeof explorerKeyFor === "function") return String(explorerKeyFor(net) || "");
-    } catch {}
+  if (typeof explorerKeyFor === "function") {
+    const k = String(explorerKeyFor(net) || "").trim();
+    if (k) return k;
+  }
+} catch {}
+
     try{
       const raw = localStorage.getItem(QS_LS_API_KEYS) || "";
       if (!raw) return "";
@@ -5623,15 +5627,27 @@ async function dnaScan() {
       dnaApplyPills(s, dnaRiskLevelFromScore(s));
 
     }
+    //try {
+  //const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
+  //const u = new URL("/api/saveScore", DNA_API_BASE);
+  //await fetch(u.toString(), {
+    //method: "POST",
+    //headers: { "content-type": "application/json" },
+    //body: JSON.stringify({ net, score: scoreNow })
+  //});
+//} catch {}
+
     try {
   const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
   const u = new URL("/api/saveScore", DNA_API_BASE);
-  await fetch(u.toString(), {
+  const resp = await fetch(u.toString(), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ net, score: scoreNow })
   });
+  if (!resp.ok) throw new Error(`saveScore ${resp.status}`);
 } catch {}
+
 
 
     const tips = (Array.isArray(data) ? null : data?.tips);
