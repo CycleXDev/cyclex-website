@@ -4767,7 +4767,14 @@ if (!pool || pool === ZERO) {
 })();
 
 
-
+// ✅ Compatibility helper (do NOT remove) — used by Liquidity Scan
+window.qsRiskChip = window.qsRiskChip || function(type, text){
+  const cls = (type === "ok" ? "ok" : type === "bad" ? "bad" : "warn");
+  const esc = (s)=> String(s ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  return `<div class="risk ${cls}"><span class="dot"></span><span>${esc(text)}</span></div>`;
+};
  // =========================
 // Liquidity Scan panel (Multi-DEX Sources) — FINAL DROP-IN
 // =========================
