@@ -3856,8 +3856,8 @@ window.CX.getReadProvider = getReadProvider;
     }
 
     async function explorerGetSource(net, addr, apiKey) {
-      const base = explorerApiBase(net);
-      const u = new URL(base);
+      const u = new URL(isUnified ? v2Base : explorerApiBase(net));
+      if (isUnified) u.searchParams.set("chainid", chainId);
       u.searchParams.set("module", "contract");
       u.searchParams.set("action", "getsourcecode");
       u.searchParams.set("address", addr);
@@ -4100,7 +4100,9 @@ window.CX.getReadProvider = getReadProvider;
       const unified = String(o?.unified || "").trim();
       if (unified) return unified;
 
-      // fallback to legacy per-network keys (V1)
+            // ✅ Unified V2 key has priority (one key for both nets)
+      if (o?.unified && String(o.unified).trim()) return String(o.unified).trim();
+
       if (net === "bsc") return String(o?.bscscan || "");
       if (net === "eth") return String(o?.etherscan || "");
       return "";
@@ -4132,6 +4134,14 @@ async function qsExplorerGetSourceDirect(net, addr, apiKey){
   if (!j || j.status !== "1" || !j.result || !j.result[0]) {
     return { ok:false, raw:j };
   }
+      const keys = loadApiKeys?.() || {};
+      const unifiedKey = (keys.unified || "").trim();
+      const isUnified = !!unifiedKey && (String(apiKey || "").trim() === unifiedKey);
+
+      // Etherscan V2 endpoint (unified across chains)
+      const v2Base = "https://api.etherscan.io/v2/api";
+      const chainId = (net === "bsc") ? "56" : "1";
+
 
   const row = j.result[0];
   const abiRaw = row.ABI || "";
