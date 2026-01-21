@@ -4763,6 +4763,8 @@ if (!pool || pool === ZERO) {
 
   // keep compatibility
   window.initQuickScanUi = initQuickScanUi;
+  window.runQuickScan = window.runQuickScan || runQuickScan;
+
 
 })();
 
@@ -6869,7 +6871,11 @@ try {
         if ($("#qs-net")) $("#qs-net").value = net;
         if (q.token && isAddr(q.token)) {
           if ($("#qs-token")) $("#qs-token").value = normAddr(q.token);
-          setTimeout(() => runQuickScan(), 250);
+          setTimeout(() => {
+  const fn = window.CX_QS_V5?.runQuickScan || window.runQuickScan;
+  if (typeof fn === "function") fn();
+}, 250);
+
         }
       }
 
