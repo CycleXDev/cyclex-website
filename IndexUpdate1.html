@@ -18,704 +18,1123 @@
   <title>CycleX – AI-Powered Secure Reward Ecosystem</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-  :root{
-    --bg-main:#05060a;
-    --bg-gradient-start:#05060a;
-    --bg-gradient-mid:#1a0d3a;
-    --bg-gradient-end:#003a4c;
+    :root {
+  --bg-main: #05060a;
+  --bg-gradient-start: #05060a;
+  --bg-gradient-mid: #1a0d3a;
+  --bg-gradient-end: #003a4c;
 
-    --text-main:#f4f6ff;
-    --text-muted:rgba(244,246,255,.70);
+  --text-main: #f4f6ff;
+  --text-muted: rgba(244, 246, 255, 0.7);
 
-    --accent-cyan:#00e5ff;
-    --accent-green:#5dffb2;
-    --accent-purple:#7c5cff;
+  --accent-cyan: #00e5ff;
+  --accent-green: #5dffb2;
+  --accent-purple: #7c5cff;
 
-    --card-bg:rgba(255,255,255,.06);
-    --border-subtle:rgba(255,255,255,.12);
+  --card-bg: rgba(255, 255, 255, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.12);
 
-    --shadow-soft:0 30px 90px rgba(0,0,0,.75);
-    --radius-xl:24px;
-    --transition-fast:.18s ease-out;
-  }
+  --shadow-soft: 0 30px 90px rgba(0, 0, 0, 0.75);
+  --radius-xl: 24px;
+  --transition-fast: 0.18s ease-out;
+}
 
-  *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
-  body{
-    font-family:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
-    background:
-      radial-gradient(circle at top left, rgba(124, 92, 255, 0.35) 0%, transparent 45%),
-      radial-gradient(circle at top right, rgba(0, 229, 255, 0.35) 0%, transparent 45%),
-      radial-gradient(circle at bottom, rgba(0, 58, 76, 0.55) 0%, transparent 55%),
-      linear-gradient(160deg,var(--bg-gradient-start),var(--bg-gradient-mid),var(--bg-gradient-end));
-    color:var(--text-main);
-    min-height:100dvh;
-    -webkit-font-smoothing:antialiased;
-    animation:fadeBody .7s ease-out forwards;
-    opacity:1;
-  }
-  @keyframes fadeBody{from{opacity:0}to{opacity:1}}
 
-  a{color:inherit;text-decoration:none}
-  img{max-width:100%;display:block}
-
-  .page-shell{
-    max-width:1160px;
-    margin:0 auto;
-    padding:32px 20px 64px;
-  }
-
-  /* ===== Top Bar ===== */
-  .top-bar{
-    position:sticky;
-    top:14px;
-    z-index:999;
-
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-
-    padding:12px 18px;
-    margin-bottom:32px;
-
-    border-radius:999px;
-    background:rgba(8,10,22,.55);
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
-
-    border:1px solid rgba(255,255,255,.14);
-    box-shadow:
-      0 20px 70px rgba(0,0,0,.60),
-      inset 0 1px 0 rgba(255,255,255,.06);
-  }
-
-  .brand{display:flex;align-items:center;gap:10px;min-width:0}
-  .brand-logo{
-    width:44px;height:44px;border-radius:16px;object-fit:contain;
-    box-shadow:0 12px 32px rgba(0,0,0,.80);
-    flex:0 0 auto;
-  }
-  .brand-text{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .brand-title{
-    font-weight:700;letter-spacing:.05em;font-size:18px;text-transform:uppercase;
-    white-space:nowrap;
-  }
-  .brand-sub{
-    font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--text-muted);
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-
-  /* ===== Language Switch ===== */
-  .lang-switch{
-    display:inline-flex;align-items:center;gap:2px;
-    padding:4px;border-radius:999px;
-    background:rgba(255,255,255,.06);
-    backdrop-filter:blur(10px);
-    border:1px solid rgba(255,255,255,.16);
-    box-shadow:0 12px 36px rgba(0,0,0,.55);
-    flex:0 0 auto;
-  }
-  .lang-btn{
-    border:none;background:transparent;color:var(--text-muted);
-    font-size:11px;padding:5px 8px;border-radius:999px;cursor:pointer;
-    transition:background var(--transition-fast),color var(--transition-fast),transform var(--transition-fast);
-    user-select:none;
-  }
-  .lang-btn:hover{transform:translateY(-1px)}
-  .lang-btn.active{
-    background:rgba(0,229,255,.14);
-    color:var(--accent-cyan);
-  }
-
-  /* ===== Main Logo ===== */
-  .main-logo{
-    margin:10px auto 22px;
-    width:100px;height:auto;object-fit:contain;
-    filter:drop-shadow(0 18px 40px rgba(0,0,0,.90));
-    animation:floatLogo 6s ease-in-out infinite;
-  }
-  @keyframes floatLogo{0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
-
-  /* ===== Hero ===== */
-  .hero{
-    text-align:center;
-    max-width:900px;
-    margin:0 auto 40px;
-    animation:fadeUp .8s ease-out forwards;
-  }
-  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-
-  body.lang-switching{animation:langFade .3s ease-out}
-  @keyframes langFade{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-
-  .hero-kicker{
-    font-size:13px;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--accent-cyan);margin-bottom:14px;
-  }
-  .hero-title{
-    font-size:clamp(40px,5vw,60px);
-    line-height:1.05;font-weight:800;margin-bottom:16px;letter-spacing:-.02em;
-  }
-  .hero-subtitle{
-    max-width:650px;margin:0 auto 26px;
-    font-size:16px;line-height:1.5;color:var(--text-muted);
-  }
-  .hero-actions{
-    display:flex;justify-content:center;flex-wrap:wrap;gap:16px;margin-bottom:14px;
-  }
-
-  .btn{
-    border-radius:999px;border:none;
-    padding:13px 26px;
-    font-size:14px;font-weight:600;
-    letter-spacing:.04em;text-transform:uppercase;
-    cursor:pointer;
-    display:inline-flex;align-items:center;justify-content:center;gap:8px;
-    transition:transform var(--transition-fast),box-shadow var(--transition-fast),background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast);
-    outline:none;
-  }
-  .btn:focus-visible{
-    box-shadow:0 0 0 3px rgba(0,229,255,.22), 0 0 0 6px rgba(0,0,0,.25);
-  }
-  .btn-primary{
-    background:linear-gradient(135deg,var(--accent-cyan),#7df2ff);
-    color:#020308;
-    box-shadow:0 14px 40px rgba(0,229,255,.40);
-  }
-  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 18px 60px rgba(0,229,255,.60)}
-  .btn-secondary{
-    background:linear-gradient(135deg,var(--accent-green),#b9ffcf);
-    color:#020308;
-    box-shadow:0 14px 40px rgba(0,230,118,.40);
-  }
-  .btn-secondary:hover{transform:translateY(-1px);box-shadow:0 18px 60px rgba(0,230,118,.60)}
-
-  .hero-note{font-size:12px;color:var(--text-muted);text-align:center}
-  .hero-note span{color:var(--accent-cyan)}
-
-  /* ===== Sections ===== */
-  .section{
-    margin-bottom:40px;
-    padding:36px 28px;
-    border-radius:var(--radius-xl);
-    background:rgba(255,255,255,.04);
-    backdrop-filter:blur(20px);
-    border:1px solid rgba(255,255,255,.12);
-    box-shadow:0 28px 80px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.05);
-    text-align:center;
-  }
-  .section-kicker{
-    font-size:12px;letter-spacing:.16em;text-transform:uppercase;
-    color:var(--accent-purple);margin-bottom:10px;
-  }
-  .section-title{font-size:32px;font-weight:700;margin-bottom:14px}
-  .section-body{
-    max-width:760px;margin:0 auto;
-    font-size:15px;line-height:1.6;color:var(--text-muted);
-  }
-  .section-body p + p{margin-top:8px}
-
-  /* ===== Stats ===== */
-  .stats-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:18px;
-    margin-top:18px;
-  }
-  .stat-card{
-    background:var(--card-bg);
-    border-radius:var(--radius-xl);
-    border:1px solid var(--border-subtle);
-    padding:16px 16px 14px;
-    box-shadow:var(--shadow-soft);
-    backdrop-filter:blur(18px);
-    text-align:left;
-    min-width:0;
-  }
-  .stat-label{
-    font-size:14px;font-weight:800;color:var(--text-main);
-    margin-bottom:8px;letter-spacing:.01em;
-  }
-  .stat-value{
-    font-size:20px;font-weight:700;margin-bottom:0;line-height:1.08;
-    word-break:break-word;
-  }
-  .stat-tag{
-    display:inline-block;
-    font-size:11px;text-transform:uppercase;letter-spacing:.16em;
-    color:var(--accent-cyan);
-    margin-top:10px;
-  }
-  .stat-caption{font-size:11px;color:var(--text-muted);margin-top:4px}
-
-  /* Glow only first 2 cards */
-  .stats-grid .stat-card:nth-child(1),
-  .stats-grid .stat-card:nth-child(2){
-    box-shadow:
-      var(--shadow-soft),
-      0 0 22px rgba(0,229,255,.10),
-      0 0 46px rgba(0,229,255,.06);
-    border-color:rgba(0,229,255,.20);
-  }
-  .stats-grid .stat-card:nth-child(1) .stat-value,
-  .stats-grid .stat-card:nth-child(2) .stat-value{
-    text-shadow:0 0 10px rgba(0,229,255,.22), 0 0 22px rgba(0,229,255,.12);
-  }
-  .stats-grid .stat-card:nth-child(1):hover,
-  .stats-grid .stat-card:nth-child(2):hover{
-    box-shadow:
-      var(--shadow-soft),
-      0 0 28px rgba(0,229,255,.14),
-      0 0 60px rgba(0,229,255,.08);
-    border-color:rgba(0,229,255,.26);
-  }
-
-  /* ===== Footer ===== */
-  .footer{
-    border-top:1px solid rgba(255,255,255,.06);
-    margin-top:32px;
-    padding-top:16px;
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    font-size:12px;
-    color:var(--text-muted);
-  }
-  .footer-tagline{color:var(--accent-cyan);font-weight:500}
-
-  /* ===== Social Cards ===== */
-  .social-grid{
-    display:grid;
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:14px;
-    margin-top:18px;
-    align-items:stretch;
-  }
-  .social-card{
-    display:flex;flex-direction:column;align-items:center;text-align:center;
-    padding:18px 16px;border-radius:18px;
-    background:rgba(255,255,255,.05);
-    border:1px solid rgba(255,255,255,.10);
-    box-shadow:var(--shadow-soft);
-    backdrop-filter:blur(18px);
-    min-width:0;
-    transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;
-  }
-  .social-card:hover{
-    transform:translateY(-2px);
-    border-color:rgba(0,229,255,.26);
-    box-shadow:var(--shadow-soft),0 0 26px rgba(0,229,255,.12),0 0 60px rgba(0,229,255,.08);
-  }
-  .social-icon{
-    width:54px;height:54px;border-radius:18px;
-    display:grid;place-items:center;
-    background:rgba(0,229,255,.10);
-    border:1px solid rgba(0,229,255,.18);
-    box-shadow:0 0 18px rgba(0,229,255,.10);
-    margin-bottom:10px;
-  }
-  .social-icon svg{
-    width:24px;height:24px;
-    fill:none;stroke:var(--accent-cyan);stroke-width:2;
-  }
-  .social-meta{
-    display:flex;flex-direction:column;align-items:center;gap:6px;
-    min-width:0;width:100%;
-  }
-  .social-title{font-weight:800;letter-spacing:.02em;font-size:16px}
-  .social-desc{color:var(--text-muted);font-size:13px;line-height:1.35}
-  .social-cta{
-    margin-top:10px;
-    width:100%;
-    max-width:210px;
-    text-align:center;
-    padding:12px 18px;
-    border-radius:14px;
-    background:rgba(0,229,255,.14);
-    border:1px solid rgba(0,229,255,.30);
-    color:var(--text-main);
-    font-weight:900;
-    letter-spacing:.02em;
-    box-shadow:0 0 18px rgba(0,229,255,.14),0 12px 30px rgba(0,0,0,.30);
-    transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease,background .15s ease;
-  }
-  .social-card:hover .social-cta{
-    transform:translateY(-1px);
-    background:rgba(0,229,255,.18);
-    border-color:rgba(0,229,255,.46);
-    box-shadow:0 0 22px rgba(0,229,255,.22),0 0 52px rgba(0,229,255,.12),0 14px 34px rgba(0,0,0,.34);
-  }
-
-  /* ===== Shared Modals ===== */
-  .modal-backdrop{
-    position:fixed;inset:0;
-    background:rgba(0,0,0,.70);
-    display:none;
-    align-items:center;justify-content:center;
-    z-index:5000;
-    backdrop-filter:blur(8px);
-  }
-  .modal-backdrop.active{
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-  }
-
-  .modal{
-    position:relative;
-    width:min(420px,92vw);
-    background:
-      radial-gradient(circle at top left, rgba(124, 92, 255, 0.25), transparent 55%),
-      radial-gradient(circle at top right, rgba(0, 229, 255, 0.22), transparent 55%),
-      rgba(12, 14, 28, 0.85);
-    backdrop-filter:blur(22px);
-    -webkit-backdrop-filter:blur(22px);
-    border-radius:24px;
-    padding:22px 22px 20px;
-    border:1px solid rgba(255,255,255,.18);
-    box-shadow:0 30px 90px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.06);
-    color:var(--text-main);
-  }
-
-  .modal-badge{
-    font-size:11px;text-transform:uppercase;letter-spacing:.18em;
-    color:var(--accent-cyan);margin-bottom:6px;
-  }
-  .modal-title{font-size:22px;font-weight:700;margin-bottom:6px}
-  .modal-subtitle{font-size:13px;color:var(--text-muted);margin-bottom:10px}
-  .modal-tagline{
-    font-size:18px;color:#ffe082;margin-bottom:10px;
-    font-style:normal;font-weight:600;letter-spacing:.02em;
-  }
-
-  /* Claim status box */
-  #claim-status{
-    display:none;
-    margin:12px auto 16px;
-    padding:14px 16px;
-    border-radius:14px;
-    background:rgba(0,230,118,.12);
-    border:1px solid rgba(0,230,118,.40);
-    color:#00e676;
-    font-size:14px;
-    line-height:1.45;
-    text-align:center;
-    max-width:100%;
-  }
-  #claim-status.pending{
-    background:rgba(255,193,7,.12);
-    border:1px solid rgba(255,193,7,.45);
-    color:#ffc107;
-  }
-  #claim-status.success{
-    background:rgba(0,230,118,.12);
-    border:1px solid rgba(0,230,118,.45);
-    color:#00e676;
-  }
-  #claim-status.error{
-    background:rgba(220,53,69,.12);
-    border:1px solid rgba(220,53,69,.45);
-    color:#dc3545;
-  }
-  #cx-claim-now-btn[disabled]{opacity:.6;cursor:not-allowed}
-
-  .modal-actions{display:flex;gap:10px;margin-bottom:6px}
-  .btn-wallet{
-    flex:1;
-    background:linear-gradient(135deg,var(--accent-purple),var(--accent-cyan));
-    color:#020308;
-    font-weight:600;
-    border-radius:999px;
-    border:none;
-    padding:11px 18px;
-    cursor:pointer;
-    box-shadow:0 14px 40px rgba(0,0,0,.65);
-    transition:transform var(--transition-fast),box-shadow var(--transition-fast);
-  }
-  .btn-wallet:hover{transform:translateY(-1px);box-shadow:0 20px 60px rgba(0,0,0,.90)}
-
-  .btn-close{
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.20);
-    background:transparent;
-    color:var(--text-muted);
-    font-size:11px;
-    padding:8px 14px;
-    cursor:pointer;
-    transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast);
-  }
-  .btn-close:hover{
-    background:rgba(255,255,255,.06);
-    color:var(--text-main);
-    border-color:rgba(255,255,255,.40);
-  }
-
-  .modal-caption{font-size:11px;color:var(--text-muted);margin-top:4px}
-  .modal-close-x{
-    position:absolute;
-    top:8px;right:12px;
-    border:none;background:transparent;
-    color:var(--text-muted);
-    font-size:18px;
-    cursor:pointer;
-  }
-
-  /* Eligibility modal specifics */
-  .eligibility-body{
-    font-size:13px;line-height:1.5;color:var(--text-muted);
-    margin-bottom:16px;
-    max-height:55vh;
-    overflow-y:auto;
-    padding-right:4px;
-  }
-  .eligibility-body ol{padding-left:18px;margin:0}
-  .eligibility-body li + li{margin-top:8px}
-  .eligibility-body ul{margin-top:4px;padding-left:16px;list-style-type:disc}
-
-  /* ===== Reward Calculator ===== */
-  .calculator-modal{
-    position:fixed;inset:0;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    background:rgba(0,0,0,.72);
-    backdrop-filter:blur(10px);
-    z-index:6000;
-  }
-  .calculator-modal.active{display:flex}
-
-  .calculator-content{
-    position:relative;
-    width:min(380px,92vw);
-    background:
-      radial-gradient(circle at top left, rgba(124, 92, 255, 0.25), transparent 55%),
-      radial-gradient(circle at top right, rgba(0, 229, 255, 0.22), transparent 55%),
-      rgba(12, 14, 28, 0.85);
-    backdrop-filter:blur(22px);
-    -webkit-backdrop-filter:blur(22px);
-    border-radius:24px;
-    padding:22px;
-    border:1px solid rgba(255,255,255,.18);
-    box-shadow:0 30px 90px rgba(0,0,0,.75), inset 0 1px 0 rgba(255,255,255,.06);
-    color:var(--text-main);
-  }
-  .calculator-content h2{font-size:20px;margin-bottom:6px}
-  .calc-desc{font-size:13px;color:var(--text-muted);margin-bottom:12px}
-
-  .calculator-content label{
-    display:block;
-    font-size:13px;
-    margin-top:8px;margin-bottom:4px;
-    text-align:left;
-  }
-
-  .calculator-content input,
-  .calculator-content select{
-    width:100%;
-    padding:8px 10px;
-    border-radius:999px;
-    border:1px solid rgba(255,255,255,.16);
-    background:rgba(5,7,18,.90);
-    color:var(--text-main);
-    font-size:13px;
-    outline:none;
-  }
-  .calculator-content input:focus,
-  .calculator-content select:focus{border-color:var(--accent-cyan)}
-
-  .calculator-content select{
-    appearance:none;-webkit-appearance:none;-moz-appearance:none;
-    padding-right:35px;
-    background-image:url("data:image/svg+xml;utf8,<svg fill='white' height='14' viewBox='0 0 20 20' width='14' xmlns='http://www.w3.org/2000/svg'><path d='M5.516 7.548l4.484 4.482 4.484-4.482L16 8.548l-6 6-6-6z'/></svg>");
-    background-repeat:no-repeat;
-    background-position:right 14px center;
-    background-size:14px;
-  }
-
-  .closeCalc{
-    position:absolute;
-    top:18px;right:18px;
-    font-size:26px;
-    color:#bbb;
-    cursor:pointer;
-    z-index:10;
-    transition:.2s;
-  }
-  .closeCalc:hover{color:#fff}
-
-  #calcRun{
-    width:100%;
-    margin-top:12px;
-    border-radius:999px;
-    border:none;
-    padding:10px 16px;
-    font-size:13px;
-    font-weight:600;
-    letter-spacing:.06em;
-    text-transform:uppercase;
-    cursor:pointer;
-    background:linear-gradient(135deg,var(--accent-green),#b9ffcf);
-    color:#020308;
-    box-shadow:0 14px 40px rgba(0,230,118,.40);
-    transition:transform .18s ease-out,box-shadow .18s ease-out;
-  }
-  #calcRun:hover{transform:translateY(-1px);box-shadow:0 18px 60px rgba(0,230,118,.70)}
-
-  #calcResult{margin-top:10px;font-size:13px;line-height:1.5}
-  .calc-note{margin-top:10px;font-size:11px;color:var(--text-muted)}
-
-  .calc-disclaimer{
-    margin-top:10px;
-    font-size:14px;
-    line-height:1.6;
-    color:var(--text-muted);
-    text-align:left;
-    max-width:92%;
-  }
-  .calc-disclaimer strong{
-    display:block;
-    margin-top:2px;margin-bottom:2px;
-    transform:translateY(-6px);
-    font-size:18px;line-height:1.25;
-    color:#ffcc80;
-    letter-spacing:.02em;
-    font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
-    font-weight:600;
-  }
-
-  /* ===== Rewards Model ===== */
-  .rewards-section{text-align:center}
-  .rewards-intro{
-    max-width:520px;
-    margin:10px auto 26px;
-    font-size:14px;
-    line-height:1.55;
-    color:var(--text-muted);
-  }
-  .rewards-grid{
-    display:grid;
-    grid-template-columns:1.2fr .9fr;
-    gap:22px;
-    align-items:stretch;
-  }
-  .rewards-side{display:flex;flex-direction:column;gap:20px}
-  .reward-card{
-    background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:22px;
-    padding:24px 22px;
-    text-align:left;
-    backdrop-filter:blur(18px);
-    box-shadow:0 24px 70px rgba(0,0,0,.65);
-  }
-  .reward-card.enforcement{background:rgba(255,255,255,.045)}
-  .reward-card h3{font-size:18px;margin-bottom:10px;color:var(--accent-cyan)}
-  .reward-card p{font-size:14px;line-height:1.55;color:var(--text-muted)}
-  .reward-card ul{padding-left:18px;margin:8px 0}
-  .reward-card li{font-size:14px;line-height:1.55;margin-bottom:6px;color:var(--text-muted)}
-  .reward-card strong{color:var(--text-main)}
-
-  .reward-card.highlight{
-    border-color:rgba(0,229,255,.45);
-    background:linear-gradient(160deg,rgba(0,229,255,.12),rgba(255,255,255,.04));
-    display:flex;
-    flex-direction:column;
-  }
-  .reward-card.highlight ul,
-  .reward-card.highlight .reward-example{flex-shrink:0}
-  .reward-footer{
-    margin-top:auto;
-    padding-top:6px;
-    padding-bottom:20px;
-    border-top:1px solid rgba(255,255,255,.12);
-    font-size:12px;
-    letter-spacing:.08em;
-    text-transform:uppercase;
-    color:var(--accent-cyan);
-    opacity:.9;
-  }
-  .reward-example{
-    margin-top:10px;
-    padding-top:10px;
-    border-top:1px solid rgba(255,255,255,.12);
-    font-size:13px;
-    line-height:1.5;
-    color:var(--text-muted);
-  }
-  .reward-policy{
-    margin-top:18px;
-    font-size:12px;
-    color:var(--text-muted);
-    text-align:center;
-    opacity:.85;
-  }
-
-  /* ===== Responsive ===== */
-  @media (max-width:1100px){
-    .social-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  }
-  @media (max-width:900px){
-    .rewards-grid{grid-template-columns:1fr}
-  }
-
-  @media (max-width:768px){
-    .page-shell{padding-inline:16px}
-
-    .top-bar{gap:8px;padding:10px 12px}
-
-    .brand-logo{width:40px;height:40px;border-radius:14px}
-    .brand-title{font-size:16px}
-    .brand-sub{font-size:10px}
-
-    .hero{margin-bottom:32px}
-    .hero-title{font-size:34px}
-
-    .section{padding-inline:18px}
-
-    .stats-grid{grid-template-columns:1fr}
-
-    /* Hide sticky bar when modal open */
-    body.modal-open .top-bar{display:none !important}
-
-    .modal-backdrop.active,
-    .calculator-modal.active{
-      align-items:center !important;
-      justify-content:center !important;
-      padding-top:calc(env(safe-area-inset-top,0px) + 12px);
-      padding-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);
-      padding-left:16px;
-      padding-right:16px;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
-    .modal,
-    .calculator-content{
-      max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px);
-      overflow:auto;
-      -webkit-overflow-scrolling:touch;
+    body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
+
+  background:
+    radial-gradient(circle at top left, rgba(124, 92, 255, 0.35) 0%, transparent 45%),
+    radial-gradient(circle at top right, rgba(0, 229, 255, 0.35) 0%, transparent 45%),
+    radial-gradient(circle at bottom, rgba(0, 58, 76, 0.55) 0%, transparent 55%),
+    linear-gradient(160deg,
+      var(--bg-gradient-start),
+      var(--bg-gradient-mid),
+      var(--bg-gradient-end)
+    );
+
+  color: var(--text-main);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  animation: fadeBody 0.7s ease-out forwards;
+  opacity: 1;
+}
+
+
+    @keyframes fadeBody {
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page-shell {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    /* top bar */
+
+    .top-bar {
+  position: sticky;
+  top: 14px;
+  z-index: 999;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 12px 18px;
+  margin-bottom: 32px;
+
+  border-radius: 999px;
+
+  background: rgba(8, 10, 22, 0.55);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 20px 70px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      object-fit: contain;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.8);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      font-size: 18px;
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--text-muted);
+    }
+
+    /* language switcher */
+    .lang-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
+  gap: 2px;
+}
+
+
+    .lang-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .lang-btn.active {
+      background: rgba(0, 229, 255, 0.14);
+      color: var(--accent-cyan);
+    }
+
+    /* main logo center */
+
+    .main-logo {
+      display: block;
+      margin: 10px auto 22px auto;
+      width: 100px;
+      height: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.9));
+      animation: floatLogo 6s ease-in-out infinite;
+    }
+
+    @keyframes floatLogo {
+      0%   { transform: translateY(0); }
+      50%  { transform: translateY(-6px); }
+      100% { transform: translateY(0); }
+    }
+
+    /* hero */
+
+    .hero {
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto 40px auto;
+      animation: fadeUp 0.8s ease-out forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* language switch fade animation */
+    body.lang-switching {
+      animation: langFade 0.3s ease-out;
+    }
+
+    @keyframes langFade {
+      from { opacity: 0.4; transform: translateY(4px); }
+      to   { opacity: 1;   transform: translateY(0); }
+    }
+
+    .hero-kicker {
+      font-size: 13px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-cyan);
+      margin-bottom: 14px;
+    }
+
+    .hero-title {
+  font-size: clamp(40px, 5vw, 60px);
+  line-height: 1.05;
+  font-weight: 800;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+
+    .hero-subtitle {
+      max-width: 650px;
+      margin: 0 auto 26px auto;
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 13px 26px;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+        background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), #7df2ff);
+      color: #020308;
+      box-shadow: 0 14px 40px rgba(0, 229, 255, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 60px rgba(0, 229, 255, 0.6);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--accent-green), #b9ffcf);
+      color: #020308;
+      box-shadow: 0 14px 40px rgba(0, 230, 118, 0.4);
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 60px rgba(0, 230, 118, 0.6);
+    }
+
+    .hero-note {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .hero-note span {
+      color: var(--accent-cyan);
+    }
+
+    /* sections */
+
+    .section {
+  margin-bottom: 40px;
+  padding: 36px 28px;
+  border-radius: var(--radius-xl);
+
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+  text-align: center;
+}
+
+
+    .section-kicker {
+      font-size: 12px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent-purple);
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .section-body {
+      max-width: 760px;
+      margin: 0 auto;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    .section-body p + p {
+      margin-top: 8px;
+    }
+
+    /* transparency stats */
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-subtle);
+      padding: 16px 16px 14px;
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(18px);
+      text-align: left;
+    }
+
+   .stat-label {
+    font-size: 14px;        
+    font-weight: 800;      
+    color: var(--text-main);
+    margin-bottom: 8px;    
+    letter-spacing: 0.01em;
+    }
+
+    .stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 0px;    
+  line-height: 1.08;     
+}
+
+   .stat-tag {
+  display: inline-block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent-cyan);
+
+  margin-top: 10px;      
+}
+
+    .stat-caption {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+/* ===== Glow only (first 2 cards + their numbers) ===== */
+/* subtle glow around the first 2 cards only (no layout changes) */
+.stats-grid .stat-card:nth-child(1),
+.stats-grid .stat-card:nth-child(2) {
+  box-shadow:
+    var(--shadow-soft),
+    0 0 22px rgba(0, 229, 255, 0.10),
+    0 0 46px rgba(0, 229, 255, 0.06);
+  border-color: rgba(0, 229, 255, 0.20);
+}
+
+/* subtle glow for the number only (first 2 cards) */
+.stats-grid .stat-card:nth-child(1) .stat-value,
+.stats-grid .stat-card:nth-child(2) .stat-value {
+  text-shadow:
+    0 0 10px rgba(0, 229, 255, 0.22),
+    0 0 22px rgba(0, 229, 255, 0.12);
+}
+
+/* optional: tiny hover glow (still no size changes) */
+.stats-grid .stat-card:nth-child(1):hover,
+.stats-grid .stat-card:nth-child(2):hover {
+  box-shadow:
+    var(--shadow-soft),
+    0 0 28px rgba(0, 229, 255, 0.14),
+    0 0 60px rgba(0, 229, 255, 0.08);
+  border-color: rgba(0, 229, 255, 0.26);
+}
+
+   
+    /* footer */
+
+    .footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin-top: 32px;
+      padding-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-tagline {
+      color: var(--accent-cyan);
+      font-weight: 500;
+    }
+    /* ===== Social Cards (X / Telegram / Whitepaper/FAQ) ===== */
+/* ===== Social Cards (X / Telegram / Whitepaper / FAQ) ===== */
+.social-grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+  align-items: stretch;
+}
+
+.social-card{
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  padding: 18px 16px;
+  border-radius: 18px;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(18px);
+
+  min-width: 0;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.social-card:hover{
+  transform: translateY(-2px);
+  border-color: rgba(0, 229, 255, 0.26);
+  box-shadow:
+    var(--shadow-soft),
+    0 0 26px rgba(0, 229, 255, 0.12),
+    0 0 60px rgba(0, 229, 255, 0.08);
+}
+
+.social-icon{
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+
+  display:grid;
+  place-items:center;
+
+  background: rgba(0, 229, 255, 0.10);
+  border: 1px solid rgba(0, 229, 255, 0.18);
+
+  box-shadow:
+    0 0 18px rgba(0, 229, 255, 0.10);
+  margin-bottom: 10px;
+}
+
+.social-icon svg{
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: var(--accent-cyan);
+  stroke-width: 2;
+}
+
+.social-meta{
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+}
+
+.social-title{
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  font-size: 16px;
+}
+
+.social-desc{
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.social-cta{
+  margin-top: 10px;
+
+  width: 100%;
+  max-width: 210px;
+  text-align: center;
+
+  padding: 12px 18px;
+  border-radius: 14px;
+
+  background: rgba(0, 229, 255, 0.14);
+  border: 1px solid rgba(0, 229, 255, 0.30);
+
+  color: var(--text-main);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+
+  box-shadow:
+    0 0 18px rgba(0, 229, 255, 0.14),
+    0 12px 30px rgba(0, 0, 0, 0.30);
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.social-card:hover .social-cta{
+  transform: translateY(-1px);
+  background: rgba(0, 229, 255, 0.18);
+  border-color: rgba(0, 229, 255, 0.46);
+  box-shadow:
+    0 0 22px rgba(0, 229, 255, 0.22),
+    0 0 52px rgba(0, 229, 255, 0.12),
+    0 14px 34px rgba(0, 0, 0, 0.34);
+}
+
+/* Tablet: 2 columns */
+@media (max-width: 1100px){
+  .social-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Mobile: 1 column */
+@media (max-width: 650px){
+  .social-grid{ grid-template-columns: 1fr; }
+  .social-cta{ max-width: none; }
+}
+
+    /* modal (shared) */
+    .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 5000; 
+  backdrop-filter: blur(8px);
+}
+
+
+    .modal-backdrop.active {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
+    .modal {
+  width: min(420px, 92vw);
+
+  background:
+    radial-gradient(circle at top left, rgba(124, 92, 255, 0.25), transparent 55%),
+    radial-gradient(circle at top right, rgba(0, 229, 255, 0.22), transparent 55%),
+    rgba(12, 14, 28, 0.85);
+
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+
+  border-radius: 24px;
+  padding: 22px 22px 20px;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  color: var(--text-main);
+}
+
+
+    .modal-badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--accent-cyan);
+      margin-bottom: 6px;
+    }
+
+    .modal-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .modal-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .modal-tagline {
+  font-size: 18px;
+  color: #ffe082;
+  margin-bottom: 10px; 
+  font-style: normal;  
+  font-weight: 600;    
+  letter-spacing: 0.02em;
+}
+    /* Claim status box (eligibility result) */
+#claim-status {
+  display: none;
+  margin: 12px auto 16px auto; 
+  padding: 14px 16px;
+  border-radius: 14px;
+
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.4);
+  color: #00e676;
+
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+
+  max-width: 100%;
+}
+    /* ===== Claim TX States ===== */
+
+#claim-status.pending {
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.45);
+  color: #ffc107;
+}
+
+#claim-status.success {
+  background: rgba(0, 230, 118, 0.12);
+  border: 1px solid rgba(0, 230, 118, 0.45);
+  color: #00e676;
+}
+
+#claim-status.error {
+  background: rgba(220, 53, 69, 0.12);
+  border: 1px solid rgba(220, 53, 69, 0.45);
+  color: #dc3545;
+}
+
+#cx-claim-now-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .btn-wallet {
+      flex: 1;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+      color: #020308;
+      font-weight: 600;
+      border-radius: 999px;
+      border: none;
+      padding: 11px 18px;
+      cursor: pointer;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.65);
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+    }
+
+    .btn-wallet:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+    }
+
+    .btn-close {
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 11px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+
+    .btn-close:hover {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-main);
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .modal-caption {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .modal-close-x {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    /* eligibility modal specific */
+
+    .eligibility-body {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      max-height: 55vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .eligibility-body ol {
+      padding-left: 18px;
+      margin: 0;
+    }
+
+    .eligibility-body li + li {
+      margin-top: 8px;
+    }
+
+    .eligibility-body ul {
+      margin-top: 4px;
+      padding-left: 16px;
+      list-style-type: disc;
+    }
+        /* Reward calculator modal */
+    .calculator-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+
+  z-index: 6000; 
+}
+
+    .calculator-modal.active {
+      display: flex;
+    }
+
+    .calculator-content {
+  width: min(380px, 92vw);
+
+  background:
+    radial-gradient(circle at top left, rgba(124, 92, 255, 0.25), transparent 55%),
+    radial-gradient(circle at top right, rgba(0, 229, 255, 0.22), transparent 55%),
+    rgba(12, 14, 28, 0.85);
+
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+
+  border-radius: 24px;
+  padding: 22px;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  box-shadow:
+    0 30px 90px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  color: var(--text-main);
+}
+
+
+    .calculator-content h2 {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    .calc-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .calculator-content label {
+      display: block;
+      font-size: 13px;
+      margin-top: 8px;
+      margin-bottom: 4px;
+      text-align: left;
+    }
+
+    .calculator-content input,
+    .calculator-content select {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(5, 7, 18, 0.9);
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+    }
+    .calculator-content select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 35px; 
+    background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='14' viewBox='0 0 20 20' width='14' xmlns='http://www.w3.org/2000/svg'><path d='M5.516 7.548l4.484 4.482 4.484-4.482L16 8.548l-6 6-6-6z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 14px center;  
+    background-size: 14px;
+}
+
+
+    .calculator-content input:focus,
+    .calculator-content select:focus {
+      border-color: var(--accent-cyan);
+    }
+    .calculator-content {
+  position: relative;
+}
+
+    .closeCalc {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  font-size: 26px;
+  color: #bbb;
+  cursor: pointer;
+  z-index: 10;
+  transition: 0.2s;
+}
+
+.closeCalc:hover {
+  color: white;
+}
+
+
+    #calcRun {
+      width: 100%;
+      margin-top: 12px;
+      border-radius: 999px;
+      border: none;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent-green), #b9ffcf);
+      color: #020308;
+      box-shadow: 0 14px 40px rgba(0, 230, 118, 0.4);
+      transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+    }
+
+    #calcRun:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 60px rgba(0, 230, 118, 0.7);
+    }
+
+    #calcResult {
+      margin-top: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .calc-note {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .closeCalc {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--text-muted);
+    }
+
+    .closeCalc:hover {
+      color: var(--text-main);
+    }
+
+   .calc-disclaimer {
+  margin-top: 10px;          
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  text-align: left;
+  max-width: 92%;
+}
+
+.calc-disclaimer strong {
+  display: block;
+
+  margin-top: 2px;            
+  margin-bottom: 2px;
+
+  transform: translateY(-6px); 
+
+  font-size: 18px;
+  line-height: 1.25;
+
+  color: #ffcc80;
+  letter-spacing: 0.02em;
+
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-weight: 600;
+}
+
+  /* ===== Rewards Model – Cards Layout ===== */
+
+.rewards-section {
+  text-align: center;
+}
+
+.rewards-intro {
+  max-width: 520px;
+  margin: 10px auto 26px auto;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+
+.rewards-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 22px;
+  align-items: stretch;
+}
+
+.rewards-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.reward-card.enforcement {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+
+.reward-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  padding: 24px 22px;
+  text-align: left;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+}
+
+.reward-card h3 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: var(--accent-cyan);
+}
+
+.reward-card p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.reward-card ul {
+  padding-left: 18px;
+  margin: 8px 0;
+}
+
+.reward-card li {
+  font-size: 14px;
+  line-height: 1.55;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+}
+
+.reward-card strong {
+  color: var(--text-main);
+}
+
+.reward-card.highlight {
+  border-color: rgba(0, 229, 255, 0.45);
+  background: linear-gradient(
+    160deg,
+    rgba(0, 229, 255, 0.12),
+    rgba(255, 255, 255, 0.04)
+  );
+}
+    .reward-card.highlight {
+  display: flex;
+  flex-direction: column;
+}
+
+.reward-card.highlight ul,
+.reward-card.highlight .reward-example {
+  flex-shrink: 0;
+}
+
+.reward-footer {
+  margin-top: auto;            
+  padding-top: 6px;           
+  padding-bottom: 20px;       
+
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  opacity: 0.9;
+}
+
+
+.reward-example {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.reward-policy {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  opacity: 0.85;
+}
+
+    .reward-card.enforcement {
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  text-align: left;
+}
+    .reward-actions-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+
+  margin-top: 22px; 
+}
+
+    
+   @media (max-width: 900px) {
+  .rewards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .page-shell { padding-inline: 16px; }
+
+  .top-bar { flex-direction: row; gap: 8px; }
+
+  .hero { margin-bottom: 32px; }
+  .hero-title { font-size: 34px; }
+
+  .section { padding-inline: 18px; }
+
+  .stats-grid { grid-template-columns: 1fr; }
+
+  body.modal-open .top-bar {
+    display: none !important;
   }
 
-  @media (max-width:650px){
-    .social-grid{grid-template-columns:1fr}
-    .social-cta{max-width:none}
+  .modal-backdrop.active,
+  .calculator-modal.active {
+    align-items: center !important;
+    justify-content: center !important;
+
+
+    padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
-  /* ===== RTL (Arabic) polishing ===== */
-  [dir="rtl"] .brand{flex-direction:row-reverse}
-  [dir="rtl"] .lang-switch{direction:ltr} /* keep emoji+codes readable */
-  [dir="rtl"] .section,
-  [dir="rtl"] .hero{text-align:center}
-  [dir="rtl"] .stat-card{text-align:right}
-  [dir="rtl"] .reward-card{text-align:right}
-  [dir="rtl"] .reward-card ul{padding-left:0;padding-right:18px}
-  [dir="rtl"] .eligibility-body ol{padding-left:0;padding-right:18px}
-  [dir="rtl"] .calculator-content label{text-align:right}
-  [dir="rtl"] .closeCalc{right:auto;left:18px}
-  [dir="rtl"] .modal-close-x{right:auto;left:12px}
-</style>
+  .modal,
+  .calculator-content {
+    max-height: calc(
+      100dvh
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px)
+      - 24px
+    );
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
 
+  </style>
 </head>
 <body>
   <div class="page-shell">
@@ -746,95 +1165,84 @@
   <main>
     <section class="hero">
       <div class="hero-kicker" data-i18n="hero_kicker">
-        Engineering secure on-chain systems for long-term participation
+        Security-first tools designed to help you stay safe on-chain
       </div>
 
       <h1 class="hero-title" data-i18n="hero_title">
-        A secure quarterly reward ecosystem powered by AI-enhanced blockchain protection.
+        Secure your wallet. Protect your assets.
       </h1>
 
       <p class="hero-subtitle" data-i18n="hero_subtitle">
-        CycleX uses AI-driven analysis to safeguard digital assets,
-        reward long-term holders, and lock treasury control directly into transparent on-chain smart contracts.
+        Use free security tools to scan approvals, detect high-risk contracts, and stay in control — no wallet connection required.
+        CycleX also powers a transparent on-chain rewards system for long-term participants.
       </p>
 
-      <!-- UPDATED: Make Security Tools the primary CTA (no wallet connect) -->
-      <div class="hero-actions">
-        <a class="btn btn-primary" id="btn-security-tools" href="/security" data-i18n="btn_security_tools">
-          Free Wallet Security Tools
+      <!-- PRIMARY CTA (security-first) -->
+      <div class="hero-primary-cta">
+        <a class="btn btn-primary" href="/security" id="btn-security-tools">
+          Free Wallet Security Tools 🛠
         </a>
+        <div class="hero-primary-sub">
+          No wallet connection required
+        </div>
+      </div>
 
-        <button class="btn btn-secondary" id="btn-claim" data-i18n="btn_claim" type="button">
+      <!-- Secondary actions (kept, but de-emphasized) -->
+      <div class="hero-actions hero-actions-secondary">
+        <button class="btn btn-secondary" id="btn-claim" data-i18n="btn_claim">
           Claim rewards
         </button>
 
-        <a href="#" id="presale-link">
-          <button class="btn btn-secondary" data-i18n="btn_presale" type="button">
-            Pre-Sale (PinkSale)
-          </button>
-        </a>
-
-        <button class="btn btn-secondary" id="openCalculator" type="button" data-i18n="btn_calculator">
+        <button class="btn btn-secondary" id="openCalculator">
           Reward Calculator
         </button>
-      </div>
 
-      <p class="hero-note" data-i18n="hero_security_note">
-        No wallet connection required for security tools.
-      </p>
+        <!-- keep id="presale-link" for your existing logic/scripts -->
+        <a class="btn btn-secondary" href="#" id="presale-link" data-i18n="btn_presale" role="button">
+          Pre-Sale (PinkSale)
+        </a>
+      </div>
 
       <p class="hero-note" data-i18n="hero_note" style="display:none">
         First reward cycle: <span>31 March 2026</span>. Eligibility: hold at least 60 days before the cycle date.
       </p>
     </section>
 
-    <!-- NEW: Live Security Activity (Counters) -->
+    <!-- NEW: Live Security Activity (Above the fold, right under Hero) -->
     <section class="section" id="security-activity">
-      <div class="section-kicker" data-i18n="activity_kicker">Security Network</div>
-      <h2 class="section-title" data-i18n="activity_title">
-        CycleX Security Network — Live Activity
-      </h2>
-
-      <p class="section-body" data-i18n="activity_subtitle">
-        Track security activity across the ecosystem. Metrics update over time as scans and risk patterns are detected.
+      <div class="section-kicker">Live Security Activity</div>
+      <h2 class="section-title">CycleX Security Network — Live Activity 🛡</h2>
+      <p class="section-body">
+        Lightweight public counters that reflect security tool activity. (Static or updated manually/JSON — your choice.)
       </p>
 
-      <!-- Reuse existing card/grid styles for consistent look -->
+      <!-- Reuse existing stat-card styling to avoid breaking CSS -->
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-label" data-i18n="activity_wallets_label">Wallets scanned</div>
-          <div class="stat-value" id="stat-wallets-scanned">—</div>
-          <div class="stat-tag" data-i18n="activity_tag">Live metric</div>
+          <div class="stat-label">Wallets Scanned 🔍</div>
+          <div class="stat-value" id="wallets-scanned">12,345</div>
+          <div class="stat-tag">Activity counter</div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-label" data-i18n="activity_risky_label">Risky approvals detected</div>
-          <div class="stat-value" id="stat-risky-approvals">—</div>
-          <div class="stat-tag" data-i18n="activity_tag2">Live metric</div>
+          <div class="stat-label">Risky Approvals Detected 🚨</div>
+          <div class="stat-value" id="risky-approvals">2,341</div>
+          <div class="stat-tag">Activity counter</div>
         </div>
 
         <div class="stat-card">
-          <div class="stat-label" data-i18n="activity_highrisk_label">High-risk contracts identified</div>
-          <div class="stat-value" id="stat-highrisk-contracts">—</div>
-          <div class="stat-tag" data-i18n="activity_tag3">Live metric</div>
+          <div class="stat-label">High-Risk Contracts Identified 🧬</div>
+          <div class="stat-value" id="high-risk-contracts">1,237</div>
+          <div class="stat-tag">Activity counter</div>
         </div>
       </div>
 
-      <div class="section-body" style="opacity:.85; margin-top:10px;" data-i18n="activity_note">
-        Tip: Re-scan regularly — wallet risk can change over time.
-      </div>
-
-      <div class="hero-actions" style="margin-top:16px;">
-        <a class="btn btn-primary" href="/security" data-i18n="btn_security_tools">
-          Free Wallet Security Tools
-        </a>
-        <div class="hero-note" data-i18n="btn_security_tools_note">
-          No wallet connection required
-        </div>
+      <div class="section-body" style="margin-top: 10px; opacity: .8;">
+        Note: No “hacked / stolen” language — just clean security activity metrics.
       </div>
     </section>
 
-    <!-- 1. On-Chain Transparency -->
+    <!-- 1. On-Chain Transparency (kept right AFTER security activity, includes your rewards/burns metrics) -->
     <section class="section">
       <div class="section-kicker" data-i18n="transparency_kicker">
         Transparency
@@ -843,8 +1251,7 @@
         On-Chain Transparency
       </h2>
       <p class="section-body" data-i18n="transparency_p1">
-        All core flows — rewards, burns, and treasury movements — are executed directly by the smart contract.
-        The counters below reflect live, verifiable on-chain data.
+        All core flows — rewards, burns, and treasury movements — are executed directly by the smart contract. The counters below reflect live, verifiable on-chain data.
       </p>
 
       <div class="stats-grid">
@@ -853,11 +1260,13 @@
           <div class="stat-value" id="stat-rewards">0 CYCX</div>
           <div class="stat-tag" data-i18n="stat_onchain_tag">Live on-chain metric</div>
         </div>
+
         <div class="stat-card">
           <div class="stat-label" data-i18n="stat_burn_label">Total tokens burned</div>
           <div class="stat-value" id="stat-burned">0 CYCX</div>
           <div class="stat-tag" data-i18n="stat_onchain_tag2">Live on-chain metric</div>
         </div>
+
         <div class="stat-card">
           <div class="stat-label" data-i18n="stat_last_cycle_label">Last distribution</div>
           <div class="stat-value" id="stat-last-cycle">—</div>
@@ -865,6 +1274,7 @@
             Updates after the first reward cycle is executed.
           </div>
         </div>
+
         <div class="stat-card">
           <div class="stat-label" data-i18n="stat_next_cycle_label">Next scheduled distribution</div>
           <div class="stat-value" id="stat-next-cycle" style="display:none">31 March 2026</div>
@@ -875,13 +1285,33 @@
       </div>
     </section>
 
+    <!-- NEW: Short “Why CycleX” bridge (security-first, not salesy) -->
+    <section class="section" id="why-cyclex">
+      <div class="section-kicker">Security-First</div>
+      <h2 class="section-title">Why CycleX exists</h2>
+      <div class="section-body">
+        <p>
+          Many on-chain systems fail for the same reasons: manual control, opaque rules, and decisions made off-chain.
+          CycleX is designed to remove discretionary control and keep execution transparent.
+        </p>
+        <ul style="margin: 14px 0 0 18px; line-height: 1.6;">
+          <li><strong>Trust:</strong> rules enforced by code — not promises.</li>
+          <li><strong>Security:</strong> free tools that help users detect risks early.</li>
+          <li><strong>Transparency:</strong> rewards &amp; burns are verifiable on-chain.</li>
+        </ul>
+        <p style="margin-top: 12px;">
+          The CycleX token is built to unlock advanced security insights and participation features as the ecosystem expands.
+        </p>
+      </div>
+    </section>
+
     <!-- 2. Vision & AI Security -->
     <section class="section">
       <div class="section-kicker" data-i18n="vision_kicker">
         Vision &amp; Architecture
       </div>
       <h2 class="section-title" style="font-size: 38px;" data-i18n="vision_title">
-        Vision & On-Chain Security Architecture
+        Vision &amp; On-Chain Security Architecture
       </h2>
       <div class="section-body">
         <p data-i18n="vision_p1">
@@ -903,6 +1333,7 @@
 
     <!-- 3. Rewards Model -->
     <section class="section rewards-section">
+
       <div class="section-kicker" data-i18n="rewards_kicker">
         REWARDS MODEL
       </div>
@@ -917,6 +1348,7 @@
       </p>
 
       <div class="rewards-grid">
+
         <!-- MAIN CARD (LEFT) -->
         <div class="reward-card highlight">
           <h3 data-i18n="rewards_dist_title">Distribution Logic</h3>
@@ -961,17 +1393,11 @@
               Pre-Sale (PinkSale)
             </button>
           </div>
-
-          <!-- NEW: light cross-CTA to security tools inside rewards block (optional but useful) -->
-          <div class="hero-actions" style="margin-top:12px;">
-            <a class="btn btn-secondary" href="/security" data-i18n="btn_security_tools_secondary">
-              Try free security tools
-            </a>
-          </div>
         </div>
 
         <!-- SIDE COLUMN (RIGHT) -->
         <div class="rewards-side">
+
           <!-- Eligibility -->
           <div class="reward-card">
             <h3 data-i18n="rewards_rules_title">
@@ -1007,6 +1433,7 @@
               Each holder triggers their own on-chain claim using their own wallet and pays their own gas.
             </p>
           </div>
+
         </div>
       </div>
 
@@ -1016,6 +1443,7 @@
         <strong>end of March, June, September, and December</strong>,
         at <strong>20:00 UK time</strong>.
       </div>
+
     </section>
 
     <!-- Future-Ready Protocol -->
@@ -1066,6 +1494,7 @@
         </p>
       </div>
     </section>
+
   </main>
 
   <!-- Social / Community -->
@@ -1079,11 +1508,10 @@
     <div class="social-grid">
       <!-- X / Twitter -->
       <a class="social-card" id="social-x"
-         href="https://x.com/CyclexNetwork"
-         target="_blank" rel="noopener"
-         aria-label="Open X / Twitter">
+        href="https://x.com/CyclexNetwork"
+        target="_blank" rel="noopener"
+        aria-label="Open X / Twitter">
         <div class="social-icon" aria-hidden="true">
-          <!-- X icon -->
           <svg viewBox="0 0 24 24">
             <path d="M4 4l16 16M20 4L4 20"></path>
           </svg>
@@ -1097,11 +1525,10 @@
 
       <!-- Telegram -->
       <a class="social-card" id="social-tg"
-         href="https://t.me/cyclex_official"
-         target="_blank" rel="noopener"
-         aria-label="Open Telegram">
+        href="https://t.me/cyclex_official"
+        target="_blank" rel="noopener"
+        aria-label="Open Telegram">
         <div class="social-icon" aria-hidden="true">
-          <!-- Telegram icon -->
           <svg viewBox="0 0 24 24">
             <path d="M22 3L2 11l8 3 2 7 4-5 4 3 2-16Z"></path>
             <path d="M10 14l12-11"></path>
@@ -1116,11 +1543,10 @@
 
       <!-- Whitepaper -->
       <a class="social-card" id="social-wp"
-         href="https://cyclex.network/whitepaper.pdf"
-         target="_blank" rel="noopener"
-         aria-label="Open Whitepaper">
+        href="https://cyclex.network/whitepaper.pdf"
+        target="_blank" rel="noopener"
+        aria-label="Open Whitepaper">
         <div class="social-icon" aria-hidden="true">
-          <!-- Doc icon -->
           <svg viewBox="0 0 24 24">
             <path d="M7 3h7l3 3v15H7V3Z"></path>
             <path d="M14 3v4h4"></path>
@@ -1136,11 +1562,10 @@
 
       <!-- FAQ (PDF) -->
       <a class="social-card" id="social-faq"
-         href="https://cyclex.network/FAQ.pdf"
-         target="_blank" rel="noopener"
-         aria-label="Open FAQ PDF">
+        href="https://cyclex.network/FAQ.pdf"
+        target="_blank" rel="noopener"
+        aria-label="Open FAQ PDF">
         <div class="social-icon" aria-hidden="true">
-          <!-- Q icon -->
           <svg viewBox="0 0 24 24">
             <path d="M12 18h.01"></path>
             <path d="M9.5 9a2.5 2.5 0 1 1 4.2 1.8c-.9.5-1.7 1.1-1.7 2.2v.5"></path>
@@ -1163,6 +1588,14 @@
     </div>
     <div class="footer-tagline" data-i18n="footer_tagline">
       Powered by security, strengthened by community, and driven by a limited supply everyone wants.
+    </div>
+
+    <!-- Optional quick links (styling later in CSS) -->
+    <div class="footer-links" style="margin-top: 14px; display:flex; gap:12px; flex-wrap:wrap; opacity:.9;">
+      <a href="/security">Security Hub</a>
+      <a href="https://x.com/CyclexNetwork" target="_blank" rel="noopener">X</a>
+      <a href="https://t.me/cyclex_official" target="_blank" rel="noopener">Telegram</a>
+      <a href="https://cyclex.network/whitepaper.pdf" target="_blank" rel="noopener">Docs</a>
     </div>
   </footer>
 </div>
@@ -1424,16 +1857,6 @@ calc_note:
         social_faq_title: "FAQ",
         social_faq_desc: "Quick answers & safety notes",
         social_faq_btn: "Open",
-        claim_now_btn: "Claim now",
-
-calc_err_amount: "Enter a valid token amount.",
-calc_result_final: "Final amount after {cycles} cycle(s):",
-calc_result_profit: "Profit over starting balance:",
-
-ui_connecting_wallet: "⏳ Connecting wallet…",
-ui_connect_timeout: "⚠️ Connection timeout. Please try again.",
-ui_web3_failed: "⚠️ Web3 init failed. Try again.",
-
 
         // Eligibility popup (SHORT)
         elig_title: "Eligibility & Holding Rules",
@@ -1605,15 +2028,6 @@ social_wp_btn: "阅读",
 social_faq_title: "常见问题",
 social_faq_desc: "快速解答与安全提示",
 social_faq_btn: "打开",
-        claim_now_btn: "立即领取",
-
-calc_err_amount: "请输入有效的代币数量。",
-calc_result_final: "{cycles} 个周期后的最终数量：",
-calc_result_profit: "相对起始余额的收益：",
-
-ui_connecting_wallet: "⏳ 正在连接钱包…",
-ui_connect_timeout: "⚠️ 连接超时，请重试。",
-ui_web3_failed: "⚠️ Web3 初始化失败，请重试。",
 
 
         elig_title: "资格与持有规则",
@@ -1786,15 +2200,6 @@ social_wp_btn: "اقرأ",
 social_faq_title: "الأسئلة الشائعة",
 social_faq_desc: "إجابات سريعة ونصائح أمان",
 social_faq_btn: "افتح",
-claim_now_btn: "اطلب الآن",
-
-calc_err_amount: "أدخل كمية رموز صالحة.",
-calc_result_final: "المبلغ النهائي بعد {cycles} دورة:",
-calc_result_profit: "الربح مقارنةً بالرصيد الأساسي:",
-
-ui_connecting_wallet: "⏳ جارٍ توصيل المحفظة…",
-ui_connect_timeout: "⚠️ انتهت مهلة الاتصال. حاول مرة أخرى.",
-ui_web3_failed: "⚠️ فشل تهيئة Web3. حاول مرة أخرى.",
 
 
         elig_title: "قواعد الأهلية والاحتفاظ",
@@ -1939,16 +2344,6 @@ social_wp_btn: "Читать",
 social_faq_title: "FAQ",
 social_faq_desc: "Быстрые ответы и заметки по безопасности",
 social_faq_btn: "Открыть",
-        claim_now_btn: "Получить сейчас",
-
-calc_err_amount: "Введите корректное количество токенов.",
-calc_result_final: "Итог после {cycles} цик(ла/лов):",
-calc_result_profit: "Прибыль относительно стартового баланса:",
-
-ui_connecting_wallet: "⏳ Подключение кошелька…",
-ui_connect_timeout: "⚠️ Таймаут подключения. Повторите попытку.",
-ui_web3_failed: "⚠️ Ошибка Web3. Попробуйте снова.",
-
 
 
         elig_title: "Правила участия и удержания",
@@ -2036,12 +2431,6 @@ calc_note:
           el.innerHTML = dict[key];
         }
       });
-      // ✅ NEW: placeholder keys
-document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
-  const key = el.getAttribute("data-i18n-placeholder");
-  if (dict[key]) el.setAttribute("placeholder", dict[key]);
-});
-
 
       document.querySelectorAll(".lang-btn").forEach((btn) => {
         btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
@@ -2296,17 +2685,11 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
         btn.id = "cx-claim-now-btn";
         btn.className = "btn-wallet";
         btn.style.marginTop = "10px";
-        const lang = document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
-const dict = translations[lang] || translations.en;
-btn.textContent = dict.claim_now_btn || "Claim now";
-
+        btn.textContent = "Claim now";
         btn.addEventListener("click", cxPerformClaim);
         modal.appendChild(btn);
       }
     }
-    // keep label synced if language changes
-btn.dataset.cxI18n = "claim_now_btn";
-
    // ✅ Already-claimed UI (does NOT override success message unless we explicitly call it)
 function cxShowAlreadyClaimed() {
   const box = document.getElementById("claim-status");
@@ -2607,26 +2990,20 @@ function cxSetClaimUI(state, message) {
         const cycles = parseInt(calcCyclesSelect.value, 10);
         const rate = 1.09; // 9% per cycle
 
-        const lang = document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
-const dict = translations[lang] || translations.en;
+        if (!tokens || tokens <= 0) {
+          calcResultBox.innerHTML = "Enter a valid token amount.";
+          return;
+        }
 
-if (!tokens || tokens <= 0) {
-  calcResultBox.innerHTML = dict.calc_err_amount || "Enter a valid token amount.";
-  return;
-}
+        const finalAmount = tokens * Math.pow(rate, cycles);
+        const profit = finalAmount - tokens;
 
-const finalLabel = (dict.calc_result_final || "Final amount after {cycles} cycle(s):")
-  .replace("{cycles}", String(cycles));
-
-const profitLabel = (dict.calc_result_profit || "Profit over starting balance:");
-
-calcResultBox.innerHTML = `
-  ${finalLabel}
-  <span style="color:#00e676">${finalAmount.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span> CYCX<br/>
-  ${profitLabel}
-  <span style="color:#00e676">${profit.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span> CYCX
-`;
-
+        calcResultBox.innerHTML = `
+          Final amount after ${cycles} cycle(s): 
+          <span style="color:#00e676">${finalAmount.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span> CYCX<br/>
+          Profit over starting balance: 
+          <span style="color:#00e676">${profit.toLocaleString("en-US", { maximumFractionDigits: 2 })}</span> CYCX
+        `;
       });
     }
 
@@ -2877,24 +3254,15 @@ cxlog("🟢 [CycleX] AppKit initialized");
     box.style.background = "rgba(0,229,255,0.10)";
     box.style.border = "1px solid rgba(0,229,255,0.35)";
     box.style.color = "#00e5ff";
-const lang = document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
-const dict = (window.translations?.[lang] || window.translations?.en || null);
-
-const tConnecting = dict?.ui_connecting_wallet || "⏳ Connecting wallet…";
-const tTimeout    = dict?.ui_connect_timeout   || "⚠️ Connection timeout. Please try again.";
-const tWeb3Fail   = dict?.ui_web3_failed       || "⚠️ Web3 init failed. Try again.";
-
-box.innerHTML = `<strong>${tConnecting}</strong>`;
+    box.innerHTML = "<strong>⏳ Connecting wallet…</strong>";
   }
-     window.translations = translations;
-
 
   await modal.open({ view: "ConnectWallet" });
 
   const provider = await waitForWalletProvider(90000);
   if (!provider) {
     console.error("🔴 Provider never became ready (timeout)");
-if (box) box.innerHTML = `<strong>${tTimeout}</strong>`;
+    if (box) box.innerHTML = "<strong>⚠️ Connection timeout. Please try again.</strong>";
     return;
   }
 
@@ -2907,7 +3275,7 @@ if (box) box.innerHTML = `<strong>${tTimeout}</strong>`;
     
 const ok = await window.cxEnsureWeb3?.();
 if (!ok) {
-  if (box) box.innerHTML = `<strong>${tWeb3Fail}</strong>`;
+  if (box) box.innerHTML = "<strong>⚠️ Web3 init failed. Try again.</strong>";
   return;
 }
 
