@@ -1,0 +1,1312 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>CycleX — On-Chain Security & Rewards</title>
+
+  <!-- GA4 (optional) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-BXDFXJWCNQ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-BXDFXJWCNQ');
+  </script>
+
+  <link rel="icon" href="/logo.png" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+
+  <style>
+    :root{
+      /* Core palette (premium dark + neon) */
+      --bg0:#05060a;
+      --bg1:#070a16;
+      --bg2:#04161f;
+
+      --text:#f4f6ff;
+      --muted:rgba(244,246,255,.74);
+      --dim:rgba(244,246,255,.55);
+
+      --c:#00e5ff;   /* cyan */
+      --p:#7c5cff;   /* purple */
+      --g:#5dffb2;   /* green */
+      --gold:#ffd28a;
+
+      /* Surfaces */
+      --hair:rgba(255,255,255,.10);
+      --hair2:rgba(255,255,255,.14);
+      --glass:rgba(255,255,255,.035);
+      --glass2:rgba(255,255,255,.060);
+
+      --r-xl:26px;
+      --r-lg:18px;
+      --r-md:14px;
+
+      --sh1:0 18px 60px rgba(0,0,0,.52);
+      --sh2:0 36px 120px rgba(0,0,0,.74);
+
+      --ease:cubic-bezier(.2,.8,.2,1);
+      --container:1180px;
+      --gutter:20px;
+
+      /* Ultra-subtle noise (SVG) */
+      --noise:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='320'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='320' height='320' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    img{max-width:100%;display:block}
+    a{color:inherit;text-decoration:none}
+    button,a{-webkit-tap-highlight-color:transparent}
+    :where(p,li,.tiny){overflow-wrap:anywhere;word-break:break-word;hyphens:auto}
+    :where(.hero-title,.h2){text-wrap:balance}
+
+    body{
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text","Segoe UI", sans-serif;
+      color:var(--text);
+      min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+      background:
+        radial-gradient(1200px 700px at 14% 10%, rgba(124,92,255,.18), transparent 60%),
+        radial-gradient(1200px 700px at 86% 14%, rgba(0,229,255,.16), transparent 58%),
+        radial-gradient(900px 650px at 50% 120%, rgba(93,255,178,.08), transparent 60%),
+        linear-gradient(160deg, var(--bg0), var(--bg1), var(--bg2));
+      overflow-x:hidden;
+    }
+
+    /* Smooth premium overlay: soft vignette + micro-noise (NO pixel stripes) */
+    body::before{
+      content:"";
+      position:fixed; inset:-20vh -20vw;
+      pointer-events:none;
+      background:
+        radial-gradient(1200px 900px at 50% -10%, rgba(255,255,255,.05), transparent 60%),
+        radial-gradient(900px 700px at 20% 40%, rgba(0,229,255,.07), transparent 60%),
+        radial-gradient(900px 700px at 82% 36%, rgba(124,92,255,.06), transparent 62%),
+        var(--noise);
+      background-size:auto, auto, auto, 560px 560px;
+      opacity:.18;
+      mix-blend-mode:overlay;
+      transform:translate3d(0,0,0);
+    }
+    body::after{
+      content:"";
+      position:fixed; inset:-25vh -25vw;
+      pointer-events:none;
+      background: radial-gradient(circle at 50% 10%, rgba(0,0,0,.18) 0%, rgba(0,0,0,.60) 62%, rgba(0,0,0,.84) 100%);
+      opacity:.92;
+    }
+
+    .wrap{
+      position:relative; z-index:1;
+      max-width:var(--container);
+      margin:0 auto;
+      padding: 18px var(--gutter) 70px;
+    }
+
+    /* Topbar */
+    .topbar{
+      position:sticky; top:14px; z-index:1000;
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 14px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(10,12,22,.50);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 14px 50px rgba(0,0,0,.46), inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .topbar::before{
+      content:"";
+      position:absolute; inset:0;
+      border-radius:999px;
+      padding:1px;
+      background: linear-gradient(120deg, rgba(0,229,255,.22), rgba(124,92,255,.16), rgba(255,255,255,.08));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+              mask-composite: exclude;
+      pointer-events:none;
+      opacity:.55;
+    }
+
+    .brand{display:flex; align-items:center; gap:10px; min-width: 210px;}
+    .logo{
+      width:40px; height:40px; border-radius:14px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 14px 40px rgba(0,0,0,.65);
+      object-fit:contain;
+    }
+    .brandtxt{display:flex; flex-direction:column; gap:2px; line-height:1.1;}
+    .brandname{
+      font-weight: 950;
+      letter-spacing:.12em;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .brandsub{
+      font-size: 10px;
+      letter-spacing:.18em;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
+
+    .nav{
+      display:none;
+      gap: 12px;
+      align-items:center;
+      justify-content:center;
+      flex: 1 1 auto;
+    }
+    .nav a{
+      font-size: 11px;
+      letter-spacing:.16em;
+      text-transform: uppercase;
+      color: rgba(244,246,255,.72);
+      padding: 8px 12px;
+      border-radius:999px;
+      border:1px solid transparent;
+      transition: background .18s var(--ease), border-color .18s var(--ease), transform .18s var(--ease), color .18s var(--ease);
+    }
+    .nav a:hover{
+      background: rgba(255,255,255,.04);
+      border-color: rgba(255,255,255,.12);
+      transform: translateY(-1px);
+      color: rgba(244,246,255,.90);
+    }
+
+    .rightbar{display:flex; align-items:center; gap:10px; flex: 0 0 auto;}
+
+    .lang{
+      display:inline-flex; align-items:center;
+      padding:4px;
+      border-radius:999px;
+      background: rgba(255,255,255,.045);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 26px rgba(0,0,0,.35);
+      gap:2px;
+    }
+    .lang button{
+      border:none; background:transparent;
+      color: var(--dim);
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      transition: transform .18s var(--ease), background .18s var(--ease), color .18s var(--ease);
+      display:flex; align-items:center; gap:6px;
+      white-space:nowrap;
+    }
+    .lang button:hover{ transform: translateY(-1px); }
+    .lang button.active{
+      background: rgba(0,229,255,.14);
+      color: rgba(0,229,255,.95);
+    }
+
+    .mini-cta{
+      display:none;
+      padding: 10px 14px;
+      border-radius:999px;
+      border:1px solid rgba(0,229,255,.20);
+      background: rgba(0,229,255,.10);
+      color: rgba(0,229,255,.95);
+      font-weight: 950;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      font-size: 11px;
+      transition: transform .18s var(--ease), background .18s var(--ease), box-shadow .18s var(--ease);
+    }
+    .mini-cta:hover{ transform: translateY(-1px); background: rgba(0,229,255,.14); box-shadow: 0 18px 60px rgba(0,229,255,.18); }
+
+    /* Hero */
+    .hero{
+      position:relative;
+      margin: 26px auto 18px;
+      padding: 26px 0 10px;
+    }
+    .heroGrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .kicker{
+      font-size: 12px;
+      letter-spacing:.22em;
+      text-transform:uppercase;
+      color: rgba(0,229,255,.92);
+      margin-bottom: 12px;
+    }
+
+    .hero-title{
+      font-size: clamp(36px, 5.1vw, 66px);
+      line-height: 1.02;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+      margin-bottom: 14px;
+    }
+    @supports (-webkit-background-clip:text){
+      .hero-title{
+        background: linear-gradient(110deg,
+          rgba(244,246,255,1) 0%,
+          rgba(0,229,255,.98) 36%,
+          rgba(124,92,255,.86) 72%,
+          rgba(244,246,255,.94) 100%);
+        -webkit-background-clip:text;
+        background-clip:text;
+        color: transparent;
+        background-size: 220% 220%;
+        animation: sheen 7.2s ease-in-out infinite;
+      }
+      @keyframes sheen{
+        0%{background-position:0% 50%}
+        50%{background-position:100% 50%}
+        100%{background-position:0% 50%}
+      }
+    }
+
+    .sub{
+      max-width: 66ch;
+      font-size: 16px;
+      line-height: 1.75;
+      color: var(--muted);
+    }
+
+    .chips{
+      display:flex; flex-wrap:wrap; gap:10px;
+      margin-top: 16px;
+    }
+    .chip{
+      font-size: 11px;
+      letter-spacing:.12em;
+      text-transform: uppercase;
+      color: rgba(244,246,255,.86);
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.10);
+      backdrop-filter: blur(12px);
+      transition: transform .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
+      white-space:nowrap;
+    }
+    .chip strong{ color: rgba(0,229,255,.95); font-weight: 950; }
+    .chip:hover{ transform: translateY(-1px); border-color: rgba(0,229,255,.20); background: rgba(255,255,255,.04); }
+
+    .heroPanel{
+      position:relative;
+      border-radius: var(--r-xl);
+      padding: 16px;
+      background: rgba(255,255,255,.035);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: var(--sh1);
+      backdrop-filter: blur(18px);
+      overflow:hidden;
+    }
+    .heroPanel::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(900px 420px at 10% 20%, rgba(0,229,255,.14), transparent 55%),
+        radial-gradient(900px 420px at 90% 10%, rgba(124,92,255,.12), transparent 58%);
+      opacity:.85;
+      pointer-events:none;
+      filter: blur(2px);
+    }
+    .heroPanelInner{ position:relative; z-index:1; }
+
+    .primaryBtn{
+      width:100%;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+      border-radius: 999px;
+      padding: 18px 16px;
+      border: 1px solid rgba(0,229,255,.20);
+      background: linear-gradient(135deg, rgba(0,229,255,1), rgba(125,242,255,1));
+      color:#05060a;
+      font-weight: 950;
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      font-size: 12px;
+      cursor:pointer;
+      box-shadow: 0 22px 90px rgba(0,229,255,.30);
+      transition: transform .28s var(--ease), box-shadow .28s var(--ease), filter .28s var(--ease);
+    }
+    .primaryBtn:hover{
+      transform: translateY(-2px);
+      box-shadow: 0 34px 120px rgba(0,229,255,.42);
+      filter: saturate(1.05);
+    }
+
+    .panelNote{
+      margin-top: 10px;
+      text-align:center;
+      color: rgba(244,246,255,.64);
+      font-size: 12px;
+      letter-spacing:.02em;
+    }
+    .panelNote span{ color: rgba(0,229,255,.95); font-weight: 900; }
+
+    .btnRow{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .ghostBtn{
+      width:100%;
+      border-radius: 999px;
+      padding: 14px 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.028);
+      color: rgba(244,246,255,.92);
+      font-weight: 950;
+      letter-spacing:.12em;
+      text-transform: uppercase;
+      font-size: 11px;
+      cursor:pointer;
+      transition: transform .22s var(--ease), border-color .22s var(--ease), background .22s var(--ease), box-shadow .22s var(--ease);
+    }
+    .ghostBtn:hover{
+      transform: translateY(-1px);
+      border-color: rgba(0,229,255,.22);
+      background: rgba(255,255,255,.038);
+      box-shadow: 0 18px 70px rgba(0,0,0,.50);
+    }
+
+    .trustStrip{
+      margin-top: 16px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .trustCard{
+      border-radius: var(--r-lg);
+      padding: 12px 14px;
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.10);
+      display:flex; gap: 10px; align-items:flex-start;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px;
+      background: rgba(0,229,255,.85);
+      box-shadow: 0 0 0 4px rgba(0,229,255,.10);
+      margin-top: 5px;
+      flex: 0 0 auto;
+    }
+    .trustCard b{
+      display:block;
+      font-size: 11px;
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      color: rgba(244,246,255,.92);
+      margin-bottom: 4px;
+    }
+    .trustCard p{
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    /* Sections */
+    .section{
+      position:relative;
+      margin-top: 44px;
+      padding-top: 34px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .sectionHead{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .tinyK{
+      font-size: 12px;
+      letter-spacing:.22em;
+      text-transform:uppercase;
+      color: rgba(124,92,255,.90);
+    }
+    .h2{
+      font-size: clamp(26px, 3vw, 40px);
+      font-weight: 950;
+      letter-spacing: -0.02em;
+      margin-top: 8px;
+    }
+    .lead{
+      max-width: 62ch;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.85;
+    }
+
+    /* Tool cards */
+    .cardGrid{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .card{
+      position:relative;
+      border-radius: 22px;
+      padding: 16px 16px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 16px 60px rgba(0,0,0,.32);
+      backdrop-filter: blur(14px);
+      transition: transform .22s var(--ease), border-color .22s var(--ease), background .22s var(--ease);
+      overflow:hidden;
+      min-width:0;
+    }
+    .card::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(520px 240px at 12% 10%, rgba(0,229,255,.10), transparent 55%);
+      opacity:.70;
+      pointer-events:none;
+      filter: blur(1px);
+    }
+    .card:hover{
+      transform: translateY(-2px);
+      border-color: rgba(0,229,255,.20);
+      background: rgba(255,255,255,.04);
+    }
+    .cardInner{ position:relative; z-index:1; display:flex; gap: 14px; align-items:flex-start; }
+    .iconBox{
+      width: 46px; height: 46px;
+      border-radius: 16px;
+      background: rgba(0,229,255,.08);
+      border: 1px solid rgba(0,229,255,.16);
+      box-shadow: 0 0 22px rgba(0,229,255,.12);
+      display:grid; place-items:center;
+      flex: 0 0 auto;
+    }
+    .iconBox svg{ width: 22px; height: 22px; stroke: rgba(0,229,255,.95); fill:none; stroke-width:2; }
+    .cardMeta{ flex:1 1 auto; min-width:0; }
+    .cardTitle{
+      font-weight: 950;
+      font-size: 15px;
+      letter-spacing:.01em;
+      line-height:1.15;
+    }
+    .cardDesc{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .cardTag{
+      margin-top: 10px;
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      font-size: 11px;
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      color: rgba(0,229,255,.92);
+    }
+    .arrow{
+      margin-left:auto;
+      width: 34px; height: 34px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.02);
+      display:grid; place-items:center;
+      flex: 0 0 auto;
+      transition: transform .22s var(--ease), border-color .22s var(--ease);
+    }
+    .card:hover .arrow{
+      transform: translateY(-1px);
+      border-color: rgba(0,229,255,.22);
+    }
+    .arrow svg{ width: 18px; height: 18px; stroke: rgba(244,246,255,.86); fill:none; stroke-width:2; }
+
+    /* Rewards layout */
+    .split{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items:start;
+    }
+    .bigCard{
+      border-radius: 22px;
+      padding: 18px 18px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 16px 60px rgba(0,0,0,.34);
+      backdrop-filter: blur(14px);
+      overflow:hidden;
+      position:relative;
+    }
+    .bigCard::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(520px 260px at 18% 12%, rgba(124,92,255,.10), transparent 56%),
+        radial-gradient(520px 260px at 86% 8%, rgba(0,229,255,.08), transparent 58%);
+      opacity:.80;
+      pointer-events:none;
+      filter: blur(2px);
+    }
+    .bigInner{ position:relative; z-index:1; }
+    .bigCard h3{
+      font-size: 18px;
+      font-weight: 950;
+      letter-spacing: -0.01em;
+      margin-bottom: 10px;
+      color: rgba(0,229,255,.92);
+    }
+    .bigCard p, .bigCard li{
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.75;
+    }
+    .bigCard ul{ padding-left: 18px; margin-top: 10px; }
+    .bigCard li + li{ margin-top: 8px; }
+    .ruleLine{
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,.10);
+      color: rgba(244,246,255,.72);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .ruleLine strong{ color: var(--gold); font-weight: 950; }
+
+    .ctaLine{
+      margin-top: 14px;
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .pillBtn{
+      border-radius:999px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.03);
+      color: rgba(244,246,255,.92);
+      font-weight: 950;
+      letter-spacing:.12em;
+      text-transform: uppercase;
+      font-size: 11px;
+      cursor:pointer;
+      transition: transform .22s var(--ease), border-color .22s var(--ease), background .22s var(--ease);
+    }
+    .pillBtn:hover{ transform: translateY(-1px); border-color: rgba(0,229,255,.22); background: rgba(255,255,255,.04); }
+
+    /* Community */
+    .communityGrid{
+      margin-top: 18px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    /* Footer */
+    footer{
+      margin-top: 48px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      color: var(--dim);
+      font-size: 12px;
+    }
+    .footStrong{ color: rgba(0,229,255,.90); font-weight: 700; }
+    .disclaimer{
+      width:100%;
+      margin-top: 6px;
+      color: rgba(244,246,255,.46);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    /* RTL for Arabic */
+    body.rtl{ direction: rtl; }
+    body.rtl .brand{ flex-direction: row-reverse; }
+    body.rtl .cardInner{ flex-direction: row-reverse; }
+    body.rtl .arrow{ margin-left: 0; margin-right: auto; }
+
+    /* Desktop upgrades */
+    @media (min-width: 980px){
+      .nav{ display:flex; }
+      .mini-cta{ display:inline-flex; }
+      .heroGrid{ grid-template-columns: 1.15fr .85fr; gap: 22px; }
+      /* Make headline “feel single-line” on wide screens (wrap only if needed) */
+      .hero-title{ white-space: nowrap; }
+      .trustStrip{ grid-template-columns: 1fr 1fr; }
+      .btnRow{ grid-template-columns: 1fr 1fr; }
+      .cardGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .split{ grid-template-columns: 1.1fr .9fr; }
+      .communityGrid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    }
+
+    @media (max-width: 768px){
+      :root{ --gutter:16px; }
+      .wrap{ padding-inline: var(--gutter); }
+      .hero-title{ white-space: normal; }
+      .brand{ min-width: 0; }
+      .brandsub{ display:none; }
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+      body::before, body::after{ display:none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="CycleX home">
+        <img class="logo" src="/logo.png" alt="CycleX logo" />
+        <div class="brandtxt">
+          <div class="brandname">CYCLEX</div>
+          <div class="brandsub" data-i18n="brand_sub">ON-CHAIN SECURITY & REWARDS</div>
+        </div>
+      </a>
+
+      <nav class="nav" aria-label="Primary">
+        <a href="#tools" data-i18n="nav_tools">Security Tools</a>
+        <a href="#rewards" data-i18n="nav_rewards">Rewards Model</a>
+        <a href="#community" data-i18n="nav_community">Community</a>
+      </nav>
+
+      <div class="rightbar">
+        <div class="lang" role="group" aria-label="Language">
+          <button class="active" data-lang="en" title="English">🇺🇸 EN</button>
+          <button data-lang="zh" title="中文">🇨🇳 中文</button>
+          <button data-lang="ar" title="العربية">🇸🇦 عربي</button>
+          <button data-lang="ru" title="Русский">🇷🇺 RU</button>
+        </div>
+
+        <a class="mini-cta" href="#tools" data-i18n="top_cta">Open Tools</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-label="Hero">
+        <div class="heroGrid">
+          <div>
+            <div class="kicker" data-i18n="hero_kicker">FREE SECURITY TOOLS • AI-SECURED • CODE-ENFORCED REWARDS</div>
+
+            <h1 class="hero-title" data-i18n="hero_title">Secure On-Chain. Earn for Holding.</h1>
+
+            <p class="sub" data-i18n="hero_sub">
+              Scan wallets, approvals, and high-risk contracts for free — no wallet connection required.
+              CycleX runs a transparent, code-enforced quarterly model with a locked treasury.
+            </p>
+
+            <div class="chips" aria-label="Highlights">
+              <div class="chip"><strong data-i18n="chip1a">No Admin</strong> <span data-i18n="chip1b">Control</span></div>
+              <div class="chip"><strong data-i18n="chip2a">Public</strong> <span data-i18n="chip2b">Verification</span></div>
+              <div class="chip"><strong data-i18n="chip3a">Deterministic</strong> <span data-i18n="chip3b">Rules</span></div>
+              <div class="chip"><strong data-i18n="chip4a">Instant</strong> <span data-i18n="chip4b">Scans</span></div>
+            </div>
+          </div>
+
+          <aside class="heroPanel" aria-label="Primary actions">
+            <div class="heroPanelInner">
+              <button class="primaryBtn" id="btn-open-tools" type="button">
+                <span data-i18n="cta_primary">Free Security Tools</span> <span aria-hidden="true">🛡️</span>
+              </button>
+              <div class="panelNote">
+                <span data-i18n="note1">No wallet connection</span> • <span data-i18n="note2">Instant scans</span>
+              </div>
+
+              <div class="btnRow" aria-label="Secondary actions">
+                <button class="ghostBtn" id="btn-claim" type="button" data-i18n="cta_claim">Claim Rewards</button>
+                <button class="ghostBtn" id="btn-calc" type="button" data-i18n="cta_calc">Reward Calculator</button>
+                <button class="ghostBtn" id="btn-presale" type="button" data-i18n="cta_presale">Pre-Sale (PinkSale)</button>
+              </div>
+
+              <div class="trustStrip" aria-label="Trust strip">
+                <div class="trustCard">
+                  <div class="dot"></div>
+                  <div>
+                    <b data-i18n="t1_title">Self-serve</b>
+                    <p data-i18n="t1_body">Use the tools without connecting a wallet. When you do connect, you remain in full control.</p>
+                  </div>
+                </div>
+                <div class="trustCard">
+                  <div class="dot" style="background:rgba(124,92,255,.85);box-shadow:0 0 0 4px rgba(124,92,255,.10)"></div>
+                  <div>
+                    <b data-i18n="t2_title">Code-enforced</b>
+                    <p data-i18n="t2_body">Rules are executed by on-chain logic — not people, not manual decisions.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="tools" aria-label="Security tools">
+        <div class="sectionHead">
+          <div>
+            <div class="tinyK" data-i18n="tools_kicker">SECURITY SUITE</div>
+            <div class="h2" data-i18n="tools_title">Tools that make risk obvious.</div>
+          </div>
+          <div class="lead" data-i18n="tools_lead">
+            Built to feel “enterprise-clean”: fast, readable, and brutally clear. No noisy UI. No gimmicks.
+          </div>
+        </div>
+
+        <div class="cardGrid">
+          <a class="card" href="#panel-dna" data-tool="dna">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 4c4 4 6 6 10 10M7 20c4-4 6-6 10-10"/><path d="M8 6h3M13 11h3M8 18h3M13 13h3"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="tool1_title">Wallet Security DNA</div>
+                <div class="cardDesc" data-i18n="tool1_desc">A clean “risk fingerprint” for wallets: approvals, exposure, and suspicious patterns.</div>
+                <div class="cardTag"><span data-i18n="tag_wallet">Wallet</span></div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+
+          <a class="card" href="#panel-quickscan" data-tool="quickscan">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 12h6l2-4 2 8 2-4h4"/><path d="M4 6v-2h2M20 6v-2h-2M4 18v2h2M20 18v2h-2"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="tool2_title">QuickScan</div>
+                <div class="cardDesc" data-i18n="tool2_desc">Score a token in seconds: supply, ownership, permissions, and red-flag mechanics.</div>
+                <div class="cardTag"><span data-i18n="tag_token">Token</span></div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+
+          <a class="card" href="#panel-liquidity" data-tool="liquidity">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/><path d="M4 12h3M17 12h3M12 4v3M12 17v3"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="tool3_title">Liquidity Cube</div>
+                <div class="cardDesc" data-i18n="tool3_desc">See DEX liquidity clearly: pools, depth, and concentration — no clutter.</div>
+                <div class="cardTag"><span data-i18n="tag_dex">DEX</span></div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+
+          <a class="card" href="#panel-approvals" data-tool="approvals">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 3l8 4v6c0 5-3 8-8 8s-8-3-8-8V7l8-4z"/><path d="M9 12l2 2 4-5"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="tool4_title">Approval Guardian</div>
+                <div class="cardDesc" data-i18n="tool4_desc">Review & revoke allowances with a clean table and instant risk labels.</div>
+                <div class="cardTag"><span data-i18n="tag_wallet">Wallet</span></div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+
+          <a class="card" href="#panel-tx" data-tool="tx">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 7h10M7 12h10M7 17h6"/><path d="M5 4h14v16H5z"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="tool5_title">Tx Decoder</div>
+                <div class="cardDesc" data-i18n="tool5_desc">Translate contract calls into human-readable intent — fast and clear.</div>
+                <div class="cardTag"><span data-i18n="tag_tx">Transaction</span></div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+
+          <a class="card" href="#panel-monitor" data-tool="monitor">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M8 19V9"/><path d="M12 19V7"/><path d="M16 19v-4"/><path d="M20 19V11"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="tool6_title">Contract Monitor</div>
+                <div class="cardDesc" data-i18n="tool6_desc">Track contracts you care about. Detect suspicious changes or events early.</div>
+                <div class="cardTag"><span data-i18n="tag_contract">Contract</span></div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <section class="section" id="rewards" aria-label="Rewards model">
+        <div class="sectionHead">
+          <div>
+            <div class="tinyK" data-i18n="rewards_kicker">REWARDS MODEL</div>
+            <div class="h2" data-i18n="rewards_title">Quarterly, transparent, code-enforced.</div>
+          </div>
+          <div class="lead" data-i18n="rewards_lead">
+            Designed to avoid discretionary control. Execution follows predefined on-chain rules.
+          </div>
+        </div>
+
+        <div class="split">
+          <div class="bigCard">
+            <div class="bigInner">
+              <h3 data-i18n="r1_title">Distribution Logic</h3>
+              <ul>
+                <li data-i18n="r1_a">Rewards are computed per cycle and claimed by users directly.</li>
+                <li data-i18n="r1_b">No manual admin selection. The rules are public and verifiable.</li>
+                <li data-i18n="r1_c">Eligibility can require long-term holding (e.g., 60 days) in self-custody.</li>
+              </ul>
+              <div class="ruleLine" data-i18n="r1_note">
+                <strong>Note:</strong> Rewards are not guaranteed. Outcomes depend on protocol rules, availability, and market conditions.
+              </div>
+              <div class="ctaLine">
+                <button class="pillBtn" type="button" id="btn-eligibility" data-i18n="btn_eligibility">Eligibility Rules</button>
+                <button class="pillBtn" type="button" id="btn-whitepaper" data-i18n="btn_whitepaper">Read Whitepaper</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bigCard">
+            <div class="bigInner">
+              <h3 data-i18n="r2_title">On-Chain Enforcement</h3>
+              <p data-i18n="r2_body">
+                Claims are executed by users, via deterministic logic. No middleman, no hidden switches, no discretionary intervention.
+              </p>
+              <ul>
+                <li data-i18n="r2_a">Public rules • publicly verifiable execution</li>
+                <li data-i18n="r2_b">Self-custody first • users trigger their own claim</li>
+                <li data-i18n="r2_c">Locked treasury model • transparency by design</li>
+              </ul>
+              <div class="ruleLine" data-i18n="r2_note">
+                <strong>Reminder:</strong> This page is informational and not financial advice.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="community" aria-label="Community">
+        <div class="sectionHead">
+          <div>
+            <div class="tinyK" style="color:rgba(0,229,255,.90)" data-i18n="comm_kicker">COMMUNITY</div>
+            <div class="h2" data-i18n="comm_title">Stay connected</div>
+          </div>
+          <div class="lead" data-i18n="comm_lead">
+            Follow updates, join the community, and read the docs — without noise.
+          </div>
+        </div>
+
+        <div class="communityGrid">
+          <a class="card" href="https://x.com/" target="_blank" rel="noopener">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M6 18L18 6"/><path d="M6 6l12 12"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="c1_title">X / Twitter</div>
+                <div class="cardDesc" data-i18n="c1_desc">Official announcements & updates.</div>
+                <div class="cardTag" data-i18n="c1_tag">Follow</div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+
+          <a class="card" href="https://t.me/" target="_blank" rel="noopener">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M21 5L3 12l7 2 2 7 3-5 6-11z"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="c2_title">Telegram</div>
+                <div class="cardDesc" data-i18n="c2_desc">Join the community channel.</div>
+                <div class="cardTag" data-i18n="c2_tag">Join</div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+
+          <a class="card" href="/whitepaper.pdf" target="_blank" rel="noopener">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 3h8l2 2v16H7z"/><path d="M9 8h6M9 12h6M9 16h5"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="c3_title">Whitepaper</div>
+                <div class="cardDesc" data-i18n="c3_desc">Full system design & rules.</div>
+                <div class="cardTag" data-i18n="c3_tag">Read</div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+
+          <a class="card" href="/faq.pdf" target="_blank" rel="noopener">
+            <div class="cardInner">
+              <div class="iconBox" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 18h.01"/><path d="M9 9a3 3 0 1 1 5 2c-.9.6-1.5 1.2-1.5 2.5V15"/></svg>
+              </div>
+              <div class="cardMeta">
+                <div class="cardTitle" data-i18n="c4_title">FAQ</div>
+                <div class="cardDesc" data-i18n="c4_desc">Quick answers (PDF).</div>
+                <div class="cardTag" data-i18n="c4_tag">Open</div>
+              </div>
+              <div class="arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 17L17 7"/><path d="M9 7h8v8"/></svg>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div>© <span id="yy"></span> CycleX</div>
+      <div class="footStrong" data-i18n="foot_tag">AI-secured • On-chain enforced • Publicly verifiable</div>
+      <div class="disclaimer" data-i18n="foot_disc">
+        This website is for informational purposes only and does not constitute financial advice. “Rewards” are protocol-defined and not guaranteed.
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    // --- Simple i18n (EN / 中文 / عربي / RU) ---
+    const I18N = {
+      en: {
+        brand_sub: "ON-CHAIN SECURITY & REWARDS",
+        nav_tools: "Security Tools",
+        nav_rewards: "Rewards Model",
+        nav_community: "Community",
+        top_cta: "Open Tools",
+
+        hero_kicker: "FREE SECURITY TOOLS • AI-SECURED • CODE-ENFORCED REWARDS",
+        hero_title: "Secure On-Chain. Earn for Holding.",
+        hero_sub: "Scan wallets, approvals, and high-risk contracts for free — no wallet connection required. CycleX runs a transparent, code-enforced quarterly model with a locked treasury.",
+
+        chip1a:"No Admin", chip1b:"Control",
+        chip2a:"Public", chip2b:"Verification",
+        chip3a:"Deterministic", chip3b:"Rules",
+        chip4a:"Instant", chip4b:"Scans",
+
+        cta_primary: "Free Security Tools",
+        note1: "No wallet connection",
+        note2: "Instant scans",
+        cta_claim: "Claim Rewards",
+        cta_calc: "Reward Calculator",
+        cta_presale: "Pre-Sale (PinkSale)",
+
+        t1_title:"Self-serve",
+        t1_body:"Use the tools without connecting a wallet. When you do connect, you remain in full control.",
+        t2_title:"Code-enforced",
+        t2_body:"Rules are executed by on-chain logic — not people, not manual decisions.",
+
+        tools_kicker:"SECURITY SUITE",
+        tools_title:"Tools that make risk obvious.",
+        tools_lead:"Built to feel “enterprise-clean”: fast, readable, and brutally clear. No noisy UI. No gimmicks.",
+
+        tool1_title:"Wallet Security DNA",
+        tool1_desc:"A clean “risk fingerprint” for wallets: approvals, exposure, and suspicious patterns.",
+        tool2_title:"QuickScan",
+        tool2_desc:"Score a token in seconds: supply, ownership, permissions, and red-flag mechanics.",
+        tool3_title:"Liquidity Cube",
+        tool3_desc:"See DEX liquidity clearly: pools, depth, and concentration — no clutter.",
+        tool4_title:"Approval Guardian",
+        tool4_desc:"Review & revoke allowances with a clean table and instant risk labels.",
+        tool5_title:"Tx Decoder",
+        tool5_desc:"Translate contract calls into human-readable intent — fast and clear.",
+        tool6_title:"Contract Monitor",
+        tool6_desc:"Track contracts you care about. Detect suspicious changes or events early.",
+
+        tag_wallet:"Wallet",
+        tag_token:"Token",
+        tag_dex:"DEX",
+        tag_tx:"Transaction",
+        tag_contract:"Contract",
+
+        rewards_kicker:"REWARDS MODEL",
+        rewards_title:"Quarterly, transparent, code-enforced.",
+        rewards_lead:"Designed to avoid discretionary control. Execution follows predefined on-chain rules.",
+
+        r1_title:"Distribution Logic",
+        r1_a:"Rewards are computed per cycle and claimed by users directly.",
+        r1_b:"No manual admin selection. The rules are public and verifiable.",
+        r1_c:"Eligibility can require long-term holding (e.g., 60 days) in self-custody.",
+        r1_note:"<strong>Note:</strong> Rewards are not guaranteed. Outcomes depend on protocol rules, availability, and market conditions.",
+        btn_eligibility:"Eligibility Rules",
+        btn_whitepaper:"Read Whitepaper",
+
+        r2_title:"On-Chain Enforcement",
+        r2_body:"Claims are executed by users, via deterministic logic. No middleman, no hidden switches, no discretionary intervention.",
+        r2_a:"Public rules • publicly verifiable execution",
+        r2_b:"Self-custody first • users trigger their own claim",
+        r2_c:"Locked treasury model • transparency by design",
+        r2_note:"<strong>Reminder:</strong> This page is informational and not financial advice.",
+
+        comm_kicker:"COMMUNITY",
+        comm_title:"Stay connected",
+        comm_lead:"Follow updates, join the community, and read the docs — without noise.",
+
+        c1_title:"X / Twitter", c1_desc:"Official announcements & updates.", c1_tag:"Follow",
+        c2_title:"Telegram",   c2_desc:"Join the community channel.",        c2_tag:"Join",
+        c3_title:"Whitepaper", c3_desc:"Full system design & rules.",        c3_tag:"Read",
+        c4_title:"FAQ",        c4_desc:"Quick answers (PDF).",               c4_tag:"Open",
+
+        foot_tag:"AI-secured • On-chain enforced • Publicly verifiable",
+        foot_disc:"This website is for informational purposes only and does not constitute financial advice. “Rewards” are protocol-defined and not guaranteed."
+      },
+
+      zh: {
+        brand_sub:"链上安全与奖励",
+        nav_tools:"安全工具", nav_rewards:"奖励模型", nav_community:"社区", top_cta:"打开工具",
+        hero_kicker:"免费安全工具 • AI 加固 • 代码强制执行奖励",
+        hero_title:"链上更安全。持有即参与。",
+        hero_sub:"免费扫描钱包、授权与高风险合约——无需连接钱包。CycleX 采用透明、代码强制的季度模型，并配有锁定金库。",
+        chip1a:"无管理员", chip1b:"控制",
+        chip2a:"公开", chip2b:"可验证",
+        chip3a:"确定性", chip3b:"规则",
+        chip4a:"即时", chip4b:"扫描",
+        cta_primary:"免费安全工具",
+        note1:"无需连接钱包",
+        note2:"即时扫描",
+        cta_claim:"领取奖励",
+        cta_calc:"奖励计算器",
+        cta_presale:"预售 (PinkSale)",
+        t1_title:"自助使用", t1_body:"无需连接钱包即可使用工具；连接后也始终由你掌控。",
+        t2_title:"代码执行", t2_body:"规则由链上逻辑执行——不是人工决定。",
+        tools_kicker:"安全套件",
+        tools_title:"让风险一眼可见的工具。",
+        tools_lead:"企业级干净体验：更快、更清晰、更直观。无噪音 UI。",
+        tool1_title:"钱包安全 DNA", tool1_desc:"钱包风险指纹：授权、暴露面与可疑模式。",
+        tool2_title:"QuickScan", tool2_desc:"秒级评分：供应、权限、持仓与红旗机制。",
+        tool3_title:"流动性立方体", tool3_desc:"清晰查看 DEX 流动性：池子、深度与集中度。",
+        tool4_title:"授权守护", tool4_desc:"以清爽表格查看/撤销授权，并标注风险。",
+        tool5_title:"交易解码", tool5_desc:"把合约调用翻译为人类可读意图。",
+        tool6_title:"合约监控", tool6_desc:"跟踪你关注的合约，提前发现异常。",
+        tag_wallet:"钱包", tag_token:"代币", tag_dex:"DEX", tag_tx:"交易", tag_contract:"合约",
+        rewards_kicker:"奖励模型",
+        rewards_title:"季度执行，透明可验证。",
+        rewards_lead:"避免人为裁量，按预先定义的链上规则执行。",
+        r1_title:"分配逻辑",
+        r1_a:"按周期计算，用户自行领取。",
+        r1_b:"无人工挑选；规则公开可验证。",
+        r1_c:"资格可要求长期持有（例如自托管 60 天）。",
+        r1_note:"<strong>提示：</strong>奖励不保证。结果取决于协议规则、可用性与市场条件。",
+        btn_eligibility:"资格规则",
+        btn_whitepaper:"阅读白皮书",
+        r2_title:"链上强制执行",
+        r2_body:"领取由确定性逻辑执行：无中间人、无隐藏开关、无人工干预。",
+        r2_a:"公开规则 • 公开验证",
+        r2_b:"自托管优先 • 用户自行触发领取",
+        r2_c:"锁定金库 • 透明设计",
+        r2_note:"<strong>提醒：</strong>本页面仅供信息参考，不构成投资建议。",
+        comm_kicker:"社区",
+        comm_title:"保持连接",
+        comm_lead:"关注更新、加入社区、阅读文档——更少噪音。",
+        c1_title:"X / Twitter", c1_desc:"官方公告与更新。", c1_tag:"关注",
+        c2_title:"Telegram", c2_desc:"加入社区频道。", c2_tag:"加入",
+        c3_title:"Whitepaper", c3_desc:"系统设计与规则。", c3_tag:"阅读",
+        c4_title:"FAQ", c4_desc:"快速解答 (PDF)。", c4_tag:"打开",
+        foot_tag:"AI 加固 • 链上执行 • 公开可验证",
+        foot_disc:"本网站仅供信息参考，不构成投资建议。“奖励”为协议定义且不保证。"
+      },
+
+      ar: {
+        brand_sub:"أمن ومكافآت على السلسلة",
+        nav_tools:"أدوات الأمان", nav_rewards:"نموذج المكافآت", nav_community:"المجتمع", top_cta:"فتح الأدوات",
+        hero_kicker:"أدوات أمان مجانية • مدعّم بالذكاء • مكافآت مُنفذة بالكود",
+        hero_title:"أمان على السلسلة. مكافآت للمشاركة.",
+        hero_sub:"افحص المحافظ والتفويضات والعقود عالية المخاطر مجانًا — بدون ربط محفظة. CycleX يعمل بنموذج ربع سنوي شفاف مع خزينة مقفلة.",
+        chip1a:"بدون", chip1b:"إدارة",
+        chip2a:"تحقق", chip2b:"علني",
+        chip3a:"قواعد", chip3b:"حتمية",
+        chip4a:"فحص", chip4b:"فوري",
+        cta_primary:"أدوات أمان مجانية",
+        note1:"بدون ربط محفظة",
+        note2:"فحص فوري",
+        cta_claim:"مطالبة بالمكافآت",
+        cta_calc:"حاسبة المكافآت",
+        cta_presale:"البيع المسبق (PinkSale)",
+        t1_title:"استخدام ذاتي", t1_body:"استخدم الأدوات بدون ربط محفظة. وعند الربط تبقى أنت المتحكم.",
+        t2_title:"منفّذ بالكود", t2_body:"القواعد تُنفذ على السلسلة — بلا قرارات يدوية.",
+        tools_kicker:"حزمة الأمان",
+        tools_title:"أدوات تُظهر المخاطر بوضوح.",
+        tools_lead:"تجربة نظيفة على مستوى المؤسسات: سريعة، مقروءة، وواضحة.",
+        tool1_title:"بصمة أمان المحفظة",
+        tool1_desc:"بصمة مخاطر للمحافظ: التفويضات، التعرض، وأنماط مشبوهة.",
+        tool2_title:"QuickScan",
+        tool2_desc:"تقييم سريع للرمز: العرض، الملكية، الصلاحيات، وإشارات الخطر.",
+        tool3_title:"Liquidity Cube",
+        tool3_desc:"رؤية واضحة لسيولة DEX: مجمعات، عمق، وتركيز.",
+        tool4_title:"حارس التفويضات",
+        tool4_desc:"مراجعة وإلغاء التفويضات بجدول نظيف ووسوم مخاطر.",
+        tool5_title:"Tx Decoder",
+        tool5_desc:"ترجمة نداءات العقود إلى نية مفهومة.",
+        tool6_title:"مراقبة العقود",
+        tool6_desc:"تتبع العقود المهمة واكتشف الأحداث المبكرة.",
+        tag_wallet:"محفظة", tag_token:"رمز", tag_dex:"DEX", tag_tx:"معاملة", tag_contract:"عقد",
+        rewards_kicker:"نموذج المكافآت",
+        rewards_title:"ربع سنوي، شفاف، منفّذ بالكود.",
+        rewards_lead:"مصمم لتجنب التحكم التقديري. التنفيذ وفق قواعد على السلسلة.",
+        r1_title:"منطق التوزيع",
+        r1_a:"المكافآت تُحسب لكل دورة ويطالب بها المستخدم مباشرة.",
+        r1_b:"لا اختيار يدوي. القواعد علنية ويمكن التحقق منها.",
+        r1_c:"قد تتطلب الأهلية الاحتفاظ طويلًا (مثل 60 يومًا) في الحفظ الذاتي.",
+        r1_note:"<strong>ملاحظة:</strong> المكافآت غير مضمونة. النتائج تعتمد على القواعد والتوفر وظروف السوق.",
+        btn_eligibility:"قواعد الأهلية",
+        btn_whitepaper:"قراءة الورقة",
+        r2_title:"تنفيذ على السلسلة",
+        r2_body:"المطالبة تُنفذ بمنطق حتمي: بدون وسيط وبدون مفاتيح خفية وبدون تدخل يدوي.",
+        r2_a:"قواعد علنية • تحقق علني",
+        r2_b:"الحفظ الذاتي أولاً • المستخدم يفعّل المطالبة",
+        r2_c:"خزينة مقفلة • شفافية بالتصميم",
+        r2_note:"<strong>تذكير:</strong> هذا محتوى معلوماتي وليس نصيحة مالية.",
+        comm_kicker:"المجتمع",
+        comm_title:"ابقَ على تواصل",
+        comm_lead:"تابع التحديثات وانضم للمجتمع واقرأ الوثائق — بدون ضوضاء.",
+        c1_title:"X / Twitter", c1_desc:"إعلانات وتحديثات رسمية.", c1_tag:"متابعة",
+        c2_title:"Telegram", c2_desc:"انضم لقناة المجتمع.", c2_tag:"انضم",
+        c3_title:"Whitepaper", c3_desc:"تصميم النظام والقواعد.", c3_tag:"اقرأ",
+        c4_title:"FAQ", c4_desc:"إجابات سريعة (PDF).", c4_tag:"افتح",
+        foot_tag:"مدعّم بالذكاء • تنفيذ على السلسلة • تحقق علني",
+        foot_disc:"هذا الموقع لأغراض معلوماتية فقط ولا يشكل نصيحة مالية. “المكافآت” يحددها البروتوكول وليست مضمونة."
+      },
+
+      ru: {
+        brand_sub:"ON-CHAIN БЕЗОПАСНОСТЬ И НАГРАДЫ",
+        nav_tools:"Инструменты", nav_rewards:"Модель наград", nav_community:"Сообщество", top_cta:"Открыть",
+        hero_kicker:"БЕСПЛАТНЫЕ SECURITY-TOOLS • AI-SECURED • НАГРАДЫ ПО КОДУ",
+        hero_title:"Secure On-Chain. Earn for Holding.",
+        hero_sub:"Сканируй кошельки, approvals и риск-контракты бесплатно — без подключения кошелька. CycleX работает по прозрачной квартальной модели с заблокированным трежери.",
+        chip1a:"Без", chip1b:"админа",
+        chip2a:"Публичная", chip2b:"проверка",
+        chip3a:"Детерм.", chip3b:"правила",
+        chip4a:"Мгнов.", chip4b:"сканы",
+        cta_primary:"Free Security Tools",
+        note1:"Без подключения",
+        note2:"Мгновенный скан",
+        cta_claim:"Claim Rewards",
+        cta_calc:"Reward Calculator",
+        cta_presale:"Pre-Sale (PinkSale)",
+        t1_title:"Self-serve", t1_body:"Можно пользоваться без подключения. При подключении — контроль у тебя.",
+        t2_title:"По коду", t2_body:"Правила исполняются on-chain — без ручных решений.",
+        tools_kicker:"SECURITY SUITE",
+        tools_title:"Инструменты, которые показывают риск.",
+        tools_lead:"Чистый enterprise-стиль: быстро, читабельно, без шума.",
+        tool1_title:"Wallet Security DNA",
+        tool1_desc:"«Отпечаток риска» кошелька: approvals, экспозиция, подозрительные паттерны.",
+        tool2_title:"QuickScan",
+        tool2_desc:"Скоринг токена за секунды: supply, ownership, permissions, red flags.",
+        tool3_title:"Liquidity Cube",
+        tool3_desc:"DEX-ликвидность без мусора: пулы, глубина, концентрация.",
+        tool4_title:"Approval Guardian",
+        tool4_desc:"Таблица approvals + revoke с мгновенными риск-лейблами.",
+        tool5_title:"Tx Decoder",
+        tool5_desc:"Перевод вызовов контракта в человеческое описание.",
+        tool6_title:"Contract Monitor",
+        tool6_desc:"Мониторинг контрактов и ранние сигналы.",
+        tag_wallet:"Wallet", tag_token:"Token", tag_dex:"DEX", tag_tx:"Tx", tag_contract:"Contract",
+        rewards_kicker:"REWARDS MODEL",
+        rewards_title:"Квартально. Прозрачно. По коду.",
+        rewards_lead:"Без дискреционного контроля. Исполнение по on-chain правилам.",
+        r1_title:"Логика распределения",
+        r1_a:"Награды считаются по циклу, claim делает пользователь.",
+        r1_b:"Без ручного выбора. Правила публичны и проверяемы.",
+        r1_c:"Eligibility может требовать долгого holding (например, 60 дней) в self-custody.",
+        r1_note:"<strong>Note:</strong> Награды не гарантированы. Результат зависит от правил, доступности и рынка.",
+        btn_eligibility:"Eligibility Rules",
+        btn_whitepaper:"Whitepaper",
+        r2_title:"On-Chain Enforcement",
+        r2_body:"Claim исполняется детерминированной логикой: без посредника и без ручного вмешательства.",
+        r2_a:"Публичные правила • публичная проверка",
+        r2_b:"Self-custody • пользователь запускает claim",
+        r2_c:"Locked treasury • прозрачность по дизайну",
+        r2_note:"<strong>Reminder:</strong> Информация, не финансовый совет.",
+        comm_kicker:"COMMUNITY",
+        comm_title:"Stay connected",
+        comm_lead:"Следи за апдейтами, вступай в комьюнити, читай доки.",
+        c1_title:"X / Twitter", c1_desc:"Официальные апдейты.", c1_tag:"Follow",
+        c2_title:"Telegram", c2_desc:"Канал комьюнити.", c2_tag:"Join",
+        c3_title:"Whitepaper", c3_desc:"Дизайн и правила.", c3_tag:"Read",
+        c4_title:"FAQ", c4_desc:"Быстрые ответы (PDF).", c4_tag:"Open",
+        foot_tag:"AI-secured • On-chain enforced • Publicly verifiable",
+        foot_disc:"Сайт носит информационный характер и не является финсоветом. “Rewards” определяются протоколом и не гарантированы."
+      }
+    };
+
+    const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+    function applyLang(lang){
+      const dict = I18N[lang] || I18N.en;
+
+      // RTL only for Arabic
+      document.body.classList.toggle("rtl", lang === "ar");
+      document.documentElement.lang = lang === "zh" ? "zh" : (lang === "ar" ? "ar" : (lang === "ru" ? "ru" : "en"));
+
+      $$("[data-i18n]").forEach(el=>{
+        const key = el.getAttribute("data-i18n");
+        if(!(key in dict)) return;
+        // allow HTML for a couple of notes
+        if(key.endsWith("_note") || key === "foot_disc") el.innerHTML = dict[key];
+        else el.textContent = dict[key];
+      });
+
+      // buttons
+      $$(".lang button").forEach(b=>b.classList.toggle("active", b.dataset.lang === lang));
+
+      // tiny fade
+      document.body.style.opacity = "0.90";
+      setTimeout(()=>{ document.body.style.opacity = ""; }, 120);
+
+      localStorage.setItem("cx_lang", lang);
+    }
+
+    // wiring
+    $$(".lang button").forEach(btn=>{
+      btn.addEventListener("click", ()=> applyLang(btn.dataset.lang));
+    });
+
+    // CTA hooks (replace these with your real open-panel logic)
+    document.getElementById("btn-open-tools").addEventListener("click", ()=> location.hash = "#tools");
+    document.getElementById("btn-claim").addEventListener("click", ()=> alert("Hook this to your Claim modal/panel."));
+    document.getElementById("btn-calc").addEventListener("click", ()=> alert("Hook this to your Calculator modal/panel."));
+    document.getElementById("btn-presale").addEventListener("click", ()=> window.open("https://pinksale.finance/", "_blank", "noopener"));
+
+    document.getElementById("btn-eligibility").addEventListener("click", ()=> alert("Hook this to your Eligibility modal."));
+    document.getElementById("btn-whitepaper").addEventListener("click", ()=> window.open("/whitepaper.pdf", "_blank", "noopener"));
+
+    // year
+    document.getElementById("yy").textContent = new Date().getFullYear();
+
+    // init
+    applyLang(localStorage.getItem("cx_lang") || "en");
+  </script>
+</body>
+</html>
