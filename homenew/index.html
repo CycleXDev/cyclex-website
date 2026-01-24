@@ -590,7 +590,7 @@
   .hero-note span{ color: rgba(0,229,255,.95); }
 
 /* =========================
-   SECTIONS (LOCKED + CLEAN)
+   SECTIONS (LOCKED + CLEAN) — stable spacing + no kicker/title weirdness
    ========================= */
 .section{
   position:relative;
@@ -623,7 +623,7 @@
   pointer-events:none;
 }
 
-/* base text blocks (no overlap risk) */
+/* base text blocks */
 .section-kicker{
   display:block;
   position: static !important;
@@ -633,7 +633,7 @@
   text-transform: uppercase;
   color: rgba(124,92,255,.92);
   line-height: 1.25;
-  margin: 0 0 6px;
+  margin: 0 0 8px;
 }
 #security-activity .section-kicker{ color: rgba(0,229,255,.92); }
 
@@ -658,26 +658,25 @@
 }
 .section-body p + p{ margin-top: 10px; }
 
-/* Desktop: left kicker+title, right body (LOCKED rows so nothing drops) */
+/* Desktop: kicker+title left, body right — locked with areas */
 @media (min-width: 980px){
   .section{
     display:grid;
     grid-template-columns: minmax(360px, 520px) 1fr;
-    grid-template-rows: auto auto;
+    grid-template-areas:
+      "kicker body"
+      "title  body"
+      "wide   wide";
     column-gap: 56px;
-    row-gap: 4px;
+    row-gap: 6px;
     align-items:start;
   }
 
-  .section-kicker{ grid-column:1; grid-row:1; margin-bottom: 2px; }
-  .section-title{  grid-column:1; grid-row:2; margin-bottom: 0; }
-
-  /* body spans both rows → never pushes title down */
+  .section-kicker{ grid-area: kicker; margin-bottom: 0; }
+  .section-title{  grid-area: title;  margin-bottom: 0; }
   .section-body{
-    grid-column:2;
-    grid-row:1 / span 2;
+    grid-area: body;
     justify-self:end;
-    align-self:start;
     max-width: 62ch;
     margin-top: 2px;
   }
@@ -689,21 +688,18 @@
   .section > .rewards-intro,
   .section > .reward-policy,
   .section > .reward-actions-inline{
-    grid-column: 1 / -1;
+    grid-area: wide;
     justify-self: stretch;
   }
-
-  .section.section-vcenter{ align-items:center; }
-  .section.section-vcenter .section-body{ margin-top: 0; }
 }
 
-/* Centered sections (safe + actually centers any lead text too) */
+/* Centered sections */
 .section.section-centered{
   text-align:center;
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .section.section-centered .section-kicker,
@@ -712,12 +708,12 @@
   text-align:center;
 }
 
+.section.section-centered .section-kicker{ margin-bottom: 0; }
 .section.section-centered .section-title{
   font-size: clamp(24px, 2.7vw, 42px);
   white-space: normal;
   margin-bottom: 2px;
 }
-
 @media (min-width: 1200px){
   .section.section-centered .section-title{ white-space: nowrap; }
 }
@@ -726,7 +722,7 @@
   max-width: 68ch;
 }
 
-/* If you have a plain <p> lead line inside centered sections (like the “Follow official updates…” line) */
+/* lead line inside centered sections (your “Follow official updates…”) */
 .section.section-centered > p,
 .section.section-centered .section-lead,
 .section.section-centered .section-subtitle{
@@ -736,34 +732,67 @@
   margin: 0 auto;
 }
 
-/* Why list */
-#why-cyclex ul{ margin: 16px 0 0; padding-left: 18px; }
-#why-cyclex li{ margin-bottom: 10px; color: var(--muted); }
-#why-cyclex li strong{ color: var(--text); }
 
 /* =========================
-   STATS
+   STATS — FORCE 3-IN-A-ROW ON DESKTOP + centered block width
    ========================= */
 .stats-grid{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0;
-  margin-top: 22px;
+  margin: 22px auto 0;
+  width: 100%;
+  max-width: 980px;  /* ✅ prevents tiny/narrow stack */
   border-top: 1px solid rgba(255,255,255,.08);
   border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+/* ✅ Desktop: always a clean row */
+@media (min-width: 980px){
+  .stats-grid{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Tablet: 2 columns */
+@media (max-width: 979px){
+  .stats-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    border: none;
+  }
+}
+
+/* Phone: 1 column */
+@media (max-width: 560px){
+  .stats-grid{ grid-template-columns: 1fr; }
 }
 
 .stat-card{
   background: transparent;
   border: none;
-  border-left: 1px solid rgba(255,255,255,.08);
   padding: 18px 18px 16px;
   box-shadow: none;
-  transition: background .28s var(--ease), transform .28s var(--ease);
   min-width: 0;
+  transition: background .28s var(--ease), transform .28s var(--ease);
 }
-.stat-card:first-child{ border-left:none; }
+
+/* ✅ separators: desktop vertical; mobile cards */
+@media (min-width: 980px){
+  .stat-card{ border-left: 1px solid rgba(255,255,255,.08); }
+  .stat-card:first-child{ border-left:none; }
+}
+@media (max-width: 979px){
+  .stat-card{
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: var(--r-lg);
+    background: rgba(255,255,255,.035);
+    box-shadow: var(--sh1);
+  }
+}
+
 .stat-card:hover{ background: rgba(255,255,255,.03); transform: translateY(-1px); }
+
+.stat-card > *{ width:100%; text-align:center; }
 
 .stat-label{
   font-size: 11px;
@@ -802,62 +831,52 @@
   line-height: 1.5;
 }
 
-.stat-card > *{ width:100%; text-align:center; }
-
-@media (max-width: 980px){
-  .stats-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; border: none; }
-  .stat-card{
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: var(--r-lg);
-    background: rgba(255,255,255,.035);
-    box-shadow: var(--sh1);
-  }
-}
-@media (max-width: 560px){ .stats-grid{ grid-template-columns: 1fr; } }
 
 /* =========================
-   SOCIAL (CENTERED GRID + COMPACT CARDS + PERFECT BUTTON CENTER)
+   SOCIAL — equal card height + button always aligned (no “one taller”)
    ========================= */
 
-/* grid is constrained so cards don't become huge; always centered */
+/* grid centered + consistent card width */
 .social-grid{
   display:grid;
   gap: 12px;
   margin: 18px auto 0;
-  max-width: 1120px;           /* ✅ keeps cards compact */
-  justify-content: center;     /* ✅ centers the whole grid */
-  grid-template-columns: repeat(2, minmax(260px, 360px)); /* ✅ nice size on mid screens */
+  width: 100%;
+  max-width: 1180px;
 }
 
-/* desktop: 4 in a row but still compact */
+/* Desktop: 4 in a row */
 @media (min-width: 980px){
-  .social-grid{
-    grid-template-columns: repeat(4, minmax(240px, 280px));
-  }
+  .social-grid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-/* phone: 1 column ONLY on real small screens */
+/* Tablet: 2 in a row */
+@media (max-width: 979px){
+  .social-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Phone: 1 in a row */
 @media (max-width: 640px){
-  .social-grid{
-    grid-template-columns: minmax(0, 520px);
-  }
+  .social-grid{ grid-template-columns: 1fr; }
 }
 
 .social-card{
   display:grid;
-  grid-template-columns: 66px 1fr auto; /* icon | text | button */
-  align-items:center;
-  gap: 14px;
+  grid-template-columns: 66px 1fr;
+  grid-template-rows: auto 1fr auto;  /* ✅ button always same “row” */
+  column-gap: 14px;
+  row-gap: 10px;
 
-  padding: 14px 14px;
+  padding: 14px;
   border-radius: 18px;
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.10);
   box-shadow: 0 14px 45px rgba(0,0,0,.32);
   backdrop-filter: blur(14px);
   transition: transform .28s var(--ease), border-color .28s var(--ease), background .28s var(--ease);
-  text-align:left;
   min-width:0;
+
+  min-height: 122px; /* ✅ equal baseline height */
 }
 
 .social-card:hover{
@@ -873,6 +892,7 @@
   background: rgba(0,229,255,.08);
   border: 1px solid rgba(0,229,255,.14);
   box-shadow: 0 0 18px rgba(0,229,255,.10);
+  grid-row: 1 / span 3; /* icon stays left for all rows */
 }
 
 .social-icon svg{
@@ -883,9 +903,6 @@
 }
 
 .social-meta{
-  display:flex;
-  flex-direction:column;
-  gap: 4px;
   min-width: 0;
 }
 
@@ -900,13 +917,17 @@
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+  margin-top: 4px;
 }
 
-/* ✅ button: TRUE center + stable size */
+/* ✅ button: centered & consistent */
 .social-cta{
+  grid-column: 2;
+  justify-self: center;    /* ✅ center inside card */
+  align-self: end;         /* ✅ always bottom aligned */
+
   min-width: 132px;
   height: 40px;
-
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -935,23 +956,11 @@
   border-color: rgba(0,229,255,.34);
 }
 
-@media (min-width: 980px){
-  .social-card{ min-height: 112px; }
+/* Phone: button can go left if you prefer */
+@media (max-width: 640px){
+  .social-cta{ justify-self: start; }
 }
 
-/* Mobile: stack button under text if needed, but still aligned */
-@media (max-width: 640px){
-  .social-card{
-    grid-template-columns: 66px 1fr;
-    grid-template-rows: auto auto;
-    align-items:start;
-  }
-  .social-cta{
-    grid-column: 2;
-    margin-top: 10px;
-    justify-self: start;
-  }
-}
 
 
 
