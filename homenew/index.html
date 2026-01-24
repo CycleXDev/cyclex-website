@@ -589,8 +589,8 @@
   @media (min-width: 980px){ .hero-note{ text-align:center; } }
   .hero-note span{ color: rgba(0,229,255,.95); }
 
- /* =========================
-   SECTIONS (STABLE: no overlaps + centered safe)
+/* =========================
+   SECTIONS (LOCKED + CLEAN)
    ========================= */
 .section{
   position:relative;
@@ -623,12 +623,11 @@
   pointer-events:none;
 }
 
-/* ✅ HARD SAFETY: prevents any accidental absolute/transform overlap */
+/* base text blocks (no overlap risk) */
 .section-kicker{
   display:block;
   position: static !important;
   transform: none !important;
-
   font-size: 12px;
   letter-spacing: .22em;
   text-transform: uppercase;
@@ -641,7 +640,6 @@
 .section-title{
   position: static !important;
   transform: none !important;
-
   font-size: clamp(28px, 3vw, 42px);
   font-weight: 950;
   letter-spacing: -0.02em;
@@ -652,7 +650,6 @@
 .section-body{
   position: static !important;
   transform: none !important;
-
   font-size: 15px;
   line-height: 1.85;
   color: var(--muted);
@@ -661,7 +658,7 @@
 }
 .section-body p + p{ margin-top: 10px; }
 
-/* Desktop grid: kicker+title left, body right (LOCKED rows) */
+/* Desktop: left kicker+title, right body (LOCKED rows so nothing drops) */
 @media (min-width: 980px){
   .section{
     display:grid;
@@ -672,29 +669,20 @@
     align-items:start;
   }
 
-  .section-kicker{
-    grid-column: 1;
-    grid-row: 1;
-    margin-bottom: 2px;
-  }
+  .section-kicker{ grid-column:1; grid-row:1; margin-bottom: 2px; }
+  .section-title{  grid-column:1; grid-row:2; margin-bottom: 0; }
 
-  .section-title{
-    grid-column: 1;
-    grid-row: 2;
-    margin-bottom: 0;
-  }
-
-  /* ✅ body spans both rows so it NEVER pushes title down */
+  /* body spans both rows → never pushes title down */
   .section-body{
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    justify-self: end;
-    align-self: start;
+    grid-column:2;
+    grid-row:1 / span 2;
+    justify-self:end;
+    align-self:start;
     max-width: 62ch;
     margin-top: 2px;
   }
 
-  /* Full-width blocks spanning both columns */
+  /* full-width blocks */
   .section > .stats-grid,
   .section > .social-grid,
   .section > .rewards-grid,
@@ -709,7 +697,7 @@
   .section.section-vcenter .section-body{ margin-top: 0; }
 }
 
-/* ✅ Centered sections: switch to FLEX (zero overlap risk) */
+/* Centered sections (safe + actually centers any lead text too) */
 .section.section-centered{
   text-align:center;
   display:flex;
@@ -722,10 +710,7 @@
 .section.section-centered .section-title,
 .section.section-centered .section-body{
   text-align:center;
-  justify-self:center;
 }
-
-.section.section-centered .section-kicker{ margin-bottom: 0; }
 
 .section.section-centered .section-title{
   font-size: clamp(24px, 2.7vw, 42px);
@@ -739,6 +724,16 @@
 
 .section.section-centered .section-body{
   max-width: 68ch;
+}
+
+/* If you have a plain <p> lead line inside centered sections (like the “Follow official updates…” line) */
+.section.section-centered > p,
+.section.section-centered .section-lead,
+.section.section-centered .section-subtitle{
+  text-align:center;
+  color: var(--muted);
+  max-width: 68ch;
+  margin: 0 auto;
 }
 
 /* Why list */
@@ -757,6 +752,7 @@
   border-top: 1px solid rgba(255,255,255,.08);
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
+
 .stat-card{
   background: transparent;
   border: none;
@@ -782,12 +778,14 @@
   align-items:center;
   gap: 8px;
 }
+
 .stat-value{
   font-size: 26px;
   font-weight: 950;
   letter-spacing: -0.02em;
   line-height: 1.06;
 }
+
 .stat-tag{
   display:inline-block;
   margin-top: 10px;
@@ -796,6 +794,7 @@
   text-transform: uppercase;
   color: rgba(0,229,255,.92);
 }
+
 .stat-caption{
   margin-top: 6px;
   font-size: 11px;
@@ -817,29 +816,39 @@
 @media (max-width: 560px){ .stats-grid{ grid-template-columns: 1fr; } }
 
 /* =========================
-   SOCIAL (cards back + button perfectly centered)
+   SOCIAL (CENTERED GRID + COMPACT CARDS + PERFECT BUTTON CENTER)
    ========================= */
+
+/* grid is constrained so cards don't become huge; always centered */
 .social-grid{
   display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 18px;
+  margin: 18px auto 0;
+  max-width: 1120px;           /* ✅ keeps cards compact */
+  justify-content: center;     /* ✅ centers the whole grid */
+  grid-template-columns: repeat(2, minmax(260px, 360px)); /* ✅ nice size on mid screens */
 }
 
-/* desktop: 4 in a row */
+/* desktop: 4 in a row but still compact */
 @media (min-width: 980px){
-  .social-grid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .social-grid{
+    grid-template-columns: repeat(4, minmax(240px, 280px));
+  }
 }
 
-/* mobile */
-@media (max-width: 900px){
-  .social-grid{ grid-template-columns: 1fr; }
+/* phone: 1 column ONLY on real small screens */
+@media (max-width: 640px){
+  .social-grid{
+    grid-template-columns: minmax(0, 520px);
+  }
 }
 
 .social-card{
-  display:flex;
+  display:grid;
+  grid-template-columns: 66px 1fr auto; /* icon | text | button */
   align-items:center;
   gap: 14px;
+
   padding: 14px 14px;
   border-radius: 18px;
   background: rgba(255,255,255,.03);
@@ -850,6 +859,7 @@
   text-align:left;
   min-width:0;
 }
+
 .social-card:hover{
   transform: translateY(-2px);
   border-color: rgba(0,229,255,.20);
@@ -863,8 +873,8 @@
   background: rgba(0,229,255,.08);
   border: 1px solid rgba(0,229,255,.14);
   box-shadow: 0 0 18px rgba(0,229,255,.10);
-  flex: 0 0 auto;
 }
+
 .social-icon svg{
   width: 22px; height: 22px;
   fill:none;
@@ -877,33 +887,29 @@
   flex-direction:column;
   gap: 4px;
   min-width: 0;
-  flex: 1 1 auto;
 }
+
 .social-title{
   font-weight: 950;
   font-size: 15px;
   letter-spacing: .02em;
   line-height: 1.2;
 }
+
 .social-desc{
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
 }
 
-/* ✅ FIX: single dot + true center */
+/* ✅ button: TRUE center + stable size */
 .social-cta{
-  flex: 0 0 auto;
-  margin-left: auto;
-
   min-width: 132px;
   height: 40px;
 
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  line-height: 1;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
 
   padding: 0 16px;
   border-radius: 999px;
@@ -916,8 +922,11 @@
   text-transform: uppercase;
   font-size: 11px;
 
-  transition: transform .28s var(--ease), background .28s var(--ease), border-color .28s var(--ease);
+  text-align:center;
+  line-height: 1;
   white-space: nowrap;
+
+  transition: transform .28s var(--ease), background .28s var(--ease), border-color .28s var(--ease);
 }
 
 .social-card:hover .social-cta{
@@ -929,9 +938,21 @@
 @media (min-width: 980px){
   .social-card{ min-height: 112px; }
 }
-@media (max-width: 900px){
-  .social-cta{ margin-left: 0; align-self:flex-start; }
+
+/* Mobile: stack button under text if needed, but still aligned */
+@media (max-width: 640px){
+  .social-card{
+    grid-template-columns: 66px 1fr;
+    grid-template-rows: auto auto;
+    align-items:start;
+  }
+  .social-cta{
+    grid-column: 2;
+    margin-top: 10px;
+    justify-self: start;
+  }
 }
+
 
 
   /* =========================
