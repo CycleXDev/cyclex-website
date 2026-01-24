@@ -589,8 +589,8 @@
   @media (min-width: 980px){ .hero-note{ text-align:center; } }
   .hero-note span{ color: rgba(0,229,255,.95); }
 
-  /* =========================
-   SECTIONS
+ /* =========================
+   SECTIONS (FIXED: kicker tight to title)
    ========================= */
 .section{
   position:relative;
@@ -628,16 +628,15 @@
   letter-spacing: .22em;
   text-transform: uppercase;
   color: rgba(124,92,255,.92);
-  margin-bottom: 10px;
+  margin-bottom: 6px; /* tighter */
 }
-
 #security-activity .section-kicker{ color: rgba(0,229,255,.92); }
 
 .section-title{
   font-size: clamp(28px, 3vw, 42px);
   font-weight: 950;
   letter-spacing: -0.02em;
-  margin-bottom: 14px;
+  margin-bottom: 12px; /* tighter */
 }
 
 .section-body{
@@ -654,23 +653,27 @@
     display:grid;
     grid-template-columns: minmax(360px, 520px) 1fr;
     column-gap: 56px;
-    row-gap: 18px;
+    row-gap: 8px;          /* ✅ was 18px — this is the main fix */
     align-items:start;
   }
 
-  /* left column */
-  .section-kicker{ grid-column:1; }
-  .section-title{ grid-column:1; }
+  .section-kicker{
+    grid-column:1;
+    margin-bottom: 2px;    /* ✅ kicker sits right above title */
+  }
 
-  /* right column */
+  .section-title{
+    grid-column:1;
+    margin-bottom: 0;      /* ✅ remove extra gap */
+  }
+
   .section-body{
     grid-column:2;
     justify-self:end;
     max-width: 62ch;
-    margin-top: 4px;
+    margin-top: 2px;
   }
 
-  /* Keep full-width blocks spanning both columns */
   .section > .stats-grid,
   .section > .social-grid,
   .section > .rewards-grid,
@@ -682,12 +685,8 @@
   }
 
   /* V-center only for the “left+right” style sections */
-  .section.section-vcenter{
-    align-items: center;
-  }
-  .section.section-vcenter .section-body{
-    margin-top: 0; /* prevent offset when centered */
-  }
+  .section.section-vcenter{ align-items:center; }
+  .section.section-vcenter .section-body{ margin-top: 0; }
 }
 
 /* Centered sections (override the 2-column desktop grid) */
@@ -696,7 +695,7 @@
     display:grid;
     grid-template-columns: 1fr;
     text-align:center;
-    row-gap: 8px;
+    row-gap: 6px; /* tighter */
   }
 
   .section.section-centered .section-kicker,
@@ -707,17 +706,22 @@
     text-align:center;
   }
 
-  .section.section-centered .section-kicker{ margin-bottom: 4px; }
+  .section.section-centered .section-kicker{ margin-bottom: 0; }
 
   .section.section-centered .section-title{
     font-size: clamp(24px, 2.7vw, 42px);
     line-height: 1.06;
-    margin-bottom: 6px;
-    white-space: nowrap;
+    margin-bottom: 4px;
+    white-space: normal; /* ✅ prevents weird spacing */
+  }
+
+  /* optional: keep single-line only on very wide screens */
+  @media (min-width: 1200px){
+    .section.section-centered .section-title{ white-space: nowrap; }
   }
 
   .section.section-centered .section-body{
-    margin-top: 2px;
+    margin-top: 0;
     max-width: 68ch;
     margin-left:auto;
     margin-right:auto;
@@ -725,8 +729,6 @@
 
   .section.section-centered > .stats-grid{ margin-top: 14px; }
 }
-
-
 
   /* Why list */
   #why-cyclex ul{ margin: 16px 0 0; padding-left: 18px; }
@@ -815,11 +817,32 @@
      SOCIAL
      ========================= */
   .social-grid{
-    display:grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 18px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* default: 2 */
+  gap: 12px;
+  margin-top: 18px;
+}
+
+/* ✅ desktop: 4 in a row */
+@media (min-width: 980px){
+  .social-grid{
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  /* small tightening so 4 cards fit nicely */
+  .social-card{ padding: 12px 12px; gap: 12px; }
+  .social-icon{ width: 46px; height: 46px; border-radius: 14px; }
+  .social-title{ font-size: 14px; }
+  .social-desc{ font-size: 12px; }
+  .social-cta{ padding: 9px 12px; font-size: 10px; }
+}
+
+/* mobile */
+@media (max-width: 900px){
+  .social-grid{ grid-template-columns: 1fr; }
+  .social-cta{ align-self:flex-start; }
+}
+
   .social-card{
     display:flex;
     align-items:center;
@@ -985,13 +1008,32 @@
     opacity: .92;
   }
   .reward-actions-inline{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    gap: 14px;
-    margin-top: 18px;
-    flex-wrap:wrap;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap: 12px;
+  margin-top: 18px;
+  flex-wrap: nowrap; /* ✅ force same row */
+}
+
+.reward-actions-inline .btn{
+  flex: 1 1 0;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+/* stack only on small screens */
+@media (max-width: 720px){
+  .reward-actions-inline{
+    flex-direction: column;
+    flex-wrap: wrap;
   }
+  .reward-actions-inline .btn{
+    width: 100%;
+    max-width: 520px;
+  }
+}
+
   @media (max-width: 900px){ .rewards-grid{ grid-template-columns: 1fr; } }
 
   /* =========================
@@ -1563,19 +1605,20 @@
             Fully automated • On-chain enforced • Publicly verifiable
           </div>
 
-          <div class="hero-actions">
-            <button class="btn btn-primary" type="button"
-              onclick="document.getElementById('btn-claim').click()"
-              data-i18n="btn_claim">
-              Claim rewards
-            </button>
+          <div class="reward-actions-inline">
+  <button class="btn btn-primary" type="button"
+    onclick="document.getElementById('btn-claim').click()"
+    data-i18n="btn_claim">
+    Claim rewards
+  </button>
 
-            <button class="btn btn-secondary" type="button"
-              onclick="document.getElementById('presale-link').click()"
-              data-i18n="btn_presale">
-              Pre-Sale (PinkSale)
-            </button>
-          </div>
+  <button class="btn btn-secondary" type="button"
+    onclick="document.getElementById('presale-link').click()"
+    data-i18n="btn_presale">
+    Pre-Sale (PinkSale)
+  </button>
+</div>
+
         </div>
 
         <div class="rewards-side">
