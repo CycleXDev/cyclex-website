@@ -647,33 +647,41 @@
 }
 .section-body p + p{ margin-top: 10px; }
 
-/* Desktop grid: left column (kicker+title) + right column (body) */
+/* Desktop grid: kicker+title on left, body on right (FIXED placement) */
 @media (min-width: 980px){
   .section{
     display:grid;
     grid-template-columns: minmax(360px, 520px) 1fr;
     column-gap: 56px;
-    row-gap: 8px;          /* ✅ was 18px — this is the main fix */
+    row-gap: 6px;
     align-items:start;
   }
 
+  /* Force exact rows so title doesn't drop under the body row */
   .section-kicker{
-    grid-column:1;
-    margin-bottom: 2px;    /* ✅ kicker sits right above title */
+    grid-column: 1;
+    grid-row: 1;
+    margin-bottom: 2px;
   }
 
   .section-title{
-    grid-column:1;
-    margin-bottom: 0;      /* ✅ remove extra gap */
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: 0;
+    margin-bottom: 0;
   }
 
+  /* KEY FIX: body spans rows 1-2, so it won't push title down */
   .section-body{
-    grid-column:2;
-    justify-self:end;
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    justify-self: end;
+    align-self: start;
     max-width: 62ch;
     margin-top: 2px;
   }
 
+  /* Keep full-width blocks spanning both columns */
   .section > .stats-grid,
   .section > .social-grid,
   .section > .rewards-grid,
@@ -684,10 +692,11 @@
     justify-self: stretch;
   }
 
-  /* V-center only for the “left+right” style sections */
+  /* Optional: vcenter sections */
   .section.section-vcenter{ align-items:center; }
   .section.section-vcenter .section-body{ margin-top: 0; }
 }
+
 
 /* Centered sections (override the 2-column desktop grid) */
 @media (min-width: 980px){
@@ -897,24 +906,50 @@
     line-height: 1.35;
     max-width: 58ch;
   }
-  .social-cta{
-    flex: 0 0 auto;
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(0,229,255,.12);
-    border: 1px solid rgba(0,229,255,.22);
-    font-weight: 950;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    font-size: 11px;
-    transition: transform .28s var(--ease), background .28s var(--ease), border-color .28s var(--ease);
-    white-space: nowrap;
-  }
+  ..social-cta{
+  flex: 0 0 auto;
+  min-width: 132px;              
+  height: 40px;                 
+  display: inline-flex;         
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+
+  padding: 0 16px;              
+  border-radius: 999px;
+  background: rgba(0,229,255,.12);
+  border: 1px solid rgba(0,229,255,.22);
+
+  font-weight: 950;
+  letter-spacing: .10em;        
+  text-transform: uppercase;
+  font-size: 11px;
+
+  transition: transform .28s var(--ease), background .28s var(--ease), border-color .28s var(--ease);
+  white-space: nowrap;
+}
+
   .social-card:hover .social-cta{
     transform: translateY(-1px);
     background: rgba(0,229,255,.16);
     border-color: rgba(0,229,255,.34);
   }
+
+  .social-card{
+  align-items: center;
+}
+
+.social-meta{
+  min-width: 0;
+}
+
+@media (min-width: 980px){
+  .social-card{
+    min-height: 112px;  
+  }
+}
+
   @media (max-width: 900px){
     .social-grid{ grid-template-columns: 1fr; }
     .social-cta{ align-self:flex-start; }
