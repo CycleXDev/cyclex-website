@@ -590,154 +590,142 @@
   .hero-note span{ color: rgba(0,229,255,.95); }
 
   /* =========================
-     SECTIONS
-     ========================= */
+   SECTIONS
+   ========================= */
+.section{
+  position:relative;
+  margin: 38px 0;
+  padding: 46px 0;
+  text-align:left;
+}
+
+.section + .section{ border-top: 1px solid rgba(255,255,255,.07); }
+
+.section::before{
+  content:"";
+  position:absolute;
+  left:-2px; right:-2px;
+  top:-1px; height:1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(0,229,255,.16) 35%, rgba(124,92,255,.10) 65%, transparent 100%);
+  opacity:.9;
+}
+
+.section::after{
+  content:"";
+  position:absolute;
+  inset:-60px -14px auto -14px;
+  height:180px;
+  background:
+    radial-gradient(circle at 22% 45%, rgba(0,229,255,.08), transparent 62%),
+    radial-gradient(circle at 70% 35%, rgba(124,92,255,.06), transparent 64%);
+  filter: blur(12px);
+  opacity:.7;
+  pointer-events:none;
+}
+
+.section-kicker{
+  font-size: 12px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: rgba(124,92,255,.92);
+  margin-bottom: 10px;
+}
+
+#security-activity .section-kicker{ color: rgba(0,229,255,.92); }
+
+.section-title{
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+
+.section-body{
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--muted);
+  max-width: 70ch;
+}
+.section-body p + p{ margin-top: 10px; }
+
+/* Desktop grid: left column (kicker+title) + right column (body) */
+@media (min-width: 980px){
   .section{
-    position:relative;
-    margin: 38px 0;
-    padding: 46px 0;
-    text-align: left;
-  }
-  .section + .section{ border-top: 1px solid rgba(255,255,255,.07); }
-  .section::before{
-    content:"";
-    position:absolute;
-    left: -2px; right: -2px;
-    top: -1px; height: 1px;
-    background: linear-gradient(90deg, transparent 0%, rgba(0,229,255,.16) 35%, rgba(124,92,255,.10) 65%, transparent 100%);
-    opacity:.9;
-  }
-  .section::after{
-    content:"";
-    position:absolute;
-    inset: -60px -14px auto -14px;
-    height: 180px;
-    background:
-      radial-gradient(circle at 22% 45%, rgba(0,229,255,.08), transparent 62%),
-      radial-gradient(circle at 70% 35%, rgba(124,92,255,.06), transparent 64%);
-    filter: blur(12px);
-    opacity:.7;
-    pointer-events:none;
+    display:grid;
+    grid-template-columns: minmax(360px, 520px) 1fr;
+    column-gap: 56px;
+    row-gap: 18px;
+    align-items:start;
   }
 
-  .section-kicker{
-    font-size: 12px;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: rgba(124,92,255,.92);
-    margin-bottom: 10px;
-  }
-  #security-activity .section-kicker{ color: rgba(0,229,255,.92); }
+  /* left column */
+  .section-kicker{ grid-column:1; }
+  .section-title{ grid-column:1; }
 
-  .section-title{
-    font-size: clamp(28px, 3vw, 42px);
-    font-weight: 950;
-    letter-spacing: -0.02em;
-    margin-bottom: 14px;
-  }
-
+  /* right column */
   .section-body{
-    font-size: 15px;
-    line-height: 1.85;
-    color: var(--muted);
-    max-width: 70ch;
+    grid-column:2;
+    justify-self:end;
+    max-width: 62ch;
+    margin-top: 4px;
   }
-  .section-body p + p{ margin-top: 10px; }
 
-  @media (min-width: 980px){
-    .section{
-      display:grid;
-      grid-template-columns: minmax(360px, 520px) 1fr;
-      column-gap: 56px;
-      row-gap: 18px;
-      align-items:start;
-    }
-
-.section-head{
-  grid-column: 1;
-}
-
-.section-head{
-  align-self: start;
-}
-
-  align-self: center;
-}
-
-.section.section-vcenter .section-body{
-  align-self: center;
-  margin-top: 0;
-}
- 
-    .section-kicker{ grid-column:1; }
-    .section-title{ grid-column:1; }
-    .section-body{
-      grid-column:2;
-      justify-self:end;
-      max-width: 62ch;
-      margin-top: 4px;
-    }
-
-    .section > .stats-grid,
-    .section > .social-grid,
-    .section > .rewards-grid,
-    .section > .rewards-intro,
-    .section > .reward-policy,
-    .section > .reward-actions-inline{
-      grid-column: 1 / -1;
-      justify-self: stretch;
-    }
+  /* Keep full-width blocks spanning both columns */
+  .section > .stats-grid,
+  .section > .social-grid,
+  .section > .rewards-grid,
+  .section > .rewards-intro,
+  .section > .reward-policy,
+  .section > .reward-actions-inline{
+    grid-column: 1 / -1;
+    justify-self: stretch;
   }
-  
-  /* Centered sections (override the 2-column desktop grid) */
+
+  /* V-center only for the “left+right” style sections */
+  .section.section-vcenter{
+    align-items: center;
+  }
+  .section.section-vcenter .section-body{
+    margin-top: 0; /* prevent offset when centered */
+  }
+}
+
+/* Centered sections (override the 2-column desktop grid) */
 @media (min-width: 980px){
   .section.section-centered{
-  display: grid;
-  grid-template-columns: 1fr;
-  text-align: center;
-}
+    display:grid;
+    grid-template-columns: 1fr;
+    text-align:center;
+    row-gap: 8px;
+  }
 
   .section.section-centered .section-kicker,
   .section.section-centered .section-title,
   .section.section-centered .section-body{
-    grid-column: 1;
-    justify-self: center;           
-    text-align: center;
+    grid-column:1;
+    justify-self:center;
+    text-align:center;
   }
 
-  .section.section-centered .section-body{
-    max-width: 72ch;
-    margin-left: auto;
-    margin-right: auto;
-  }
-   /* Tighten the 3 lines (kicker + title + desc) + slightly smaller title */
-  .section.section-centered{
-    row-gap: 8px;            
-  }
-
-  .section.section-centered .section-kicker{
-    margin-bottom: 4px;        
-  }
+  .section.section-centered .section-kicker{ margin-bottom: 4px; }
 
   .section.section-centered .section-title{
-  font-size: clamp(24px, 2.7vw, 42px);
-  line-height: 1.06;
-  margin-bottom: 6px;
-  white-space: nowrap;
-}
-
+    font-size: clamp(24px, 2.7vw, 42px);
+    line-height: 1.06;
+    margin-bottom: 6px;
+    white-space: nowrap;
+  }
 
   .section.section-centered .section-body{
-    margin-top: 2px;           
+    margin-top: 2px;
     max-width: 68ch;
+    margin-left:auto;
+    margin-right:auto;
   }
 
-  .section.section-centered > .stats-grid{
-    margin-top: 14px;        
-  }
-  
-
+  .section.section-centered > .stats-grid{ margin-top: 14px; }
 }
+
 
 
   /* Why list */
@@ -1355,6 +1343,7 @@
       </a>
     </div>
   </header>
+
   <!-- main logo center -->
   <img src="logo.png" alt="CycleX main logo" class="main-logo" />
 
@@ -1370,14 +1359,15 @@
       </h1>
 
       <p class="hero-subtitle" data-i18n="hero_subtitle">
-          Scan wallets, approvals, and high-risk contracts for free — no wallet connection required. CycleX runs a transparent, code-enforced quarterly rewards model with a locked treasury.
+        Scan wallets, approvals, and high-risk contracts for free — no wallet connection required. CycleX runs a transparent, code-enforced quarterly rewards model with a locked treasury.
       </p>
+
       <div class="hero-chips">
-     <span class="chip"><b>NO ADMIN</b> CONTROL</span>
-     <span class="chip"><b>PUBLIC</b> VERIFICATION</span>
-     <span class="chip"><b>DETERMINISTIC</b> RULES</span>
-     <span class="chip"><b>INSTANT</b> SCANS</span>
-   </div>
+        <span class="chip"><b>NO ADMIN</b> CONTROL</span>
+        <span class="chip"><b>PUBLIC</b> VERIFICATION</span>
+        <span class="chip"><b>DETERMINISTIC</b> RULES</span>
+        <span class="chip"><b>INSTANT</b> SCANS</span>
+      </div>
 
       <!-- PRIMARY CTA (security-first) -->
       <div class="hero-primary-cta">
@@ -1389,7 +1379,7 @@
         </div>
       </div>
 
-      <!-- Secondary actions (kept, but de-emphasized) -->
+      <!-- Secondary actions -->
       <div class="hero-actions hero-actions-secondary">
         <button class="btn btn-secondary" id="btn-claim" data-i18n="btn_claim">
           Claim rewards
@@ -1399,7 +1389,6 @@
           Reward Calculator
         </button>
 
-        <!-- keep id="presale-link" for your existing logic/scripts -->
         <a class="btn btn-secondary" href="#" id="presale-link" data-i18n="btn_presale" role="button">
           Pre-Sale (PinkSale)
         </a>
@@ -1410,7 +1399,7 @@
       </p>
     </section>
 
-    <!-- NEW: Live Security Activity (Above the fold, right under Hero) -->
+    <!-- Live Security Activity (CENTERED) -->
     <section class="section section-centered" id="security-activity">
       <div class="section-kicker" data-i18n="security_activity_kicker">Live Security Activity</div>
 
@@ -1422,7 +1411,6 @@
         Lightweight public counters that reflect security tool activity.
       </p>
 
-      <!-- Reuse existing stat-card styling to avoid breaking CSS -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-label" data-i18n="security_wallets_scanned">Wallets Scanned 🔍</div>
@@ -1444,14 +1432,14 @@
       </div>
     </section>
 
-    <!-- 1. On-Chain Transparency (kept right AFTER security activity, includes your rewards/burns metrics) -->
-    <section class="section section-centered">
-      <div class="section-kicker" data-i18n="transparency_kicker">
-        Transparency
-      </div>
+    <!-- Transparency (CENTERED) -->
+    <section class="section section-centered" id="transparency">
+      <div class="section-kicker" data-i18n="transparency_kicker">Transparency</div>
+
       <h2 class="section-title" data-i18n="transparency_title">
         On-Chain Transparency
       </h2>
+
       <p class="section-body" data-i18n="transparency_p1">
         All core flows — rewards, burns, and treasury movements — are executed directly by the smart contract. The counters below reflect live, verifiable on-chain data.
       </p>
@@ -1487,11 +1475,11 @@
       </div>
     </section>
 
-    <!-- NEW: Short “Why CycleX” bridge (security-first, not salesy) -->
+    <!-- Security-First (LEFT + V-CENTER) -->
     <section class="section section-vcenter" id="why-cyclex">
       <div class="section-kicker" data-i18n="why_kicker">Security-First</div>
       <h2 class="section-title" data-i18n="why_title">Why CycleX exists</h2>
-    
+
       <div class="section-body">
         <p data-i18n="why_p1">
           Many on-chain systems fail for the same reasons: manual control, opaque rules, and decisions made off-chain.
@@ -1510,14 +1498,14 @@
       </div>
     </section>
 
-    <!-- 2. Vision & AI Security -->
+    <!-- Vision & Architecture (LEFT + V-CENTER) -->
     <section class="section section-vcenter">
-      <div class="section-kicker" data-i18n="vision_kicker">
-        Vision &amp; Architecture
-      </div>
+      <div class="section-kicker" data-i18n="vision_kicker">Vision &amp; Architecture</div>
+
       <h2 class="section-title" data-i18n="vision_title">
         Vision &amp; On-Chain Security Architecture
       </h2>
+
       <div class="section-body">
         <p data-i18n="vision_p1">
           CycleX is built on a simple but powerful principle: let code, math, and cryptography enforce the rules —
@@ -1536,36 +1524,28 @@
       </div>
     </section>
 
-    <!-- 3. Rewards Model -->
+    <!-- Rewards Model (CENTERED) -->
     <section class="section rewards-section section-centered" id="rewards">
-      <div class="section-kicker" data-i18n="rewards_kicker">
-        REWARDS MODEL
-      </div>
+      <div class="section-kicker" data-i18n="rewards_kicker">REWARDS MODEL</div>
 
-      <h2 class="section-title" data-i18n="rewards_title">
-        Rewards Model
-      </h2>
+      <h2 class="section-title" data-i18n="rewards_title">Rewards Model</h2>
 
-      <p class="rewards-intro" data-i18n="rewards_intro">
+      <!-- added section-body here so it behaves like the centered subtitle -->
+      <p class="rewards-intro section-body" data-i18n="rewards_intro">
         CycleX operates on a quarterly reward cycle.
         Each cycle is executed automatically according to predefined on-chain rules.
       </p>
 
       <div class="rewards-grid">
-        <!-- MAIN CARD (LEFT) -->
         <div class="reward-card highlight">
           <h3 data-i18n="rewards_dist_title">Distribution Logic</h3>
 
           <ul>
-            <li data-i18n="rewards_dist_li1">
-              <strong>9%</strong> rewards are distributed to eligible holders.
-            </li>
-
+            <li data-i18n="rewards_dist_li1"><strong>9%</strong> rewards are distributed to eligible holders.</li>
             <li data-i18n="rewards_dist_li2">
               For every reward cycle, the treasury burns an amount
               <strong>equal to the 9% distributed rewards</strong> (1:1).
             </li>
-
             <li data-i18n="rewards_dist_li3">
               An additional <strong>20%</strong> of the 9% reward amount is allocated to
               <strong>Development &amp; Operations</strong> — sourced from the treasury only.
@@ -1598,21 +1578,12 @@
           </div>
         </div>
 
-        <!-- SIDE COLUMN (RIGHT) -->
         <div class="rewards-side">
-          <!-- Eligibility -->
           <div class="reward-card">
-            <h3 data-i18n="rewards_rules_title">
-              Eligibility &amp; Claim Rules
-            </h3>
-
+            <h3 data-i18n="rewards_rules_title">Eligibility &amp; Claim Rules</h3>
             <ul>
-              <li data-i18n="rewards_rules_li1">
-                Tokens must be held for at least <strong>60 days</strong> in a self-custody Web3 wallet.
-              </li>
-              <li data-i18n="rewards_rules_li2">
-                Exchange balances do not qualify.
-              </li>
+              <li data-i18n="rewards_rules_li1">Tokens must be held for at least <strong>60 days</strong> in a self-custody Web3 wallet.</li>
+              <li data-i18n="rewards_rules_li2">Exchange balances do not qualify.</li>
               <li data-i18n="rewards_rules_li3">
                 Rewards must be claimed every cycle.<br>
                 <strong>Unclaimed rewards do not roll over.</strong>
@@ -1620,11 +1591,8 @@
             </ul>
           </div>
 
-          <!-- On-chain enforcement -->
           <div class="reward-card enforcement">
-            <h3 data-i18n="rewards_chain_title">
-              On-Chain Enforcement
-            </h3>
+            <h3 data-i18n="rewards_chain_title">On-Chain Enforcement</h3>
 
             <p data-i18n="rewards_chain_p1">
               Rewards are claimed directly by users via a secure Merkle-proof system.
@@ -1646,15 +1614,11 @@
       </div>
     </section>
 
-    <!-- Future-Ready Protocol -->
+    <!-- Future-Ready Protocol (LEFT + V-CENTER) -->
     <section class="section section-vcenter">
-      <div class="section-kicker" data-i18n="future_kicker">
-        Future-Ready Protocol
-      </div>
+      <div class="section-kicker" data-i18n="future_kicker">Future-Ready Protocol</div>
 
-      <h2 class="section-title" data-i18n="future_title">
-        Future-Ready Protocol
-      </h2>
+      <h2 class="section-title" data-i18n="future_title">Future-Ready Protocol</h2>
 
       <div class="section-body">
         <p data-i18n="future_p1">
@@ -1675,15 +1639,11 @@
       </div>
     </section>
 
-    <!-- 4. Pre-Sale & Liquidity Plan -->
+    <!-- Pre-Sale & Liquidity Plan (LEFT + V-CENTER) -->
     <section class="section section-vcenter">
-      <div class="section-kicker" data-i18n="presale_kicker">
-        Pre-Sale &amp; Liquidity Plan
-      </div>
+      <div class="section-kicker" data-i18n="presale_kicker">Pre-Sale &amp; Liquidity Plan</div>
 
-      <h2 class="section-title" data-i18n="presale_title">
-        Pre-Sale &amp; Liquidity Strategy
-      </h2>
+      <h2 class="section-title" data-i18n="presale_title">Pre-Sale &amp; Liquidity Strategy</h2>
 
       <div class="section-body">
         <p data-i18n="presale_p1">
@@ -1697,7 +1657,7 @@
 
   </main>
 
-  <!-- Social / Community -->
+  <!-- Community (CENTERED) -->
   <section class="section section-centered" id="social">
     <div class="section-kicker" data-i18n="social_kicker">Community</div>
     <h2 class="section-title" data-i18n="social_title">Stay Connected</h2>
@@ -1790,7 +1750,6 @@
       Powered by security, strengthened by community, and driven by a limited supply everyone wants.
     </div>
 
-    <!-- Optional quick links (styling later in CSS) -->
     <div class="footer-links" style="margin-top: 14px; display:flex; gap:12px; flex-wrap:wrap; opacity:.9;">
       <a href="/security">Security Hub</a>
       <a href="https://x.com/CyclexNetwork" target="_blank" rel="noopener">X</a>
@@ -1799,120 +1758,6 @@
     </div>
   </footer>
 </div>
-
-<!-- Eligibility modal (first-visit popup, multi-language) -->
-<div class="modal-backdrop" id="eligibility-modal-backdrop" aria-hidden="true">
-  <div class="modal">
-    <h2 class="modal-title" data-i18n="elig_title">
-      Eligibility &amp; Holding Rules
-    </h2>
-    <p class="modal-subtitle" data-i18n="elig_subtitle">
-      To be included in a reward cycle, you must hold CYCLEX correctly and respect the 60-day Web3 holding rule:
-    </p>
-    <div class="eligibility-body" data-i18n="elig_body">
-      <ol>
-        <li><strong>Hold in a self-custody Web3 wallet</strong> (MetaMask, Trust Wallet, Ledger) for at least 60 days.</li>
-        <li><strong>Exchange balances do not count</strong> until tokens are withdrawn to your own Web3 wallet.</li>
-        <li><strong>Snapshots are taken before each cycle</strong>; moving or selling before snapshot removes eligibility.</li>
-        <li><strong>Rewards are based on duration + balance only</strong>, not on buy price or trading history.</li>
-        <li><strong>Claims use Merkle-proof</strong> and can only be triggered by the owner wallet.</li>
-      </ol>
-    </div>
-    <div class="modal-actions">
-      <button class="btn-wallet" id="eligibility-continue-btn" data-i18n="elig_continue">
-        I understand – continue
-      </button>
-    </div>
-    <p class="modal-caption" data-i18n="elig_caption">
-      By continuing, you confirm that you understand how eligibility is calculated and acknowledge these rules before interacting with the reward system.
-    </p>
-  </div>
-</div>
-
-<!-- Claim modal -->
-<div class="modal-backdrop" id="claim-modal-backdrop" aria-hidden="true">
-  <div class="modal">
-    <button class="modal-close-x" id="modal-close-x" aria-label="Close">&times;</button>
-    <div class="modal-badge" data-i18n="claim_badge">Claim Portal</div>
-    <h2 class="modal-title" data-i18n="claim_title">Claim your rewards</h2>
-    <p class="modal-subtitle" data-i18n="claim_subtitle">
-      Connect your wallet to check your eligibility and claim what’s yours. Rewards are calculated per cycle based on
-      the official 9% model and 60-day holding rule.
-      Claim is required every cycle to receive your rewards. Unclaimed rewards do not roll over.
-    </p>
-    <p class="modal-tagline" data-i18n="claim_tagline">
-      For important and loyal holders only.
-    </p>
-    <div id="claim-status"></div>
-    <div class="modal-actions">
-      <button class="btn-wallet" id="btn-connect-wallet" data-i18n="claim_btn_connect">
-        Connect wallet
-      </button>
-      <button class="btn-close" id="btn-close-modal" data-i18n="claim_btn_close">
-        Close
-      </button>
-    </div>
-    <p class="modal-caption" data-i18n="claim_caption">
-      Web3 integration (MetaMask / WalletConnect) will connect here to read your Merkle allocation and trigger the
-      on-chain <code>claim()</code> call.
-    </p>
-  </div>
-</div>
-
-<!-- Reward Calculator Modal -->
-<div id="calculatorModal" class="calculator-modal" aria-hidden="true">
-  <div class="calculator-content">
-    <span class="closeCalc" id="closeCalc">&times;</span>
-
-    <h2 data-i18n="calc_title">Reward Calculator</h2>
-
-    <p class="calc-desc" data-i18n="calc_desc">
-      Estimate your long-term CycleX rewards with compounding cycles.
-    </p>
-
-    <label for="calcTokens" data-i18n="calc_label_tokens">
-      Tokens you hold:
-    </label>
-    <input
-      id="calcTokens"
-      type="number"
-      placeholder="Enter amount..."
-      data-i18n-placeholder="calc_placeholder_tokens"
-    />
-
-    <label for="calcCycles" data-i18n="calc_label_cycles">
-      Number of cycles:
-    </label>
-    <select id="calcCycles">
-      <option value="1" data-i18n="calc_cycle_1">1 cycle</option>
-      <option value="2" data-i18n="calc_cycle_2">2 cycles</option>
-      <option value="4" data-i18n="calc_cycle_4">4 cycles (≈ 1 year)</option>
-      <option value="8" data-i18n="calc_cycle_8">8 cycles (≈ 2 years)</option>
-      <option value="12" data-i18n="calc_cycle_12">12 cycles (≈ 3 years)</option>
-    </select>
-
-    <button id="calcRun" data-i18n="calc_btn">
-      Calculate
-    </button>
-
-    <div id="calcResult"></div>
-
-    <p class="calc-disclaimer" data-i18n="calc_disclaimer">
-      CycleX pays 9% every reward cycle.<br>
-      If you hold your tokens (including the rewards you claim) without selling or moving them,<br>
-      you earn compound rewards — meaning each cycle is calculated on top of the previous one.<br><br>
-      <strong>
-        Claim is required every cycle to receive your rewards.<br>
-        Unclaimed rewards do not roll over.
-      </strong>
-    </p>
-
-    <p class="calc-note" data-i18n="calc_note">
-      Rewards compound if you keep holding your CYCX and claim every cycle.
-    </p>
-  </div>
-</div>
-
 
 
   <!-- Load ethers.js -->
