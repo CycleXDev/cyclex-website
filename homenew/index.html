@@ -276,11 +276,11 @@
   @keyframes floatLogo{0%{transform:translateY(0)}50%{transform:translateY(-7px)}100%{transform:translateY(0)}}
 
   /* =========================
-     HERO (LIKE YOUR SCREENSHOT)
+     HERO (PREMIUM — SINGLE LINE TITLE + CLEAN BUTTON ROW)
      ========================= */
   .hero{
     position:relative;
-    max-width: 1100px;
+    max-width: 1180px;
     margin: 10px auto 34px;
     padding: 14px 0 12px;
     animation: heroIn .7s var(--ease) both;
@@ -307,12 +307,13 @@
     margin-bottom: 14px;
   }
 
+  /* Title */
   .hero-title{
-    font-size: clamp(44px, 6vw, 90px);
-    line-height: 1.01;
+    font-size: clamp(44px, 5.4vw, 88px);
+    line-height: 1.02;
     font-weight: 950;
-    letter-spacing: -0.04em;
-    margin-bottom: 16px;
+    letter-spacing: -0.045em;
+    margin-bottom: 14px;
   }
   @supports (-webkit-background-clip:text){
     .hero-title{
@@ -335,17 +336,22 @@
     }
   }
 
+  /* Force single-line on desktop, but allow wrap on mobile */
+  @media (min-width: 980px){
+    .hero-title{
+      white-space: nowrap;
+      letter-spacing: -0.05em;
+      font-size: clamp(52px, 5.25vw, 92px);
+    }
+    .hero-title br{ display:none; }
+  }
+
   .hero-subtitle{
     max-width: 78ch;
     font-size: 16px;
     line-height: 1.75;
     color: var(--muted);
-    margin-bottom: 16px;
-  }
-
-  /* Title single-line on desktop (if you used <br>) */
-  @media (min-width: 980px){
-    .hero-title br{ display:none; }
+    margin-bottom: 14px;
   }
 
   /* Chips row */
@@ -353,7 +359,7 @@
     display:flex;
     flex-wrap:wrap;
     gap: 10px;
-    margin: 12px 0 18px;
+    margin: 12px 0 16px;
   }
   .chip{
     display:inline-flex;
@@ -395,6 +401,7 @@
     gap: 10px;
     transition: transform .32s var(--ease), box-shadow .32s var(--ease), background .32s var(--ease), border-color .32s var(--ease), filter .32s var(--ease);
     isolation:isolate;
+    min-height: 52px; /* premium uniform height */
   }
   .btn:focus-visible{ outline:none; box-shadow: 0 0 0 3px rgba(0,229,255,.22); }
 
@@ -440,32 +447,45 @@
 
   #btn-security-tools{
     padding: 18px 38px;
-    width: min(720px, 100%);
+    width: min(760px, 100%);
     letter-spacing: .14em;
+    min-height: 62px;
   }
 
-  /* Secondary buttons under the main CTA */
-  .hero-actions{
-    margin-top: 12px;
-    display:grid;
-    gap: 10px;
-    width: min(980px, 100%);
+  .hero-primary-sub{
+    margin-top: 10px;
+    font-size: 13px;
+    color: rgba(244,246,255,.62);
+    letter-spacing: .02em;
   }
+
+  /* Secondary buttons: premium single row on desktop */
+  .hero-actions{
+    margin-top: 14px;
+    width: min(980px, 100%);
+    display:flex;
+    gap: 12px;
+    align-items:stretch;
+  }
+  .hero-actions .btn{
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
   @media (min-width: 980px){
     .hero{ text-align:left; }
     .hero-chips{ justify-content:flex-start; }
-    .hero-actions{
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      justify-content:start;
-      max-width: 980px;
-    }
   }
   @media (max-width: 979px){
     .hero{ text-align:center; }
     .hero-subtitle{ margin-left:auto; margin-right:auto; }
     .hero-chips{ justify-content:center; }
     #btn-security-tools{ width: 100%; }
-    .hero-actions{ grid-template-columns: 1fr; max-width: 520px; margin-left:auto; margin-right:auto; }
+    .hero-actions{
+      flex-direction: column;
+      max-width: 520px;
+      margin-left:auto; margin-right:auto;
+    }
   }
 
   .hero-note{
@@ -1087,7 +1107,7 @@
     .brand-title{ font-size: 12px; }
     .brand-sub{ font-size: 10px; }
 
-    .hero-title{ font-size: 38px; }
+    .hero-title{ font-size: 38px; white-space: normal; }
     .hero-subtitle{ font-size: 15px; }
     .chip{ font-size: 11px; letter-spacing:.18em; }
     body.modal-open .top-bar{ display:none !important; }
@@ -1123,6 +1143,7 @@
     transform: translateZ(0);
   }
 </style>
+
 </head>
 <body>
  <div class="page-shell">
