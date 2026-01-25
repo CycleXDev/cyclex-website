@@ -89,50 +89,51 @@
   }
   @keyframes bodyIn{from{opacity:0}to{opacity:1}}
 
-  /* Smooth orbs + subtle film-grain (NO scanlines) */
-  body::before{
-    content:"";
-    position:fixed; inset:-18vh -18vw;
-    pointer-events:none;
-    background:
-  radial-gradient(740px 640px at 20% 14%, rgba(0,229,255,.10), transparent 60%),
-  radial-gradient(940px 780px at 78% 18%, rgba(124,92,255,.09), transparent 62%),
-  radial-gradient(820px 700px at 52% 78%, rgba(93,255,178,.06), transparent 64%),
+ body::before{
+  content:"";
+  position:fixed; inset:-18vh -18vw;
+  pointer-events:none;
+  display:block;
 
-  /* subtle enterprise grid (big cells, no scanlines) */
-  repeating-linear-gradient(90deg,
-    rgba(255,255,255,.055) 0,
-    rgba(255,255,255,.055) 1px,
-    transparent 1px,
-    transparent 180px),
-  repeating-linear-gradient(0deg,
-    rgba(255,255,255,.055) 0,
-    rgba(255,255,255,.055) 1px,
-    transparent 1px,
-    transparent 180px),
+  z-index: 0;
 
-  /* film grain */
-  url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
-background-repeat:no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
-background-size:auto, auto, auto, 140px 140px, 140px 140px, 260px 260px;
+  background:
+    radial-gradient(740px 640px at 20% 14%, rgba(0,229,255,.10), transparent 60%),
+    radial-gradient(940px 780px at 78% 18%, rgba(124,92,255,.09), transparent 62%),
+    radial-gradient(820px 700px at 52% 78%, rgba(93,255,178,.06), transparent 64%),
 
-    opacity:.11;
-    animation: drift 18s linear infinite;
-    transform: translate3d(0,0,0);
-    mix-blend-mode: soft-light;
-    filter: none;
-  }
-  @keyframes drift{
-    0%{transform:translate3d(0,0,0)}
-    50%{transform:translate3d(2.2vw,-1.4vh,0)}
-    100%{transform:translate3d(0,0,0)}
-  }
+    /* grid עדין */
+    repeating-linear-gradient(90deg,
+      rgba(255,255,255,.040) 0,
+      rgba(255,255,255,.040) 1px,
+      transparent 1px,
+      transparent 140px),
+    repeating-linear-gradient(0deg,
+      rgba(255,255,255,.040) 0,
+      rgba(255,255,255,.040) 1px,
+      transparent 1px,
+      transparent 140px),
+
+    /* grain */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+
+  background-repeat:no-repeat, no-repeat, no-repeat, repeat, repeat, repeat;
+  background-size:auto, auto, auto, 140px 140px, 140px 140px, 260px 260px;
+
+  opacity:.14;
+  mix-blend-mode: soft-light;
+  filter:none;
+  animation: drift 18s linear infinite;
+  transform: translate3d(0,0,0);
+}
+
 
   /* Vignette */
   body::after{
     content:"";
     position:fixed; inset:-30vh -30vw;
     pointer-events:none;
+    body::after{ z-index: 1; }
     background: radial-gradient(circle at 50% 18%, transparent 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.60) 100%);
     opacity:.68;
   }
@@ -141,7 +142,7 @@ background-size:auto, auto, auto, 140px 140px, 140px 140px, 260px 260px;
   @keyframes langFade{from{opacity:.45; transform:translateY(4px)}to{opacity:1; transform:translateY(0)}}
 
   .page-shell{
-    position:relative; z-index:1;
+    position:relative; z-index:2;
     max-width:var(--container);
     margin:0 auto;
     padding: 26px var(--gutter) 78px;
@@ -1428,33 +1429,7 @@ background-size:auto, auto, auto, 140px 140px, 140px 140px, 260px 260px;
     backface-visibility:hidden;
     transform: translateZ(0);
   }
-/* === ABSOLUTE DEBUG (remove after) === */
-body{ outline: 6px solid #ff0033 !important; }
 
-body::before{
-  content:"DEBUG ACTIVE" !important;
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 2147483647 !important;
-  display:block !important;
-  pointer-events:none !important;
-
-  color:#ff0033 !important;
-  font: 900 24px/1.2 system-ui !important;
-  padding: 18px !important;
-
-  background:
-    repeating-linear-gradient(90deg,
-      rgba(255,0,0,.85) 0,
-      rgba(255,0,0,.85) 6px,
-      transparent 6px,
-      transparent 80px),
-    repeating-linear-gradient(0deg,
-      rgba(255,0,0,.85) 0,
-      rgba(255,0,0,.85) 6px,
-      transparent 6px,
-      transparent 80px) !important;
-}
 
 
 </style>
