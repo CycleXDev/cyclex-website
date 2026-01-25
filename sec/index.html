@@ -1409,6 +1409,39 @@ a.tool-card[data-tool="approvals"]::after{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+    /* =========================
+   DNA – small, controlled tweaks
+   ========================= */
+
+/* Tips: same size, just bold */
+#panel-approvals #dna-tips li{
+  font-weight: 700;
+}
+
+/* Locked card: slightly clearer + bolder, tiny size bump */
+#panel-approvals #dna-approvals-locked .small{
+  font-weight: 650;
+  line-height: 1.55;
+  font-size: 14.5px; /* ממש טיפה */
+}
+
+/* spacing between lines in the locked card */
+#panel-approvals #dna-approvals-locked .small + .small{
+  margin-top: 8px;
+}
+
+/* Eligibility message line */
+#panel-approvals #dna-elig-msg{
+  margin-top: 10px;
+  font-weight: 800;
+  font-size: 14.5px;
+}
+
+/* Red / Green states */
+#panel-approvals #dna-elig-msg.elig-ok{ color: var(--green); }
+#panel-approvals #dna-elig-msg.elig-bad{ color: #ff6a6a; }
+#panel-approvals #dna-elig-msg.elig-warn{ color: #ffd36a; }
+
     
 
 </style>
@@ -6026,12 +6059,19 @@ function dnaTr(key, fallback) {
   return (typeof window.t === "function" ? window.t(key) : fallback);
 }
 
-function dnaSetEligMsg(text, muted = true) {
+function dnaSetEligMsg(text, state = "info") {
   const el = $("#dna-elig-msg");
   if (!el) return;
+
   el.textContent = text || "";
-  el.classList.toggle("muted", !!muted);
+  el.classList.remove("elig-ok", "elig-bad", "elig-warn", "muted");
+
+  if (state === "ok") el.classList.add("elig-ok");
+  else if (state === "bad") el.classList.add("elig-bad");
+  else if (state === "warn") el.classList.add("elig-warn");
+  else el.classList.add("muted");
 }
+
 
 function dnaLockApprovalsUI(msgKey) {
   dnaFullAccess = false;
@@ -6045,16 +6085,19 @@ function dnaLockApprovalsUI(msgKey) {
   $("#dna-revoke-all")?.classList.add("hidden");
 
   if (msgKey) {
-    const map = {
-      checking: dnaTr("dna_elig_checking", "Checking CYCX balance…"),
-      wrong_net: dnaTr("dna_elig_wrong_net", "Please switch to BSC (BNB Chain) to check CYCX eligibility."),
-      no: dnaTr("dna_elig_no", "Not eligible for full access."),
-      error: dnaTr("dna_elig_error", "Could not check eligibility. Please try again.")
-    };
-    dnaSetEligMsg(map[msgKey] || "", msgKey !== "checking");
+  if (msgKey === "checking") {
+    dnaSetEligMsg(dnaTr("dna_elig_checking", "Checking CYCX balance…"), "warn");
+  } else if (msgKey === "wrong_net") {
+    dnaSetEligMsg(dnaTr("dna_elig_wrong_net", "Please switch to BSC (BNB Chain) to check CYCX eligibility."), "warn");
+  } else if (msgKey === "no") {
+    dnaSetEligMsg(dnaTr("dna_elig_no", "Not eligible for full access."), "bad"); 
   } else {
-    dnaSetEligMsg("", true);
+    dnaSetEligMsg(dnaTr("dna_elig_error", "Could not check eligibility. Please try again."), "warn");
   }
+} else {
+  dnaSetEligMsg("", "info");
+}
+
 }
 
 function dnaUnlockApprovalsUI() {
@@ -6125,7 +6168,7 @@ async function dnaRequestFullAccess() {
       return;
     }
 
-    dnaSetEligMsg(dnaTr("dna_elig_ok", "Eligible — unlocking approvals…"), true);
+    dnaSetEligMsg(dnaTr("dna_elig_ok", "Eligible — unlocking approvals…"), "ok"); 
     dnaUnlockApprovalsUI();
 
     // Reload scan so approvals table is actually rendered now
