@@ -6054,10 +6054,15 @@ const CYCX_GATE_ABI = [
 ];
 
 function dnaTr(key, fallback) {
-  // If you have a translation getter function, use it here.
-  // Otherwise fallback to English text.
-  return (typeof window.t === "function" ? window.t(key) : fallback);
+  try {
+    if (typeof window.t === "function") {
+      const v = window.t(key);
+      if (v != null && String(v).trim() !== "") return v; 
+    }
+  } catch {}
+  return fallback; 
 }
+
 
 function dnaSetEligMsg(text, state = "info") {
   const el = $("#dna-elig-msg");
@@ -6110,7 +6115,7 @@ function dnaUnlockApprovalsUI() {
   $("#dna-revoke-all")?.classList.remove("hidden");
 
   dnaSetEligMsg("", "info");
-}
+ }
 
 async function dnaCheckCycxEligibility_BSC() {
   // must be bsc in selector
@@ -6169,11 +6174,8 @@ async function dnaRequestFullAccess() {
     }
 
    dnaSetEligMsg(dnaTr("dna_elig_ok", "Eligible — unlocking approvals…"), "ok");
-
-await new Promise(r => setTimeout(r, 650));
-
-dnaUnlockApprovalsUI();
-await dnaScan();
+   dnaUnlockApprovalsUI();
+   await dnaScan();
 
 
   } catch (e) {
