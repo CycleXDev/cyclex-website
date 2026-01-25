@@ -6109,7 +6109,7 @@ function dnaUnlockApprovalsUI() {
   $("#dna-full-access")?.classList.add("hidden");
   $("#dna-revoke-all")?.classList.remove("hidden");
 
-  dnaSetEligMsg("", true);
+  dnaSetEligMsg("", "info");
 }
 
 async function dnaCheckCycxEligibility_BSC() {
@@ -6168,11 +6168,13 @@ async function dnaRequestFullAccess() {
       return;
     }
 
-    dnaSetEligMsg(dnaTr("dna_elig_ok", "Eligible — unlocking approvals…"), "ok"); 
-    dnaUnlockApprovalsUI();
+   dnaSetEligMsg(dnaTr("dna_elig_ok", "Eligible — unlocking approvals…"), "ok");
 
-    // Reload scan so approvals table is actually rendered now
-    await dnaScan();
+await new Promise(r => setTimeout(r, 650));
+
+dnaUnlockApprovalsUI();
+await dnaScan();
+
 
   } catch (e) {
     console.error("dnaRequestFullAccess error:", e);
