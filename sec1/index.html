@@ -3597,6 +3597,7 @@ window.__wallet = wallet;
     async function cxConnectWallet({ silent = false } = {}) {
       const stQuick = $("#qs-status");
 if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
+  renderWalletLabels();
   if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
   return true;
 }
@@ -3604,38 +3605,42 @@ if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browser
 if (silent) return false;
 
       try {
-        if (!silent) await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
-        }
-        const providerRaw = await waitForWalletProvider(12000);
-        if (!providerRaw) {
-          if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
-          return false;
-        }
+  if (!silent) {
+    await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
+  }
 
-        wallet.providerRaw = providerRaw;
-        attachProviderListeners(providerRaw);
+  const providerRaw = await waitForWalletProvider(12000);
+  if (!providerRaw) {
+    if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
+    return false;
+  }
 
-        const bp = new E.BrowserProvider(providerRaw);
-        wallet.browserProvider = bp;
+  wallet.providerRaw = providerRaw;
+  attachProviderListeners(providerRaw);
 
-        const signer = await bp.getSigner();
-        wallet.signer = signer;
+  const bp = new E.BrowserProvider(providerRaw);
+  wallet.browserProvider = bp;
 
-        const addr = await signer.getAddress();
-        const net = await bp.getNetwork();
+  const signer = await bp.getSigner();
+  wallet.signer = signer;
 
-        wallet.address = E.getAddress(addr);
-        wallet.chainId = Number(net.chainId || 0);
+  const addr = await signer.getAddress();
+  const net = await bp.getNetwork();
 
-        renderWalletLabels();
-        if (!silent) setStatus(stQuick, "ok", `Wallet connected: <span class="mono">${wallet.address}</span>`);
-        gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
+  wallet.address = E.getAddress(addr);
+  wallet.chainId = Number(net.chainId || 0);
 
-        return true;
-      } catch (e) {
-        if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
-        return false;
-      }
+  renderWalletLabels();
+  if (!silent) setStatus(stQuick, "ok", `Wallet connected: <span class="mono">${wallet.address}</span>`);
+  gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
+
+  return true;
+
+} catch (e) {
+  if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
+  return false;
+}
+
     }
 window.cxConnectWallet = cxConnectWallet;
 window.connectWallet = cxConnectWallet;
