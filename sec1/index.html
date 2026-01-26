@@ -3454,6 +3454,24 @@ function bindLangButtons(){
       const z = String(a).toLowerCase();
       return z === ZERO.toLowerCase() || z === DEAD.toLowerCase();
     }
+    function dnaFormatLastUpdated(ts) {
+  const s = String(ts ?? "").trim();
+  if (!s || s === "—") return `<span class="muted">—</span>`;
+
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    const nice = `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+    return `<span class="mono" title="${window.escapeHtml(s)}">${window.escapeHtml(nice)}</span>`;
+  }
+
+  return `<span class="mono">${window.escapeHtml(s)}</span>`;
+}
+
 
     async function copyText(text) {
       try {
@@ -5589,19 +5607,35 @@ function dnaFormatAllowance(rawStr, decimals = null) {
   let s0 = String(rawStr ?? "").trim();
   if (!s0 || s0 === "—") return "—";
 
+  // Fix ".1" -> "0.1"
   if (s0.startsWith(".")) s0 = "0" + s0;
   if (s0.startsWith("-.")) s0 = "-0" + s0.slice(1);
 
   const low0 = s0.toLowerCase();
+
+  // obvious unlimited hints
   if (s0 === "∞" || low0 === "infinite" || low0 === "unlimited" || low0.includes("inf")) {
     return `<span class="mono" title="Unlimited" data-copy="Unlimited">Unlimited</span>`;
   }
 
+  // ✅ IMPORTANT:
+  // if API gives a "broken" value like 0.<tons of digits> (looks like your screenshot),
+  // treat it as a raw integer by removing "0." (or ".") so we can detect MaxUint256/unlimited.
+  // Example: "0.1157920....(70+ digits)" => "1157920...(70+ digits)"
+  const brokenDec = /^-?0?\.\d{25,}$/; // 25+ digits after dot = suspicious/broken
+  if (brokenDec.test(s0) && !s0.startsWith("0x")) {
+    const neg = s0.startsWith("-");
+    const digits = s0.replace("-", "").replace(/^0?\./, ""); // remove leading 0.
+    s0 = (neg ? "-" : "") + digits; // now it's an integer string
+  }
+
+  // If it's a normal small decimal like "0.1" / "12.34" → keep it as-is
   if (s0.includes(".") && !s0.startsWith("0x")) {
     const safe = window.escapeHtml(s0);
     return `<span class="mono" title="Value: ${safe}" data-copy="${safe}">${safe}</span>`;
   }
 
+  // Parse raw bigint (hex or decimal integer)
   let raw;
   try {
     raw = s0.startsWith("0x") ? BigInt(s0) : BigInt(s0);
@@ -5616,21 +5650,24 @@ function dnaFormatAllowance(rawStr, decimals = null) {
 
   const MAX_UINT256 = (1n << 256n) - 1n;
   const NEAR_MAX = MAX_UINT256 - 1000n;
+
+  // ✅ this is what will turn those huge values into "Unlimited"
   if (raw === MAX_UINT256 || raw >= NEAR_MAX) {
     return `<span class="mono" title="Unlimited (MaxUint256)\nRaw: ${MAX_UINT256.toString()}" data-copy="${MAX_UINT256.toString()}">Unlimited</span>`;
   }
 
+  // If we know decimals → format to human + shorten
   if (Number.isInteger(decimals) && decimals >= 0 && decimals <= 36) {
     const pad = decimals;
 
     const neg = raw < 0n;
     const v = neg ? (-raw) : raw;
     const str = v.toString().padStart(pad + 1, "0");
-    const intPart = str.slice(0, -pad);
+    const intPart = str.slice(0, -pad) || "0";
     let frac = str.slice(-pad).replace(/0+$/, "");
+    const full = (neg ? "-" : "") + intPart + (frac ? "." + frac : "");
 
-    const full = (neg ? "-" : "") + (intPart || "0") + (frac ? "." + frac : "");
-
+    // shorten display (K/M/B…)
     const ip = intPart.replace(/^0+/, "") || "0";
     const intLen = ip.length;
     const suffixes = ["", "K", "M", "B", "T", "Q"];
@@ -5652,6 +5689,7 @@ function dnaFormatAllowance(rawStr, decimals = null) {
     return `<span class="mono" title="${window.escapeHtml(title)}" data-copy="${raw.toString()}">${window.escapeHtml(display)}</span>`;
   }
 
+  // No decimals: show raw shortened
   const rawDec = raw.toString();
   const abs = rawDec.startsWith("-") ? rawDec.slice(1) : rawDec;
   let display = rawDec;
@@ -5659,6 +5697,7 @@ function dnaFormatAllowance(rawStr, decimals = null) {
 
   return `<span class="mono" title="${window.escapeHtml("Raw: " + rawDec)}" data-copy="${rawDec}">${window.escapeHtml(display)}</span>`;
 }
+
 window.dnaFormatAllowance = dnaFormatAllowance; 
 
 function dnaRowRiskChip(risk) {
@@ -5826,7 +5865,7 @@ const canRevoke =
 
         <div class="cell">${alwHtml}</div>
         <div class="cell hide-sm">${verTxt}</div>
-        <div class="cell hide-sm">${window.escapeHtml(String(r.lastUpdated || "—"))}</div>
+        <div class="cell hide-sm">${dnaFormatLastUpdated(r.lastUpdated)}</div>
         <div class="cell">${riskChip}</div>
         <div class="cell">${actionHtml}</div>
       </div>
