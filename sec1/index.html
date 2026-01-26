@@ -1442,8 +1442,7 @@ a.tool-card[data-tool="approvals"]::after{
 #panel-approvals #dna-elig-msg.elig-ok{ color: var(--green) !important; }
 #panel-approvals #dna-elig-msg.elig-bad{ color: #ff6a6a !important; }
 #panel-approvals #dna-elig-msg.elig-warn{ color: #ffd36a !important; }
-</style>
-
+.hidden{ display:none !important; }
 </style>
    
 </head>
@@ -2227,7 +2226,9 @@ a.tool-card[data-tool="approvals"]::after{
   <script type="module">
     "use strict";
 
-    const E = window.ethers;
+    var E = window.E || window.ethers;
+    window.E = E;
+
 
     // =========================
     // AppKit (Reown)
@@ -5673,9 +5674,6 @@ function dnaRenderTable(rows) {
   return;
 }
 
-
-
-
     const html = rows.map(r => {
     const tkTxt = r.token ? shortAddr(r.token) : "—";
     const spTxt = r.spender ? shortAddr(r.spender) : "—";
@@ -5691,9 +5689,9 @@ function dnaRenderTable(rows) {
       alwTxt !== "—" &&
       alwTxt !== "0";
 
-    const actionHtml = canRevoke
-      ? `<button class="chip chip-danger" data-revoke="1" data-token="${r.token}" data-spender="${r.spender}">Revoke</button>`
-      : `<span class="muted">—</span>`;
+    const actionHtml = (dnaFullAccess && canRevoke)
+  ? `<button class="chip chip-danger" data-revoke="1" data-token="${r.token}" data-spender="${r.spender}">Revoke</button>`
+  : `<span class="muted">—</span>`;
 
     return `
       <!-- MAIN ROW (no Flags column) -->
@@ -5759,13 +5757,9 @@ async function dnaScan() {
   [];
 
     const rows = approvals.map(dnaNormalizeApiRow);
+    dnaRenderTable(rows);
+if (dnaFullAccess) dnaBindRevokeButtons(net);
 
-   if (dnaFullAccess) {
-  dnaRenderTable(rows);
-  dnaBindRevokeButtons(net);
-} else {
-  dnaLockApprovalsUI();
-}
 
     const score = (Array.isArray(data) ? null : data?.score);
     const riskLevel = (Array.isArray(data) ? null : data?.riskLevel);
@@ -6119,30 +6113,18 @@ function dnaUnlockApprovalsUI() {
   // אופציה 2: למחוק אחרי 2.5 שניות:
   // setTimeout(() => dnaSetEligMsg("", "info"), 2500);
 }
-
-
 async function dnaCheckCycxEligibility_BSC() {
-  // must be bsc in selector
-  const net = dnaNet();
-  if (net !== "bsc") return { ok: false, reason: "wrong_net" };
+  if (!wallet?.address) return { ok: false, reason: "no_wallet" };
 
-  // must have wallet connected
-  if (!wallet?.address || !wallet?.signer) return { ok: false, reason: "no_wallet" };
+  const BSC_RPC =
+    window.BSC_RPC_URL ||
+    "https://bsc-dataseed.binance.org";
 
-  // must be on BSC chainId 56
-  const bscChainId = CHAINS?.bsc?.chainId || 56;
-  if (wallet?.chainId && wallet.chainId !== bscChainId) {
-    const ok = await ensureChain(bscChainId);
-    if (!ok) return { ok: false, reason: "wrong_net" };
-  }
-
-  // Read-only balance check (no tx)
-  const token = new E.Contract(CYCX_BSC_ADDRESS, CYCX_GATE_ABI, wallet.signer);
+  const provider = new E.JsonRpcProvider(BSC_RPC);
+  const token = new E.Contract(CYCX_BSC_ADDRESS, CYCX_GATE_ABI, provider);
 
   let decimals = 18;
-  try {
-    decimals = Number(await token.decimals());
-  } catch {}
+  try { decimals = Number(await token.decimals()); } catch {}
 
   const bal = await token.balanceOf(wallet.address);
   const minRaw = BigInt(CYCX_MIN_TOKENS) * (10n ** BigInt(decimals));
@@ -6150,6 +6132,7 @@ async function dnaCheckCycxEligibility_BSC() {
 
   return { ok: true, eligible, bal: BigInt(bal), decimals };
 }
+
 
 async function dnaRequestFullAccess() {
   try {
