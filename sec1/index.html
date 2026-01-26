@@ -1831,7 +1831,7 @@ a.tool-card[data-tool="approvals"]::after{
 
   <!-- Approvals content (default hidden) -->
   <div id="dna-approvals-content" class="hidden">
-    <div id="ap-table" class="table" style="margin-top:10px;">
+    <div id="ap-table" class="table ap-table" style="margin-top:10px;">
       <div class="trow head">
         <div class="cell">Token</div>
         <div class="cell hide-sm">Spender</div>
@@ -5696,6 +5696,8 @@ function dnaRenderTable(rows) {
     const html = rows.map(r => {
     const tkTxt = r.token ? shortAddr(r.token) : "—";
     const spTxt = r.spender ? shortAddr(r.spender) : "—";
+    const tkFull = r.token || "";
+    const spFull = r.spender || "";
     const alwTxt = dnaFormatAllowance(r.allowanceStr);
     const verTxt = dnaVerifiedChip(r.verified);
     const riskChip = dnaRowRiskChip(r.risk);
@@ -5717,8 +5719,16 @@ function dnaRenderTable(rows) {
     return `
       <!-- MAIN ROW (no Flags column) -->
       <div class="trow ap-main">
-        <div class="cell mono">${tkTxt}</div>
-        <div class="cell mono hide-sm">${spTxt}</div>
+        <div class="cell mono">
+  <span class="addr-short">${tkTxt}</span>
+  ${tkFull ? `<button class="chip chip-ghost ap-copy" data-copy="${tkFull}" title="Copy token">Copy</button>` : ``}
+</div>
+
+<div class="cell mono hide-sm">
+  <span class="addr-short">${spTxt}</span>
+  ${spFull ? `<button class="chip chip-ghost ap-copy" data-copy="${spFull}" title="Copy spender">Copy</button>` : ``}
+</div>
+
         <div class="cell">${window.escapeHtml(String(alwTxt))}</div>
         <div class="cell hide-sm">${verTxt}</div>
         <div class="cell hide-sm">${window.escapeHtml(String(r.lastUpdated || "—"))}</div>
@@ -5739,6 +5749,27 @@ function dnaRenderTable(rows) {
   table.insertAdjacentHTML("beforeend", html);
 
 }
+    (function bindApprovalsCopyOnce(){
+  const table = document.getElementById("ap-table");
+  if (!table || table.__copyBound) return;
+  table.__copyBound = true;
+
+  table.addEventListener("click", async (e) => {
+    const btn = e.target.closest?.("[data-copy]");
+    if (!btn) return;
+
+    const text = String(btn.getAttribute("data-copy") || "").trim();
+    if (!text) return;
+
+    const ok = await copyText(text);
+    if (ok) {
+      const prev = btn.textContent;
+      btn.textContent = "Copied";
+      setTimeout(()=> (btn.textContent = prev), 900);
+    }
+  });
+})();
+
 
 function dnaComputeFallbackTips(rows) {
   const tips = [];
