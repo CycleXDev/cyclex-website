@@ -6655,29 +6655,41 @@ function initWalletSecurityDNAUi() {
   }
 
   function tx_pickPrimaryApproval(approvals, net){
-    // Prefer: unlimited > known-router > larger value > first
-    let best = null;
-    let bestIsUnlimited = false;
-    let bestHasRouter = false;
+  // Prefer: unlimited > known-router > larger value > first
+  let best = null;
 
-    for (const a of approvals) {
-      if (!a) continue;
-      if (!best) { best = a; bestIsUnlimited = tx_isUnlimitedApprove(a.value); bestHasRouter = !!tx_getKnownRouterName(net, a.spender); continue; }
+  const hasRouter = (spender) => {
+    try { return !!tx_getKnownRouterName(net, spender); } catch { return false; }
+  };
+  const asBI = (v) => { try { return BigInt(v); } catch { return 0n; } };
 
-      const aUnlimited = tx_isUnlimitedApprove(a.value);
-      const aHasRouter = !!tx_getKnownRouterName(net, a.spender);
+  for (const a of (approvals || [])) {
+    if (!a) continue;
+    if (!best) { best = a; continue; }
 
-      if (!bestIsUnlimited && aUnlimited) { best = a; bestIsUnlimited = true; bestHasRouter = aHasRouter; continue; }
-      if (bestIsUnlimited && aUnlimited) {
-        if (!bestHasRouter && aHasRouter) { best = a; bestHasRouter = true; continue; }
-      }
-      if (!bestIsUnlimited && !aUnlimited) {
-        if (!bestHasRouter && aHasRouter) { best = a; bestHasRouter = true; continue; }
-        if (typeof a.value === "bigint" && typeof best.value === "bigint" && a.value > best.value) { best = a; continue; }
-      }
-    }
-    return best;
+    const bestUnlimited = tx_isUnlimitedApprove(best.value);
+    const aUnlimited    = tx_isUnlimitedApprove(a.value);
+
+    const bestRouter = hasRouter(best.spender);
+    const aRouter    = hasRouter(a.spender);
+
+    // 1) Unlimited beats non-unlimited
+    if (!bestUnlimited && aUnlimited) { best = a; continue; }
+    if (bestUnlimited && !aUnlimited) { continue; }
+
+    // 2) Known router beats unknown (when both are same unlimited-ness)
+    if (!bestRouter && aRouter) { best = a; continue; }
+    if (bestRouter && !aRouter) { continue; }
+
+    // 3) Bigger value wins (when still tied)
+    const bv = asBI(best.value);
+    const av = asBI(a.value);
+    if (av > bv) { best = a; continue; }
   }
+
+  return best || (approvals && approvals[0]) || null;
+}
+
 
   // =========================
   // Main
