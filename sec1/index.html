@@ -3471,6 +3471,13 @@ function bindLangButtons(){
         } catch {
           return false;
         }
+        function escAttr(s){
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
       }
     }
 
@@ -5612,7 +5619,9 @@ function dnaFormatAllowance(rawStr, decimals = null) {
     const str = v.toString().padStart(pad + 1, "0");
     const intPart = str.slice(0, -pad);
     let frac = str.slice(-pad).replace(/0+$/, "");
-    const full = (neg ? "-" : "") + intPart + (frac ? "." + frac : "");
+    const intPartSafe = (intPart && intPart.length) ? intPart : "0";
+    const full = (neg ? "-" : "") + intPartSafe + (frac ? "." + frac : "");
+    const fullSafe = full.startsWith(".") ? ("0" + full) : (full.startsWith("-.") ? ("-0" + full.slice(1)) : full);
 
     const ip = intPart.replace(/^0+/, "") || "0";
     const intLen = ip.length;
@@ -5772,16 +5781,19 @@ function dnaRenderTable(rows) {
     const flagsTxt = flagsTxtRaw ? window.escapeHtml(flagsTxtRaw) : "—";
 
     const allowanceRawStr = String(r.allowanceStr ?? "0").trim();
+    const low = allowanceRawStr.toLowerCase();
+    const isUnlimited = (allowanceRawStr === "∞" || low === "infinite" || low === "unlimited" || low.includes("inf"));
 
-const allowanceIsNonZero = allowanceRawStr.startsWith("0x")
-  ? !/^0x0+$/i.test(allowanceRawStr)
-  : allowanceRawStr !== "" && allowanceRawStr !== "0" && allowanceRawStr !== "0.0";
+    const allowanceIsNonZero = isUnlimited || (
+    allowanceRawStr.startsWith("0x")
+    ? !/^0x0+$/i.test(allowanceRawStr)
+    : allowanceRawStr !== "" && allowanceRawStr !== "0" && allowanceRawStr !== "0.0"
+);
 
 
 const canRevoke =
   dnaFullAccess &&
   r.token && r.spender &&
-  allowanceIsNonZero;
 
 
     const actionHtml = (dnaFullAccess && canRevoke)
@@ -5793,12 +5805,12 @@ const canRevoke =
       <div class="trow ap-main">
         <div class="cell mono">
   <span class="addr-short">${tkTxt}</span>
-  ${tkFull ? `<button class="chip chip-ghost ap-copy" data-copy="${tkFull}" title="Copy token">Copy</button>` : ``}
+  ${tkFull ? `<button class="chip chip-ghost ap-copy" data-copy="${escAttr(tkFull)}" title="Copy token">Copy</button>` : ``}
 </div>
 
 <div class="cell mono hide-sm">
   <span class="addr-short">${spTxt}</span>
-  ${spFull ? `<button class="chip chip-ghost ap-copy" data-copy="${spFull}" title="Copy spender">Copy</button>` : ``}
+  ${spFull ? `<button class="chip chip-ghost ap-copy" data-copy="${escAttr(spFull)}" title="Copy spender">Copy</button>` : ``}
 </div>
 
         <div class="cell">${alwHtml}</div>
