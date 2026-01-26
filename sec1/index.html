@@ -5685,9 +5685,11 @@ function dnaRenderTable(rows) {
     const flagsTxt = flagsTxtRaw ? window.escapeHtml(flagsTxtRaw) : "—";
 
     const canRevoke =
-      r.token && r.spender &&
-      alwTxt !== "—" &&
-      alwTxt !== "0";
+  dnaFullAccess &&
+  r.token && r.spender &&
+  alwTxt !== "—" &&
+  alwTxt !== "0";
+
 
     const actionHtml = (dnaFullAccess && canRevoke)
   ? `<button class="chip chip-danger" data-revoke="1" data-token="${r.token}" data-spender="${r.spender}">Revoke</button>`
@@ -5757,8 +5759,11 @@ async function dnaScan() {
   [];
 
     const rows = approvals.map(dnaNormalizeApiRow);
-    dnaRenderTable(rows);
-if (dnaFullAccess) dnaBindRevokeButtons(net);
+   dnaRenderTable(rows);
+
+if (dnaFullAccess) {
+  dnaBindRevokeButtons(net);
+}
 
 
     const score = (Array.isArray(data) ? null : data?.score);
