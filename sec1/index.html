@@ -5332,9 +5332,7 @@ window.escapeHtml = window.escapeHtml || function (s) {
     .replace(/'/g, "&#39;");
 };
 
-
-
-  // =========================
+ // =========================
 // Wallet Security DNA (replaces Approval Guardian)
 // =========================
 
@@ -5668,8 +5666,12 @@ async function dnaScan() {
 
     const rows = approvals.map(dnaNormalizeApiRow);
 
-    dnaRenderTable(rows);
-    dnaBindRevokeButtons(net);
+   if (dnaFullAccess) {
+  dnaRenderTable(rows);
+  dnaBindRevokeButtons(net);
+} else {
+  dnaLockApprovalsUI();
+}
 
     const score = (Array.isArray(data) ? null : data?.score);
     const riskLevel = (Array.isArray(data) ? null : data?.riskLevel);
@@ -5704,7 +5706,8 @@ async function dnaScan() {
   //});
 //} catch {}
 
-    try {
+    // Best-effort: save score (ignore failures)
+try {
   const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
   const u = new URL("/api/saveScore", DNA_API_BASE);
   const resp = await fetch(u.toString(), {
@@ -5714,8 +5717,6 @@ async function dnaScan() {
   });
   if (!resp.ok) throw new Error(`saveScore ${resp.status}`);
 } catch {}
-
-
 
     const tips = (Array.isArray(data) ? null : data?.tips);
     dnaRenderTips(Array.isArray(tips) ? tips : dnaComputeFallbackTips(rows));
@@ -5789,6 +5790,13 @@ async function dnaConnectWallet() {
 
 async function dnaRevokeOne(net, token, spender) {
   const st = $("#dna-status");
+  if (!dnaFullAccess) {
+    return setStatus(
+      st,
+      "warn",
+      dnaTr("dna_revoke_requires_full_access", "Full access is required for revoke actions.")
+    );
+  }
 
   if (!wallet?.signer || !wallet?.address) {
     setStatus(st, "warn", "Connect a wallet first to revoke.");
@@ -5827,6 +5835,13 @@ async function dnaRevokeOne(net, token, spender) {
 async function dnaRevokeAll() {
   const st = $("#dna-status");
   const net = dnaNet();
+  if (!dnaFullAccess) {
+    return setStatus(
+      st,
+      "warn",
+      dnaTr("dna_revoke_requires_full_access", "Full access is required for revoke actions.")
+    );
+  }
 
   if (!wallet?.signer || !wallet?.address) return setStatus(st, "warn", "Connect a wallet first to revoke.");
 
@@ -5924,8 +5939,187 @@ function dnaShareScore() {
   //}
 //}
 
+    // =========================
+// CYCX Gate — RIGHT side only (Approvals section)
+// Paste BETWEEN: dnaShareScore()  and  initWalletSecurityDNAUi()
+// =========================
+
+let dnaFullAccess = false;
+
+// TODO: confirm/update your CYCX token address on BSC
+const CYCX_BSC_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+
+// TODO: you'll decide later. For now: must hold >= 1 token
+const CYCX_MIN_TOKENS = 1;
+
+const CYCX_GATE_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)"
+];
+
+function dnaTr(key, fallback) {
+  try {
+    if (typeof window.t === "function") {
+      const v = window.t(key);
+      if (v != null && String(v).trim() !== "") return v; 
+    }
+  } catch {}
+  return fallback; 
+}
+
+
+function dnaSetEligMsg(text, state = "info") {
+  const el = $("#dna-elig-msg");
+  if (!el) return;
+
+  el.textContent = text || "";
+  el.classList.remove("elig-ok", "elig-bad", "elig-warn", "muted");
+
+  if (state === "ok") el.classList.add("elig-ok");
+  else if (state === "bad") el.classList.add("elig-bad");
+  else if (state === "warn") el.classList.add("elig-warn");
+  else el.classList.add("muted");
+}
+
+
+function dnaLockApprovalsUI(msgKey) {
+  dnaFullAccess = false;
+
+  // Show locked card, hide content/table
+  $("#dna-approvals-locked")?.classList.remove("hidden");
+  $("#dna-approvals-content")?.classList.add("hidden");
+
+  // Buttons: show Full Access, hide Revoke All
+  $("#dna-full-access")?.classList.remove("hidden");
+  $("#dna-revoke-all")?.classList.add("hidden");
+
+  if (msgKey) {
+  if (msgKey === "checking") {
+    dnaSetEligMsg(dnaTr("dna_elig_checking", "Checking CYCX balance…"), "warn");
+  } else if (msgKey === "wrong_net") {
+    dnaSetEligMsg(dnaTr("dna_elig_wrong_net", "Please switch to BSC (BNB Chain) to check CYCX eligibility."), "warn");
+  } else if (msgKey === "no") {
+    dnaSetEligMsg(dnaTr("dna_elig_no", "Not eligible for full access."), "bad"); 
+  } else {
+    dnaSetEligMsg(dnaTr("dna_elig_error", "Could not check eligibility. Please try again."), "warn");
+  }
+} else {
+  dnaSetEligMsg("", "info");
+}
+
+}
+
+function dnaUnlockApprovalsUI() {
+  dnaFullAccess = true;
+
+  $("#dna-approvals-locked")?.classList.add("hidden");
+  $("#dna-approvals-content")?.classList.remove("hidden");
+
+  $("#dna-full-access")?.classList.add("hidden");
+  $("#dna-revoke-all")?.classList.remove("hidden");
+
+  // אל תמחק מיד את ההודעה הירוקה
+  // אופציה 1: להשאיר אותה עד פעולה הבאה:
+  // (כלום כאן)
+
+  // אופציה 2: למחוק אחרי 2.5 שניות:
+  // setTimeout(() => dnaSetEligMsg("", "info"), 2500);
+}
+
+
+async function dnaCheckCycxEligibility_BSC() {
+  // must be bsc in selector
+  const net = dnaNet();
+  if (net !== "bsc") return { ok: false, reason: "wrong_net" };
+
+  // must have wallet connected
+  if (!wallet?.address || !wallet?.signer) return { ok: false, reason: "no_wallet" };
+
+  // must be on BSC chainId 56
+  const bscChainId = CHAINS?.bsc?.chainId || 56;
+  if (wallet?.chainId && wallet.chainId !== bscChainId) {
+    const ok = await ensureChain(bscChainId);
+    if (!ok) return { ok: false, reason: "wrong_net" };
+  }
+
+  // Read-only balance check (no tx)
+  const token = new E.Contract(CYCX_BSC_ADDRESS, CYCX_GATE_ABI, wallet.signer);
+
+  let decimals = 18;
+  try {
+    decimals = Number(await token.decimals());
+  } catch {}
+
+  const bal = await token.balanceOf(wallet.address);
+  const minRaw = BigInt(CYCX_MIN_TOKENS) * (10n ** BigInt(decimals));
+  const eligible = (BigInt(bal) >= minRaw);
+
+  return { ok: true, eligible, bal: BigInt(bal), decimals };
+}
+
+async function dnaRequestFullAccess() {
+  try {
+    dnaLockApprovalsUI("checking");
+
+    // Connect using your existing flow
+    if (!wallet?.address) {
+      await dnaConnectWallet();
+    }
+    if (!wallet?.address) {
+      dnaLockApprovalsUI("error");
+      return;
+    }
+
+    const res = await dnaCheckCycxEligibility_BSC();
+
+    if (!res.ok) {
+      if (res.reason === "wrong_net") dnaLockApprovalsUI("wrong_net");
+      else dnaLockApprovalsUI("error");
+      return;
+    }
+
+    if (!res.eligible) {
+      dnaLockApprovalsUI("no");
+      return;
+    }
+
+   dnaSetEligMsg(dnaTr("dna_elig_ok", "Eligible — unlocking approvals"), "ok");
+   dnaUnlockApprovalsUI();
+   await dnaScan();
+
+
+  } catch (e) {
+    console.error("dnaRequestFullAccess error:", e);
+    dnaLockApprovalsUI("error");
+  }
+}
+
+function initDnaCycxGate() {
+  // Default state: locked
+  dnaLockApprovalsUI();
+
+  // Button click
+  $("#dna-full-access")?.addEventListener("click", dnaRequestFullAccess);
+
+  // Safety: if someone forces click on revoke-all while locked
+  $("#dna-revoke-all")?.addEventListener("click", (e) => {
+    if (!dnaFullAccess) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  // When reset pressed → lock again
+  $("#dna-reset")?.addEventListener("click", () => dnaLockApprovalsUI());
+
+  // When network changes → lock again
+  $("#dna-net")?.addEventListener("change", () => dnaLockApprovalsUI());
+}
+
+
 function initWalletSecurityDNAUi() {
   dnaSetWalletBadges();
+    initDnaCycxGate();
 
   $("#dna-run")?.addEventListener("click", dnaScan);
   $("#dna-reset")?.addEventListener("click", dnaClearOutputs);
@@ -5945,7 +6139,9 @@ function initWalletSecurityDNAUi() {
   });
 
   window.initApprovalsUi = initWalletSecurityDNAUi;
+
 }
+
 
 
     // =========================
