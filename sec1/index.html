@@ -6141,6 +6141,7 @@ function dnaLockApprovalsUI(msgKey) {
   // Buttons: show Full Access, hide Revoke All
   $("#dna-full-access")?.classList.remove("hidden");
   $("#dna-revoke-all")?.classList.add("hidden");
+  dnaClearApprovalsTable();
 
   if (msgKey) {
   if (msgKey === "checking") {
@@ -6157,6 +6158,27 @@ function dnaLockApprovalsUI(msgKey) {
 }
 
 }
+    function dnaClearApprovalsTable() {
+  const table = $("#ap-table");
+  if (!table) return;
+
+  const head = table.querySelector(".trow.head");
+  table.innerHTML = "";
+  if (head) table.appendChild(head);
+
+  table.insertAdjacentHTML("beforeend", `
+    <div class="trow ap-main">
+      <div class="cell muted">—</div>
+      <div class="cell muted hide-sm">—</div>
+      <div class="cell muted">—</div>
+      <div class="cell muted hide-sm">—</div>
+      <div class="cell muted hide-sm">—</div>
+      <div class="cell muted">—</div>
+      <div class="cell muted">—</div>
+    </div>
+  `);
+}
+
 
 function dnaUnlockApprovalsUI() {
   dnaFullAccess = true;
