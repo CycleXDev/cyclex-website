@@ -3596,7 +3596,7 @@ window.__wallet = wallet;
 
     async function cxConnectWallet({ silent = false } = {}) {
       const stQuick = $("#qs-status");
-if (wallet?.address && wallet?.signer && wallet?.browserProvider) {
+if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
   if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
   return true;
 }
@@ -3605,7 +3605,7 @@ if (silent) return false;
 
       try {
         if (!silent) await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
-
+        }
         const providerRaw = await waitForWalletProvider(12000);
         if (!providerRaw) {
           if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
