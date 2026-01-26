@@ -3599,6 +3599,7 @@ window.__wallet = wallet;
 if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
   renderWalletLabels();
   if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
+  try { await window.CxAppKitModal?.close?.(); } catch {}
   return true;
 }
 
@@ -3612,6 +3613,7 @@ if (silent) return false;
   const providerRaw = await waitForWalletProvider(12000);
   if (!providerRaw) {
     if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
+    try { await window.CxAppKitModal?.close?.(); } catch {}
     return false;
   }
 
@@ -3637,9 +3639,11 @@ if (silent) return false;
   return true;
 
 } catch (e) {
+  try { await window.CxAppKitModal?.close?.(); } catch {}
   if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
   return false;
 }
+
 
     }
 window.cxConnectWallet = cxConnectWallet;
