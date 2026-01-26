@@ -5570,17 +5570,79 @@ function dnaNormalizeApiRow(row) {
   if (Array.isArray(flags)) flags = flags.length ? flags.join(", ") : "—";
 
   const risk = row?.risk || row?.riskLevel || "—";
+  const decRaw = row?.decimals ?? row?.token_decimals ?? row?.tokenDecimals ?? row?.tokenDecimals ?? null;
+  const decimals = Number.isFinite(Number(decRaw)) ? Number(decRaw) : null;
+  return { token, spender, symbol, allowanceStr, verified, lastUpdated, flags, risk, decimals };
 
-  return { token, spender, symbol, allowanceStr, verified, lastUpdated, flags, risk };
 }
 
 
-function dnaFormatAllowance(allowanceStr) {
-  if (!allowanceStr) return "—";
-  const v = String(allowanceStr).toLowerCase();
-  if (v === "infinite" || v === "∞" || v.includes("inf")) return "∞";
-  return allowanceStr;
+function dnaFormatAllowance(rawStr, decimals = null) {
+  const s0 = String(rawStr ?? "").trim();
+  if (!s0 || s0 === "—") return "—";
+
+  const low = s0.toLowerCase();
+  if (s0 === "∞" || low === "infinite" || low === "unlimited" || low.includes("inf")) {
+    return `<span class="mono" title="Unlimited" data-copy="Unlimited">Unlimited</span>`;
+  }
+
+  let raw = null;
+  try {
+    raw = s0.startsWith("0x") ? BigInt(s0) : BigInt(s0);
+  } catch {
+    const safe = window.escapeHtml(s0);
+    return `<span class="mono" title="${safe}" data-copy="${safe}">${safe}</span>`;
+  }
+
+  if (raw === 0n) {
+    return `<span class="mono" title="Raw: 0" data-copy="0">0</span>`;
+  }
+
+  const MAX_UINT256 = (1n << 256n) - 1n;
+  const NEAR_MAX = MAX_UINT256 - 1000n;
+  if (raw === MAX_UINT256 || raw >= NEAR_MAX) {
+    return `<span class="mono" title="Unlimited (MaxUint256)\nRaw: ${MAX_UINT256.toString()}" data-copy="${MAX_UINT256.toString()}">Unlimited</span>`;
+  }
+
+  if (Number.isInteger(decimals) && decimals >= 0 && decimals <= 36) {
+    const pad = decimals;
+
+    const neg = raw < 0n;
+    const v = neg ? (-raw) : raw;
+    const str = v.toString().padStart(pad + 1, "0");
+    const intPart = str.slice(0, -pad);
+    let frac = str.slice(-pad).replace(/0+$/, "");
+    const full = (neg ? "-" : "") + intPart + (frac ? "." + frac : "");
+
+    const ip = intPart.replace(/^0+/, "") || "0";
+    const intLen = ip.length;
+    const suffixes = ["", "K", "M", "B", "T", "Q"];
+    const group = Math.floor((intLen - 1) / 3);
+
+    let display = full;
+    if (group > 0 && group < suffixes.length) {
+      const cut = intLen - group * 3;
+      const head = ip.slice(0, cut);
+      const tail = ip.slice(cut, cut + 2);
+      display = `${head}${tail ? "." + tail : ""}${suffixes[group]}`;
+      if (neg) display = "-" + display;
+    } else if (group >= suffixes.length) {
+      display = `${ip.slice(0, 3)}e+${intLen - 3}`;
+      if (neg) display = "-" + display;
+    }
+
+    const title = `Value: ${full}\nRaw: ${raw.toString()}`;
+    return `<span class="mono" title="${window.escapeHtml(title)}" data-copy="${raw.toString()}">${window.escapeHtml(display)}</span>`;
+  }
+
+  const rawDec = raw.toString();
+  const abs = rawDec.startsWith("-") ? rawDec.slice(1) : rawDec;
+  let display = rawDec;
+  if (abs.length > 10) display = `${rawDec.slice(0, 6)}…${rawDec.slice(-4)}`;
+
+  return `<span class="mono" title="${window.escapeHtml("Raw: " + rawDec)}" data-copy="${rawDec}">${window.escapeHtml(display)}</span>`;
 }
+
 
 function dnaRowRiskChip(risk) {
   const r = String(risk || "—").toLowerCase();
@@ -5702,7 +5764,7 @@ function dnaRenderTable(rows) {
     const spTxt = r.spender ? shortAddr(r.spender) : "—";
     const tkFull = r.token || "";
     const spFull = r.spender || "";
-    const alwTxt = dnaFormatAllowance(r.allowanceStr);
+    const alwHtml = dnaFormatAllowance(r.allowanceStr, r.decimals);
     const verTxt = dnaVerifiedChip(r.verified);
     const riskChip = dnaRowRiskChip(r.risk);
 
@@ -5739,7 +5801,7 @@ const canRevoke =
   ${spFull ? `<button class="chip chip-ghost ap-copy" data-copy="${spFull}" title="Copy spender">Copy</button>` : ``}
 </div>
 
-        <div class="cell">${window.escapeHtml(String(alwTxt))}</div>
+        <div class="cell">${alwHtml}</div>
         <div class="cell hide-sm">${verTxt}</div>
         <div class="cell hide-sm">${window.escapeHtml(String(r.lastUpdated || "—"))}</div>
         <div class="cell">${riskChip}</div>
