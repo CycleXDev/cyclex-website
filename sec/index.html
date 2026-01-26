@@ -6231,6 +6231,31 @@ function initWalletSecurityDNAUi() {
   });
 
   window.initApprovalsUi = initWalletSecurityDNAUi;
+  // =========================
+// FIX: expose missing init functions to window (Liquidity/RPC/Monitor)
+// Paste right after: window.initApprovalsUi = initWalletSecurityDNAUi;
+// =========================
+(function () {
+  // Liquidity
+  if (typeof window.initLiquidityUi !== "function") {
+    if (typeof initLiquidityUi === "function") window.initLiquidityUi = initLiquidityUi;
+    else if (typeof initLiquidityCubeUi === "function") window.initLiquidityUi = initLiquidityCubeUi;
+    else if (typeof initLiquidity === "function") window.initLiquidityUi = initLiquidity;
+  }
+
+  // RPC
+  if (typeof window.initRpcUi !== "function") {
+    if (typeof initRpcUi === "function") window.initRpcUi = initRpcUi;
+    else if (typeof initRPCUi === "function") window.initRpcUi = initRPCUi;
+  }
+
+  // Contract Monitor
+  if (typeof window.initContractMonitorUi !== "function") {
+    if (typeof initContractMonitorUi === "function") window.initContractMonitorUi = initContractMonitorUi;
+    else if (typeof initMonitorUi === "function") window.initContractMonitorUi = initMonitorUi;
+  }
+})();
+
 }
 
 
