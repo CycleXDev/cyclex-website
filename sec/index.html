@@ -2419,7 +2419,6 @@ dna_share: "Share score",
 dna_allowances_title: "Approvals",
 dna_table_note: "Tip: revoke “infinite” approvals you don’t fully trust. Verified status and flags are informational only.",
 
-// add to translations.<lang>
 dna_full_access_btn: "Full Access (CYCX users)",
 dna_locked_title: "Advanced approvals are locked",
 dna_locked_body: "Full access (spender details + revoke actions) is available for CYCX holders.",
@@ -6114,8 +6113,14 @@ function dnaUnlockApprovalsUI() {
   $("#dna-full-access")?.classList.add("hidden");
   $("#dna-revoke-all")?.classList.remove("hidden");
 
-  dnaSetEligMsg("", "info");
- }
+  // אל תמחק מיד את ההודעה הירוקה
+  // אופציה 1: להשאיר אותה עד פעולה הבאה:
+  // (כלום כאן)
+
+  // אופציה 2: למחוק אחרי 2.5 שניות:
+  // setTimeout(() => dnaSetEligMsg("", "info"), 2500);
+}
+
 
 async function dnaCheckCycxEligibility_BSC() {
   // must be bsc in selector
@@ -6173,8 +6178,7 @@ async function dnaRequestFullAccess() {
       return;
     }
 
-   dnaSetEligMsg("Eligible — unlocking approvals…", "ok");
-
+   dnaSetEligMsg(dnaTr("dna_elig_ok", "Eligible — unlocking approvals…"), "ok");
    dnaUnlockApprovalsUI();
    await dnaScan();
 
