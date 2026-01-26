@@ -3593,8 +3593,15 @@ function bindLangButtons(){
 
     async function cxConnectWallet({ silent = false } = {}) {
       const stQuick = $("#qs-status");
+if (wallet?.address && wallet?.signer && wallet?.browserProvider) {
+  if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
+  return true;
+}
+
+if (silent) return false;
+
       try {
-        await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
+        if (!silent) await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
 
         const providerRaw = await waitForWalletProvider(12000);
         if (!providerRaw) {
@@ -6143,14 +6150,14 @@ async function dnaRequestFullAccess() {
   try {
     dnaLockApprovalsUI("checking");
 
-    // Connect using your existing flow
-    if (!wallet?.address) {
-      await dnaConnectWallet();
-    }
-    if (!wallet?.address) {
-      dnaLockApprovalsUI("error");
-      return;
-    }
+if (!wallet?.address || !wallet?.signer) {
+  const ok = await window.cxConnectWallet?.({ silent: false }); // interactive connect
+  if (!ok || !wallet?.address || !wallet?.signer) {
+    dnaLockApprovalsUI("error");
+    return;
+  }
+}
+
 
     const res = await dnaCheckCycxEligibility_BSC();
 
