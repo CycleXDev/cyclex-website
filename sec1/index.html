@@ -5598,18 +5598,19 @@ if ((fixed.startsWith(".") || fixed.startsWith("0."))) {
 }
 
 
-  const low = s0.toLowerCase();
+  const low = fixed.toLowerCase();
   if (s0 === "∞" || low === "infinite" || low === "unlimited" || low.includes("inf")) {
     return `<span class="mono" title="Unlimited" data-copy="Unlimited">Unlimited</span>`;
   }
 
   let raw = null;
   try {
-    raw = s0.startsWith("0x") ? BigInt(s0) : BigInt(s0);
-  } catch {
-    const safe = window.escapeHtml(s0);
-    return `<span class="mono" title="${safe}" data-copy="${safe}">${safe}</span>`;
-  }
+  raw = fixed.startsWith("0x") ? BigInt(fixed) : BigInt(fixed);
+} catch {
+  const safe = window.escapeHtml(fixed);
+  return `<span class="mono" title="${safe}" data-copy="${safe}">${safe}</span>`;
+}
+
 
   if (raw === 0n) {
     return `<span class="mono" title="Raw: 0" data-copy="0">0</span>`;
