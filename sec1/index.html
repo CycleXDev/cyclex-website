@@ -5708,8 +5708,9 @@ function dnaRenderTable(rows) {
     const allowanceRawStr = String(r.allowanceStr ?? "0").trim();
 
 const allowanceIsNonZero = allowanceRawStr.startsWith("0x")
-  ? allowanceRawStr !== "0x0" && allowanceRawStr !== "0x00"
+  ? !/^0x0+$/i.test(allowanceRawStr)
   : allowanceRawStr !== "" && allowanceRawStr !== "0" && allowanceRawStr !== "0.0";
+
 
 const canRevoke =
   dnaFullAccess &&
