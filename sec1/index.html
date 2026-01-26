@@ -5589,6 +5589,15 @@ function dnaFormatAllowance(rawStr, decimals = null) {
   const s0 = String(rawStr ?? "").trim();
   if (!s0 || s0 === "—") return "—";
 
+let fixed = s0;
+if ((fixed.startsWith(".") || fixed.startsWith("0."))) {
+  const tail = fixed.startsWith(".") ? fixed.slice(1) : fixed.slice(2);
+  if (/^\d+$/.test(tail) && tail.length > 25) {
+    fixed = tail; 
+  }
+}
+
+
   const low = s0.toLowerCase();
   if (s0 === "∞" || low === "infinite" || low === "unlimited" || low.includes("inf")) {
     return `<span class="mono" title="Unlimited" data-copy="Unlimited">Unlimited</span>`;
