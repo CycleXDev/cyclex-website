@@ -5454,7 +5454,7 @@ window.escapeHtml = window.escapeHtml || function (s) {
     .replace(/'/g, "&#39;");
 };
 
- // =========================
+// =========================
 // Wallet Security DNA (replaces Approval Guardian)
 // =========================
 
@@ -5586,31 +5586,29 @@ function dnaNormalizeApiRow(row) {
 
 
 function dnaFormatAllowance(rawStr, decimals = null) {
-  const s0 = String(rawStr ?? "").trim();
+  let s0 = String(rawStr ?? "").trim();
   if (!s0 || s0 === "—") return "—";
 
-let fixed = s0;
-if ((fixed.startsWith(".") || fixed.startsWith("0."))) {
-  const tail = fixed.startsWith(".") ? fixed.slice(1) : fixed.slice(2);
-  if (/^\d+$/.test(tail) && tail.length > 25) {
-    fixed = tail; 
-  }
-}
+  if (s0.startsWith(".")) s0 = "0" + s0;
+  if (s0.startsWith("-.")) s0 = "-0" + s0.slice(1);
 
-
-  const low = fixed.toLowerCase();
-  if (s0 === "∞" || low === "infinite" || low === "unlimited" || low.includes("inf")) {
+  const low0 = s0.toLowerCase();
+  if (s0 === "∞" || low0 === "infinite" || low0 === "unlimited" || low0.includes("inf")) {
     return `<span class="mono" title="Unlimited" data-copy="Unlimited">Unlimited</span>`;
   }
 
-  let raw = null;
-  try {
-  raw = fixed.startsWith("0x") ? BigInt(fixed) : BigInt(fixed);
-} catch {
-  const safe = window.escapeHtml(fixed);
-  return `<span class="mono" title="${safe}" data-copy="${safe}">${safe}</span>`;
-}
+  if (s0.includes(".") && !s0.startsWith("0x")) {
+    const safe = window.escapeHtml(s0);
+    return `<span class="mono" title="Value: ${safe}" data-copy="${safe}">${safe}</span>`;
+  }
 
+  let raw;
+  try {
+    raw = s0.startsWith("0x") ? BigInt(s0) : BigInt(s0);
+  } catch {
+    const safe = window.escapeHtml(s0);
+    return `<span class="mono" title="${safe}" data-copy="${safe}">${safe}</span>`;
+  }
 
   if (raw === 0n) {
     return `<span class="mono" title="Raw: 0" data-copy="0">0</span>`;
@@ -5630,9 +5628,8 @@ if ((fixed.startsWith(".") || fixed.startsWith("0."))) {
     const str = v.toString().padStart(pad + 1, "0");
     const intPart = str.slice(0, -pad);
     let frac = str.slice(-pad).replace(/0+$/, "");
-    const intPartSafe = (intPart && intPart.length) ? intPart : "0";
-    const full = (neg ? "-" : "") + intPartSafe + (frac ? "." + frac : "");
-    const fullSafe = full.startsWith(".") ? ("0" + full) : (full.startsWith("-.") ? ("-0" + full.slice(1)) : full);
+
+    const full = (neg ? "-" : "") + (intPart || "0") + (frac ? "." + frac : "");
 
     const ip = intPart.replace(/^0+/, "") || "0";
     const intLen = ip.length;
@@ -5662,6 +5659,8 @@ if ((fixed.startsWith(".") || fixed.startsWith("0."))) {
 
   return `<span class="mono" title="${window.escapeHtml("Raw: " + rawDec)}" data-copy="${rawDec}">${window.escapeHtml(display)}</span>`;
 }
+window.dnaFormatAllowance = dnaFormatAllowance; /
+
 
 
 function dnaRowRiskChip(risk) {
