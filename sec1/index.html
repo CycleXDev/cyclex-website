@@ -5629,13 +5629,30 @@ function dnaFormatAllowance(rawStr, decimals = null) {
     s0 = (neg ? "-" : "") + digits; // now it's an integer string
   }
 
-  // If it's a normal small decimal like "0.1" / "12.34" → keep it as-is
   if (s0.includes(".") && !s0.startsWith("0x")) {
-    const safe = window.escapeHtml(s0);
-    return `<span class="mono" title="Value: ${safe}" data-copy="${safe}">${safe}</span>`;
+  const full = s0;
+
+  let norm = full;
+  if (norm.startsWith(".")) norm = "0" + norm;
+  if (norm.startsWith("-.")) norm = "-0" + norm.slice(1);
+
+  const parts = norm.split(".");
+  const ip = parts[0] || "0";
+  const fp = (parts[1] || "").replace(/[^\d]/g, ""); 
+
+  const KEEP = 8;
+
+  let display = norm;
+  if (fp.length > KEEP) {
+    display = `${ip}.${fp.slice(0, KEEP)}…`;
   }
 
-  // Parse raw bigint (hex or decimal integer)
+  const safeDisplay = window.escapeHtml(display);
+  const safeFull = window.escapeHtml(norm);
+
+  return `<span class="mono" title="Value: ${safeFull}" data-copy="${safeFull}">${safeDisplay}</span>`;
+}
+
   let raw;
   try {
     raw = s0.startsWith("0x") ? BigInt(s0) : BigInt(s0);
