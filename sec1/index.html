@@ -5705,11 +5705,16 @@ function dnaRenderTable(rows) {
     const flagsTxtRaw = (r.flags && r.flags !== "—") ? String(r.flags) : "";
     const flagsTxt = flagsTxtRaw ? window.escapeHtml(flagsTxtRaw) : "—";
 
-    const canRevoke =
+    const allowanceRawStr = String(r.allowanceStr ?? "0").trim();
+
+const allowanceIsNonZero = allowanceRawStr.startsWith("0x")
+  ? allowanceRawStr !== "0x0" && allowanceRawStr !== "0x00"
+  : allowanceRawStr !== "" && allowanceRawStr !== "0" && allowanceRawStr !== "0.0";
+
+const canRevoke =
   dnaFullAccess &&
   r.token && r.spender &&
-  alwTxt !== "—" &&
-  alwTxt !== "0";
+  allowanceIsNonZero;
 
 
     const actionHtml = (dnaFullAccess && canRevoke)
