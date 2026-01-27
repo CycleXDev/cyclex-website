@@ -5601,52 +5601,52 @@ function dnaNormalizeApiRow(row) {
   return { token, spender, symbol, allowanceStr, verified, lastUpdated, flags, risk, decimals };
 
 }
-
-
 function dnaFormatAllowance(rawStr, decimals = null) {
   let s0 = String(rawStr ?? "").trim();
   if (!s0 || s0 === "—") return "—";
 
-  // Fix ".1" -> "0.1"
+  // Normalize ".1" -> "0.1"
   if (s0.startsWith(".")) s0 = "0" + s0;
   if (s0.startsWith("-.")) s0 = "-0" + s0.slice(1);
 
   const low0 = s0.toLowerCase();
 
-  // obvious unlimited hints
+  // Unlimited hints
   if (s0 === "∞" || low0 === "infinite" || low0 === "unlimited" || low0.includes("inf")) {
     return `<span class="mono" title="Unlimited" data-copy="Unlimited">Unlimited</span>`;
   }
 
-  // ✅ IMPORTANT:
-  // if API gives a "broken" value like 0.<tons of digits> (looks like your screenshot),
-  // treat it as a raw integer by removing "0." (or ".") so we can detect MaxUint256/unlimited.
-  // Example: "0.1157920....(70+ digits)" => "1157920...(70+ digits)"
+  // ✅ FIX for broken MaxUint256 coming as "0.<huge digits>"
+  // Example: "0.1157920...(70+ digits)" => treat as integer "1157920..." and detect MaxUint256
   const brokenDec = /^-?0?\.\d{25,}$/; // 25+ digits after dot = suspicious/broken
   if (brokenDec.test(s0) && !s0.startsWith("0x")) {
     const neg = s0.startsWith("-");
-    const digits = s0.replace("-", "").replace(/^0?\./, ""); // remove leading 0.
-    s0 = (neg ? "-" : "") + digits; // now it's an integer string
+    const digits = s0.replace("-", "").replace(/^0?\./, ""); // remove "0."
+    s0 = (neg ? "-" : "") + digits; // now integer string
   }
 
- if (s0.includes(".") && !s0.startsWith("0x")) {
-  let norm = s0;
-  if (norm.startsWith(".")) norm = "0" + norm;
-  if (norm.startsWith("-.")) norm = "-0" + norm.slice(1);
+  // If it's a normal human decimal (not broken) -> show SHORT (6 decimals) but keep full in title/copy
+  //1if (s0.includes(".") && !s0.startsWith("0x")) {
+    //1const full = s0;
 
-  let display = norm;
-  if (display.length > 16) {
-    display = display.slice(0, 12) + "…";
+    // shorten display to max 6 fraction digits without rounding (string cut)
+    const m = full.match(/^(-?\d+)\.(\d+)/);
+    let display = full;
+    if (m) {
+      const ip = m[1];
+      const frac = m[2].slice(0, 6).replace(/0+$/, ""); // trim trailing zeros
+      display = frac ? `${ip}.${frac}` : ip;
+    }
+
+    // extra safety: don't let it get too long
+    if (display.length > 16) display = display.slice(0, 12) + "…";
+
+    const safeDisplay = window.escapeHtml(display);
+    const safeFull = window.escapeHtml(full);
+    return `<span class="mono" title="Value: ${safeFull}" data-copy="${safeFull}">${safeDisplay}</span>`;
   }
 
-  const safeDisplay = window.escapeHtml(display);
-  const safeFull = window.escapeHtml(norm);
-
-  return `<span class="mono" title="Value: ${safeFull}" data-copy="${safeFull}">${safeDisplay}</span>`;
-}
-
-
-
+  // Parse bigint (hex or integer string)
   let raw;
   try {
     raw = s0.startsWith("0x") ? BigInt(s0) : BigInt(s0);
@@ -5662,12 +5662,12 @@ function dnaFormatAllowance(rawStr, decimals = null) {
   const MAX_UINT256 = (1n << 256n) - 1n;
   const NEAR_MAX = MAX_UINT256 - 1000n;
 
-  // ✅ this is what will turn those huge values into "Unlimited"
+  // ✅ Turn MaxUint256 into Unlimited
   if (raw === MAX_UINT256 || raw >= NEAR_MAX) {
     return `<span class="mono" title="Unlimited (MaxUint256)\nRaw: ${MAX_UINT256.toString()}" data-copy="${MAX_UINT256.toString()}">Unlimited</span>`;
   }
 
-  // If we know decimals → format to human + shorten
+  // If decimals known -> format to human + shorten
   if (Number.isInteger(decimals) && decimals >= 0 && decimals <= 36) {
     const pad = decimals;
 
@@ -5709,7 +5709,8 @@ function dnaFormatAllowance(rawStr, decimals = null) {
   return `<span class="mono" title="${window.escapeHtml("Raw: " + rawDec)}" data-copy="${rawDec}">${window.escapeHtml(display)}</span>`;
 }
 
-window.dnaFormatAllowance = dnaFormatAllowance; 
+// optional - for console testing/debug
+window.dnaFormatAllowance = dnaFormatAllowance;
 
 function dnaRowRiskChip(risk) {
   const r = String(risk || "—").toLowerCase();
