@@ -6082,6 +6082,12 @@ async function dnaConnectWallet() {
   }
 }
 
+// --- Minimal ERC20 ABI (only what Revoke needs) ---
+const ERC20_ABI = [
+  "function approve(address spender, uint256 amount) returns (bool)"
+];
+// optional: expose for debugging
+window.ERC20_ABI = ERC20_ABI;
 
 
 async function dnaRevokeOne(net, token, spender) {
@@ -6113,7 +6119,9 @@ async function dnaRevokeOne(net, token, spender) {
 
   try {
     setStatus(st, "info", "Sending revoke tx (approve → 0)…");
-    const c = new E.Contract(normAddr(token), ERC20_ABI, wallet.signer);
+    const ABI = window.ERC20_ABI || ERC20_ABI;
+    const c = new E.Contract(normAddr(token), ABI, wallet.signer);
+
     const tx = await c.approve(normAddr(spender), 0n);
     setStatus(st, "info", `Pending: <span class="mono">${tx.hash}</span>`);
     await tx.wait();
@@ -6161,7 +6169,9 @@ async function dnaRevokeAll() {
     const tk = btns[i].getAttribute("data-token");
     const sp = btns[i].getAttribute("data-spender");
     try {
-      const c = new E.Contract(normAddr(tk), ERC20_ABI, wallet.signer);
+      const ABI = window.ERC20_ABI || ERC20_ABI;
+      const c = new E.Contract(normAddr(tk), ABI, wallet.signer);
+
       const tx = await c.approve(normAddr(sp), 0n);
       setStatus(st, "info", `(${i + 1}/${btns.length}) Pending: <span class="mono">${tx.hash}</span>`);
       await tx.wait();
