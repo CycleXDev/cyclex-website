@@ -5630,9 +5630,21 @@ function dnaFormatAllowance(rawStr, decimals = null) {
   }
 
  if (s0.includes(".") && !s0.startsWith("0x")) {
-  const safe = window.escapeHtml(s0);
-  return `<span class="mono" title="Value: ${safe}" data-copy="${safe}">${safe}</span>`;
+  let norm = s0;
+  if (norm.startsWith(".")) norm = "0" + norm;
+  if (norm.startsWith("-.")) norm = "-0" + norm.slice(1);
+
+  let display = norm;
+  if (display.length > 16) {
+    display = display.slice(0, 12) + "…";
+  }
+
+  const safeDisplay = window.escapeHtml(display);
+  const safeFull = window.escapeHtml(norm);
+
+  return `<span class="mono" title="Value: ${safeFull}" data-copy="${safeFull}">${safeDisplay}</span>`;
 }
+
 
 
   let raw;
