@@ -6039,27 +6039,33 @@ async function dnaConnectWallet() {
   clearStatus?.(st);
 
   try {
-    // 1) Use your existing CycleX wallet connect (AppKit/Web3Modal)
+    // 1) Prefer AppKit/Web3Modal connect (interactive)
     if (typeof window.cxConnectWallet === "function") {
-      const ok = await window.cxConnectWallet({ silent: true });
+      const ok = await window.cxConnectWallet({ silent: false }); // ✅ MUST be false to open modal
       if (!ok) {
-        setStatus(st, "warn", "Wallet connect cancelled or timed out. Try again.");
+        setStatus(st, "warn", "Wallet connect cancelled. Try again.");
         return;
       }
     }
-    // 2) fallback if you ever add a generic connectWallet()
+    // 2) If you have another global connect function
     else if (typeof window.connectWallet === "function") {
       await window.connectWallet();
     }
-    // 3) last fallback (if you ever expose wallet.connect)
-    else if (wallet?.connect) {
-      await wallet.connect();
-    } else {
-      setStatus(st, "warn", "No wallet connect function found.");
-      return;
+    // 3) Fallback: click the TOPBAR connect button if it exists
+    else {
+      const topBtn =
+        document.querySelector("#btn-connect, #connectWallet, [data-cx-connect], [data-w3m-connect]");
+
+      if (topBtn) {
+        topBtn.click(); // opens the same modal as topbar
+      } else {
+        setStatus(st, "warn", "No wallet connect entrypoint found (cxConnectWallet / top button).");
+        return;
+      }
     }
 
-    // wallet object should now be populated by cxConnectWallet:
+    await new Promise(r => setTimeout(r, 50));
+
     dnaSetWalletBadges();
 
     setStatus(
@@ -6075,6 +6081,7 @@ async function dnaConnectWallet() {
     setStatus(st, "bad", `Connect failed: ${String(e?.message || e)}`);
   }
 }
+
 
 
 async function dnaRevokeOne(net, token, spender) {
