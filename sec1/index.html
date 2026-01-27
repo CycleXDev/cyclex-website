@@ -6082,8 +6082,8 @@ async function dnaConnectWallet() {
   }
 }
 
-// --- Minimal ERC20 ABI (only what Revoke needs) ---
-// safe: won't redeclare, and supports pages that load scripts more than once
+// --- Minimal ERC20 ABI (only what revoke needs) ---
+// Safe: no redeclare, and works even if scripts load twice
 if (!Array.isArray(window.ERC20_ABI) || window.ERC20_ABI.length === 0) {
   window.ERC20_ABI = [
     "function approve(address spender, uint256 amount) returns (bool)"
@@ -6136,6 +6136,7 @@ async function dnaRevokeOne(net, token, spender) {
     setStatus(st, "bad", `Revoke failed: ${String(e?.message || e)}`);
   }
 }
+    window.dnaRevokeOne = dnaRevokeOne;
 
 async function dnaRevokeAll() {
   const st = $("#dna-status");
@@ -6186,6 +6187,7 @@ async function dnaRevokeAll() {
 
   await dnaScan();
 }
+    window.dnaRevokeAll = dnaRevokeAll;
 
 function dnaSeedCommon() {
   const net = dnaNet();
