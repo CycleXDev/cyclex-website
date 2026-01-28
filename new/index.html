@@ -1335,8 +1335,9 @@ body::after{
   }
 
 /* =========================
-   MOBILE TOP BAR — Brand row + Languages on its own row (below)
-   3 nav tiles + OPEN TOOLS (4th)
+   MOBILE TOP BAR — Brand LEFT + Languages RIGHT (same row)
+   3 nav tiles + OPEN TOOLS (4th under Rewards)
+   More premium air + less height + smaller dark side margins
    (NO HTML changes)
    ========================= */
 @media (max-width: 900px){
@@ -1346,28 +1347,24 @@ body::after{
   .top-right{ display: contents !important; }
 
   .top-bar{
-    overflow: visible;
-    border-radius: 22px;
-    padding: 12px;
-    gap: 10px;
+    overflow: hidden;                 /* cleaner edges */
+    border-radius: 20px;
+    padding: 10px;                    /* less bulky */
+    gap: 8px;
     top: calc(env(safe-area-inset-top, 0px) + 10px);
+    margin-bottom: 18px;              /* less “half page” */
 
     display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto;
     grid-template-areas:
-      "brand brand"
-      "lang  lang"
+      "brand lang"
       "btn1  btn2"
       "btn3  cta";
     align-items: center;
-
-    /* polish */
-    row-gap: 12px;
-    padding-top: 14px;
   }
 
-  /* Brand full row */
+  /* Brand (left) */
   .brand{ grid-area: brand; min-width: 0; }
   .brand-text{ min-width: 0; }
   .brand-title{
@@ -1376,42 +1373,36 @@ body::after{
     text-overflow: ellipsis;
     letter-spacing: .09em;
   }
-  .brand-sub{ opacity: .92; }
 
-  /* Languages: full row UNDER brand — CENTERED */
+  /* Languages (right) — like before, but tighter pill */
   .lang-switch{
     grid-area: lang;
-    justify-self: center;
-    width: 100%;
-    max-width: 92%;
+    justify-self: end;
 
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
+    width: auto;                      /* ✅ stops huge dark side padding */
+    max-width: 54vw;                  /* ✅ prevents overlap with brand */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;
     scrollbar-width: none;
 
-    /* polish */
-    padding: 3px;
+    padding: 3px;                     /* tighter */
     gap: 2px;
     border-radius: 999px;
-    background: rgba(255,255,255,.030);
+
+    background: rgba(255,255,255,.028);
     border: 1px solid rgba(255,255,255,.10);
-    box-shadow: 0 8px 18px rgba(0,0,0,.28);
+    box-shadow: 0 8px 18px rgba(0,0,0,.26);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    align-self: center;
   }
   .lang-switch::-webkit-scrollbar{ height: 0; }
 
   .lang-btn{
     padding: 6px 9px;
     font-size: 11px;
-    letter-spacing: .06em;
     line-height: 1;
+    letter-spacing: .06em;
     transform: none !important;
   }
   .lang-btn.active{
@@ -1419,38 +1410,61 @@ body::after{
     box-shadow: 0 0 0 1px rgba(0,229,255,.10) inset;
   }
 
-  /* Nav tiles */
+  /* Tiles */
   .top-link{
     width: 100%;
     text-align: center;
-    padding: 12px 10px;
+
+    padding: 11px 10px;               /* slightly smaller */
     font-size: 11px;
     letter-spacing: .12em;
+
     border: 1px solid rgba(255,255,255,.12);
     background: rgba(255,255,255,.03);
     border-radius: 999px;
+
     transform: none !important;
   }
   .top-link::after{ display:none !important; }
 
-  /* Place the 3 links (keeps your current order) */
-  .top-link:nth-of-type(1){ grid-area: btn1; }
-  .top-link:nth-of-type(2){ grid-area: btn2; }
-  .top-link:nth-of-type(3){ grid-area: btn3; }
+  /* Place the 3 links */
+  .top-link:nth-of-type(1){ grid-area: btn1; } /* SECURITY */
+  .top-link:nth-of-type(2){ grid-area: btn2; } /* REWARDS MODAL */
+  .top-link:nth-of-type(3){ grid-area: btn3; } /* COMMUNITY */
 
   /* Hide extra links on mobile (if exist) */
   .top-link:nth-of-type(n+4){ display:none !important; }
 
-  /* OPEN TOOLS = 4th tile (keeps unique style) */
+  /* OPEN TOOLS (keeps unique style) — bottom-right (under Rewards) */
   .top-cta{
     grid-area: cta;
     width: 100%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     min-height: 44px;
-    padding: 12px 10px;
+    padding: 11px 10px;               /* slightly smaller */
     transform: none !important;
+  }
+}
+
+/* tighter on very small screens */
+@media (max-width: 520px){
+  .brand-logo{ width: 36px; height: 36px; border-radius: 12px; }
+  .brand-title{ font-size: 12px; letter-spacing: .08em; }
+  .brand-sub{ display: none; }        /* prevents collisions */
+
+  .lang-switch{ max-width: 60vw; }    /* allow a bit more room to scroll */
+  .lang-btn{ padding: 6px 8px; font-size: 11px; }
+
+  .top-link{
+    padding: 11px 10px;
+    font-size: 10.5px;
+    letter-spacing: .11em;
+  }
+
+  .top-cta{
+    min-height: 44px;
+    padding: 11px 10px;
+    font-size: 11px;
+    letter-spacing: .12em;
   }
 }
 
