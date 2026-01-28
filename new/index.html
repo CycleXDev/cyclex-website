@@ -1338,21 +1338,21 @@
   }
 
 /* =========================
-   MOBILE TOP BAR — Logo left, Languages right
-   3 nav buttons + OPEN TOOLS under "Rewards Model"
+   MOBILE TOP BAR — PREMIUM (Logo left, flags right)
+   3 nav tiles + OPEN TOOLS under Rewards Model
    (NO HTML changes)
    ========================= */
 @media (max-width: 900px){
 
-  /* Make top-nav and top-right "flatten" into the top-bar grid */
+  /* Flatten inner wrappers into the top-bar grid */
   .top-nav{ display: contents !important; }
   .top-right{ display: contents !important; }
 
   .top-bar{
     overflow: visible;
     border-radius: 22px;
-    padding: 12px;
-    gap: 10px;
+    padding: 12px 12px 14px;
+    gap: 12px;
     top: calc(env(safe-area-inset-top, 0px) + 10px);
 
     display: grid !important;
@@ -1363,14 +1363,50 @@
       "btn1  btn2"
       "btn3  cta";
     align-items: center;
+
+    /* Premium polish */
+    box-shadow:
+      0 18px 60px rgba(0,0,0,.50),
+      inset 0 1px 0 rgba(255,255,255,.07);
   }
 
-  /* Header */
-  .brand{ grid-area: brand; min-width: 0; }
-  .brand-text{ min-width: 0; }
-  .brand-title{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* ===== Header: Brand (left) ===== */
+  .brand{
+    grid-area: brand;
+    min-width: 0;
+    gap: 10px;
+    position: relative;
+    padding-right: 10px;
+  }
+  /* subtle divider to structure the header row */
+  .brand::after{
+    content:"";
+    position:absolute;
+    right: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 1px;
+    background: rgba(255,255,255,.08);
+    opacity: .9;
+  }
 
-  /* Languages (top-right) */
+  .brand-logo{
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    box-shadow: 0 14px 36px rgba(0,0,0,.65);
+  }
+
+  .brand-text{ min-width: 0; }
+  .brand-title{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12.5px;
+    letter-spacing: .09em;
+  }
+
+  /* ===== Header: Languages (right) ===== */
   .lang-switch{
     grid-area: lang;
     justify-self: end;
@@ -1379,7 +1415,16 @@
     align-items: center;
     justify-content: flex-end;
 
-    max-width: 56vw;
+    /* capsule polish */
+    padding: 4px 6px;
+    gap: 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.035);
+    border: 1px solid rgba(255,255,255,.10);
+    box-shadow: 0 10px 26px rgba(0,0,0,.32);
+
+    /* scroll */
+    max-width: 58vw;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;
@@ -1387,7 +1432,14 @@
   }
   .lang-switch::-webkit-scrollbar{ height: 0; }
 
-  /* Nav buttons become 3 tiles (we map the FIRST 3 links) */
+  .lang-btn{
+    padding: 6px 8px;
+    font-size: 11px;
+    border-radius: 999px;
+    transform: none !important;
+  }
+
+  /* ===== Tiles: 3 nav buttons ===== */
   .top-link{
     width: 100%;
     text-align: center;
@@ -1400,19 +1452,24 @@
     background: rgba(255,255,255,.03);
     border-radius: 999px;
 
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
     transform: none !important;
   }
   .top-link::after{ display:none !important; }
 
-  /* Place 3 buttons */
+  /* Place 3 buttons (first 3 links) */
   .top-link:nth-of-type(1){ grid-area: btn1; }
-  .top-link:nth-of-type(2){ grid-area: btn2; } /* ← Rewards Model (לפי הסדר שלך) */
+  .top-link:nth-of-type(2){ grid-area: btn2; } /* Rewards Model */
   .top-link:nth-of-type(3){ grid-area: btn3; }
 
-  /* אם יש אצלך יותר מ-3 לינקים (למשל COMMUNITY נוסף) — מסתירים במובייל כדי שיהיו "3 + OPEN TOOLS" */
+  /* If there are more links, hide them on mobile for the clean 3+CTA layout */
   .top-link:nth-of-type(n+4){ display:none !important; }
 
-  /* OPEN TOOLS tile (keeps its unique style), placed under Rewards Model */
+  /* ===== OPEN TOOLS tile (keeps its unique style) ===== */
   .top-cta{
     grid-area: cta;
 
@@ -1421,15 +1478,26 @@
     align-items: center;
     justify-content: center;
 
-    min-height: 44px;
+    min-height: 46px;
     padding: 12px 10px;
 
+    /* keep it crisp */
     transform: none !important;
+  }
+
+  /* Reduce tap highlight weirdness on iOS */
+  .top-link, .top-cta, .lang-btn{
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
 /* tighter on small screens */
 @media (max-width: 520px){
+  .top-bar{
+    padding: 11px 11px 13px;
+    border-radius: 20px;
+  }
+
   .brand-logo{ width: 36px; height: 36px; border-radius: 12px; }
   .brand-title{ font-size: 12px; letter-spacing: .08em; }
   .brand-sub{ display:none; }
@@ -1440,6 +1508,7 @@
     padding: 11px 10px;
     font-size: 10.5px;
     letter-spacing: .11em;
+    min-height: 44px;
   }
 
   .top-cta{
