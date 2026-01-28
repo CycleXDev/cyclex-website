@@ -3681,29 +3681,6 @@ if (!ok) {
   return x.toLocaleString();
 };
 
-const parseNum = (s) => {
-  const x = Number(String(s || "").replace(/[^\d.-]/g, ""));
-  return Number.isFinite(x) ? x : 0;
-};
-
-function animateTo(el, next, ms = 450){
-  if (!el) return;
-  const from = parseNum(el.textContent);
-  const to = Number(next);
-  if (!Number.isFinite(to)) return;
-
-  if (from === to) { el.textContent = fmt(to); return; }
-
-  const t0 = performance.now();
-  const step = (t) => {
-    const p = Math.min(1, (t - t0) / ms);
-    const val = Math.round(from + (to - from) * p);
-    el.textContent = fmt(val);
-    if (p < 1) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-}
-
   async function refreshActivity(){
     try{
       const r = await fetch("/api/activity", { cache: "no-store" });
@@ -3714,13 +3691,13 @@ function animateTo(el, next, ms = 450){
       const elR = document.getElementById("risky-approvals");
       const elH = document.getElementById("high-risk-contracts");
 
-      if (elW) animateTo(elW, j.wallets);
-      if (elR) animateTo(elR, j.riskyApprovals);
-      if (elH) animateTo(elH, j.highRiskContracts);
+      if (elW) elW.textContent = fmt(j.wallets);
+      if (elR) elR.textContent = fmt(j.riskyApprovals);
+      if (elH) elH.textContent = fmt(j.highRiskContracts);
+
     } catch(e){}
   }
 
-  // run now + refresh every 12s
   refreshActivity();
   setInterval(refreshActivity, 12000);
 })();
