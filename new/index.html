@@ -3481,6 +3481,59 @@ async function pickProvider() {
   }
   throw new Error("All RPCs failed");
 }
+  // ---- tiny health dot for ON-CHAIN METRICS (no CSS dependencies) ----
+function ensureMetricsDot(){
+  let dot = document.getElementById("cx-metrics-dot");
+  if (dot) return dot;
+
+  // try to attach near the "On-Chain Transparency" title first
+  const title =
+    document.querySelector('[data-i18n="transparency_title"]') ||
+    document.querySelector('[data-i18n="home_transparency_title"]') ||
+    document.querySelector("h2, h1");
+
+  dot = document.createElement("span");
+  dot.id = "cx-metrics-dot";
+  dot.title = "On-chain metrics status";
+  dot.setAttribute("aria-label", "On-chain metrics status");
+  dot.style.display = "inline-block";
+  dot.style.width = "10px";
+  dot.style.height = "10px";
+  dot.style.borderRadius = "999px";
+  dot.style.marginInlineStart = "10px";
+  dot.style.verticalAlign = "middle";
+  dot.style.boxShadow = "0 0 10px rgba(0,0,0,.35)";
+  dot.style.background = "rgba(255,255,255,.35)"; // unknown
+
+  if (title && title.parentNode) {
+    title.parentNode.insertBefore(dot, title.nextSibling);
+  } else {
+    // fallback: fixed
+    dot.style.position = "fixed";
+    dot.style.right = "18px";
+    dot.style.bottom = "52px"; // above activity dot if exists
+    dot.style.zIndex = "9999";
+    document.body.appendChild(dot);
+  }
+
+  return dot;
+}
+
+function setMetricsDot(ok){
+  const dot = ensureMetricsDot();
+  if (!dot) return;
+
+  if (ok) {
+    dot.style.background = "#39ff9a";
+    dot.style.boxShadow = "0 0 14px rgba(57,255,154,.45)";
+    dot.title = "On-chain metrics: OK";
+  } else {
+    dot.style.background = "rgba(255,80,80,.95)";
+    dot.style.boxShadow = "0 0 14px rgba(255,80,80,.35)";
+    dot.title = "On-chain metrics: OFFLINE";
+  }
+}
+
 
   function formatCYCX(value) {
   try {
@@ -3518,11 +3571,14 @@ async function pickProvider() {
     }, 2);
 
     if (!stats) {
-      if ($("stat-rewards")) $("stat-rewards").textContent = "—";
-      if ($("stat-burned")) $("stat-burned").textContent = "—";
-      if ($("stat-last-cycle")) $("stat-last-cycle").textContent = "—";
-      return;
-    }
+  setMetricsDot(false);
+  if ($("stat-rewards")) $("stat-rewards").textContent = "—";
+  if ($("stat-burned")) $("stat-burned").textContent = "—";
+  if ($("stat-last-cycle")) $("stat-last-cycle").textContent = "—";
+  return;
+}
+
+setMetricsDot(true);
 
     const claimed = stats.claimed ?? stats[0];
     const burned  = stats.burned  ?? stats[1];
@@ -3549,6 +3605,7 @@ async function pickProvider() {
       if ($("stat-last-cycle")) $("stat-last-cycle").textContent = formatTime(startTime);
     }
   } catch (e) {
+    setMetricsDot(false);
     console.warn("CycleX metrics error:", e);
     if ($("stat-rewards")) $("stat-rewards").textContent = "—";
     if ($("stat-burned")) $("stat-burned").textContent = "—";
