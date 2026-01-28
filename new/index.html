@@ -1349,115 +1349,111 @@
     letter-spacing: .02em;
     font-weight: 900;
   }
+/* =========================
+   MOBILE TUNING
+   ========================= */
+@media (max-width: 768px){
+  :root{ --gutter:16px; }
+  .page-shell{ padding-inline: var(--gutter); }
+  .brand-title{ font-size: 12px; }
+  .brand-sub{ font-size: 10px; }
 
-  /* =========================
-     MOBILE TUNING
-     ========================= */
-  @media (max-width: 768px){
-    :root{ --gutter:16px; }
-    .page-shell{ padding-inline: var(--gutter); }
-    .brand-title{ font-size: 12px; }
-    .brand-sub{ font-size: 10px; }
+  .hero-title{ font-size: 38px; white-space: normal; }
+  .hero-subtitle{ font-size: 15px; }
+  .chip{ font-size: 11px; letter-spacing:.18em; }
 
-    .hero-title{ font-size: 38px; white-space: normal; }
-    .hero-subtitle{ font-size: 15px; }
-    .chip{ font-size: 11px; letter-spacing:.18em; }
-    body.modal-open .top-bar{ display:none !important; }
+  body.modal-open .top-bar{ display:none !important; }
 
-    .modal-backdrop.active,
-    .calculator-modal.active{
-      align-items:center !important;
-      justify-content:center !important;
-      padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-      padding-left: 16px;
-      padding-right: 16px;
-    }
-    .modal,
-    .calculator-content{
-      max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
-      overflow:auto;
-      -webkit-overflow-scrolling: touch;
-    }
+  .modal-backdrop.active,
+  .calculator-modal.active{
+    align-items:center !important;
+    justify-content:center !important;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    padding-left: 16px;
+    padding-right: 16px;
   }
-
-  @media (prefers-reduced-motion: reduce){
-    *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
-    body::before{ animation:none !important; }
-  }
-
-  .hero, .section, .reward-card, .stat-card{ overflow-wrap:anywhere; word-break: break-word; }
-  .btn, .social-card, .reward-card, .stat-card, .top-bar{
-    backface-visibility:hidden;
-    transform: translateZ(0);
-  }
- 
-@media (max-width: 900px){
-  .top-bar{
-    top: calc(env(safe-area-inset-top, 0px) + 10px); 
-    overflow: visible;
-
+  .modal,
+  .calculator-content{
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
-@media (max-width: 900px){
-  .rewards-grid{
-    grid-template-columns: 1fr !important;
-  }
-  .rewards-side{
-    width: 100%;
-  }
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation:none !important; transition:none !important; scroll-behavior:auto !important; }
+  body::before{ animation:none !important; }
 }
-  /* =========================
-   PATCH: Samsung / Mobile Top-Bar Fix (mobile only)
+
+/* Extra safety */
+.hero, .section, .reward-card, .stat-card{ overflow-wrap:anywhere; word-break: break-word; }
+.btn, .social-card, .reward-card, .stat-card, .top-bar{
+  backface-visibility:hidden;
+  transform: translateZ(0);
+}
+
+/* Rewards: mobile single column */
+@media (max-width: 900px){
+  .rewards-grid{ grid-template-columns: 1fr !important; }
+  .rewards-side{ width: 100%; }
+}
+
+/* =========================
+   TOP BAR — MOBILE FIX (ONLY)
    ========================= */
 @media (max-width: 900px){
-  .top-bar{
-    position: sticky;
-    top: calc(env(safe-area-inset-top, 0px) + 10px);
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 2px;
 
-    padding: 12px;
+  /* keep it sticky + Samsung safe area */
+  .top-bar{
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    overflow: visible;               /* avoid clipping */
+    flex-wrap: wrap;                 /* ✅ key: allow rows */
+    gap: 6px;
+    padding: 12px 12px;
     border-radius: 24px;
-    overflow: visible;         /* avoid Samsung clipping */
+    align-items: center;
   }
 
-  /* Row 1: brand + lang nicely spaced */
+  /* Brand stays on first row left */
   .brand{
-    width: 100%;
+    order: 1;
     flex: 0 0 auto;
     min-width: 0;
-    justify-content: flex-start;
   }
 
+  /* Language pill centered on same first row */
   .lang-switch{
-    align-self: flex-start;
+    order: 2;
+    margin-left: auto;
+    margin-right: auto;              /* ✅ center */
     align-self: center;
-    margin-inline: auto; 
-    flex: 0 0 auto;
   }
 
-  /* Row 2: CTA full width */
+  /* OPEN TOOLS full width row under */
   .top-cta{
+    order: 3;
     width: 100%;
     justify-content: center;
   }
 
-  /* Row 3: nav full width, scroll if needed */
+  /* Bottom nav row: closer + no left cut + spaced nicely */
   .top-nav{
+    order: 4;
     width: 100%;
-    margin-top: 2px;
-    gap: 8px; 
-    margin: 0;
-    justify-content: center;
+    margin-top: 2px;                 /* ✅ closer to CTA */
+    gap: 10px;                       /* ✅ buttons closer */
+    justify-content: space-around;   /* ✅ balanced */
+    padding: 0 10px;                 /* ✅ fixes “SECURITY” cut */
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 2px;
   }
   .top-nav::-webkit-scrollbar{ height: 0; }
-  .top-link{ flex: 0 0 auto; }
+
+  .top-link{
+    padding: 8px 10px;
+    flex: 0 0 auto;
+  }
 }
 
 
