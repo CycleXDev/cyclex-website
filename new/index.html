@@ -89,38 +89,35 @@
   }
   @keyframes bodyIn{from{opacity:0}to{opacity:1}}
 
-  /* Smooth orbs + subtle film-grain (NO scanlines) */
-  body::before{
-    content:"";
-    position:fixed; inset:-18vh -18vw;
-    pointer-events:none;
-    background:
-      radial-gradient(740px 640px at 20% 14%, rgba(0,229,255,.12), transparent 60%),
-      radial-gradient(940px 780px at 78% 18%, rgba(124,92,255,.11), transparent 62%),
-      radial-gradient(820px 700px at 52% 78%, rgba(93,255,178,.07), transparent 64%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
-    background-size:auto, auto, auto, 260px 260px;
-    background-repeat:no-repeat, no-repeat, no-repeat, repeat;
-    opacity:.10;
-    animation: drift 18s linear infinite;
-    transform: translate3d(0,0,0);
-    mix-blend-mode: overlay;
-    filter: blur(.25px);
-  }
-  @keyframes drift{
-    0%{transform:translate3d(0,0,0)}
-    50%{transform:translate3d(2.2vw,-1.4vh,0)}
-    100%{transform:translate3d(0,0,0)}
-  }
+ body::before{
+  content:"";
+  position:fixed; inset:0;          
+  pointer-events:none;
+  background:
+    radial-gradient(740px 640px at 20% 14%, rgba(0,229,255,.12), transparent 60%),
+    radial-gradient(940px 780px at 78% 18%, rgba(124,92,255,.11), transparent 62%),
+    radial-gradient(820px 700px at 52% 78%, rgba(93,255,178,.07), transparent 64%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+  background-size:auto, auto, auto, 260px 260px;
+  background-repeat:no-repeat, no-repeat, no-repeat, repeat;
+  opacity:.10;
+  animation: drift 18s linear infinite;
+  transform: translate3d(0,0,0) scale(1.12);  
+  transform-origin:center;
+  mix-blend-mode: overlay;
+  filter: blur(.25px);
+}
 
-  /* Vignette */
-  body::after{
-    content:"";
-    position:fixed; inset:-30vh -30vw;
-    pointer-events:none;
-    background: radial-gradient(circle at 50% 18%, transparent 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.60) 100%);
-    opacity:.82;
-  }
+body::after{
+  content:"";
+  position:fixed; inset:0;  
+  pointer-events:none;
+  background: radial-gradient(circle at 50% 18%, transparent 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.60) 100%);
+  opacity:.82;
+  transform: scale(1.12);
+  transform-origin:center;
+}
+
 
   body.lang-switching{ animation: langFade .28s var(--ease); }
   @keyframes langFade{from{opacity:.45; transform:translateY(4px)}to{opacity:1; transform:translateY(0)}}
@@ -355,7 +352,7 @@
   .hero::before{
   content:"";
   position:absolute;
-  inset: -70px -60px -40px;   
+  inset: -70px 0 -40px;
   z-index:-1;
   border-radius: 80px;        
   background:
@@ -613,7 +610,7 @@
   .section::before{
     content:"";
     position:absolute;
-    left: -2px; right: -2px;
+    left: 0px; right: 0px;
     top: -1px; height: 1px;
     background: linear-gradient(90deg, transparent 0%, rgba(0,229,255,.16) 35%, rgba(124,92,255,.10) 65%, transparent 100%);
     opacity:.9;
@@ -621,7 +618,7 @@
   .section::after{
     content:"";
     position:absolute;
-    inset: -60px -14px auto -14px;
+    inset: -60px 0 auto 0;
     height: 180px;
     background:
       radial-gradient(circle at 22% 45%, rgba(0,229,255,.08), transparent 62%),
