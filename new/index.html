@@ -1338,82 +1338,112 @@
   }
 
 /* =========================
-   MOBILE TOP BAR — FINAL (with .top-right stacked)
+   MOBILE TOP BAR — CLEAN + READABLE (no overlaps)
    ========================= */
 @media (max-width: 900px){
   .top-bar{
-    overflow: visible;              /* override overflow:hidden on mobile */
-    border-radius: 22px;
-    padding: 12px;
-    gap: 10px;
+    /* יותר "כרטיס" ופחות גלולה במובייל */
+    overflow: visible;                 /* חשוב כדי שלא ייחתך תוכן */
+    border-radius: 20px;
+    padding: 10px 10px 8px;
+    gap: 8px;
 
+    /* sticky נוח במובייל + safe-area לאייפון */
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+
+    /* גריד ברור: שורה 1 (brand+right) | שורה 2 (nav) */
     display: grid !important;
-    grid-template-columns: 1fr auto;          /* left: brand | right: lang+cta */
-    grid-template-rows: auto auto;            /* row1 header | row2 nav */
+    grid-template-columns: 1fr auto;   /* brand | right */
+    grid-template-rows: auto auto;     /* header | nav */
     grid-template-areas:
       "brand right"
       "nav   nav";
     align-items: center;
   }
 
-  .brand{
-    grid-area: brand;
-    min-width: 0;
-  }
+  .brand{ grid-area: brand; min-width: 0; }
 
-  /* Right side becomes a vertical stack: languages ABOVE button */
+  /* ימין: נותנים לו להישבר לשתי שורות בלי להתנגש */
   .top-right{
     grid-area: right;
     display: flex !important;
-    flex-direction: column;
-    align-items: flex-end;
-    justify-content: center;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
     gap: 8px;
-    min-width: 0;
+    flex-wrap: wrap;                   /* ✅ מאפשר ירידה שורה */
+    max-width: 52vw;                   /* ✅ מונע דריסה של ה-brand */
   }
 
-  .lang-switch{ margin: 0; }
+  /* גורמים לשפות לרדת שורה כשאין מקום */
+  .lang-switch{
+    flex: 1 1 100%;                    /* ✅ יורד שורה מתחת לכפתור */
+    justify-content: flex-end;
+    margin: 0;
+    padding: 4px;
+    gap: 2px;
+
+    /* אם יש הרבה שפות — גלילה אופקית עדינה */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+  .lang-switch::-webkit-scrollbar{ height: 0; }
+
+  .lang-btn{
+    padding: 6px 8px;
+    font-size: 11px;
+  }
 
   .top-cta{
-    white-space: nowrap;
     padding: 10px 12px;
     font-size: 11px;
-    letter-spacing: .14em;
+    letter-spacing: .12em;
   }
 
+  /* ניווט: במקום להיחתך — נותנים לו להישבר לשתי שורות */
   .top-nav{
     grid-area: nav;
     margin: 0;
     padding-top: 6px;
 
     display: flex;
+    flex-wrap: wrap;                   /* ✅ לא נחתך */
     justify-content: center;
     align-items: center;
-    gap: 8px;                      
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    white-space: nowrap;
+    gap: 8px;
+    row-gap: 6px;
+    white-space: normal;               /* ✅ מאפשר שבירת שורה */
+    overflow: visible;                 /* ✅ לא חותך "COMMUNITY" */
   }
-  .top-nav::-webkit-scrollbar{ height: 0; }
 
   .top-link{
     flex: 0 0 auto;
-    padding: 8px 10px;              
+    padding: 8px 10px;
     font-size: 11px;
-    letter-spacing: .13em;
+    letter-spacing: .12em;
   }
 }
 
 @media (max-width: 520px){
-  .brand-logo{ width: 38px; height: 38px; border-radius: 13px; }
-  .brand-title{ font-size: 12px; letter-spacing: .08em; }
-  .brand-sub{ font-size: 9px; }
+  .brand-logo{ width: 36px; height: 36px; border-radius: 12px; }
+  .brand-title{ font-size: 12px; letter-spacing: .07em; }
+  .brand-sub{ display: none; }         
 
-  .lang-btn{
-    padding: 6px 8px;
-    font-size: 11px;
+  .top-right{ max-width: 58vw; }       
+  .top-cta{
+    padding: 9px 10px;
+    font-size: 10.5px;
+    letter-spacing: .11em;
   }
 }
+
+@media (max-width: 380px){
+  .top-right{ max-width: 64vw; }
+  .top-cta{ flex: 1 1 100%; }          
+  .lang-switch{ justify-content: flex-end; }
+}
+
 
 
 /* Hide top bar while modal open */
