@@ -1443,6 +1443,204 @@ a.tool-card[data-tool="approvals"]::after{
 #panel-approvals #dna-elig-msg.elig-bad{ color: #ff6a6a !important; }
 #panel-approvals #dna-elig-msg.elig-warn{ color: #ffd36a !important; }
 .hidden{ display:none !important; }
+
+/* =========================================================
+   CycleX — THEME OVERRIDES (colors/background/buttons only)
+   Paste at the VERY END of your existing <style>
+   (No layout changes)
+   ========================================================= */
+
+:root{
+  /* Reference palette */
+  --bg0:#05060a;
+  --bg1:#0b0a18;
+  --bg2:#021b24;
+
+  --text:#f4f6ff;
+  --muted:rgba(244,246,255,.74);
+  --dim:rgba(244,246,255,.56);
+
+  --c:#00e5ff;
+  --g:#5dffb2;
+  --p:#7c5cff;
+
+  --hair:rgba(255,255,255,.10);
+  --hair2:rgba(255,255,255,.14);
+  --glass:rgba(255,255,255,.030);
+  --glass2:rgba(255,255,255,.050);
+
+  --sh1:0 18px 60px rgba(0,0,0,.50);
+  --sh2:0 36px 120px rgba(0,0,0,.72);
+
+  --ease:cubic-bezier(.2,.8,.2,1);
+
+  /* Map to your existing vars (so nothing breaks) */
+  --bg-main: var(--bg0);
+  --bg-gradient-start: var(--bg0);
+  --bg-gradient-mid: var(--bg1);
+  --bg-gradient-end: var(--bg2);
+
+  --text-main: var(--text);
+  --text-muted: var(--muted);
+
+  --accent-cyan: var(--c);
+  --accent-green: var(--g);
+  --accent-purple: var(--p);
+
+  --card-bg: rgba(255,255,255,.06);
+  --border-subtle: rgba(255,255,255,.12);
+
+  /* Keep your radiuses */
+  /* --radius-xl / --radius-lg stay as-is */
+
+  /* Make transitions match ref feel */
+  --transition-fast: .18s var(--ease);
+}
+
+/* ===== Background: match reference (smooth, premium, no “pixel” vibe) ===== */
+html{
+  background:
+    radial-gradient(1200px 720px at 14% 10%, rgba(124,92,255,.18), transparent 58%),
+    radial-gradient(1200px 720px at 86% 12%, rgba(0,229,255,.16), transparent 56%),
+    radial-gradient(980px 680px at 55% 120%, rgba(0,58,76,.40), transparent 62%),
+    linear-gradient(160deg, var(--bg0), var(--bg1), var(--bg2));
+  background-repeat:no-repeat;
+  background-attachment:fixed;
+}
+
+body{
+  background: transparent;
+  color: var(--text);
+}
+
+/* Film-grain + soft orbs overlay (reference style) */
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(740px 640px at 20% 14%, rgba(0,229,255,.12), transparent 60%),
+    radial-gradient(940px 780px at 78% 18%, rgba(124,92,255,.11), transparent 62%),
+    radial-gradient(820px 700px at 52% 78%, rgba(93,255,178,.07), transparent 64%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+  background-size:auto, auto, auto, 260px 260px;
+  background-repeat:no-repeat, no-repeat, no-repeat, repeat;
+  opacity:.10;
+  transform: translate3d(0,0,0) scale(1.12);
+  transform-origin:center;
+  mix-blend-mode: overlay;
+  filter: blur(.25px);
+}
+
+body::after{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  background: radial-gradient(circle at 50% 18%, transparent 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.60) 100%);
+  opacity:.82;
+  transform: scale(1.12);
+  transform-origin:center;
+}
+
+/* ===== Top bar: same colors + subtle gradient frame ===== */
+.top-bar{
+  background: rgba(10,12,22,.50) !important;
+  border-color: rgba(255,255,255,.14) !important;
+  backdrop-filter: blur(18px) saturate(1.12) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.12) !important;
+  box-shadow: 0 14px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06) !important;
+  overflow:hidden; /* enables the frame */
+  position: sticky; /* keep your behavior */
+}
+
+.top-bar::before{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:999px;
+  padding:1px;
+  background: linear-gradient(120deg, rgba(0,229,255,.22), rgba(124,92,255,.16), rgba(255,255,255,.10));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events:none;
+  opacity:.55;
+}
+
+/* ===== Language switch colors ===== */
+.lang-switch{
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(255,255,255,.12) !important;
+}
+.lang-btn.active{
+  background: rgba(0,229,255,.14) !important;
+  color: rgba(0,229,255,.95) !important;
+}
+
+/* ===== Buttons: match reference feel (without changing sizing/layout) ===== */
+.btn{
+  border: 1px solid transparent;
+  transition: transform .32s var(--ease), box-shadow .32s var(--ease),
+              background .32s var(--ease), border-color .32s var(--ease),
+              filter .32s var(--ease);
+}
+
+/* Primary = Cyan gradient + sheen */
+.btn-primary{
+  background: linear-gradient(135deg, rgba(0,229,255,1), rgba(125,242,255,1)) !important;
+  color:#03040a !important;
+  border-color: rgba(0,229,255,.18) !important;
+  box-shadow: 0 22px 90px rgba(0,229,255,.38) !important;
+  position: relative;
+  isolation: isolate;
+}
+.btn-primary::after{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:999px;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,.58) 18%, transparent 36%, transparent 100%);
+  transform: translateX(-120%);
+  opacity:.65;
+  z-index:-1;
+  transition: transform .65s var(--ease);
+  filter: blur(.2px);
+}
+.btn-primary:hover{
+  transform: translateY(-2px) !important;
+  box-shadow: 0 30px 130px rgba(0,229,255,.48) !important;
+  filter: saturate(1.05);
+}
+.btn-primary:hover::after{ transform: translateX(120%); }
+
+/* Secondary = keep green but align to reference vibe */
+.btn-secondary{
+  background: linear-gradient(135deg, rgba(93,255,178,1), rgba(185,255,207,1)) !important;
+  color:#03040a !important;
+  border-color: rgba(93,255,178,.18) !important;
+  box-shadow: 0 18px 80px rgba(93,255,178,.26) !important;
+}
+.btn-secondary:hover{
+  transform: translateY(-2px) !important;
+  box-shadow: 0 26px 110px rgba(93,255,178,.38) !important;
+}
+
+/* Ghost = glass (reference) */
+.btn-ghost{
+  background: rgba(255,255,255,.030) !important;
+  color: var(--text) !important;
+  border-color: rgba(255,255,255,.16) !important;
+  backdrop-filter: blur(14px) !important;
+  box-shadow: 0 16px 55px rgba(0,0,0,.34) !important;
+}
+.btn-ghost:hover{
+  transform: translateY(-2px) !important;
+  border-color: rgba(0,229,255,.24) !important;
+  box-shadow: 0 24px 90px rgba(0,0,0,.56) !important;
+}
+
+/* Small text colors to match reference */
+.muted, .small{ color: var(--muted) !important; }
+
+     
 </style>
    
    
