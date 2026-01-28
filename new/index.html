@@ -1335,13 +1335,13 @@ body::after{
   }
 
 /* =========================
-   MOBILE TOP BAR — Logo left, Languages right
-   3 nav buttons + OPEN TOOLS under "Rewards Model"
+   MOBILE TOP BAR — Brand row + Languages on its own row (below)
+   3 nav tiles + OPEN TOOLS (4th)
    (NO HTML changes)
    ========================= */
 @media (max-width: 900px){
 
-  /* Make top-nav and top-right "flatten" into the top-bar grid */
+  /* Flatten wrappers into the grid */
   .top-nav{ display: contents !important; }
   .top-right{ display: contents !important; }
 
@@ -1354,37 +1354,49 @@ body::after{
 
     display: grid !important;
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto auto auto;
     grid-template-areas:
-      "brand lang"
+      "brand brand"
+      "lang  lang"
       "btn1  btn2"
       "btn3  cta";
     align-items: center;
   }
 
-  /* Header */
-  .brand{ grid-area: brand; min-width: 0; }
-  .brand-text{ min-width: 0; }
-  .brand-title{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-  /* Languages (top-right) */
-  .lang-switch{
-    grid-area: lang;
-    justify-self: end;
-
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-
-    max-width: 56vw;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    white-space: nowrap;
-    scrollbar-width: none;
+  /* Brand full row */
+  .brand{
+    grid-area: brand;
+    min-width: 0;
   }
-  .lang-switch::-webkit-scrollbar{ height: 0; }
+  .brand-text{ min-width: 0; }
+  .brand-title{
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-  /* Nav buttons become 3 tiles (we map the FIRST 3 links) */
+ /* Languages: full row UNDER brand — CENTERED */
+.lang-switch{
+  grid-area: lang;
+  justify-self: center;
+  width: 100%;
+  max-width: 92%;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: nowrap;
+  scrollbar-width: none;
+
+  padding: 4px;
+  border-radius: 999px;
+}
+.lang-switch::-webkit-scrollbar{ height: 0; }
+
+  /* Nav tiles */
   .top-link{
     width: 100%;
     text-align: center;
@@ -1401,15 +1413,15 @@ body::after{
   }
   .top-link::after{ display:none !important; }
 
-  /* Place 3 buttons */
+  /* Place the 3 links (keeps your current order) */
   .top-link:nth-of-type(1){ grid-area: btn1; }
-  .top-link:nth-of-type(2){ grid-area: btn2; } /* ← Rewards Model (לפי הסדר שלך) */
+  .top-link:nth-of-type(2){ grid-area: btn2; }
   .top-link:nth-of-type(3){ grid-area: btn3; }
 
-  /* אם יש אצלך יותר מ-3 לינקים (למשל COMMUNITY נוסף) — מסתירים במובייל כדי שיהיו "3 + OPEN TOOLS" */
+  /* Hide extra links on mobile (if exist) */
   .top-link:nth-of-type(n+4){ display:none !important; }
 
-  /* OPEN TOOLS tile (keeps its unique style), placed under Rewards Model */
+  /* OPEN TOOLS = 4th tile (keeps unique style) */
   .top-cta{
     grid-area: cta;
 
@@ -1446,7 +1458,6 @@ body::after{
     letter-spacing: .12em;
   }
 }
-
 
 
 /* Hide top bar while modal open */
