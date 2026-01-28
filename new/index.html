@@ -1338,13 +1338,13 @@
   }
 
 /* =========================
-   MOBILE TOP BAR — PREMIUM (Logo left, flags right)
-   3 nav tiles + OPEN TOOLS under Rewards Model
+   MOBILE TOP BAR — RE-LAYOUT (Logo left, flags right aligned)
+   3 tiles + OPEN TOOLS under Rewards Model
    (NO HTML changes)
    ========================= */
-@media (max-width: 900px){
+@media (max-width: 1100px){
 
-  /* Flatten inner wrappers into the top-bar grid */
+  /* flatten wrappers into the top-bar grid (needed because OPEN TOOLS is inside .top-right) */
   .top-nav{ display: contents !important; }
   .top-right{ display: contents !important; }
 
@@ -1356,7 +1356,10 @@
     top: calc(env(safe-area-inset-top, 0px) + 10px);
 
     display: grid !important;
-    grid-template-columns: 1fr 1fr;
+
+    /* ✅ KEY FIX: push languages to the real right */
+    grid-template-columns: 1fr auto !important;
+
     grid-template-rows: auto auto auto;
     grid-template-areas:
       "brand lang"
@@ -1364,30 +1367,18 @@
       "btn3  cta";
     align-items: center;
 
-    /* Premium polish */
     box-shadow:
       0 18px 60px rgba(0,0,0,.50),
       inset 0 1px 0 rgba(255,255,255,.07);
   }
 
-  /* ===== Header: Brand (left) ===== */
+  /* ===== Header Left (brand) ===== */
   .brand{
     grid-area: brand;
     min-width: 0;
     gap: 10px;
-    position: relative;
-    padding-right: 10px;
-  }
-  /* subtle divider to structure the header row */
-  .brand::after{
-    content:"";
-    position:absolute;
-    right: 0;
-    top: 6px;
-    bottom: 6px;
-    width: 1px;
-    background: rgba(255,255,255,.08);
-    opacity: .9;
+    display: flex;
+    align-items: center;
   }
 
   .brand-logo{
@@ -1406,16 +1397,16 @@
     letter-spacing: .09em;
   }
 
-  /* ===== Header: Languages (right) ===== */
+  /* ===== Header Right (languages) ===== */
   .lang-switch{
     grid-area: lang;
-    justify-self: end;
+    justify-self: end;              /* ✅ stick to right edge */
+    align-self: center;
 
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
 
-    /* capsule polish */
     padding: 4px 6px;
     gap: 4px;
     border-radius: 999px;
@@ -1423,8 +1414,7 @@
     border: 1px solid rgba(255,255,255,.10);
     box-shadow: 0 10px 26px rgba(0,0,0,.32);
 
-    /* scroll */
-    max-width: 58vw;
+    max-width: 60vw;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;
@@ -1439,7 +1429,7 @@
     transform: none !important;
   }
 
-  /* ===== Tiles: 3 nav buttons ===== */
+  /* ===== Tiles (3 nav links) ===== */
   .top-link{
     width: 100%;
     text-align: center;
@@ -1466,10 +1456,10 @@
   .top-link:nth-of-type(2){ grid-area: btn2; } /* Rewards Model */
   .top-link:nth-of-type(3){ grid-area: btn3; }
 
-  /* If there are more links, hide them on mobile for the clean 3+CTA layout */
+  /* Hide any extra nav links on this mobile layout */
   .top-link:nth-of-type(n+4){ display:none !important; }
 
-  /* ===== OPEN TOOLS tile (keeps its unique style) ===== */
+  /* ===== OPEN TOOLS (keeps unique design) — under Rewards Model ===== */
   .top-cta{
     grid-area: cta;
 
@@ -1481,14 +1471,11 @@
     min-height: 46px;
     padding: 12px 10px;
 
-    /* keep it crisp */
     transform: none !important;
   }
 
-  /* Reduce tap highlight weirdness on iOS */
-  .top-link, .top-cta, .lang-btn{
-    -webkit-tap-highlight-color: transparent;
-  }
+  /* iOS tap highlight */
+  .top-link, .top-cta, .lang-btn{ -webkit-tap-highlight-color: transparent; }
 }
 
 /* tighter on small screens */
@@ -1518,8 +1505,6 @@
     letter-spacing: .12em;
   }
 }
-
-
 
 /* Hide top bar while modal open */
 body.modal-open .top-bar{ display:none !important; }
