@@ -152,6 +152,16 @@
     box-shadow: 0 14px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
     overflow:hidden;
   }
+  /* Right group wrapper (Lang + CTA) */
+.top-right{
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
   .top-bar::before{
     content:"";
     position:absolute; inset:0;
@@ -1337,22 +1347,21 @@
    Paste at the VERY END of the CSS
    ========================= */
 
-/* TOP BAR: true grid on mobile (brand | lang | cta) + nav full row */
+/* =========================
+   MOBILE TOP BAR (FIXED for .top-right wrapper)
+   Paste at the VERY END of the CSS
+   ========================= */
 @media (max-width: 900px){
   .top-bar{
-    /* layout + safety */
-    overflow: visible;                 /* Samsung clipping safety */
-    display: grid !important;          /* beat any flex overrides */
-    grid-template-columns: 1fr auto 1fr; /* brand | lang | cta */
-    grid-template-rows: auto auto;       /* row1 = brand/lang/cta, row2 = nav */
-    grid-auto-flow: row;
-
-    align-items: center;
-    gap: 10px;
-
-    /* styling */
+    overflow: visible;           /* override overflow:hidden on mobile */
     border-radius: 22px;
     padding: 12px;
+    gap: 10px;
+
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr; /* brand | lang | cta */
+    grid-template-rows: auto auto;       /* row1, row2(nav) */
+    align-items: center;
   }
 
   .brand{
@@ -1360,37 +1369,32 @@
     grid-row: 1;
     justify-self: start;
     min-width: 0;
-    position: relative;
-    z-index: 2;
   }
 
-  /* IMPORTANT: reset anything that could make it "float" */
+  /* KEY: unwrap the wrapper so lang + cta become grid items */
+  .top-right{
+    display: contents !important;
+  }
+
   .lang-switch{
     grid-column: 2;
     grid-row: 1;
     justify-self: center;
     margin: 0;
 
+    /* hard reset to stop "floating" */
     position: relative !important;
+    transform: none !important;
     left: auto !important;
     right: auto !important;
     top: auto !important;
     bottom: auto !important;
-    transform: none !important;
-
-    z-index: 2;
   }
 
   .top-cta{
     grid-column: 3;
     grid-row: 1;
     justify-self: end;
-
-    position: relative;
-    z-index: 2;
-
-    /* keep it from pushing layout */
-    max-width: 100%;
     white-space: nowrap;
   }
 
@@ -1399,7 +1403,7 @@
     grid-row: 2;
 
     margin: 0;
-    padding-top: 4px;
+    padding-top: 6px;
 
     display: flex;
     justify-content: center;
@@ -1409,21 +1413,17 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;
-
-    position: relative;
-    z-index: 1;
   }
   .top-nav::-webkit-scrollbar{ height: 0; }
 
   .top-link{
+    flex: 0 0 auto;
     padding: 9px 10px;
     font-size: 11px;
     letter-spacing: .14em;
-    flex: 0 0 auto;
   }
 }
 
-/* Extra small: tighten, prevent CTA from being huge */
 @media (max-width: 520px){
   .brand-title{ font-size: 12px; letter-spacing: .08em; }
   .brand-sub{ font-size: 9px; }
@@ -1442,6 +1442,7 @@
 
 /* Hide top bar while modal open */
 body.modal-open .top-bar{ display:none !important; }
+
 
 
 /* =========================
