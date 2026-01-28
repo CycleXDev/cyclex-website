@@ -1327,6 +1327,148 @@
     letter-spacing: .02em;
     font-weight: 900;
   }
+/* =========================
+   MOBILE FIX (TOP BAR + REWARDS)
+   Paste at the VERY END of the CSS
+   ========================= */
+
+/* TOP BAR: grid layout so LANG stays centered + CTA right + NAV full row */
+@media (max-width: 900px){
+  .top-bar{
+    overflow: visible; /* Samsung clipping safety */
+    border-radius: 22px;
+    padding: 12px;
+    gap: 10px;
+
+    display: grid;
+    grid-template-columns: 1fr auto 1fr; /* brand | lang | cta */
+    grid-template-rows: auto auto;       /* row1 = brand/lang/cta, row2 = nav */
+    align-items: center;
+  }
+
+  .brand{
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    min-width: 0;
+  }
+
+  .lang-switch{
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center; /* ✅ centered */
+    margin: 0;            /* prevent left-stick */
+  }
+
+  .top-cta{
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;    /* ✅ right */
+  }
+
+  .top-nav{
+    grid-column: 1 / -1;
+    grid-row: 2;
+
+    margin: 0;
+    padding-top: 4px;
+    justify-content: center;
+    gap: 10px;
+
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+  .top-nav::-webkit-scrollbar{ height: 0; }
+
+  .top-link{
+    padding: 9px 10px;
+    font-size: 11px;
+    letter-spacing: .14em;
+    flex: 0 0 auto;
+  }
+}
+
+/* Extra small: make CTA not too wide, keep everything tidy */
+@media (max-width: 520px){
+  .brand-title{ font-size: 12px; letter-spacing: .08em; }
+  .brand-sub{ font-size: 9px; }
+
+  .top-cta{
+    padding: 10px 12px;
+    font-size: 11px;
+    letter-spacing: .14em;
+  }
+
+  .lang-btn{
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}
+
+/* Hide top bar while modal open (if you use this behavior elsewhere) */
+body.modal-open .top-bar{ display:none !important; }
+
+/* =========================
+   REWARDS MOBILE LAYOUT
+   ========================= */
+
+/* Stack the grid nicely on mobile */
+@media (max-width: 900px){
+  .rewards-grid{
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+    align-items: stretch;
+  }
+
+  .rewards-side{
+    width: 100%;
+    gap: 12px;
+  }
+
+  .reward-card{
+    padding: 18px 16px;
+    border-radius: 20px;
+  }
+
+  .reward-card h3{
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  .reward-card p,
+  .reward-card li{
+    font-size: 14px;
+    line-height: 1.65;
+  }
+}
+
+/* Keep bottom buttons closer + premium; 2 buttons stay in one row until very small */
+@media (max-width: 900px){
+  .reward-actions-inline{
+    gap: 10px;            /* ✅ closer */
+    margin-top: 14px;     /* ✅ closer */
+    flex-wrap: nowrap;
+  }
+
+  .reward-actions-inline .btn{
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 12px;
+    letter-spacing: .10em;
+  }
+}
+
+/* Very small screens: stack buttons but still close */
+@media (max-width: 420px){
+  .reward-actions-inline{
+    flex-direction: column;
+    gap: 8px;
+  }
+  .reward-actions-inline .btn{
+    width: 100%;
+  }
+}
 
 
 </style>
