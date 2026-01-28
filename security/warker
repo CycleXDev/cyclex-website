@@ -1,3 +1,35 @@
+/**
+ * CycleX — Wallet Security DNA API (Cloudflare Worker)
+ * Route:  GET /api/getApprovals?net=bsc|eth|polygon&address=0x...
+ *
+ * v2-strict (improved) + FIX:
+ * ✅ If verification is UNKNOWN (null) => do NOT penalize score.
+ * ✅ "unverified" penalties apply ONLY when verified === false (known-unverified).
+ * ✅ Risk from unverified_spender is High only when verified === false.
+ *
+ * v2-strict features kept:
+ * - Stricter scoring model (less “easy 100”)
+ * - Detects "very large" allowances (infinite-like patterns e.g. 1e27/1e30)
+ * - Optional Moralis pagination (more approvals), with ETH-specific pages
+ * - Verification enrichment (verified + ContractName) via Etherscan API V2 (chainid)
+ * - Returns extra diagnostics: stats + scoreModel + allowanceKind + spenderName
+ *
+ * ENV Vars (Cloudflare):
+ * - MORALIS_API_KEY                  (required)
+ * - ETHERSCAN_KEY                    (optional but recommended; enables verify/name)
+ * - BSCSCAN_KEY                      (optional; if missing, fallback to ETHERSCAN_KEY)
+ * - POLYGONSCAN_KEY                  (optional; if missing, fallback to ETHERSCAN_KEY)
+ * - VERIFY_KV (KV binding)           (optional; caches verification results)
+ * - RATE_KV (KV binding)             (required if rate limit enabled)
+ * - RATE_LIMIT_ENABLED               ("1" default)
+ * - RATE_LIMIT_MAX_PER_HOUR          ("200" default)
+ * - RATE_LIMIT_BYPASS_TOKEN          (optional)
+ * - HIGH_RISK_SPENDERS               (CSV or JSON array of spender addresses)
+ * - VERIFY_CONCURRENCY               ("3" default, max 6)
+ * - MORALIS_MAX_PAGES                ("2" default for non-ETH)
+ * - MORALIS_MAX_PAGES_ETH            ("4" default for ETH; set 3-6 if you want more)
+ */
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -25,8 +57,8 @@ export default {
     // -------------------------
     // Rate Limit (per IP / per hour)
     // -------------------------
-    const rateEnabled = (env.RATE_LIMIT_ENABLED || "1") !== "0"; // default ON
-    const maxPerHour = Number(env.RATE_LIMIT_MAX_PER_HOUR || "200"); // default 200/hour
+    const rateEnabled = (env.RATE_LIMIT_ENABLED || "1") !== "0";
+    const maxPerHour = Number(env.RATE_LIMIT_MAX_PER_HOUR || "200");
     const bypassToken = (env.RATE_LIMIT_BYPASS_TOKEN || "").trim();
     const bypassHeader = (request.headers.get("x-cx-bypass") || "").trim();
 
@@ -94,64 +126,60 @@ export default {
     const shouldVerify = !!explorerKey;
     const verifyConc = Math.max(1, Math.min(6, Number(env.VERIFY_CONCURRENCY || "3")));
 
+    // Moralis pagination (more data)
+    const maxPages = (net === "eth")
+      ? clampInt(env.MORALIS_MAX_PAGES_ETH || env.MORALIS_MAX_PAGES || "4", 1, 8)
+      : clampInt(env.MORALIS_MAX_PAGES || "2", 1, 8);
+
     // -------------------------
     // Moralis: get approvals
     // -------------------------
     try {
-      const moralisUrl =
-        `https://deep-index.moralis.io/api/v2.2/wallets/${address}/approvals?chain=${chain}`;
-
-      const r = await fetch(moralisUrl, {
-        headers: {
-          accept: "application/json",
-          "X-API-Key": MORALIS_API_KEY,
-        },
-      });
-
-      if (!r.ok) {
-        const txt = await r.text().catch(() => "");
-        return json(
-          { error: "Moralis request failed", status: r.status, body: txt.slice(0, 500) },
-          502,
-          allowOrigin
-        );
-      }
-
-      const raw = await r.json();
-
-      // Moralis formats may vary — normalize to array:
-      const items = extractArray(raw);
+      const items = await fetchMoralisApprovals(address, chain, MORALIS_API_KEY, maxPages);
 
       // Normalize
       const rows = items.map((it) => normalizeApprovalRow(it));
 
-      // Verified enrichment (spender)
+      // Verified enrichment (spender) + name
       if (shouldVerify && rows.length) {
         await mapWithConcurrency(rows, verifyConc, async (row) => {
-          row.verified = await getContractVerified(net, row.spender, explorerKey, CACHE_KV);
+          const info = await getContractVerifyAndName(net, row.spender, explorerKey, CACHE_KV);
+          row.verified = info.verified;                // true/false/null
+          row.spenderName = info.contractName || "";   // optional
           return row;
         });
       } else {
-        rows.forEach((row) => (row.verified = null));
+        rows.forEach((row) => {
+          row.verified = null;
+          row.spenderName = "";
+        });
       }
 
-      // Flags + risk
+      // Flags + risk (strict, but no penalty for unknown verification)
       for (const row of rows) {
         const flags = [];
 
-        if (isInfiniteAllowance(row.allowance)) flags.push("infinite");
+        const kind = allowanceKind(row.allowance);
+        row.allowanceKind = kind; // "infinite" | "very_large" | "finite"
+        if (kind === "infinite") flags.push("infinite");
+        if (kind === "very_large") flags.push("very_large_allowance");
+
+        // ✅ Only flag as unverified_spender when we KNOW it's unverified
         if (row.verified === false) flags.push("unverified_spender");
-        if (row.verified === true) flags.push("verified_spender");
+        else if (row.verified === true) flags.push("verified_spender");
+        else flags.push("verification_unknown");
+
 
         if (row.spender && highRiskSpend.has(row.spender.toLowerCase())) {
           flags.push("high_risk_spender");
         }
 
-        row.flags = flags;                 // array
-        row.risk = riskFromFlags(flags);   // "Low/Medium/High"
+        row.flags = flags;
+        row.risk = riskFromFlags(flags);
       }
 
-      const { score, riskLevel, tips } = computeWalletScoreAndTips(rows);
+      // Strict score model (✅ no penalty for unknown verification)
+      const { score, riskLevel, tips, stats, model } = computeWalletScoreAndTipsStrict(rows);
 
       return json(
         {
@@ -160,6 +188,8 @@ export default {
           score,
           riskLevel,
           tips,
+          stats,
+          scoreModel: model,
           approvals: rows,
         },
         200,
@@ -195,13 +225,10 @@ function json(obj, status, allowOrigin) {
   });
 }
 
-function extractArray(raw) {
-  if (Array.isArray(raw)) return raw;
-  if (Array.isArray(raw?.result)) return raw.result;
-  if (Array.isArray(raw?.approvals)) return raw.approvals;
-  if (Array.isArray(raw?.data)) return raw.data;
-  if (Array.isArray(raw?.items)) return raw.items;
-  return [];
+function clampInt(v, lo, hi) {
+  const n = parseInt(String(v || ""), 10);
+  if (!Number.isFinite(n)) return lo;
+  return Math.max(lo, Math.min(hi, n));
 }
 
 // --- Parse HIGH_RISK_SPENDERS from ENV (CSV or JSON) ---
@@ -222,9 +249,49 @@ function parseHighRiskList(v) {
   return set;
 }
 
+// -------------------------
+// Moralis pagination (MORE DATA)
+// -------------------------
+async function fetchMoralisApprovals(address, chain, apiKey, maxPages) {
+  const all = [];
+  let cursor = "";
+
+  for (let page = 0; page < maxPages; page++) {
+    const u = new URL(`https://deep-index.moralis.io/api/v2.2/wallets/${address}/approvals`);
+    u.searchParams.set("chain", chain);
+    if (cursor) u.searchParams.set("cursor", cursor);
+
+    const r = await fetch(u.toString(), {
+      headers: { accept: "application/json", "X-API-Key": apiKey },
+    });
+
+    if (!r.ok) {
+      const txt = await r.text().catch(() => "");
+      throw new Error(`Moralis request failed (${r.status}): ${txt.slice(0, 200)}`);
+    }
+
+    const raw = await r.json();
+    const items = extractArray(raw);
+    if (items.length) all.push(...items);
+
+    cursor = String(raw?.cursor || raw?.next_cursor || "").trim();
+    if (!cursor || !items.length) break;
+  }
+
+  return all;
+}
+
+function extractArray(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.result)) return raw.result;
+  if (Array.isArray(raw?.approvals)) return raw.approvals;
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.items)) return raw.items;
+  return [];
+}
+
 // ---------- Normalization ----------
 function normalizeApprovalRow(it) {
-  // Token address can be flat or nested
   const token = pickAddr(
     it?.token,
     it?.token_address,
@@ -244,7 +311,6 @@ function normalizeApprovalRow(it) {
     it?.spender?.address
   );
 
-  // Symbol/name can be flat or nested
   const symbol =
     it?.symbol ||
     it?.token_symbol ||
@@ -256,7 +322,6 @@ function normalizeApprovalRow(it) {
     it?.token?.name ||
     "—";
 
-  // Allowance/value can be in multiple keys
   const allowanceRaw =
     it?.allowance ??
     it?.value ??
@@ -269,7 +334,6 @@ function normalizeApprovalRow(it) {
 
   const allowance = normalizeAllowance(allowanceRaw);
 
-  // timestamp
   const lastUpdated =
     it?.lastUpdated ||
     it?.updatedAt ||
@@ -283,8 +347,10 @@ function normalizeApprovalRow(it) {
     token: token || "",
     spender: spender || "",
     symbol: symbol || "—",
-    allowance,          // string; can be "infinite" / big number
-    verified: null,     // true/false/null
+    allowance,
+    allowanceKind: "finite",
+    verified: null,       // true/false/null
+    spenderName: "",
     lastUpdated,
     flags: [],
     risk: "—",
@@ -328,71 +394,158 @@ function isInfiniteAllowance(allowance) {
   return s === "infinite" || s === "∞" || s.includes("inf");
 }
 
-// ---------- Scoring ----------
+function isVeryLargeAllowance(allowance) {
+  const s = String(allowance || "").trim();
+  if (!/^\d+$/.test(s)) return false;
+  return s.length >= 25; // heuristic: >= 1e24
+}
+
+function allowanceKind(allowance) {
+  if (isInfiniteAllowance(allowance)) return "infinite";
+  if (isVeryLargeAllowance(allowance)) return "very_large";
+  return "finite";
+}
+
+// ---------- Risk ----------
 function riskFromFlags(flags) {
   const f = new Set((flags || []).map(x => String(x).toLowerCase()));
+
+  // ✅ High only for known-unverified or high-risk list
   if (f.has("high_risk_spender")) return "High";
-  if (f.has("unverified_spender")) return "Medium";
+  if (f.has("unverified_spender")) return "High";
+
+  if (f.has("verification_unknown")) return "Medium";
+
   if (f.has("infinite")) return "Medium";
+  if (f.has("very_large_allowance")) return "Medium";
+
   return "Low";
 }
 
-function computeWalletScoreAndTips(rows) {
-  let score = 100;
-
-  const infinite = rows.filter(r => isInfiniteAllowance(r.allowance)).length;
-  const unverified = rows.filter(r => r.verified === false).length;
-  const highRisk = rows.filter(r => (r.flags || []).includes("high_risk_spender")).length;
+// ---------- Strict Scoring (no penalty for unknown verification) ----------
+function computeWalletScoreAndTipsStrict(rows) {
   const total = rows.length;
 
-  score -= infinite * 10;
-  score -= unverified * 12;
-  score -= highRisk * 20;
-  if (total >= 20) score -= 10;
+  const infinite = rows.filter(r => r.allowanceKind === "infinite").length;
+  const veryLarge = rows.filter(r => r.allowanceKind === "very_large").length;
+
+  // ✅ Only count KNOWN unverified (verified === false)
+  const unverified = rows.filter(r => r.verified === false).length;
+  const unknownVer = rows.filter(r => r.verified === null).length;
+
+
+  const highRisk = rows.filter(r => (r.flags || []).includes("high_risk_spender")).length;
+
+  const highRows = rows.filter(r => String(r.risk).toLowerCase().includes("high")).length;
+  const medRows = rows.filter(r => String(r.risk).toLowerCase().includes("med")).length;
+  const lowRows = rows.filter(r => String(r.risk).toLowerCase().includes("low")).length;
+
+  const model = {
+    version: "dna-v2-strict",
+    penalties: {
+      highRiskSpender_each: 30,
+      unverifiedSpender_each: 18,
+      infinite_each: 18,
+      veryLarge_each: 12,
+      approvals_10plus: 5,
+      approvals_25plus: 12,
+      approvals_50plus: 20,
+      combo_highRisk_and_infinite: 6,
+      combo_highRisk_and_unverified: 6,
+    },
+    thresholds: {
+      low: ">=85",
+      medium: "60..84",
+      high: "<60",
+    }
+  };
+
+  let score = 100;
+
+  score -= highRisk * model.penalties.highRiskSpender_each;
+  score -= unverified * model.penalties.unverifiedSpender_each;
+  score -= infinite * model.penalties.infinite_each;
+  score -= veryLarge * model.penalties.veryLarge_each;
+
+  if (total >= 10) score -= model.penalties.approvals_10plus;
+  if (total >= 25) score -= model.penalties.approvals_25plus;
+  if (total >= 50) score -= model.penalties.approvals_50plus;
+
+  if (highRisk > 0 && infinite > 0) score -= model.penalties.combo_highRisk_and_infinite;
+  if (highRisk > 0 && unverified > 0) score -= model.penalties.combo_highRisk_and_unverified;
 
   score = Math.max(0, Math.min(100, score));
-  const riskLevel = score >= 80 ? "Low" : score >= 50 ? "Medium" : "High";
+
+  const riskLevel = score >= 85 ? "Low" : score >= 60 ? "Medium" : "High";
 
   const tips = [];
-  if (highRisk) tips.push(`Revoke approvals to high-risk spenders first (${highRisk}).`);
-  if (infinite) tips.push(`Consider revoking “infinite” approvals you don’t fully trust (${infinite}).`);
-  if (unverified) tips.push(`Review unverified spender contracts before keeping approvals (${unverified}).`);
-  if (total >= 20) tips.push("You have many active approvals. Reducing them lowers attack surface.");
+  if (highRisk) tips.push(`Revoke approvals to HIGH-RISK spenders first (${highRisk}).`);
+
+  // ✅ Only show this tip when we KNOW unverified exists
+  if (unverified) tips.push(`Unverified spender contracts detected (${unverified}). Consider revoking unless essential.`);
+  if (unknownVer) tips.push(`Verification unavailable for ${unknownVer} spender(s). Treat as unknown risk.`);
+
+
+  if (infinite) tips.push(`Infinite approvals found (${infinite}). Prefer least-privilege allowances.`);
+  if (veryLarge) tips.push(`Very large approvals found (${veryLarge}). Many dApps use “infinite-like” values — revoke if not needed.`);
+  if (total >= 25) tips.push("You have many active approvals. Reducing them lowers your attack surface.");
   if (!tips.length) tips.push("No major red flags detected. Keep monitoring regularly.");
 
-  return { score, riskLevel, tips };
+  const stats = {
+    total,
+    infinite,
+    veryLarge,
+    unverified,
+    highRisk,
+    riskRows: { high: highRows, medium: medRows, low: lowRows },
+  };
+
+  return { score, riskLevel, tips, stats, model };
 }
 
-// ---------- Explorer verification ----------
+// ---------- Explorer verification (Etherscan API V2) ----------
 function getExplorerKey(net, env) {
-  if (net === "bsc") return (env.BSCSCAN_KEY || "").trim();
   if (net === "eth") return (env.ETHERSCAN_KEY || "").trim();
-  if (net === "polygon") return (env.POLYGONSCAN_KEY || "").trim();
+
+  if (net === "bsc") {
+    return (env.BSCSCAN_KEY || env.ETHERSCAN_KEY || "").trim();
+  }
+  if (net === "polygon") {
+    return (env.POLYGONSCAN_KEY || env.ETHERSCAN_KEY || "").trim();
+  }
   return "";
 }
 
-function explorerApiBase(net) {
-  if (net === "bsc") return "https://api.bscscan.com/api";
-  if (net === "eth") return "https://api.etherscan.io/api";
-  if (net === "polygon") return "https://api.polygonscan.com/api";
-  return "";
+function chainIdForNet(net) {
+  if (net === "eth") return "1";
+  if (net === "bsc") return "56";
+  if (net === "polygon") return "137";
+  return "1";
 }
 
-async function getContractVerified(net, contractAddr, apiKey, KV) {
-  if (!contractAddr) return null;
+/**
+ * Returns { verified: true|false|null, contractName: string }
+ * Caches in KV for 7d when KV available.
+ */
+async function getContractVerifyAndName(net, contractAddr, apiKey, KV) {
+  if (!contractAddr) return { verified: null, contractName: "" };
   const addr = contractAddr.toLowerCase();
-  const ck = `ver:${net}:${addr}`;
+  const ck = `ver2:${net}:${addr}`;
 
   if (KV) {
     const cached = await KV.get(ck);
-    if (cached === "1") return true;
-    if (cached === "0") return false;
+    if (cached) {
+      const [v, name] = cached.split("|");
+      if (v === "1") return { verified: true, contractName: name || "" };
+      if (v === "0") return { verified: false, contractName: name || "" };
+      if (v === "n") return { verified: null, contractName: name || "" };
+    }
   }
 
-  const base = explorerApiBase(net);
-  if (!base || !apiKey) return null;
+  if (!apiKey) return { verified: null, contractName: "" };
 
-  const u = new URL(base);
+  const u = new URL("https://api.etherscan.io/v2/api");
+  u.searchParams.set("chainid", chainIdForNet(net));
   u.searchParams.set("module", "contract");
   u.searchParams.set("action", "getsourcecode");
   u.searchParams.set("address", contractAddr);
@@ -400,22 +553,29 @@ async function getContractVerified(net, contractAddr, apiKey, KV) {
 
   try {
     const r = await fetch(u.toString(), { headers: { accept: "application/json" } });
-    if (!r.ok) return null;
+    if (!r.ok) return { verified: null, contractName: "" };
 
     const j = await r.json().catch(() => null);
     const row = Array.isArray(j?.result) ? j.result[0] : null;
-    if (!row) return null;
+    if (!row) return { verified: null, contractName: "" };
 
     const abi = String(row?.ABI || "");
+    const name = String(row?.ContractName || "").trim();
+
     const isUnverified = abi.includes("Contract source code not verified") || abi === "[]";
     const verified = !isUnverified;
 
     if (KV) {
-      await KV.put(ck, verified ? "1" : "0", { expirationTtl: 7 * 24 * 3600 });
+      const tag = verified ? "1" : "0";
+      await KV.put(ck, `${tag}|${name}`, { expirationTtl: 7 * 24 * 3600 });
     }
-    return verified;
+
+    return { verified, contractName: name };
   } catch {
-    return null;
+    if (KV) {
+      await KV.put(ck, `n|`, { expirationTtl: 6 * 3600 });
+    }
+    return { verified: null, contractName: "" };
   }
 }
 
