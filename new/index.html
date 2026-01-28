@@ -1332,18 +1332,27 @@
    Paste at the VERY END of the CSS
    ========================= */
 
-/* TOP BAR: grid layout so LANG stays centered + CTA right + NAV full row */
+/* =========================
+   MOBILE TOP BAR (REPLACE THIS WHOLE BLOCK)
+   Paste at the VERY END of the CSS
+   ========================= */
+
+/* TOP BAR: true grid on mobile (brand | lang | cta) + nav full row */
 @media (max-width: 900px){
   .top-bar{
-    overflow: visible; /* Samsung clipping safety */
-    border-radius: 22px;
-    padding: 12px;
-    gap: 10px;
-
-    display: grid;
+    /* layout + safety */
+    overflow: visible;                 /* Samsung clipping safety */
+    display: grid !important;          /* beat any flex overrides */
     grid-template-columns: 1fr auto 1fr; /* brand | lang | cta */
     grid-template-rows: auto auto;       /* row1 = brand/lang/cta, row2 = nav */
+    grid-auto-flow: row;
+
     align-items: center;
+    gap: 10px;
+
+    /* styling */
+    border-radius: 22px;
+    padding: 12px;
   }
 
   .brand{
@@ -1351,19 +1360,38 @@
     grid-row: 1;
     justify-self: start;
     min-width: 0;
+    position: relative;
+    z-index: 2;
   }
 
+  /* IMPORTANT: reset anything that could make it "float" */
   .lang-switch{
     grid-column: 2;
     grid-row: 1;
-    justify-self: center; /* ✅ centered */
-    margin: 0;            /* prevent left-stick */
+    justify-self: center;
+    margin: 0;
+
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+
+    z-index: 2;
   }
 
   .top-cta{
     grid-column: 3;
     grid-row: 1;
-    justify-self: end;    /* ✅ right */
+    justify-self: end;
+
+    position: relative;
+    z-index: 2;
+
+    /* keep it from pushing layout */
+    max-width: 100%;
+    white-space: nowrap;
   }
 
   .top-nav{
@@ -1372,12 +1400,18 @@
 
     margin: 0;
     padding-top: 4px;
+
+    display: flex;
     justify-content: center;
+    align-items: center;
     gap: 10px;
 
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;
+
+    position: relative;
+    z-index: 1;
   }
   .top-nav::-webkit-scrollbar{ height: 0; }
 
@@ -1389,7 +1423,7 @@
   }
 }
 
-/* Extra small: make CTA not too wide, keep everything tidy */
+/* Extra small: tighten, prevent CTA from being huge */
 @media (max-width: 520px){
   .brand-title{ font-size: 12px; letter-spacing: .08em; }
   .brand-sub{ font-size: 9px; }
@@ -1406,8 +1440,9 @@
   }
 }
 
-/* Hide top bar while modal open (if you use this behavior elsewhere) */
+/* Hide top bar while modal open */
 body.modal-open .top-bar{ display:none !important; }
+
 
 /* =========================
    REWARDS MOBILE LAYOUT
