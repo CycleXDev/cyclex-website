@@ -3681,11 +3681,67 @@ if (!ok) {
   return x.toLocaleString();
 };
 
+  // ---- tiny health dot (no CSS dependencies) ----
+function ensureHealthDot(){
+  let dot = document.getElementById("cx-activity-dot");
+  if (dot) return dot;
+
+  // try to attach near the section title first
+  const title =
+    document.querySelector('[data-i18n="security_live_activity_title"]') ||
+    document.querySelector("section .section-title") ||
+    document.querySelector("h2, h1");
+
+  dot = document.createElement("span");
+  dot.id = "cx-activity-dot";
+  dot.title = "Activity API status";
+  dot.setAttribute("aria-label", "Activity API status");
+  dot.style.display = "inline-block";
+  dot.style.width = "10px";
+  dot.style.height = "10px";
+  dot.style.borderRadius = "999px";
+  dot.style.marginInlineStart = "10px";
+  dot.style.verticalAlign = "middle";
+  dot.style.boxShadow = "0 0 10px rgba(0,0,0,.35)";
+  dot.style.background = "rgba(255,255,255,.35)"; // default unknown
+
+  if (title && title.parentNode) {
+    title.parentNode.insertBefore(dot, title.nextSibling);
+  } else {
+    // fallback: attach to body if no title found
+    dot.style.position = "fixed";
+    dot.style.right = "18px";
+    dot.style.bottom = "18px";
+    dot.style.zIndex = "9999";
+    document.body.appendChild(dot);
+  }
+
+  return dot;
+}
+
+function setHealthDot(ok){
+  const dot = ensureHealthDot();
+  if (!dot) return;
+
+  if (ok) {
+    dot.style.background = "#39ff9a";           // green
+    dot.style.boxShadow = "0 0 14px rgba(57,255,154,.45)";
+    dot.title = "Activity API: OK";
+  } else {
+    dot.style.background = "rgba(255,80,80,.95)"; // red
+    dot.style.boxShadow = "0 0 14px rgba(255,80,80,.35)";
+    dot.title = "Activity API: OFFLINE";
+  }
+}
+
+
   async function refreshActivity(){
     try{
       const r = await fetch("/api/activity", { cache: "no-store" });
-      if (!r.ok) return;
+      if (!r.ok) { setHealthDot(false); return; }
       const j = await r.json();
+      
+      setHealthDot(true);
 
       const elW = document.getElementById("wallets-scanned");
       const elR = document.getElementById("risky-approvals");
@@ -3695,11 +3751,14 @@ if (!ok) {
       if (elR) elR.textContent = fmt(j.riskyApprovals);
       if (elH) elH.textContent = fmt(j.highRiskContracts);
 
-    } catch(e){}
+    } catch(e){
+  setHealthDot(false);
+  }
+
   }
 
   refreshActivity();
-  setInterval(refreshActivity, 12000);
+  setInterval(refreshActivity, 60000);
 })();
 </script>
 
