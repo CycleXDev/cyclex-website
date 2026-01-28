@@ -4838,6 +4838,12 @@ if (useApis) {
 
     setStatus(st, score >= 70 ? "ok" : score >= 50 ? "warn" : "bad", `Done. Score: <b>${score}/100</b> (${overallText}).`);
     render(rep);
+    // ✅ Activity counter: count "High-risk contract" when score is 0..80
+try {
+  if (typeof cxActivitySend === "function" && Number(score) <= 80) {
+    cxActivitySend("high_risk_contract", 1);
+  }
+} catch {}
 
     function render(rep){
       const sym = rep.meta?.symbol || "Token";
@@ -5981,8 +5987,11 @@ async function dnaScan() {
 
     // ✅ Count a real completed wallet scan
 cxActivitySend("wallet_scan", 1);
-// ✅ Count high-risk approvals detected (based on results)
-const riskyCount = rows.filter(r => String(r.risk).toLowerCase().includes("high")).length;
+const riskyCount = rows.filter(r => {
+  const rr = String(r.risk || "").toLowerCase();
+  return rr.includes("high") || rr.includes("med");
+}).length;
+
 if (riskyCount > 0) cxActivitySend("risky_approvals", riskyCount);
 
 
