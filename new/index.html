@@ -3673,6 +3673,35 @@ if (!ok) {
 
   }
 </script>
+<script>
+(function(){
+  const fmt = (n) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "0";
+    return x.toLocaleString();
+  };
+
+  async function refreshActivity(){
+    try{
+      const r = await fetch("/api/activity", { cache: "no-store" });
+      if (!r.ok) return;
+      const j = await r.json();
+
+      const elW = document.getElementById("wallets-scanned");
+      const elR = document.getElementById("risky-approvals");
+      const elH = document.getElementById("high-risk-contracts");
+
+      if (elW) elW.textContent = fmt(j.wallets);
+      if (elR) elR.textContent = fmt(j.riskyApprovals);
+      if (elH) elH.textContent = fmt(j.highRiskContracts);
+    } catch(e){}
+  }
+
+  // run now + refresh every 12s
+  refreshActivity();
+  setInterval(refreshActivity, 12000);
+})();
+</script>
 
 
 </body>
