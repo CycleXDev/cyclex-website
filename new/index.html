@@ -1071,7 +1071,6 @@
   min-width: 0;
 }
   
-}
   /* =========================
      FOOTER
      ========================= */
@@ -1337,79 +1336,60 @@
     letter-spacing: .02em;
     font-weight: 900;
   }
-/* =========================
-   MOBILE FIX (TOP BAR + REWARDS)
-   Paste at the VERY END of the CSS
-   ========================= */
 
 /* =========================
-   MOBILE TOP BAR (REPLACE THIS WHOLE BLOCK)
-   Paste at the VERY END of the CSS
-   ========================= */
-
-/* =========================
-   MOBILE TOP BAR (FIXED for .top-right wrapper)
-   Paste at the VERY END of the CSS
+   MOBILE TOP BAR — FINAL (with .top-right stacked)
    ========================= */
 @media (max-width: 900px){
   .top-bar{
-    overflow: visible;           /* override overflow:hidden on mobile */
+    overflow: visible;              /* override overflow:hidden on mobile */
     border-radius: 22px;
     padding: 12px;
     gap: 10px;
 
     display: grid !important;
-    grid-template-columns: 1fr auto 1fr; /* brand | lang | cta */
-    grid-template-rows: auto auto;       /* row1, row2(nav) */
+    grid-template-columns: 1fr auto;          /* left: brand | right: lang+cta */
+    grid-template-rows: auto auto;            /* row1 header | row2 nav */
+    grid-template-areas:
+      "brand right"
+      "nav   nav";
     align-items: center;
   }
 
   .brand{
-    grid-column: 1;
-    grid-row: 1;
-    justify-self: start;
+    grid-area: brand;
     min-width: 0;
   }
 
-  /* KEY: unwrap the wrapper so lang + cta become grid items */
+  /* Right side becomes a vertical stack: languages ABOVE button */
   .top-right{
-    display: contents !important;
+    grid-area: right;
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
   }
 
-  .lang-switch{
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: center;
-    margin: 0;
-
-    /* hard reset to stop "floating" */
-    position: relative !important;
-    transform: none !important;
-    left: auto !important;
-    right: auto !important;
-    top: auto !important;
-    bottom: auto !important;
-  }
+  .lang-switch{ margin: 0; }
 
   .top-cta{
-    grid-column: 3;
-    grid-row: 1;
-    justify-self: end;
     white-space: nowrap;
+    padding: 10px 12px;
+    font-size: 11px;
+    letter-spacing: .14em;
   }
 
   .top-nav{
-    grid-column: 1 / -1;
-    grid-row: 2;
-
+    grid-area: nav;
     margin: 0;
     padding-top: 6px;
 
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
-
+    gap: 8px;                      
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;
@@ -1418,27 +1398,23 @@
 
   .top-link{
     flex: 0 0 auto;
-    padding: 9px 10px;
+    padding: 8px 10px;              
     font-size: 11px;
-    letter-spacing: .14em;
+    letter-spacing: .13em;
   }
 }
 
 @media (max-width: 520px){
+  .brand-logo{ width: 38px; height: 38px; border-radius: 13px; }
   .brand-title{ font-size: 12px; letter-spacing: .08em; }
   .brand-sub{ font-size: 9px; }
-
-  .top-cta{
-    padding: 10px 12px;
-    font-size: 11px;
-    letter-spacing: .14em;
-  }
 
   .lang-btn{
     padding: 6px 8px;
     font-size: 11px;
   }
 }
+
 
 /* Hide top bar while modal open */
 body.modal-open .top-bar{ display:none !important; }
