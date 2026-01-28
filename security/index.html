@@ -5745,6 +5745,28 @@ function dnaBindRevokeButtons(net) {
 const DNA_API_BASE =
   (window.CYCLEX_API_BASE && String(window.CYCLEX_API_BASE).trim()) || location.origin;
 
+    // -------------------------
+// Live Activity ping (Home counters) ✅
+// -------------------------
+function cxActivitySend(t, n = 1) {
+  try {
+    const payload = JSON.stringify({ t, n });
+
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/activity", new Blob([payload], { type: "application/json" }));
+      return;
+    }
+
+    fetch("/api/activity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+
 async function dnaFetchApprovals(net, address) {
   const u = new URL("/api/getApprovals", DNA_API_BASE);
   u.searchParams.set("net", net);
@@ -5956,6 +5978,13 @@ async function dnaScan() {
 
     const rows = approvals.map(dnaNormalizeApiRow);
    dnaRenderTable(rows);
+
+    // ✅ Count a real completed wallet scan
+cxActivitySend("wallet_scan", 1);
+// ✅ Count high-risk approvals detected (based on results)
+const riskyCount = rows.filter(r => String(r.risk).toLowerCase().includes("high")).length;
+if (riskyCount > 0) cxActivitySend("risky_approvals", riskyCount);
+
 
 if (dnaFullAccess) {
   dnaBindRevokeButtons(net);
