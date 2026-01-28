@@ -137,7 +137,6 @@
      ========================= */
   .top-bar{
     position:sticky; top:14px; z-index:999;
-    isolation: isolate;
     display:flex;
     align-items:center;
     justify-content:space-between;
@@ -1387,10 +1386,7 @@
     body::before{ animation:none !important; }
   }
 
-  /* Extra safety: long strings never break layout */
   .hero, .section, .reward-card, .stat-card{ overflow-wrap:anywhere; word-break: break-word; }
-
-  /* Tiny polish: GPU + crisp glass */
   .btn, .social-card, .reward-card, .stat-card, .top-bar{
     backface-visibility:hidden;
     transform: translateZ(0);
@@ -1400,7 +1396,7 @@
   .top-bar{
     top: calc(env(safe-area-inset-top, 0px) + 10px); 
     overflow: visible;
-    height: auto; 
+
   }
 }
 @media (max-width: 900px){
@@ -1411,6 +1407,55 @@
     width: 100%;
   }
 }
+  /* =========================
+   PATCH: Samsung / Mobile Top-Bar Fix (mobile only)
+   ========================= */
+@media (max-width: 900px){
+  .top-bar{
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+
+    padding: 12px;
+    border-radius: 24px;
+    overflow: visible;         /* avoid Samsung clipping */
+  }
+
+  /* Row 1: brand + lang nicely spaced */
+  .brand{
+    width: 100%;
+    flex: 0 0 auto;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .lang-switch{
+    align-self: flex-start;
+    flex: 0 0 auto;
+  }
+
+  /* Row 2: CTA full width */
+  .top-cta{
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Row 3: nav full width, scroll if needed */
+  .top-nav{
+    width: 100%;
+    margin: 0;
+    justify-content: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .top-nav::-webkit-scrollbar{ height: 0; }
+  .top-link{ flex: 0 0 auto; }
+}
+
 
 </style>
  
