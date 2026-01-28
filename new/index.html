@@ -1338,7 +1338,7 @@
   }
 
 /* =========================
-   MOBILE TOP BAR — 3 ROWS (Brand+Lang / CTA / Nav grid)
+   MOBILE TOP BAR — LOGO LEFT + LANG RIGHT + 4 TILES (OPEN TOOLS as 4th)
    ========================= */
 @media (max-width: 900px){
   .top-bar{
@@ -1351,10 +1351,9 @@
 
     display: grid !important;
     grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     grid-template-areas:
       "brand lang"
-      "cta   cta"
       "nav   nav";
     align-items: center;
   }
@@ -1363,7 +1362,7 @@
   .brand-text{ min-width: 0; }
   .brand-title{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  /* right: languages (scroll if needed) */
+  /* right: languages */
   .top-right{
     grid-area: lang;
     display: flex !important;
@@ -1383,27 +1382,19 @@
   }
   .lang-switch::-webkit-scrollbar{ height: 0; }
 
-  /* CTA full width on its own row */
-  .top-cta{
-    grid-area: cta;
-    width: 100%;
-    justify-content: center;
-    padding: 12px 14px;
-    font-size: 12px;
-    letter-spacing: .14em;
-  }
-
-  /* NAV becomes 2x2 grid buttons */
+  /* NAV area becomes 2x2 tile grid */
   .top-nav{
     grid-area: nav;
     margin: 0;
-    padding-top: 6px;
+    padding-top: 10px;
 
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+    align-items: stretch;
   }
 
+  /* 3 nav links are tiles */
   .top-link{
     width: 100%;
     text-align: center;
@@ -1415,14 +1406,36 @@
     border: 1px solid rgba(255,255,255,.12);
     background: rgba(255,255,255,.03);
     border-radius: 999px;
+
+    transform: none !important;
   }
 
-  .top-link:hover{
-    transform: none; 
-  }
+  .top-link::after{ display:none !important; }
 
-  .top-link::after{
-    display:none; 
+  /* Place the 3 links:
+     1: SECURITY (top-left)
+     2: REWARDS  (top-right)
+     3: MODAL    (bottom-left)
+  */
+  .top-nav .top-link:nth-child(1){ grid-column: 1; grid-row: 1; }
+  .top-nav .top-link:nth-child(2){ grid-column: 2; grid-row: 1; }
+  .top-nav .top-link:nth-child(3){ grid-column: 1; grid-row: 2; }
+
+  /* OPEN TOOLS becomes the 4th tile (bottom-right) — keep unique design */
+  .top-cta{
+    grid-column: 2;
+    grid-row: 2;
+
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 44px;
+    padding: 12px 10px;
+
+    /* keep it crisp on mobile */
+    transform: none !important;
   }
 }
 
@@ -1434,19 +1447,23 @@
 
   .lang-btn{ padding: 6px 8px; font-size: 11px; }
 
-  .top-cta{
-    padding: 11px 12px;
-    font-size: 11px;
-    letter-spacing: .12em;
-  }
-
   .top-nav{ gap: 8px; }
+
   .top-link{
     padding: 11px 10px;
     font-size: 10.5px;
     letter-spacing: .11em;
   }
+
+  .top-cta{
+    width: 100%;
+    min-height: 44px;
+    padding: 11px 10px;
+    font-size: 11px;
+    letter-spacing: .12em;
+  }
 }
+
 
 /* Hide top bar while modal open */
 body.modal-open .top-bar{ display:none !important; }
