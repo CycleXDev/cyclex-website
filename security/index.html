@@ -35,6 +35,7 @@
     --accent-cyan:#00e5ff;
     --accent-green:#5dffb2;
     --accent-purple:#7c5cff;
+    --green:#3cffb0;
 
     --card-bg:rgba(255,255,255,.06);
     --border-subtle:rgba(255,255,255,.12);
@@ -1409,7 +1410,39 @@ a.tool-card[data-tool="approvals"]::after{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+     /* =========================
+   DNA – small, controlled tweaks
+   ========================= */
 
+/* Tips: same size, just bold */
+#panel-approvals #dna-tips li{
+  font-weight: 700;
+}
+
+/* Locked card: slightly clearer + bolder, tiny size bump */
+#panel-approvals #dna-approvals-locked .small{
+  font-weight: 650;
+  line-height: 1.55;
+  font-size: 14.5px; /* ממש טיפה */
+}
+
+/* spacing between lines in the locked card */
+#panel-approvals #dna-approvals-locked .small + .small{
+  margin-top: 8px;
+}
+
+/* Eligibility message line */
+#panel-approvals #dna-elig-msg{
+  margin-top: 10px;
+  font-weight: 800;
+  font-size: 14.5px;
+}
+
+/* Red / Green states */
+#panel-approvals #dna-elig-msg.elig-ok{ color: var(--green) !important; }
+#panel-approvals #dna-elig-msg.elig-bad{ color: #ff6a6a !important; }
+#panel-approvals #dna-elig-msg.elig-warn{ color: #ffd36a !important; }
+.hidden{ display:none !important; }
 </style>
    
 </head>
@@ -1767,41 +1800,66 @@ a.tool-card[data-tool="approvals"]::after{
       </div>
 
       <div style="margin-top:14px">
-        <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
-          <h3 style="margin:0" data-i18n="dna_allowances_title">Approvals</h3>
-          <button class="btn btn-ghost" id="dna-revoke-all" data-i18n="ap_revoke_all">
-            Revoke All (non-zero)
-          </button>
-        </div>
+  <div class="row" style="justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap">
+    <h3 style="margin:0" data-i18n="dna_allowances_title">Approvals</h3>
 
-        <div id="ap-table" class="table" style="margin-top:10px;">
-          <div class="trow head">
-            <div class="cell">Token</div>
-            <div class="cell hide-sm">Spender</div>
-            <div class="cell">Allowance</div>
-            <div class="cell hide-sm">Verified</div>
-            <div class="cell hide-sm">Last Updated</div>
-            <div class="cell">Risk</div>
-            <div class="cell">Action</div>
-          </div>
+    <!-- RIGHT ACTIONS (gated) -->
+    <div class="row" style="gap:10px; flex-wrap:wrap">
+      <!-- New: Full access button (default visible) -->
+      <button class="btn btn-secondary" id="dna-full-access" data-i18n="dna_full_access_btn">
+        Full Access (CYCX users)
+      </button>
 
-          <div class="trow">
-            <div class="cell muted">—</div>
-            <div class="cell muted hide-sm">—</div>
-            <div class="cell muted">—</div>
-            <div class="cell muted hide-sm">—</div>
-            <div class="cell muted hide-sm">—</div>
-            <div class="cell muted hide-sm">—</div>
-            <div class="cell muted">—</div>
-            <div class="cell muted">—</div>
-          </div>
-        </div>
+      <!-- Existing: Revoke all (default hidden; becomes visible only if eligible) -->
+      <button class="btn btn-ghost hidden" id="dna-revoke-all" data-i18n="ap_revoke_all">
+        Revoke All (non-zero)
+      </button>
+    </div>
+  </div>
 
-        <div class="small" style="margin-top:8px" data-i18n="dna_table_note">
-          Tip: revoke “infinite” approvals you don’t fully trust. Verified status and flags are informational only.
-        </div>
+  <!-- Locked notice (default visible) -->
+  <div id="dna-approvals-locked" class="card" style="margin-top:10px; padding:12px">
+    <div class="small" data-i18n="dna_locked_title">Advanced approvals are locked</div>
+    <div class="small muted" style="margin-top:6px" data-i18n="dna_locked_body">
+      Full access (spender details + revoke actions) is available for CYCX holders.
+    </div>
+    <div id="dna-elig-msg" class="small" style="margin-top:10px"></div>
+    <div class="small muted" style="margin-top:8px" data-i18n="dna_locked_hint">
+      Connect your wallet to check eligibility. This is a read-only balance check.
+    </div>
+  </div>
+
+  <!-- Approvals content (default hidden) -->
+  <div id="dna-approvals-content" class="hidden">
+    <div id="ap-table" class="table ap-table" style="margin-top:10px;">
+      <div class="trow head">
+        <div class="cell">Token</div>
+        <div class="cell hide-sm">Spender</div>
+        <div class="cell">Allowance</div>
+        <div class="cell hide-sm">Verified</div>
+        <div class="cell hide-sm">Last Updated</div>
+        <div class="cell">Risk</div>
+        <div class="cell">Action</div>
+      </div>
+
+      <div class="trow">
+        <div class="cell muted">—</div>
+        <div class="cell muted hide-sm">—</div>
+        <div class="cell muted">—</div>
+        <div class="cell muted hide-sm">—</div>
+        <div class="cell muted hide-sm">—</div>
+        <div class="cell muted hide-sm">—</div>
+        <div class="cell muted">—</div>
+        <div class="cell muted">—</div>
       </div>
     </div>
+
+    <div class="small" style="margin-top:8px" data-i18n="dna_table_note">
+      Tip: revoke “infinite” approvals you don’t fully trust. Verified status and flags are informational only.
+    </div>
+  </div>
+</div>
+
   </div>
 </section>
 
@@ -2168,7 +2226,9 @@ a.tool-card[data-tool="approvals"]::after{
   <script type="module">
     "use strict";
 
-    const E = window.ethers;
+    var E = window.E || window.ethers;
+    window.E = E;
+
 
     // =========================
     // AppKit (Reown)
@@ -2362,6 +2422,15 @@ dna_share: "Share score",
 dna_allowances_title: "Approvals",
 dna_table_note: "Tip: revoke “infinite” approvals you don’t fully trust. Verified status and flags are informational only.",
 
+dna_full_access_btn: "Full Access (CYCX users)",
+dna_locked_title: "Advanced approvals are locked",
+dna_locked_body: "Full access (spender details + revoke actions) is available for CYCX holders.",
+dna_locked_hint: "Connect your wallet to check eligibility. This is a read-only balance check.",
+dna_elig_checking: "Checking CYCX balance…",
+dna_elig_ok: "Eligible — unlocking approvals",
+dna_elig_no: "Not eligible for full access.",
+dna_elig_wrong_net: "Please switch to BSC (BNB Chain) to check CYCX eligibility.",
+dna_elig_error: "Could not check eligibility. Please try again.",
 
     // rpc panel
     p_rpc_kicker: "RPC Health Checker",
@@ -2614,6 +2683,15 @@ dna_share: "分享评分",
 
 dna_allowances_title: "授权",
 dna_table_note: "提示：不完全信任的“无限”授权建议撤销。Verified 与 Flags 仅供参考。",
+        dna_full_access_btn: "完整权限（CYCX 用户）",
+    dna_locked_title: "高级授权信息已锁定",
+    dna_locked_body: "完整权限（Spender 详情 + 撤销操作）仅对 CYCX 持有者开放。",
+    dna_locked_hint: "连接钱包以检查资格。该步骤仅进行只读余额查询。",
+    dna_elig_checking: "正在检查 CYCX 余额…",
+    dna_elig_ok: "符合资格 — 正在解锁授权信息",
+    dna_elig_no: "当前不符合完整权限条件。",
+    dna_elig_wrong_net: "请切换到 BSC（BNB Chain）以检查 CYCX 资格。",
+    dna_elig_error: "无法检查资格，请重试。",
 
 
     // rpc panel
@@ -2866,6 +2944,15 @@ dna_share: "مشاركة النتيجة",
 
 dna_allowances_title: "الصلاحيات",
 dna_table_note: "نصيحة: ألغِ الصلاحيات “غير المحدودة” التي لا تثق بها تماماً. حالة Verified و Flags معلوماتية فقط.",
+    dna_full_access_btn: "وصول كامل (مستخدمي CYCX)",
+    dna_locked_title: "الموافقات المتقدمة مقفلة",
+    dna_locked_body: "الوصول الكامل (تفاصيل المُصرّح له + إجراءات الإلغاء) متاح لحاملي CYCX فقط.",
+    dna_locked_hint: "اتصل بالمحفظة للتحقق من الأهلية. هذا فحص رصيد للقراءة فقط.",
+    dna_elig_checking: "جارٍ التحقق من رصيد CYCX…",
+    dna_elig_ok: "مؤهل — جارٍ فتح قسم الموافقات",
+    dna_elig_no: "غير مؤهل للوصول الكامل.",
+    dna_elig_wrong_net: "يرجى التبديل إلى BSC (BNB Chain) للتحقق من أهلية CYCX.",
+    dna_elig_error: "تعذر التحقق من الأهلية. يرجى المحاولة مرة أخرى.",
 
 
     // rpc panel
@@ -3124,7 +3211,15 @@ dna_share: "Поделиться оценкой",
 
 dna_allowances_title: "Разрешения",
 dna_table_note: "Совет: отзывайте “бесконечные” approvals, если не доверяете им полностью. Verified и Flags — только справочная информация.",
-
+dna_full_access_btn: "Полный доступ (пользователи CYCX)",
+    dna_locked_title: "Расширенные разрешения заблокированы",
+    dna_locked_body: "Полный доступ (детали spender + действия revoke) доступен держателям CYCX.",
+    dna_locked_hint: "Подключите кошелёк, чтобы проверить право доступа. Это только чтение баланса.",
+    dna_elig_checking: "Проверяем баланс CYCX…",
+    dna_elig_ok: "Доступ разрешён — открываем approvals",
+    dna_elig_no: "Нет права на полный доступ.",
+    dna_elig_wrong_net: "Переключитесь на BSC (BNB Chain), чтобы проверить доступ CYCX.",
+    dna_elig_error: "Не удалось проверить доступ. Попробуйте ещё раз.",
 
     // rpc panel
     p_rpc_kicker: "Проверка RPC",
@@ -3359,6 +3454,24 @@ function bindLangButtons(){
       const z = String(a).toLowerCase();
       return z === ZERO.toLowerCase() || z === DEAD.toLowerCase();
     }
+    function dnaFormatLastUpdated(ts) {
+  const s = String(ts ?? "").trim();
+  if (!s || s === "—") return `<span class="muted">—</span>`;
+
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    const nice = `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+    return `<span class="mono" title="${window.escapeHtml(s)}">${window.escapeHtml(nice)}</span>`;
+  }
+
+  return `<span class="mono">${window.escapeHtml(s)}</span>`;
+}
+
 
     async function copyText(text) {
       try {
@@ -3378,6 +3491,14 @@ function bindLangButtons(){
         }
       }
     }
+    function dnaEscAttr(s){
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 
     function setStatus(el, type, html) {
       if (!el) return;
@@ -3459,6 +3580,9 @@ function bindLangButtons(){
       address: "",
       chainId: 0
     };
+    window.wallet = wallet;
+window.__wallet = wallet; 
+
 
     function renderWalletLabels() {
       const notConn = t(currentLang, "wallet_not_connected") || "not connected";
@@ -3498,39 +3622,55 @@ function bindLangButtons(){
 
     async function cxConnectWallet({ silent = false } = {}) {
       const stQuick = $("#qs-status");
+if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
+  renderWalletLabels();
+  if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
+  try { await window.CxAppKitModal?.close?.(); } catch {}
+  return true;
+}
+
+if (silent) return false;
+
       try {
-        await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
+  if (!silent) {
+    await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
+  }
 
-        const providerRaw = await waitForWalletProvider(12000);
-        if (!providerRaw) {
-          if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
-          return false;
-        }
+  const providerRaw = await waitForWalletProvider(12000);
+  if (!providerRaw) {
+    if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
+    try { await window.CxAppKitModal?.close?.(); } catch {}
+    return false;
+  }
 
-        wallet.providerRaw = providerRaw;
-        attachProviderListeners(providerRaw);
+  wallet.providerRaw = providerRaw;
+  attachProviderListeners(providerRaw);
 
-        const bp = new E.BrowserProvider(providerRaw);
-        wallet.browserProvider = bp;
+  const bp = new E.BrowserProvider(providerRaw);
+  wallet.browserProvider = bp;
 
-        const signer = await bp.getSigner();
-        wallet.signer = signer;
+  const signer = await bp.getSigner();
+  wallet.signer = signer;
 
-        const addr = await signer.getAddress();
-        const net = await bp.getNetwork();
+  const addr = await signer.getAddress();
+  const net = await bp.getNetwork();
 
-        wallet.address = E.getAddress(addr);
-        wallet.chainId = Number(net.chainId || 0);
+  wallet.address = E.getAddress(addr);
+  wallet.chainId = Number(net.chainId || 0);
 
-        renderWalletLabels();
-        if (!silent) setStatus(stQuick, "ok", `Wallet connected: <span class="mono">${wallet.address}</span>`);
-        gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
+  renderWalletLabels();
+  if (!silent) setStatus(stQuick, "ok", `Wallet connected: <span class="mono">${wallet.address}</span>`);
+  gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
 
-        return true;
-      } catch (e) {
-        if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
-        return false;
-      }
+  return true;
+
+} catch (e) {
+  try { await window.CxAppKitModal?.close?.(); } catch {}
+  if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
+  return false;
+}
+
+
     }
 window.cxConnectWallet = cxConnectWallet;
 window.connectWallet = cxConnectWallet;
@@ -5332,9 +5472,7 @@ window.escapeHtml = window.escapeHtml || function (s) {
     .replace(/'/g, "&#39;");
 };
 
-
-
-  // =========================
+// =========================
 // Wallet Security DNA (replaces Approval Guardian)
 // =========================
 
@@ -5458,17 +5596,121 @@ function dnaNormalizeApiRow(row) {
   if (Array.isArray(flags)) flags = flags.length ? flags.join(", ") : "—";
 
   const risk = row?.risk || row?.riskLevel || "—";
+  const decRaw = row?.decimals ?? row?.token_decimals ?? row?.tokenDecimals ?? row?.tokenDecimals ?? null;
+  const decimals = Number.isFinite(Number(decRaw)) ? Number(decRaw) : null;
+  return { token, spender, symbol, allowanceStr, verified, lastUpdated, flags, risk, decimals };
 
-  return { token, spender, symbol, allowanceStr, verified, lastUpdated, flags, risk };
+}
+function dnaFormatAllowance(rawStr, decimals = null) {
+  let s0 = String(rawStr ?? "").trim();
+  if (!s0 || s0 === "—") return "—";
+
+  // Normalize ".1" -> "0.1"
+  if (s0.startsWith(".")) s0 = "0" + s0;
+  if (s0.startsWith("-.")) s0 = "-0" + s0.slice(1);
+
+  const low0 = s0.toLowerCase();
+
+  // Unlimited hints
+  if (s0 === "∞" || low0 === "infinite" || low0 === "unlimited" || low0.includes("inf")) {
+    return `<span class="mono" title="Unlimited" data-copy="Unlimited">Unlimited</span>`;
+  }
+
+  // ✅ FIX for broken MaxUint256 coming as "0.<huge digits>"
+  // Example: "0.1157920...(70+ digits)" => treat as integer "1157920..." and detect MaxUint256
+  const brokenDec = /^-?0?\.\d{25,}$/; // 25+ digits after dot = suspicious/broken
+  if (brokenDec.test(s0) && !s0.startsWith("0x")) {
+    const neg = s0.startsWith("-");
+    const digits = s0.replace("-", "").replace(/^0?\./, ""); // remove "0."
+    s0 = (neg ? "-" : "") + digits; // now integer string
+  }
+
+  // If it's a normal human decimal (not broken) -> show SHORT (6 decimals) but keep full in title/copy
+  if (s0.includes(".") && !s0.startsWith("0x")) {
+    const full = s0;
+
+    // shorten display to max 6 fraction digits without rounding (string cut)
+    const m = full.match(/^(-?\d+)\.(\d+)/);
+    let display = full;
+    if (m) {
+      const ip = m[1];
+      const frac = m[2].slice(0, 6).replace(/0+$/, ""); // trim trailing zeros
+      display = frac ? `${ip}.${frac}` : ip;
+    }
+
+    // extra safety: don't let it get too long
+    if (display.length > 16) display = display.slice(0, 12) + "…";
+
+    const safeDisplay = window.escapeHtml(display);
+    const safeFull = window.escapeHtml(full);
+    return `<span class="mono" title="Value: ${safeFull}" data-copy="${safeFull}">${safeDisplay}</span>`;
+  }
+
+  // Parse bigint (hex or integer string)
+  let raw;
+  try {
+    raw = s0.startsWith("0x") ? BigInt(s0) : BigInt(s0);
+  } catch {
+    const safe = window.escapeHtml(s0);
+    return `<span class="mono" title="${safe}" data-copy="${safe}">${safe}</span>`;
+  }
+
+  if (raw === 0n) {
+    return `<span class="mono" title="Raw: 0" data-copy="0">0</span>`;
+  }
+
+  const MAX_UINT256 = (1n << 256n) - 1n;
+  const NEAR_MAX = MAX_UINT256 - 1000n;
+
+  // ✅ Turn MaxUint256 into Unlimited
+  if (raw === MAX_UINT256 || raw >= NEAR_MAX) {
+    return `<span class="mono" title="Unlimited (MaxUint256)\nRaw: ${MAX_UINT256.toString()}" data-copy="${MAX_UINT256.toString()}">Unlimited</span>`;
+  }
+
+  // If decimals known -> format to human + shorten
+  if (Number.isInteger(decimals) && decimals >= 0 && decimals <= 36) {
+    const pad = decimals;
+
+    const neg = raw < 0n;
+    const v = neg ? (-raw) : raw;
+    const str = v.toString().padStart(pad + 1, "0");
+    const intPart = str.slice(0, -pad) || "0";
+    let frac = str.slice(-pad).replace(/0+$/, "");
+    const full = (neg ? "-" : "") + intPart + (frac ? "." + frac : "");
+
+    // shorten display (K/M/B…)
+    const ip = intPart.replace(/^0+/, "") || "0";
+    const intLen = ip.length;
+    const suffixes = ["", "K", "M", "B", "T", "Q"];
+    const group = Math.floor((intLen - 1) / 3);
+
+    let display = full;
+    if (group > 0 && group < suffixes.length) {
+      const cut = intLen - group * 3;
+      const head = ip.slice(0, cut);
+      const tail = ip.slice(cut, cut + 2);
+      display = `${head}${tail ? "." + tail : ""}${suffixes[group]}`;
+      if (neg) display = "-" + display;
+    } else if (group >= suffixes.length) {
+      display = `${ip.slice(0, 3)}e+${intLen - 3}`;
+      if (neg) display = "-" + display;
+    }
+
+    const title = `Value: ${full}\nRaw: ${raw.toString()}`;
+    return `<span class="mono" title="${window.escapeHtml(title)}" data-copy="${raw.toString()}">${window.escapeHtml(display)}</span>`;
+  }
+
+  // No decimals: show raw shortened
+  const rawDec = raw.toString();
+  const abs = rawDec.startsWith("-") ? rawDec.slice(1) : rawDec;
+  let display = rawDec;
+  if (abs.length > 10) display = `${rawDec.slice(0, 6)}…${rawDec.slice(-4)}`;
+
+  return `<span class="mono" title="${window.escapeHtml("Raw: " + rawDec)}" data-copy="${rawDec}">${window.escapeHtml(display)}</span>`;
 }
 
-
-function dnaFormatAllowance(allowanceStr) {
-  if (!allowanceStr) return "—";
-  const v = String(allowanceStr).toLowerCase();
-  if (v === "infinite" || v === "∞" || v.includes("inf")) return "∞";
-  return allowanceStr;
-}
+// optional - for console testing/debug
+window.dnaFormatAllowance = dnaFormatAllowance;
 
 function dnaRowRiskChip(risk) {
   const r = String(risk || "—").toLowerCase();
@@ -5559,6 +5801,10 @@ function dnaRenderTips(list) {
 }
 
 function dnaRenderTable(rows) {
+  if (!dnaFullAccess) {
+    dnaClearApprovalsTable();
+    return;
+  }
   const table = $("#ap-table");
   const head = table?.querySelector(".trow.head");
   if (table) table.innerHTML = "";
@@ -5581,36 +5827,57 @@ function dnaRenderTable(rows) {
   return;
 }
 
-
-
-
     const html = rows.map(r => {
     const tkTxt = r.token ? shortAddr(r.token) : "—";
     const spTxt = r.spender ? shortAddr(r.spender) : "—";
-    const alwTxt = dnaFormatAllowance(r.allowanceStr);
+    const tkFull = r.token || "";
+    const spFull = r.spender || "";
+    const alwHtml = dnaFormatAllowance(r.allowanceStr, r.decimals);
     const verTxt = dnaVerifiedChip(r.verified);
     const riskChip = dnaRowRiskChip(r.risk);
 
     const flagsTxtRaw = (r.flags && r.flags !== "—") ? String(r.flags) : "";
     const flagsTxt = flagsTxtRaw ? window.escapeHtml(flagsTxtRaw) : "—";
 
-    const canRevoke =
-      r.token && r.spender &&
-      alwTxt !== "—" &&
-      alwTxt !== "0";
+    const allowanceRawStr = String(r.allowanceStr ?? "0").trim();
+    const low = allowanceRawStr.toLowerCase();
+    const isUnlimited = (allowanceRawStr === "∞" || low === "infinite" || low === "unlimited" || low.includes("inf"));
 
-    const actionHtml = canRevoke
-      ? `<button class="chip chip-danger" data-revoke="1" data-token="${r.token}" data-spender="${r.spender}">Revoke</button>`
-      : `<span class="muted">—</span>`;
+    const allowanceIsNonZero = isUnlimited || (
+    allowanceRawStr.startsWith("0x")
+    ? !/^0x0+$/i.test(allowanceRawStr)
+    : allowanceRawStr !== "" && allowanceRawStr !== "0" && allowanceRawStr !== "0.0"
+);
+
+
+const canRevoke =
+  dnaFullAccess &&
+  r.token && r.spender &&
+  allowanceIsNonZero;
+
+      const actionHtml = (dnaFullAccess && canRevoke)
+  ? `<button class="chip chip-danger" data-revoke="1"
+      data-token="${dnaEscAttr(r.token)}"
+      data-spender="${dnaEscAttr(r.spender)}">Revoke</button>`
+  : `<span class="muted">—</span>`;
+
 
     return `
       <!-- MAIN ROW (no Flags column) -->
       <div class="trow ap-main">
-        <div class="cell mono">${tkTxt}</div>
-        <div class="cell mono hide-sm">${spTxt}</div>
-        <div class="cell">${window.escapeHtml(String(alwTxt))}</div>
+        <div class="cell mono">
+  <span class="addr-short">${tkTxt}</span>
+  ${tkFull ? `<button class="chip chip-ghost ap-copy" data-copy="${dnaEscAttr(tkFull)}" title="Copy token">Copy</button>` : ``}
+</div>
+
+<div class="cell mono hide-sm">
+  <span class="addr-short">${spTxt}</span>
+  ${spFull ? `<button class="chip chip-ghost ap-copy" data-copy="${dnaEscAttr(spFull)}" title="Copy spender">Copy</button>` : ``}
+</div>
+
+        <div class="cell">${alwHtml}</div>
         <div class="cell hide-sm">${verTxt}</div>
-        <div class="cell hide-sm">${window.escapeHtml(String(r.lastUpdated || "—"))}</div>
+        <div class="cell hide-sm">${dnaFormatLastUpdated(r.lastUpdated)}</div>
         <div class="cell">${riskChip}</div>
         <div class="cell">${actionHtml}</div>
       </div>
@@ -5628,6 +5895,27 @@ function dnaRenderTable(rows) {
   table.insertAdjacentHTML("beforeend", html);
 
 }
+    (function bindApprovalsCopyOnce(){
+  const table = document.getElementById("ap-table");
+  if (!table || table.__copyBound) return;
+  table.__copyBound = true;
+
+  table.addEventListener("click", async (e) => {
+    const btn = e.target.closest?.("[data-copy]");
+    if (!btn) return;
+
+    const text = String(btn.getAttribute("data-copy") || "").trim();
+    if (!text) return;
+
+    const ok = await copyText(text);
+    if (ok) {
+      const prev = btn.textContent;
+      btn.textContent = "Copied";
+      setTimeout(()=> (btn.textContent = prev), 900);
+    }
+  });
+})();
+
 
 function dnaComputeFallbackTips(rows) {
   const tips = [];
@@ -5667,9 +5955,12 @@ async function dnaScan() {
   [];
 
     const rows = approvals.map(dnaNormalizeApiRow);
+   dnaRenderTable(rows);
 
-    dnaRenderTable(rows);
-    dnaBindRevokeButtons(net);
+if (dnaFullAccess) {
+  dnaBindRevokeButtons(net);
+}
+
 
     const score = (Array.isArray(data) ? null : data?.score);
     const riskLevel = (Array.isArray(data) ? null : data?.riskLevel);
@@ -5704,7 +5995,8 @@ async function dnaScan() {
   //});
 //} catch {}
 
-    try {
+    // Best-effort: save score (ignore failures)
+try {
   const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
   const u = new URL("/api/saveScore", DNA_API_BASE);
   const resp = await fetch(u.toString(), {
@@ -5714,8 +6006,6 @@ async function dnaScan() {
   });
   if (!resp.ok) throw new Error(`saveScore ${resp.status}`);
 } catch {}
-
-
 
     const tips = (Array.isArray(data) ? null : data?.tips);
     dnaRenderTips(Array.isArray(tips) ? tips : dnaComputeFallbackTips(rows));
@@ -5749,27 +6039,33 @@ async function dnaConnectWallet() {
   clearStatus?.(st);
 
   try {
-    // 1) Use your existing CycleX wallet connect (AppKit/Web3Modal)
+    // 1) Prefer AppKit/Web3Modal connect (interactive)
     if (typeof window.cxConnectWallet === "function") {
-      const ok = await window.cxConnectWallet({ silent: true });
+      const ok = await window.cxConnectWallet({ silent: false }); // ✅ MUST be false to open modal
       if (!ok) {
-        setStatus(st, "warn", "Wallet connect cancelled or timed out. Try again.");
+        setStatus(st, "warn", "Wallet connect cancelled. Try again.");
         return;
       }
     }
-    // 2) fallback if you ever add a generic connectWallet()
+    // 2) If you have another global connect function
     else if (typeof window.connectWallet === "function") {
       await window.connectWallet();
     }
-    // 3) last fallback (if you ever expose wallet.connect)
-    else if (wallet?.connect) {
-      await wallet.connect();
-    } else {
-      setStatus(st, "warn", "No wallet connect function found.");
-      return;
+    // 3) Fallback: click the TOPBAR connect button if it exists
+    else {
+      const topBtn =
+        document.querySelector("#btn-connect, #connectWallet, [data-cx-connect], [data-w3m-connect]");
+
+      if (topBtn) {
+        topBtn.click(); // opens the same modal as topbar
+      } else {
+        setStatus(st, "warn", "No wallet connect entrypoint found (cxConnectWallet / top button).");
+        return;
+      }
     }
 
-    // wallet object should now be populated by cxConnectWallet:
+    await new Promise(r => setTimeout(r, 50));
+
     dnaSetWalletBadges();
 
     setStatus(
@@ -5786,9 +6082,24 @@ async function dnaConnectWallet() {
   }
 }
 
+// --- Minimal ERC20 ABI (only what revoke needs) ---
+// Safe: no redeclare, and works even if scripts load twice
+if (!Array.isArray(window.ERC20_ABI) || window.ERC20_ABI.length === 0) {
+  window.ERC20_ABI = [
+    "function approve(address spender, uint256 amount) returns (bool)"
+  ];
+}
+
 
 async function dnaRevokeOne(net, token, spender) {
   const st = $("#dna-status");
+  if (!dnaFullAccess) {
+    return setStatus(
+      st,
+      "warn",
+      dnaTr("dna_revoke_requires_full_access", "Full access is required for revoke actions.")
+    );
+  }
 
   if (!wallet?.signer || !wallet?.address) {
     setStatus(st, "warn", "Connect a wallet first to revoke.");
@@ -5809,7 +6120,9 @@ async function dnaRevokeOne(net, token, spender) {
 
   try {
     setStatus(st, "info", "Sending revoke tx (approve → 0)…");
-    const c = new E.Contract(normAddr(token), ERC20_ABI, wallet.signer);
+    const ABI = window.ERC20_ABI || ERC20_ABI;
+    const c = new E.Contract(normAddr(token), window.ERC20_ABI, wallet.signer);
+
     const tx = await c.approve(normAddr(spender), 0n);
     setStatus(st, "info", `Pending: <span class="mono">${tx.hash}</span>`);
     await tx.wait();
@@ -5823,10 +6136,18 @@ async function dnaRevokeOne(net, token, spender) {
     setStatus(st, "bad", `Revoke failed: ${String(e?.message || e)}`);
   }
 }
+    window.dnaRevokeOne = dnaRevokeOne;
 
 async function dnaRevokeAll() {
   const st = $("#dna-status");
   const net = dnaNet();
+  if (!dnaFullAccess) {
+    return setStatus(
+      st,
+      "warn",
+      dnaTr("dna_revoke_requires_full_access", "Full access is required for revoke actions.")
+    );
+  }
 
   if (!wallet?.signer || !wallet?.address) return setStatus(st, "warn", "Connect a wallet first to revoke.");
 
@@ -5850,7 +6171,9 @@ async function dnaRevokeAll() {
     const tk = btns[i].getAttribute("data-token");
     const sp = btns[i].getAttribute("data-spender");
     try {
-      const c = new E.Contract(normAddr(tk), ERC20_ABI, wallet.signer);
+      const ABI = window.ERC20_ABI || ERC20_ABI;
+      const c = new E.Contract(normAddr(tk), window.ERC20_ABI, wallet.signer);
+
       const tx = await c.approve(normAddr(sp), 0n);
       setStatus(st, "info", `(${i + 1}/${btns.length}) Pending: <span class="mono">${tx.hash}</span>`);
       await tx.wait();
@@ -5864,6 +6187,7 @@ async function dnaRevokeAll() {
 
   await dnaScan();
 }
+    window.dnaRevokeAll = dnaRevokeAll;
 
 function dnaSeedCommon() {
   const net = dnaNet();
@@ -5924,8 +6248,204 @@ function dnaShareScore() {
   //}
 //}
 
+    // =========================
+// CYCX Gate — RIGHT side only (Approvals section)
+// Paste BETWEEN: dnaShareScore()  and  initWalletSecurityDNAUi()
+// =========================
+
+let dnaFullAccess = false;
+  // expose dnaFullAccess for console debugging (kept in sync)
+Object.defineProperty(window, "dnaFullAccess", {
+  get() { return dnaFullAccess; },
+  set(v) { dnaFullAccess = !!v; }
+});
+
+
+// TODO: confirm/update your CYCX token address on BSC
+const CYCX_BSC_ADDRESS = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+
+// TODO: you'll decide later. For now: must hold >= 1 token
+const CYCX_MIN_TOKENS = 1;
+
+const CYCX_GATE_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)"
+];
+
+function dnaTr(key, fallback) {
+  try {
+    if (typeof window.t === "function") {
+      const v = window.t(key);
+      if (v != null && String(v).trim() !== "") return v; 
+    }
+  } catch {}
+  return fallback; 
+}
+
+
+function dnaSetEligMsg(text, state = "info") {
+  const el = $("#dna-elig-msg");
+  if (!el) return;
+
+  el.textContent = text || "";
+  el.classList.remove("elig-ok", "elig-bad", "elig-warn", "muted");
+
+  if (state === "ok") el.classList.add("elig-ok");
+  else if (state === "bad") el.classList.add("elig-bad");
+  else if (state === "warn") el.classList.add("elig-warn");
+  else el.classList.add("muted");
+}
+
+
+function dnaLockApprovalsUI(msgKey) {
+  dnaFullAccess = false;
+
+  // Show locked card, hide content/table
+  $("#dna-approvals-locked")?.classList.remove("hidden");
+  $("#dna-approvals-content")?.classList.add("hidden");
+
+  // Buttons: show Full Access, hide Revoke All
+  $("#dna-full-access")?.classList.remove("hidden");
+  $("#dna-revoke-all")?.classList.add("hidden");
+  dnaClearApprovalsTable();
+
+  if (msgKey) {
+  if (msgKey === "checking") {
+    dnaSetEligMsg(dnaTr("dna_elig_checking", "Checking CYCX balance…"), "warn");
+  } else if (msgKey === "wrong_net") {
+    dnaSetEligMsg(dnaTr("dna_elig_wrong_net", "Please switch to BSC (BNB Chain) to check CYCX eligibility."), "warn");
+  } else if (msgKey === "no") {
+    dnaSetEligMsg(dnaTr("dna_elig_no", "Not eligible for full access."), "bad"); 
+  } else {
+    dnaSetEligMsg(dnaTr("dna_elig_error", "Could not check eligibility. Please try again."), "warn");
+  }
+} else {
+  dnaSetEligMsg("", "info");
+}
+
+}
+    function dnaClearApprovalsTable() {
+  const table = $("#ap-table");
+  if (!table) return;
+
+  const head = table.querySelector(".trow.head");
+  table.innerHTML = "";
+  if (head) table.appendChild(head);
+
+  table.insertAdjacentHTML("beforeend", `
+    <div class="trow ap-main">
+      <div class="cell muted">—</div>
+      <div class="cell muted hide-sm">—</div>
+      <div class="cell muted">—</div>
+      <div class="cell muted hide-sm">—</div>
+      <div class="cell muted hide-sm">—</div>
+      <div class="cell muted">—</div>
+      <div class="cell muted">—</div>
+    </div>
+  `);
+}
+
+
+function dnaUnlockApprovalsUI() {
+  dnaFullAccess = true;
+
+  $("#dna-approvals-locked")?.classList.add("hidden");
+  $("#dna-approvals-content")?.classList.remove("hidden");
+
+  $("#dna-full-access")?.classList.add("hidden");
+  $("#dna-revoke-all")?.classList.remove("hidden");
+
+  // אל תמחק מיד את ההודעה הירוקה
+  // אופציה 1: להשאיר אותה עד פעולה הבאה:
+  // (כלום כאן)
+
+  // אופציה 2: למחוק אחרי 2.5 שניות:
+  // setTimeout(() => dnaSetEligMsg("", "info"), 2500);
+}
+async function dnaCheckCycxEligibility_BSC() {
+  if (!wallet?.address) return { ok: false, reason: "no_wallet" };
+
+  const BSC_RPC =
+    window.BSC_RPC_URL ||
+    "https://bsc-dataseed.binance.org";
+
+  const provider = new E.JsonRpcProvider(BSC_RPC);
+  const token = new E.Contract(CYCX_BSC_ADDRESS, CYCX_GATE_ABI, provider);
+
+  let decimals = 18;
+  try { decimals = Number(await token.decimals()); } catch {}
+
+  const bal = await token.balanceOf(wallet.address);
+  const minRaw = BigInt(CYCX_MIN_TOKENS) * (10n ** BigInt(decimals));
+  const eligible = (BigInt(bal) >= minRaw);
+
+  return { ok: true, eligible, bal: BigInt(bal), decimals };
+}
+
+
+async function dnaRequestFullAccess() {
+  try {
+    dnaLockApprovalsUI("checking");
+
+if (!wallet?.address || !wallet?.signer) {
+  const ok = await window.cxConnectWallet?.({ silent: false }); // interactive connect
+  if (!ok || !wallet?.address || !wallet?.signer) {
+    dnaLockApprovalsUI("error");
+    return;
+  }
+}
+
+
+    const res = await dnaCheckCycxEligibility_BSC();
+
+    if (!res.ok) {
+      if (res.reason === "wrong_net") dnaLockApprovalsUI("wrong_net");
+      else dnaLockApprovalsUI("error");
+      return;
+    }
+
+    if (!res.eligible) {
+      dnaLockApprovalsUI("no");
+      return;
+    }
+
+   dnaSetEligMsg(dnaTr("dna_elig_ok", "Eligible — unlocking approvals"), "ok");
+   dnaUnlockApprovalsUI();
+   await dnaScan();
+
+
+  } catch (e) {
+    console.error("dnaRequestFullAccess error:", e);
+    dnaLockApprovalsUI("error");
+  }
+}
+
+function initDnaCycxGate() {
+  // Default state: locked
+  dnaLockApprovalsUI();
+
+  // Button click
+  $("#dna-full-access")?.addEventListener("click", dnaRequestFullAccess);
+
+  // Safety: if someone forces click on revoke-all while locked
+  $("#dna-revoke-all")?.addEventListener("click", (e) => {
+    if (!dnaFullAccess) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
+
+  // When reset pressed → lock again
+  $("#dna-reset")?.addEventListener("click", () => dnaLockApprovalsUI());
+
+  // When network changes → lock again
+  $("#dna-net")?.addEventListener("change", () => dnaLockApprovalsUI());
+}
+
+
 function initWalletSecurityDNAUi() {
   dnaSetWalletBadges();
+    initDnaCycxGate();
 
   $("#dna-run")?.addEventListener("click", dnaScan);
   $("#dna-reset")?.addEventListener("click", dnaClearOutputs);
@@ -5945,7 +6465,9 @@ function initWalletSecurityDNAUi() {
   });
 
   window.initApprovalsUi = initWalletSecurityDNAUi;
+
 }
+
 
 
     // =========================
