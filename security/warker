@@ -47,6 +47,79 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(allowOrigin) });
     }
 
+        // -------------------------
+    // Live Activity Counter (NEW)
+    // Route:
+    //   GET  /api/activity
+    //   POST /api/activity  { t: "wallet_scan"|"risky_approvals"|"high_risk_contract", n: 1..50 }
+    // -------------------------
+    if (url.pathname === "/api/activity") {
+      // must have ACTIVITY_KV binding
+      if (!env.ACTIVITY_KV) {
+        return json({ error: "Server missing ACTIVITY_KV binding" }, 500, allowOrigin);
+      }
+
+      // GET: return counters
+      if (request.method === "GET") {
+        const wallets = Number(await env.ACTIVITY_KV.get("wallets_scanned") || "0") || 0;
+        const riskyApprovals = Number(await env.ACTIVITY_KV.get("risky_approvals") || "0") || 0;
+        const highRiskContracts = Number(await env.ACTIVITY_KV.get("high_risk_contracts") || "0") || 0;
+
+        return json(
+          { wallets, riskyApprovals, highRiskContracts, updatedAt: Date.now() },
+          200,
+          allowOrigin
+        );
+      }
+
+      // POST: increment counters
+      if (request.method === "POST") {
+        // basic origin check (anti-spam)
+        const o = request.headers.get("Origin") || "";
+        const okOrigin = (o === "" || o === "https://cyclex.network" || o === "https://www.cyclex.network");
+        if (!okOrigin) return json({ error: "bad_origin" }, 403, allowOrigin);
+
+        let body = null;
+        try { body = await request.json(); } catch {}
+        const t = String(body?.t || "");
+        let n = parseInt(String(body?.n ?? "1"), 10);
+        if (!Number.isFinite(n) || n < 1) n = 1;
+        if (n > 50) n = 50;
+
+        const map = {
+          wallet_scan: "wallets_scanned",
+          risky_approvals: "risky_approvals",
+          high_risk_contract: "high_risk_contracts",
+        };
+        const key = map[t];
+        if (!key) return json({ error: "bad_type" }, 400, allowOrigin);
+
+        // (optional) tiny rate limit using RATE_KV (per IP / minute)
+        const ip =
+          request.headers.get("CF-Connecting-IP") ||
+          (request.headers.get("X-Forwarded-For") || "").split(",")[0].trim() ||
+          "unknown";
+        const minute = Math.floor(Date.now() / 60000);
+        const rlKey = `act:${minute}:${ip}`;
+
+        if (env.RATE_KV) {
+          const cur = Number(await env.RATE_KV.get(rlKey) || "0") || 0;
+          if (cur >= 60) return json({ error: "rate_limited" }, 429, allowOrigin);
+          await env.RATE_KV.put(rlKey, String(cur + 1), { expirationTtl: 120 });
+        }
+
+        // KV increment (MVP)
+        const curVal = Number(await env.ACTIVITY_KV.get(key) || "0") || 0;
+        const nextVal = curVal + n;
+        await env.ACTIVITY_KV.put(key, String(nextVal));
+
+        return json({ ok: true, key, next: nextVal }, 200, allowOrigin);
+      }
+
+      return json({ error: "Method not allowed" }, 405, allowOrigin);
+    }
+
+
     // -------------------------
     // Routing
     // -------------------------
@@ -208,7 +281,7 @@ export default {
 function corsHeaders(allowOrigin) {
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, x-cx-bypass",
     "Access-Control-Max-Age": "86400",
   };
