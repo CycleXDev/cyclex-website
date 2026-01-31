@@ -1417,6 +1417,24 @@ a.tool-card[data-tool="approvals"]::after{
 #panel-approvals #dna-tips li{
   font-weight: 700;
 }
+/* Meta line above tips (Approvals detected...) */
+#panel-approvals #dna-tips .dna-meta{
+  opacity: .92;
+  font-size: .95em;
+  letter-spacing: .2px;
+  list-style: none; /* no bullet for meta */
+  margin-bottom: .25rem;
+}
+
+/* Keep meta not as bold as tips */
+#panel-approvals #dna-tips .dna-meta{
+  font-weight: 600;
+}
+
+#panel-approvals #dna-tips .dna-meta .k{ opacity: .85; }
+#panel-approvals #dna-tips .dna-meta .sep{ margin: 0 .45em; opacity: .55; }
+#panel-approvals #dna-tips .dna-meta .dna-meta-count{ font-weight: 800; }
+
 
 /* Locked card: slightly clearer + bolder, tiny size bump */
 #panel-approvals #dna-approvals-locked .small{
@@ -2478,6 +2496,9 @@ dna_elig_ok: "Eligible — unlocking approvals",
 dna_elig_no: "Not eligible for full access.",
 dna_elig_wrong_net: "Please switch to BSC (BNB Chain) to check CYCX eligibility.",
 dna_elig_error: "Could not check eligibility. Please try again.",
+    dna_meta_approvals_detected: "Approvals detected:",
+dna_meta_spenders_hidden: "Spender details hidden until unlock",
+
 
     // rpc panel
     p_rpc_kicker: "RPC Health Checker",
@@ -2749,6 +2770,9 @@ dna_table_note: "提示：不完全信任的“无限”授权建议撤销。Ver
     dna_elig_no: "当前不符合完整权限条件。",
     dna_elig_wrong_net: "请切换到 BSC（BNB Chain）以检查 CYCX 资格。",
     dna_elig_error: "无法检查资格，请重试。",
+    dna_meta_approvals_detected: "检测到授权：",
+dna_meta_spenders_hidden: "解锁前隐藏授权方详情",
+
 
 
     // rpc panel
@@ -3020,6 +3044,9 @@ dna_table_note: "نصيحة: ألغِ الصلاحيات “غير المحدو�
     dna_elig_no: "غير مؤهل للوصول الكامل.",
     dna_elig_wrong_net: "يرجى التبديل إلى BSC (BNB Chain) للتحقق من أهلية CYCX.",
     dna_elig_error: "تعذر التحقق من الأهلية. يرجى المحاولة مرة أخرى.",
+    dna_meta_approvals_detected: "عدد الموافقات المكتشفة:",
+dna_meta_spenders_hidden: "تفاصيل المُنفق مخفية حتى فتح الوصول",
+
 
 
     // rpc panel
@@ -3297,6 +3324,9 @@ dna_full_access_btn: "ОТКРЫТЬ РАСШИРЕННОЕ (PASS / CYCX)",
     dna_elig_no: "Нет права на полный доступ.",
     dna_elig_wrong_net: "Переключитесь на BSC (BNB Chain), чтобы проверить доступ CYCX.",
     dna_elig_error: "Не удалось проверить доступ. Попробуйте ещё раз.",
+    dna_meta_approvals_detected: "Обнаружено разрешений:",
+dna_meta_spenders_hidden: "Детали spender скрыты до разблокировки",
+
 
     // rpc panel
     p_rpc_kicker: "Проверка RPC",
@@ -5895,15 +5925,59 @@ async function dnaFetchApprovals(net, address) {
   return await res.json();
 }
 
-function dnaRenderTips(list) {
-  const tips = $("#dna-tips");
-  if (!tips) return;
-  if (!Array.isArray(list) || !list.length) {
-    tips.innerHTML = `<li class="muted">—</li>`;
+function dnaRenderTips(input) {
+  const el = $("#dna-tips");
+  if (!el) return;
+
+  // -------------------------
+  // Option A object: { total, tips, ... }
+  // -------------------------
+  const isInfoObj =
+    input &&
+    typeof input === "object" &&
+    !Array.isArray(input) &&
+    Array.isArray(input.tips);
+
+  if (isInfoObj) {
+    const total = Number(input.total || 0);
+
+    const metaHtml = (total > 0)
+      ? `<li class="muted dna-meta">
+           <span class="k" data-i18n="dna_meta_approvals_detected">Approvals detected:</span>
+           <strong class="dna-meta-count">${total}</strong>
+           <span class="sep" aria-hidden="true">•</span>
+           <span data-i18n="dna_meta_spenders_hidden">Spender details hidden until unlock</span>
+         </li>`
+      : "";
+
+    const tipsHtml = (input.tips && input.tips.length)
+      ? input.tips.map(t => `<li>${window.escapeHtml(String(t))}</li>`).join("")
+      : `<li class="muted">—</li>`;
+
+    el.innerHTML = metaHtml + tipsHtml;
+
     return;
   }
-  tips.innerHTML = list.map(t => `<li>${window.escapeHtml(String(t))}</li>`).join("");
+
+  if (Array.isArray(input) && (input.length === 0 || typeof input[0] === "string")) {
+    if (!input.length) {
+      el.innerHTML = `<li class="muted">—</li>`;
+      return;
+    }
+    el.innerHTML = input.map(t => `<li>${window.escapeHtml(String(t))}</li>`).join("");
+    return;
+  }
+
+ 
+  if (Array.isArray(input)) {
+    const info = dnaComputeFallbackTips(input);
+    dnaRenderTips(info);
+    return;
+  }
+
+  el.innerHTML = `<li class="muted">—</li>`;
 }
+
 
 function dnaRenderTable(rows) {
   if (!dnaFullAccess) {
@@ -6023,7 +6097,6 @@ const canRevoke =
 
 
 function dnaComputeFallbackTips(rows) {
-  const tips = [];
   const high = rows.filter(r => String(r.risk).toLowerCase().includes("high")).length;
   const unverified = rows.filter(r => String(r.verified).toLowerCase().includes("unver")).length;
   const flagged = rows.filter(r => r.flags && r.flags !== "—").length;
@@ -6031,17 +6104,16 @@ function dnaComputeFallbackTips(rows) {
 
   const total = Array.isArray(rows) ? rows.length : 0;
 
-  // ✅ Add premium "meta" line first (short, not salesy)
-  if (total) tips.push(`Approvals detected (${total}). Spender details hidden until unlock.`);
-
+  const tips = [];
   if (high) tips.push(`Revoke high-risk approvals first (${high}).`);
   if (infinite) tips.push(`Consider revoking infinite approvals you don’t fully trust (${infinite}).`);
   if (unverified) tips.push(`Review unverified spender contracts before keeping approvals (${unverified}).`);
   if (flagged) tips.push(`Check flagged interactions and bridges before signing again (${flagged}).`);
   if (!tips.length) tips.push("No major red flags detected. Keep monitoring regularly.");
 
-  return tips;
+  return { total, high, unverified, flagged, infinite, tips };
 }
+
 
 
 async function dnaScan() {
@@ -6129,7 +6201,7 @@ try {
 } catch {}
 
     const tips = (Array.isArray(data) ? null : data?.tips);
-    dnaRenderTips(Array.isArray(tips) ? tips : dnaComputeFallbackTips(rows));
+    dnaRenderTips(Array.isArray(rows) ? rows : []);
 
     setStatus(st, "ok", "Done.");
     gtagEvent?.("sec_dna_scan", { net });
