@@ -4105,9 +4105,9 @@ function accessUpdatePricesUI(usdPrice) {
   const usdtEl = document.getElementById("access-price-usdt");
   if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
 
-  // BNB side: for now show USD until we add BNB conversion
   const bnbEl = document.getElementById("access-price-bnb");
-  if (bnbEl) bnbEl.textContent = `$${usdPrice}`;
+if (bnbEl) bnbEl.textContent = ACCESS_BNB_PRICE_TEXT;
+
 
   // enable buttons
   const bnbBtn = document.getElementById("btn-pay-bnb");
@@ -4124,9 +4124,7 @@ function openAccessModal() {
   m.classList.add("is-open");
   m.setAttribute("aria-hidden", "false");
 
-  // ✅ price for now (test)
-  const usdPrice = 9; // later we’ll switch to 19 based on sold count
-  accessUpdatePricesUI(usdPrice);
+  accessUpdatePricesUI(ACCESS_USD_PRICE);
 }
     function accessSetBusy(on) {
   const bnbBtn = document.getElementById("btn-pay-bnb");
@@ -4138,6 +4136,16 @@ function openAccessModal() {
   if (bnbBtn) bnbBtn.classList.toggle("is-busy", !!on);
   if (usdtBtn) usdtBtn.classList.toggle("is-busy", !!on);
 }
+// =========================
+// ACCESS PASS — TEMP CONFIG
+// =========================
+const ACCESS_USD_PRICE = 9; // later: 19 after sold count
+const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955"; // USDT (BSC)
+const ACCESS_SALE_OR_RECEIVER = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9"; // TODO: replace with real SALE contract later
+
+// TEMP: fixed BNB price (for UI + tx). Later: compute from USD.
+const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
+const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
 
 async function accessBuyFlow(kind) {
   try {
@@ -4212,11 +4220,9 @@ async function accessBuyFlow(kind) {
 
     // 3) Branch by payment method
     if (kind === "bnb") {
-      const PASS_CONTRACT = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9";
+      const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+      const PRICE_WEI = ACCESS_BNB_PRICE_WEI;
 
-      // TODO: compute real BNB amount from USD later
-      // Example: 0.02 BNB
-      const PRICE_WEI = 20000000000000000n;
 
       const txHash = await provider.request({
         method: "eth_sendTransaction",
