@@ -4076,18 +4076,29 @@ window.connectWallet = cxConnectWallet;
     await cxConnectWallet();
   });
 
-  // ✅ Access modal buttons (for now: just verify click flow)
-  $("#btn-pay-bnb")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    alert("BNB flow: next step = send tx to Pass contract");
-  });
+ // ✅ Access modal buttons (connect first, no blocking alerts)
+$("#btn-pay-bnb")?.addEventListener("click", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 
-  $("#btn-pay-usdt")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    alert("USDT flow: next step = approve USDT + buy");
-  });
+  // 1) connect wallet (non-blocking)
+  await cxConnectWallet();
+
+  // 2) next step (we'll implement): send BNB tx to Pass contract
+  // accessBuyFlow("bnb");
+});
+
+$("#btn-pay-usdt")?.addEventListener("click", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  // 1) connect wallet (non-blocking)
+  await cxConnectWallet();
+
+  // 2) next step (we'll implement): approve USDT then buy
+  // accessBuyFlow("usdt");
+});
+
 }
 
 
