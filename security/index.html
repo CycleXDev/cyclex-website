@@ -1652,6 +1652,13 @@ a.tool-card[data-tool="approvals"]::after{
   cursor:progress;
   filter:saturate(.9);
 }
+     .cx-modal__status{
+  margin-top: 12px;
+  font-size: 13px;
+  opacity: .85;
+  text-align: center;
+}
+
 
 
 </style>
@@ -2501,7 +2508,7 @@ a.tool-card[data-tool="approvals"]::after{
   </button>
 </div>
 
-
+<div class="cx-modal__status muted" id="access-status" aria-live="polite"></div>
 
       <div class="cx-modal__foot muted" data-i18n="access_foot">
         Early access: $9 for first 500 access passes, then $19. 1 pass per wallet.
@@ -4110,6 +4117,7 @@ function accessUpdatePricesUI(usdPrice) {
 }
 
 function openAccessModal() {
+  accessSetStatus("");
   const m = document.getElementById("access-modal");
   if (!m) return;
 
@@ -4214,16 +4222,99 @@ async function accessBuyFlow(kind) {
           value: "0x" + PRICE_WEI.toString(16),
         }],
       });
+      // ✅ show sent
+accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
-      console.log("BNB tx sent:", txHash);
-      return;
+// ✅ wait for confirmation (up to ~2 minutes)
+const ok = await accessWaitForConfirm(txHash);
+
+if (ok) {
+  accessSetStatus("Confirmed ✅");
+  // close modal after a short moment so user sees it
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus(""); // reset for next open
+  }, 900);
+} else {
+  accessSetStatus("Pending on-chain… You can close this window.");
+  // Optional: auto close after a few seconds anyway
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 3500);
+}
+return;
+
     }
 
     if (kind === "usdt") {
-      // We'll implement: approve USDT -> buy
-      console.log("USDT flow next: approve + buy");
-      return;
-    }
+  // ✅ USDT on BSC (mainnet)
+  const USDT = "0x55d398326f99059fF775485246999027B3197955";
+
+  // ✅ Your sale/pass contract (same as BNB receiver for now)
+  const PASS_CONTRACT = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9";
+
+  // Minimal ERC20 ABI (approve + decimals)
+  const ERC20_ABI = [
+    { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
+    { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
+  ];
+
+  // Sale ABI placeholder (we will match it to your contract next)
+  // You MUST have a function like: buyWithUSDT(uint256 amount)
+  const SALE_ABI = [
+    { "constant": false, "inputs": [{ "name": "amount", "type": "uint256" }], "name": "buyWithUSDT", "outputs": [], "type": "function" }
+  ];
+
+  accessSetStatus("Preparing USDT checkout…");
+
+  // We'll use ethers if it exists, otherwise we stop here cleanly.
+  if (!window.ethers) {
+    accessSetStatus("USDT checkout needs ethers.js (next step).");
+    return;
+  }
+
+  const ethers = window.ethers;
+  const web3Provider = new ethers.BrowserProvider(provider);
+  const signer = await web3Provider.getSigner();
+
+  // amount in USDT (for now: 9 USDT)
+  const usdPrice = 9; // later dynamic 9/19
+  const usdtContract = new ethers.Contract(USDT, ERC20_ABI, signer);
+  const sale = new ethers.Contract(PASS_CONTRACT, SALE_ABI, signer);
+
+  const decimals = Number(await usdtContract.decimals());
+  const amount = ethers.parseUnits(String(usdPrice), decimals);
+
+  // 1) approve
+  accessSetStatus("Approve USDT…");
+  const tx1 = await usdtContract.approve(PASS_CONTRACT, amount);
+  await tx1.wait();
+
+  // 2) buy
+  accessSetStatus("Buying pass…");
+  const tx2 = await sale.buyWithUSDT(amount);
+
+  accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
+  const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
+
+  if (ok) {
+    accessSetStatus("Confirmed ✅");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 900);
+  } else {
+    accessSetStatus("Pending on-chain… You can close this window.");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 3500);
+  }
+
+  return;
+}
+
 
   } catch (e) {
     // no alerts - keep it smooth
@@ -4233,6 +4324,37 @@ async function accessBuyFlow(kind) {
   }
 }
 
+function accessSetStatus(msg) {
+  const el = document.getElementById("access-status");
+  if (!el) return;
+  el.textContent = msg || "";
+}
+
+async function accessWaitForConfirm(txHash, maxMs = 120000) {
+  const provider = window.ethereum;
+  if (!provider || !provider.request) return false;
+
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    try {
+      const receipt = await provider.request({
+        method: "eth_getTransactionReceipt",
+        params: [txHash],
+      });
+
+      if (receipt && receipt.status) {
+        // status is "0x1" success, "0x0" fail
+        return receipt.status === "0x1";
+      }
+    } catch (e) {
+      // ignore intermittent errors
+    }
+
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
+  return false;
+}
 
 
 
@@ -4256,13 +4378,18 @@ function bindAccessModal() {
 const bnbBtn = document.getElementById("btn-pay-bnb");
 const usdtBtn = document.getElementById("btn-pay-usdt");
 
-bnbBtn?.addEventListener("click", async () => {
-  await accessBuyFlow("bnb");
+bnbBtn?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  accessBuyFlow("bnb");
 });
 
-usdtBtn?.addEventListener("click", async () => {
-  await accessBuyFlow("usdt");
+usdtBtn?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  accessBuyFlow("usdt");
 });
+
 
   // ESC to close
   document.addEventListener("keydown", (e) => {
