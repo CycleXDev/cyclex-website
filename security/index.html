@@ -4083,38 +4083,73 @@ window.connectWallet = cxConnectWallet;
     await cxConnectWallet();
   });
 
-// ✅ Access modal buttons (single flow: connect via AppKit + continue)
-$("#btn-pay-bnb")?.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  accessBuyFlow("bnb");
-});
-
-$("#btn-pay-usdt")?.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  accessBuyFlow("usdt");
-});
-
 
 }
+// ---- Live price helpers (BNB/USDT) ----
+let ACCESS_PRICE_CACHE = { ts: 0, bnbUsd: null };
 
+async function accessFetchBnbUsd() {
+  // cache 60s to avoid spamming
+  const now = Date.now();
+  if (ACCESS_PRICE_CACHE.bnbUsd && (now - ACCESS_PRICE_CACHE.ts) < 60000) {
+    return ACCESS_PRICE_CACHE.bnbUsd;
+  }
 
-function accessUpdatePricesUI(usdPrice) {
-  // USDT side: 1 USDT ≈ 1$
+  // Binance ticker: BNBUSDT
+  const r = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT", { cache: "no-store" });
+  if (!r.ok) throw new Error("BNB_PRICE_FETCH_FAILED");
+  const j = await r.json();
+  const px = Number(j.price);
+  if (!isFinite(px) || px <= 0) throw new Error("BNB_PRICE_BAD");
+
+  ACCESS_PRICE_CACHE = { ts: now, bnbUsd: px };
+  return px;
+}
+
+async function accessUpdatePricesUI(usdPrice) {
+  // disable until we know BNB price
+  const bnbBtn  = document.getElementById("btn-pay-bnb");
+  const usdtBtn = document.getElementById("btn-pay-usdt");
+  if (bnbBtn)  bnbBtn.disabled = true;
+  if (usdtBtn) usdtBtn.disabled = true;
+
+  // USDT side: exact
   const usdtEl = document.getElementById("access-price-usdt");
   if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
 
+  // BNB side: live convert
   const bnbEl = document.getElementById("access-price-bnb");
-if (bnbEl) bnbEl.textContent = ACCESS_BNB_PRICE_TEXT;
+  if (bnbEl) bnbEl.textContent = "…";
 
+  try {
+    const bnbUsd = await accessFetchBnbUsd();        // live BNB price in USD/USDT
+    const bnbAmt = usdPrice / bnbUsd;               // BNB amount for $usdPrice
 
-  // enable buttons
-  const bnbBtn = document.getElementById("btn-pay-bnb");
-  const usdtBtn = document.getElementById("btn-pay-usdt");
-  if (bnbBtn) bnbBtn.disabled = false;
-  if (usdtBtn) usdtBtn.disabled = false;
+    // nice display (adjust decimals if you want)
+    const bnbText = bnbAmt.toFixed(8).replace(/0+$/,"").replace(/\.$/,"");
+    if (bnbEl) bnbEl.textContent = `${bnbText} BNB`;
+
+    // store exact wei for tx (needs ethers)
+    if (window.ethers?.parseUnits) {
+      window.__ACCESS_BNB_WEI = window.ethers.parseUnits(bnbText, 18);
+      window.__ACCESS_BNB_TEXT = bnbText;
+    } else {
+      // fallback: keep text only (tx will fail-safe)
+      window.__ACCESS_BNB_WEI = null;
+      window.__ACCESS_BNB_TEXT = bnbText;
+    }
+
+    // enable buttons
+    if (bnbBtn)  bnbBtn.disabled = false;
+    if (usdtBtn) usdtBtn.disabled = false;
+  } catch (e) {
+    console.error("BNB price load failed:", e);
+    if (bnbEl) bnbEl.textContent = "—";
+    // still allow USDT, keep BNB disabled
+    if (usdtBtn) usdtBtn.disabled = false;
+  }
 }
+
 
 function openAccessModal() {
   accessSetStatus("");
@@ -4124,8 +4159,11 @@ function openAccessModal() {
   m.classList.add("is-open");
   m.setAttribute("aria-hidden", "false");
 
-  accessUpdatePricesUI(ACCESS_USD_PRICE);
+  const usdPrice = 9; // later dynamic
+  // fire-and-forget (updates UI + enables buttons when ready)
+  accessUpdatePricesUI(usdPrice);
 }
+
     function accessSetBusy(on) {
   const bnbBtn = document.getElementById("btn-pay-bnb");
   const usdtBtn = document.getElementById("btn-pay-usdt");
@@ -4218,44 +4256,46 @@ async function accessBuyFlow(kind) {
       }
     }
 
-    // 3) Branch by payment method
-    if (kind === "bnb") {
-      const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
-      const PRICE_WEI = ACCESS_BNB_PRICE_WEI;
+   if (kind === "bnb") {
+  const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
 
+  // use the LIVE wei we computed when opening the modal
+  const PRICE_WEI = window.__ACCESS_BNB_WEI;
+  if (!PRICE_WEI) {
+    accessSetStatus("Loading BNB price… try again in a second.");
+    return;
+  }
 
-      const txHash = await provider.request({
-        method: "eth_sendTransaction",
-        params: [{
-          from,
-          to: PASS_CONTRACT,
-          value: "0x" + PRICE_WEI.toString(16),
-        }],
-      });
-      // ✅ show sent
-accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
+  const txHash = await provider.request({
+    method: "eth_sendTransaction",
+    params: [{
+      from,
+      to: PASS_CONTRACT,
+      // safe conversion even if PRICE_WEI is not a pure BigInt for some reason
+      value: "0x" + BigInt(PRICE_WEI).toString(16),
+    }],
+  });
 
-// ✅ wait for confirmation (up to ~2 minutes)
-const ok = await accessWaitForConfirm(txHash);
+  accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
-if (ok) {
-  accessSetStatus("Confirmed ✅");
-  // close modal after a short moment so user sees it
-  setTimeout(() => {
-    closeAccessModal();
-    accessSetStatus(""); // reset for next open
-  }, 900);
-} else {
-  accessSetStatus("Pending on-chain… You can close this window.");
-  // Optional: auto close after a few seconds anyway
-  setTimeout(() => {
-    closeAccessModal();
-    accessSetStatus("");
-  }, 3500);
+  const ok = await accessWaitForConfirm(txHash);
+
+  if (ok) {
+    accessSetStatus("Confirmed ✅");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 900);
+  } else {
+    accessSetStatus("Pending on-chain… You can close this window.");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 3500);
+  }
+  return;
 }
-return;
 
-    }
 
     if (kind === "usdt") {
   // ✅ USDT on BSC (mainnet)
@@ -4350,8 +4390,7 @@ window.accessUpdatePricesUI = accessUpdatePricesUI;
 window.accessWaitForConfirm = accessWaitForConfirm;
 
 
-async function accessWaitForConfirm(txHash, maxMs = 120000) {
-  const provider = window.ethereum;
+async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
   if (!provider || !provider.request) return false;
 
   const start = Date.now();
