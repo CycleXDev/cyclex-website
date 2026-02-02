@@ -1647,7 +1647,11 @@ a.tool-card[data-tool="approvals"]::after{
 #access-modal #btn-pay-bnb:disabled{
   opacity: .78;
 }
-
+     .cx-modal__actions .btn.is-busy{
+  opacity:.75;
+  cursor:progress;
+  filter:saturate(.9);
+}
 
 
 </style>
@@ -4114,6 +4118,42 @@ function openAccessModal() {
   const usdPrice = 9; // later we’ll switch to 19 based on sold count
   accessUpdatePricesUI(usdPrice);
 }
+    function accessSetBusy(on) {
+  const bnbBtn = document.getElementById("btn-pay-bnb");
+  const usdtBtn = document.getElementById("btn-pay-usdt");
+
+  if (bnbBtn) bnbBtn.disabled = !!on;
+  if (usdtBtn) usdtBtn.disabled = !!on;
+
+  if (bnbBtn) bnbBtn.classList.toggle("is-busy", !!on);
+  if (usdtBtn) usdtBtn.classList.toggle("is-busy", !!on);
+}
+
+async function accessBuyFlow(kind) {
+  try {
+    accessSetBusy(true);
+
+    // ✅ חשוב: לא נוגעים ב-AppKit של DNA — רק כאן מתחברים
+    await cxConnectWallet();
+
+    // כרגע רק בדיקת זרימה (בשלב הבא נחבר לטרנזקציה אמיתית)
+    if (kind === "bnb") {
+      alert("BNB checkout: next step is on-chain purchase.");
+      return;
+    }
+
+    if (kind === "usdt") {
+      alert("USDT checkout: next step is approve + buy.");
+      return;
+    }
+  } catch (e) {
+    console.error(e);
+    alert("Something went wrong. Check console.");
+  } finally {
+    accessSetBusy(false);
+  }
+}
+
 
 
 function closeAccessModal() {
@@ -4131,6 +4171,17 @@ function bindAccessModal() {
   m.querySelectorAll("[data-close-access]").forEach((el) => {
     el.addEventListener("click", closeAccessModal);
   });
+// buy buttons
+const bnbBtn = document.getElementById("btn-pay-bnb");
+const usdtBtn = document.getElementById("btn-pay-usdt");
+
+bnbBtn?.addEventListener("click", async () => {
+  await accessBuyFlow("bnb");
+});
+
+usdtBtn?.addEventListener("click", async () => {
+  await accessBuyFlow("usdt");
+});
 
   // ESC to close
   document.addEventListener("keydown", (e) => {
