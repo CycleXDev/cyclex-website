@@ -1601,6 +1601,52 @@ a.tool-card[data-tool="approvals"]::after{
   .cx-modal__title{ font-size: 16px; }
   .cx-modal__actions .btn{ flex-basis: 100%; }
 }
+/* ✅ Center + make price inside the buttons */
+.cx-modal__actions{
+  display:flex;
+  gap: 14px;
+  justify-content: center;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.cx-modal__actions .btn{
+  flex: 0 1 360px;
+  min-height: 74px;
+  padding: 16px 18px;
+  display:flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align:center;
+}
+
+.cx-modal__actions .btn .btn-main{
+  font-weight: 900;
+  letter-spacing: .6px;
+}
+
+.cx-modal__actions .btn .btn-sub{
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: .85;
+}
+
+/* ✅ BNB orange / coin vibe */
+#access-modal #btn-pay-bnb{
+  background: linear-gradient(135deg, #f3ba2f 0%, #ff8a00 100%);
+  color: #061018;
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+#access-modal #btn-pay-bnb:hover{
+  filter: brightness(1.02);
+}
+
+#access-modal #btn-pay-bnb:disabled{
+  opacity: .78;
+}
 
 
 
@@ -2433,15 +2479,25 @@ a.tool-card[data-tool="approvals"]::after{
         </span>
       </div>
 
-      <div class="cx-modal__actions">
-        <button class="btn btn-primary" id="btn-pay-bnb" type="button" data-i18n="access_pay_bnb">
-          Buy Access Pass (BNB)
-        </button>
+     <div class="cx-modal__actions">
+  <button class="btn btn-primary" id="btn-pay-bnb" type="button" disabled>
+    <span class="btn-main" data-i18n="access_pay_bnb">Buy Access Pass (BNB)</span>
+    <span class="btn-sub">
+      <span data-i18n="access_price_label">Price:</span>
+      <span id="access-price-bnb">—</span>
+    </span>
+  </button>
 
-        <button class="btn btn-secondary" id="btn-pay-usdt" type="button" data-i18n="access_pay_usdt">
-          Buy Access Pass (USDT)
-        </button>
-      </div>
+  <button class="btn btn-secondary" id="btn-pay-usdt" type="button" disabled>
+    <span class="btn-main" data-i18n="access_pay_usdt">Buy Access Pass (USDT)</span>
+    <span class="btn-sub">
+      <span data-i18n="access_price_label">Price:</span>
+      <span id="access-price-usdt">—</span>
+    </span>
+  </button>
+</div>
+
+
 
       <div class="cx-modal__foot muted" data-i18n="access_foot">
         Early access: $9 for first 500 access passes, then $19. 1 pass per wallet.
@@ -2684,8 +2740,7 @@ access_note: "No signature needed to unlock. Revoke actions always require your 
 access_pay_bnb: "Buy Access Pass (BNB)",
 access_pay_usdt: "Buy Access Pass (USDT)",
 access_foot: "Early access: $9 for first 500 access passes, then $19. 1 pass per wallet.",
-
-
+    access_price_label: "Price:",
 
     // rpc panel
     p_rpc_kicker: "RPC Health Checker",
@@ -2966,7 +3021,7 @@ access_pay_bnb: "购买访问通行证（BNB）",
 access_pay_usdt: "购买访问通行证（USDT）",
 access_desc: "几秒内解锁高级 DNA 工具。你的 Access Pass 不可转让（Soulbound），并且仅在公开发售开始时可转换为 CYCX。",
 access_foot: "早鸟：前 500 个 Access Pass 仅 $9，之后 $19。每个钱包限 1 个。",
-
+    access_price_label: "价格：",
 
     // rpc panel
     p_rpc_kicker: "RPC 健康检测",
@@ -3246,6 +3301,7 @@ access_pay_bnb: "شراء بطاقة وصول (BNB)",
 access_pay_usdt: "شراء بطاقة وصول (USDT)",
 access_desc: "افتح أدوات DNA المتقدمة خلال ثوانٍ. بطاقة الوصول الخاصة بك غير قابلة للتداول (Soulbound)، ويمكنك لاحقًا تحويلها إلى CYCX عند بدء البيع العام.",
 access_foot: "وصول مبكر: 9$ لأول 500 بطاقة وصول، ثم 19$. بطاقة واحدة لكل محفظة.",
+    access_price_label: "السعر:",
 
     // rpc panel
     p_rpc_kicker: "فحص صحة RPC",
@@ -3531,7 +3587,7 @@ access_pay_bnb: "Купить access pass (BNB)",
 access_pay_usdt: "Купить access pass (USDT)",
 access_desc: "Разблокируйте продвинутые инструменты DNA за секунды. Ваш Access Pass не передаётся (soulbound), а позже вы сможете конвертировать его в CYCX, когда начнётся публичная продажа.",
 access_foot: "Ранний доступ: $9 за первые 500 Access Pass, затем $19. 1 pass на кошелёк.",
-
+    access_price_label: "Цена:",
 
     // rpc panel
     p_rpc_kicker: "Проверка RPC",
@@ -4031,13 +4087,34 @@ window.connectWallet = cxConnectWallet;
 }
 
 
-    
-   function openAccessModal() {
-  const m = $("#access-modal");
+function accessUpdatePricesUI(usdPrice) {
+  // USDT side: 1 USDT ≈ 1$
+  const usdtEl = document.getElementById("access-price-usdt");
+  if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
+
+  // BNB side: for now show USD until we add BNB conversion
+  const bnbEl = document.getElementById("access-price-bnb");
+  if (bnbEl) bnbEl.textContent = `$${usdPrice}`;
+
+  // enable buttons
+  const bnbBtn = document.getElementById("btn-pay-bnb");
+  const usdtBtn = document.getElementById("btn-pay-usdt");
+  if (bnbBtn) bnbBtn.disabled = false;
+  if (usdtBtn) usdtBtn.disabled = false;
+}
+
+function openAccessModal() {
+  const m = document.getElementById("access-modal");
   if (!m) return;
+
   m.classList.add("is-open");
   m.setAttribute("aria-hidden", "false");
+
+  // ✅ price for now (test)
+  const usdPrice = 9; // later we’ll switch to 19 based on sold count
+  accessUpdatePricesUI(usdPrice);
 }
+
 
 function closeAccessModal() {
   const m = $("#access-modal");
