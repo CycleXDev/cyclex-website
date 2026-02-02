@@ -4125,19 +4125,17 @@ async function accessUpdatePricesUI(usdPrice) {
     const bnbUsd = await accessFetchBnbUsd();        // live BNB price in USD/USDT
     const bnbAmt = usdPrice / bnbUsd;               // BNB amount for $usdPrice
 
-    // nice display (adjust decimals if you want)
-    const bnbText = bnbAmt.toFixed(8).replace(/0+$/,"").replace(/\.$/,"");
-    if (bnbEl) bnbEl.textContent = `${bnbText} BNB`;
+    const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+if (bnbEl) bnbEl.textContent = `${bnbText} BNB`;
 
-    // store exact wei for tx (needs ethers)
-    if (window.ethers?.parseUnits) {
-      window.__ACCESS_BNB_WEI = window.ethers.parseUnits(bnbText, 18);
-      window.__ACCESS_BNB_TEXT = bnbText;
-    } else {
-      // fallback: keep text only (tx will fail-safe)
-      window.__ACCESS_BNB_WEI = null;
-      window.__ACCESS_BNB_TEXT = bnbText;
-    }
+if (window.ethers?.parseUnits) {
+  const preciseStr = bnbAmt.toFixed(18); // full 18 decimals for wei
+  window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
+  window.__ACCESS_BNB_TEXT = bnbText; // UI only
+} else {
+  window.__ACCESS_BNB_WEI  = null;
+  window.__ACCESS_BNB_TEXT = bnbText;
+}
 
     // enable buttons
     if (bnbBtn)  bnbBtn.disabled = false;
