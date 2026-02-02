@@ -1466,6 +1466,101 @@ a.tool-card[data-tool="approvals"]::after{
   html, body{ overflow-x: hidden; }
 }
 
+     /* =========================
+   ACCESS MODAL (PASS / CYCX)
+   ========================= */
+.cx-modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  z-index:9999;
+}
+
+.cx-modal.is-open{ display:block; }
+
+.cx-modal__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.55);
+  backdrop-filter: blur(6px);
+}
+
+.cx-modal__dialog{
+  position:relative;
+  width:min(720px, calc(100% - 28px));
+  margin: 8vh auto 0;
+  border-radius: 22px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 24px 90px rgba(0,0,0,.55);
+  overflow:hidden;
+}
+
+.cx-modal__top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+.cx-modal__title{
+  font-weight: 800;
+  letter-spacing:.4px;
+}
+
+.cx-modal__close{
+  border:0;
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.86);
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  cursor:pointer;
+}
+
+.cx-modal__close:hover{
+  background: rgba(255,255,255,.10);
+}
+
+.cx-modal__body{
+  padding: 18px;
+}
+
+.cx-modal__desc{
+  line-height: 1.55;
+  opacity: .92;
+}
+
+.cx-modal__note{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.10);
+  font-size: 13.5px;
+  opacity: .9;
+}
+
+.cx-modal__actions{
+  display:flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.cx-modal__actions .btn{
+  flex: 1 1 220px;
+  justify-content:center;
+}
+
+.cx-modal__foot{
+  margin-top: 12px;
+  font-size: 13px;
+  opacity: .78;
+}
+
+
 </style>
    
    
@@ -2272,6 +2367,46 @@ a.tool-card[data-tool="approvals"]::after{
 
     </main>
   </div>
+  <!-- =========================
+     ACCESS MODAL (PASS / CYCX)
+     ========================= -->
+<div class="cx-modal" id="access-modal" aria-hidden="true">
+  <div class="cx-modal__backdrop" data-close-access></div>
+
+  <div class="cx-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="access-title">
+    <div class="cx-modal__top">
+      <div class="cx-modal__title" id="access-title" data-i18n="access_title">Get Access</div>
+      <button class="cx-modal__close" type="button" data-close-access aria-label="Close">✕</button>
+    </div>
+
+    <div class="cx-modal__body">
+      <div class="cx-modal__desc" data-i18n="access_desc">
+        This is an access pass (non-tradable). It unlocks Advanced DNA tools now and can be converted to CYCX only when the public sale begins.
+      </div>
+
+      <div class="cx-modal__note">
+        <span data-i18n="access_note">
+          No signature needed to view. Any revoke action always requires your wallet approval.
+        </span>
+      </div>
+
+      <div class="cx-modal__actions">
+        <button class="btn btn-primary" id="btn-pay-bnb" type="button" disabled data-i18n="access_pay_bnb">
+          Pay with BNB
+        </button>
+
+        <button class="btn btn-secondary" id="btn-pay-usdt" type="button" disabled data-i18n="access_pay_usdt">
+          Pay with USDT
+        </button>
+      </div>
+
+      <div class="cx-modal__foot muted" data-i18n="access_foot">
+        Early access: $9 for first 500 passes, then $19. One pass per wallet.
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 
   <!-- ethers -->
@@ -3807,8 +3942,33 @@ window.connectWallet = cxConnectWallet;
 
       $("#ap-connect")?.addEventListener("click", async () => { await cxConnectWallet(); });
     }
-    function openAccessModal() {
-  alert("Access modal will open here (BNB / USDT).");
+   function openAccessModal() {
+  const m = $("#access-modal");
+  if (!m) return;
+  m.classList.add("is-open");
+  m.setAttribute("aria-hidden", "false");
+}
+
+function closeAccessModal() {
+  const m = $("#access-modal");
+  if (!m) return;
+  m.classList.remove("is-open");
+  m.setAttribute("aria-hidden", "true");
+}
+
+function bindAccessModal() {
+  const m = $("#access-modal");
+  if (!m) return;
+
+  // close buttons + backdrop
+  m.querySelectorAll("[data-close-access]").forEach((el) => {
+    el.addEventListener("click", closeAccessModal);
+  });
+
+  // ESC to close
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAccessModal();
+  });
 }
 
 
@@ -7808,6 +7968,7 @@ try {
       initPanels();
       initWalletButtons();
       initApiKeysUi();
+      bindAccessModal();
 
       initQuickScanUi();
       initLiqUi();
