@@ -4154,7 +4154,11 @@ async function accessBuyFlow(kind) {
 
     // 1) IMPORTANT: after AppKit connect, DO NOT call eth_requestAccounts
     // Use eth_accounts (no popups, no PUBLIC_requestAccounts errors)
-    const provider = window.ethereum;
+    const provider =
+  (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
+    ? wallet.providerRaw
+    : window.ethereum;
+
     if (!provider || !provider.request) {
       console.warn("No EIP-1193 provider found after AppKit connect.");
       return;
@@ -4329,6 +4333,16 @@ function accessSetStatus(msg) {
   if (!el) return;
   el.textContent = msg || "";
 }
+    // ✅ expose for console/tests (safe)
+window.openAccessModal  = openAccessModal;
+window.closeAccessModal = closeAccessModal;
+window.accessBuyFlow    = accessBuyFlow;
+window.accessSetStatus  = accessSetStatus;
+
+// (optional helpers)
+window.accessUpdatePricesUI = accessUpdatePricesUI;
+window.accessWaitForConfirm = accessWaitForConfirm;
+
 
 async function accessWaitForConfirm(txHash, maxMs = 120000) {
   const provider = window.ethereum;
