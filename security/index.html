@@ -4144,42 +4144,87 @@ async function accessBuyFlow(kind) {
   try {
     accessSetBusy(true);
 
-    // ✅ חשוב: לא נוגעים ב-AppKit של DNA — רק כאן מתחברים
-    await cxConnectWallet();
-
-    if (kind === "bnb") {
-  // 1) set your PASS sale contract address here
-  const PASS_CONTRACT = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9";
-
-  // 2) price in wei (9 USD worth in BNB is handled later; for now hardcode a BNB amount)
-  // Example: 0.02 BNB:
-  const PRICE_WEI = 20000000000000000n;
-
-  // 3) send native BNB tx
-  // cxGetSigner() / provider names differ between codebases, so we use window.ethereum directly (safe + simple)
-  if (!window.ethereum) throw new Error("NO_WALLET");
-
-  const [from] = await window.ethereum.request({ method: "eth_requestAccounts" });
-
-  const txHash = await window.ethereum.request({
-    method: "eth_sendTransaction",
-    params: [{
-      from,
-      to: PASS_CONTRACT,
-      value: "0x" + PRICE_WEI.toString(16),
-    }],
-  });
-
-  // optional: show success
-  alert("Transaction sent: " + txHash);
-  return;
-}
-
-
-    if (kind === "usdt") {
-      alert("USDT checkout: next step is approve + buy.");
+    // ✅ Access flow uses injected wallet (MetaMask / browser wallet)
+    // ✅ Doesn't touch DNA AppKit at all
+    if (!window.ethereum) {
+      alert("Please open this page in a browser wallet (MetaMask) to buy an access pass.");
       return;
     }
+
+    // 1) Ask for account (user may cancel)
+    let from;
+    try {
+      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+      from = accounts?.[0];
+      if (!from) throw new Error("NO_ACCOUNT");
+    } catch (err) {
+      // User canceled or wallet not available
+      if (err && (err.code === 4001 || err.message?.toLowerCase().includes("user rejected"))) {
+        // silent exit (no scary errors)
+        return;
+      }
+      throw err;
+    }
+
+    // 2) Ensure BSC (chainId 56 = 0x38)
+    const TARGET_CHAIN = "0x38";
+    try {
+      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      if (chainId !== TARGET_CHAIN) {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: TARGET_CHAIN }],
+        });
+      }
+    } catch (err) {
+      // If chain isn't added in wallet
+      if (err && (err.code === 4902 || String(err.message || "").includes("4902"))) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: TARGET_CHAIN,
+            chainName: "BNB Smart Chain",
+            nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+            rpcUrls: ["https://bsc-dataseed.binance.org/"],
+            blockExplorerUrls: ["https://bscscan.com/"],
+          }],
+        });
+      } else if (err && err.code === 4001) {
+        // user canceled switching
+        return;
+      } else {
+        throw err;
+      }
+    }
+
+    // 3) Branch by payment method
+    if (kind === "bnb") {
+      const PASS_CONTRACT = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9";
+
+      // TODO: Later you'll compute real BNB amount from USD.
+      // For now example: 0.02 BNB
+      const PRICE_WEI = 20000000000000000n;
+
+      const txHash = await window.ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{
+          from,
+          to: PASS_CONTRACT,
+          value: "0x" + PRICE_WEI.toString(16),
+        }],
+      });
+
+      // Optional: show simple confirmation (can replace with your own UI)
+      console.log("BNB tx sent:", txHash);
+      return;
+    }
+
+    if (kind === "usdt") {
+      // We'll implement: approve USDT -> call buy function on contract
+      console.log("USDT flow next: approve + buy");
+      return;
+    }
+
   } catch (e) {
     console.error(e);
     alert("Something went wrong. Check console.");
@@ -4187,6 +4232,7 @@ async function accessBuyFlow(kind) {
     accessSetBusy(false);
   }
 }
+
 
 
 
