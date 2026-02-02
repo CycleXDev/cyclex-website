@@ -4136,11 +4136,34 @@ async function accessBuyFlow(kind) {
     // ✅ חשוב: לא נוגעים ב-AppKit של DNA — רק כאן מתחברים
     await cxConnectWallet();
 
-    // כרגע רק בדיקת זרימה (בשלב הבא נחבר לטרנזקציה אמיתית)
     if (kind === "bnb") {
-      alert("BNB checkout: next step is on-chain purchase.");
-      return;
-    }
+  // 1) set your PASS sale contract address here
+  const PASS_CONTRACT = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9";
+
+  // 2) price in wei (9 USD worth in BNB is handled later; for now hardcode a BNB amount)
+  // Example: 0.02 BNB:
+  const PRICE_WEI = 20000000000000000n;
+
+  // 3) send native BNB tx
+  // cxGetSigner() / provider names differ between codebases, so we use window.ethereum directly (safe + simple)
+  if (!window.ethereum) throw new Error("NO_WALLET");
+
+  const [from] = await window.ethereum.request({ method: "eth_requestAccounts" });
+
+  const txHash = await window.ethereum.request({
+    method: "eth_sendTransaction",
+    params: [{
+      from,
+      to: PASS_CONTRACT,
+      value: "0x" + PRICE_WEI.toString(16),
+    }],
+  });
+
+  // optional: show success
+  alert("Transaction sent: " + txHash);
+  return;
+}
+
 
     if (kind === "usdt") {
       alert("USDT checkout: next step is approve + buy.");
