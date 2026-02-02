@@ -4076,28 +4076,19 @@ window.connectWallet = cxConnectWallet;
     await cxConnectWallet();
   });
 
- // ✅ Access modal buttons (connect first, no blocking alerts)
-$("#btn-pay-bnb")?.addEventListener("click", async (e) => {
+// ✅ Access modal buttons (single flow: connect via AppKit + continue)
+$("#btn-pay-bnb")?.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
-
-  // 1) connect wallet (non-blocking)
-  await cxConnectWallet();
-
-  // 2) next step (we'll implement): send BNB tx to Pass contract
-  // accessBuyFlow("bnb");
+  accessBuyFlow("bnb");
 });
 
-$("#btn-pay-usdt")?.addEventListener("click", async (e) => {
+$("#btn-pay-usdt")?.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
-
-  // 1) connect wallet (non-blocking)
-  await cxConnectWallet();
-
-  // 2) next step (we'll implement): approve USDT then buy
-  // accessBuyFlow("usdt");
+  accessBuyFlow("usdt");
 });
+
 
 }
 
@@ -4144,42 +4135,52 @@ async function accessBuyFlow(kind) {
   try {
     accessSetBusy(true);
 
-    // ✅ Access flow uses injected wallet (MetaMask / browser wallet)
-    // ✅ Doesn't touch DNA AppKit at all
-    if (!window.ethereum) {
-      alert("Please open this page in a browser wallet (MetaMask) to buy an access pass.");
+    // 0) Connect via AppKit (opens the wallet picker with many options)
+    if (typeof cxConnectWallet !== "function") {
+      console.warn("cxConnectWallet is missing - AppKit connect not available.");
       return;
     }
 
-    // 1) Ask for account (user may cancel)
-    let from;
-    try {
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    // This should open AppKit modal and create an active session when user connects
+    await cxConnectWallet();
+
+    // 1) IMPORTANT: after AppKit connect, DO NOT call eth_requestAccounts
+    // Use eth_accounts (no popups, no PUBLIC_requestAccounts errors)
+    const provider = window.ethereum;
+    if (!provider || !provider.request) {
+      console.warn("No EIP-1193 provider found after AppKit connect.");
+      return;
+    }
+
+    let accounts = await provider.request({ method: "eth_accounts" });
+    let from = accounts?.[0];
+
+    // Sometimes it takes a beat for the session to appear
+    if (!from) {
+      await new Promise(r => setTimeout(r, 250));
+      accounts = await provider.request({ method: "eth_accounts" });
       from = accounts?.[0];
-      if (!from) throw new Error("NO_ACCOUNT");
-    } catch (err) {
-      // User canceled or wallet not available
-      if (err && (err.code === 4001 || err.message?.toLowerCase().includes("user rejected"))) {
-        // silent exit (no scary errors)
-        return;
-      }
-      throw err;
+    }
+
+    if (!from) {
+      // user closed AppKit or didn't connect
+      return;
     }
 
     // 2) Ensure BSC (chainId 56 = 0x38)
     const TARGET_CHAIN = "0x38";
     try {
-      const chainId = await window.ethereum.request({ method: "eth_chainId" });
+      const chainId = await provider.request({ method: "eth_chainId" });
       if (chainId !== TARGET_CHAIN) {
-        await window.ethereum.request({
+        await provider.request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: TARGET_CHAIN }],
         });
       }
     } catch (err) {
-      // If chain isn't added in wallet
+      // If chain isn't added
       if (err && (err.code === 4902 || String(err.message || "").includes("4902"))) {
-        await window.ethereum.request({
+        await provider.request({
           method: "wallet_addEthereumChain",
           params: [{
             chainId: TARGET_CHAIN,
@@ -4190,7 +4191,7 @@ async function accessBuyFlow(kind) {
           }],
         });
       } else if (err && err.code === 4001) {
-        // user canceled switching
+        // user canceled switch
         return;
       } else {
         throw err;
@@ -4201,11 +4202,11 @@ async function accessBuyFlow(kind) {
     if (kind === "bnb") {
       const PASS_CONTRACT = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9";
 
-      // TODO: Later you'll compute real BNB amount from USD.
-      // For now example: 0.02 BNB
+      // TODO: compute real BNB amount from USD later
+      // Example: 0.02 BNB
       const PRICE_WEI = 20000000000000000n;
 
-      const txHash = await window.ethereum.request({
+      const txHash = await provider.request({
         method: "eth_sendTransaction",
         params: [{
           from,
@@ -4214,24 +4215,24 @@ async function accessBuyFlow(kind) {
         }],
       });
 
-      // Optional: show simple confirmation (can replace with your own UI)
       console.log("BNB tx sent:", txHash);
       return;
     }
 
     if (kind === "usdt") {
-      // We'll implement: approve USDT -> call buy function on contract
+      // We'll implement: approve USDT -> buy
       console.log("USDT flow next: approve + buy");
       return;
     }
 
   } catch (e) {
-    console.error(e);
-    alert("Something went wrong. Check console.");
+    // no alerts - keep it smooth
+    console.error("accessBuyFlow error:", e);
   } finally {
     accessSetBusy(false);
   }
 }
+
 
 
 
