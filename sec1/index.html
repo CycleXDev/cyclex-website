@@ -1466,6 +1466,144 @@ a.tool-card[data-tool="approvals"]::after{
   html, body{ overflow-x: hidden; }
 }
 
+ /* =========================
+   ACCESS MODAL (PASS / CYCX) — Premium centered
+   ========================= */
+.cx-modal{
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 9999;
+
+  /* ✅ always center dialog in viewport */
+  align-items: center;
+  justify-content: center;
+
+  padding: 22px;
+}
+
+.cx-modal.is-open{ display: flex; }
+
+.cx-modal__backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.42);
+  backdrop-filter: blur(7px);
+}
+
+/* ✅ Bigger, solid, premium */
+.cx-modal__dialog{
+  position: relative;
+  z-index: 1;
+
+  width: min(860px, 100%);
+  border-radius: 26px;
+
+  /* slightly lighter, still premium */
+  background: #13213a;
+
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow:
+    0 26px 92px rgba(0,0,0,.44),
+    0 0 0 1px rgba(255,255,255,.07) inset;
+
+  overflow: hidden;
+}
+
+
+/* Top bar */
+.cx-modal__top{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+
+  background: rgba(255,255,255,.03);
+}
+
+.cx-modal__title{
+  font-weight: 900;
+  letter-spacing: .3px;
+  font-size: 18px;
+}
+
+.cx-modal__close{
+  border: 0;
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.92);
+
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.cx-modal__close:hover{
+  background: rgba(255,255,255,.14);
+}
+
+/* Body — more space + scroll if long */
+.cx-modal__body{
+  padding: 20px 20px 22px;
+  max-height: min(72vh, 760px);
+  overflow: auto;
+}
+
+.cx-modal__desc{
+  line-height: 1.65;
+  font-size: 16px;
+  color: rgba(255,255,255,.92);
+}
+
+/* Note box */
+.cx-modal__note{
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 16px;
+
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(255,255,255,.88);
+}
+
+/* Buttons row */
+.cx-modal__actions{
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+
+.cx-modal__actions .btn{
+  flex: 1 1 260px;
+  justify-content: center;
+  min-height: 54px;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+/* Footer */
+.cx-modal__foot{
+  margin-top: 14px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: rgba(255,255,255,.72);
+}
+
+/* Mobile refinement */
+@media (max-width: 520px){
+  .cx-modal{ padding: 14px; }
+  .cx-modal__title{ font-size: 16px; }
+  .cx-modal__actions .btn{ flex-basis: 100%; }
+}
+
+
+
 </style>
    
    
@@ -2272,6 +2410,47 @@ a.tool-card[data-tool="approvals"]::after{
 
     </main>
   </div>
+ <!-- =========================
+     ACCESS MODAL (PASS / CYCX)
+     ========================= -->
+<div class="cx-modal" id="access-modal" aria-hidden="true">
+  <div class="cx-modal__backdrop" data-close-access></div>
+
+  <div class="cx-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="access-title">
+    <div class="cx-modal__top">
+      <div class="cx-modal__title" id="access-title" data-i18n="access_title">Get Access</div>
+      <button class="cx-modal__close" type="button" data-close-access aria-label="Close">✕</button>
+    </div>
+
+    <div class="cx-modal__body">
+      <div class="cx-modal__desc" data-i18n="access_desc">
+        Unlock Advanced DNA tools in seconds. Your pass is non-tradable, and later you can convert it to CYCX when the public sale begins.
+      </div>
+
+      <div class="cx-modal__note">
+        <span data-i18n="access_note">
+          No signature needed to unlock. Revoke actions always require your approval in-wallet.
+        </span>
+      </div>
+
+      <div class="cx-modal__actions">
+        <button class="btn btn-primary" id="btn-pay-bnb" type="button" disabled data-i18n="access_pay_bnb">
+          Buy Access Pass (BNB)
+        </button>
+
+        <button class="btn btn-secondary" id="btn-pay-usdt" type="button" disabled data-i18n="access_pay_usdt">
+          Buy Access Pass (USDT)
+        </button>
+      </div>
+
+      <div class="cx-modal__foot muted" data-i18n="access_foot">
+        Early access: $9 for first 500 access passes, then $19. 1 pass per wallet.
+      </div>
+    </div>
+  </div>
+</div>
+
+
 </body>
 
   <!-- ethers -->
@@ -2498,6 +2677,14 @@ dna_elig_wrong_net: "Please switch to BSC (BNB Chain) to check CYCX eligibility.
 dna_elig_error: "Could not check eligibility. Please try again.",
     dna_meta_approvals_detected: "Approvals detected:",
 dna_meta_spenders_hidden: "Spender details hidden until unlock",
+
+    access_title: "Get Access",
+access_desc: "Unlock Advanced DNA tools in seconds. Your access pass is non-tradable (soulbound), and later you can convert it to CYCX when the public sale begins.",
+access_note: "No signature needed to unlock. Revoke actions always require your approval in-wallet.",
+access_pay_bnb: "Buy Access Pass (BNB)",
+access_pay_usdt: "Buy Access Pass (USDT)",
+access_foot: "Early access: $9 for first 500 access passes, then $19. 1 pass per wallet.",
+
 
 
     // rpc panel
@@ -2773,6 +2960,12 @@ dna_table_note: "提示：不完全信任的“无限”授权建议撤销。Ver
     dna_meta_approvals_detected: "检测到授权：",
 dna_meta_spenders_hidden: "解锁前隐藏授权方详情",
 
+    access_title: "获取访问权限",
+access_note: "解锁无需签名。任何撤销操作都需要你在钱包中确认。",
+access_pay_bnb: "购买访问通行证（BNB）",
+access_pay_usdt: "购买访问通行证（USDT）",
+access_desc: "几秒内解锁高级 DNA 工具。你的 Access Pass 不可转让（Soulbound），并且仅在公开发售开始时可转换为 CYCX。",
+access_foot: "早鸟：前 500 个 Access Pass 仅 $9，之后 $19。每个钱包限 1 个。",
 
 
     // rpc panel
@@ -3047,7 +3240,12 @@ dna_table_note: "نصيحة: ألغِ الصلاحيات “غير المحدو�
     dna_meta_approvals_detected: "عدد الموافقات المكتشفة:",
 dna_meta_spenders_hidden: "تفاصيل المُنفق مخفية حتى فتح الوصول",
 
-
+    access_title: "الحصول على الوصول",
+access_note: "لا يلزم توقيع لفتح الوصول. أي عملية إلغاء تتطلب موافقتك داخل المحفظة.",
+access_pay_bnb: "شراء بطاقة وصول (BNB)",
+access_pay_usdt: "شراء بطاقة وصول (USDT)",
+access_desc: "افتح أدوات DNA المتقدمة خلال ثوانٍ. بطاقة الوصول الخاصة بك غير قابلة للتداول (Soulbound)، ويمكنك لاحقًا تحويلها إلى CYCX عند بدء البيع العام.",
+access_foot: "وصول مبكر: 9$ لأول 500 بطاقة وصول، ثم 19$. بطاقة واحدة لكل محفظة.",
 
     // rpc panel
     p_rpc_kicker: "فحص صحة RPC",
@@ -3326,6 +3524,13 @@ dna_full_access_btn: "ОТКРЫТЬ РАСШИРЕННОЕ (PASS / CYCX)",
     dna_elig_error: "Не удалось проверить доступ. Попробуйте ещё раз.",
     dna_meta_approvals_detected: "Обнаружено разрешений:",
 dna_meta_spenders_hidden: "Детали spender скрыты до разблокировки",
+
+    access_title: "Получить доступ",
+access_note: "Для открытия доступа подпись не требуется. Любое действие Revoke всегда требует подтверждения в кошельке.",
+access_pay_bnb: "Купить access pass (BNB)",
+access_pay_usdt: "Купить access pass (USDT)",
+access_desc: "Разблокируйте продвинутые инструменты DNA за секунды. Ваш Access Pass не передаётся (soulbound), а позже вы сможете конвертировать его в CYCX, когда начнётся публичная продажа.",
+access_foot: "Ранний доступ: $9 за первые 500 Access Pass, затем $19. 1 pass на кошелёк.",
 
 
     // rpc panel
@@ -3807,8 +4012,33 @@ window.connectWallet = cxConnectWallet;
 
       $("#ap-connect")?.addEventListener("click", async () => { await cxConnectWallet(); });
     }
-    function openAccessModal() {
-  alert("Access modal will open here (BNB / USDT).");
+   function openAccessModal() {
+  const m = $("#access-modal");
+  if (!m) return;
+  m.classList.add("is-open");
+  m.setAttribute("aria-hidden", "false");
+}
+
+function closeAccessModal() {
+  const m = $("#access-modal");
+  if (!m) return;
+  m.classList.remove("is-open");
+  m.setAttribute("aria-hidden", "true");
+}
+
+function bindAccessModal() {
+  const m = $("#access-modal");
+  if (!m) return;
+
+  // close buttons + backdrop
+  m.querySelectorAll("[data-close-access]").forEach((el) => {
+    el.addEventListener("click", closeAccessModal);
+  });
+
+  // ESC to close
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeAccessModal();
+  });
 }
 
 
@@ -7808,6 +8038,7 @@ try {
       initPanels();
       initWalletButtons();
       initApiKeysUi();
+      bindAccessModal();
 
       initQuickScanUi();
       initLiqUi();
