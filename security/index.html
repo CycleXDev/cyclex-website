@@ -2434,11 +2434,11 @@ a.tool-card[data-tool="approvals"]::after{
       </div>
 
       <div class="cx-modal__actions">
-        <button class="btn btn-primary" id="btn-pay-bnb" type="button" disabled data-i18n="access_pay_bnb">
+        <button class="btn btn-primary" id="btn-pay-bnb" type="button" data-i18n="access_pay_bnb">
           Buy Access Pass (BNB)
         </button>
 
-        <button class="btn btn-secondary" id="btn-pay-usdt" type="button" disabled data-i18n="access_pay_usdt">
+        <button class="btn btn-secondary" id="btn-pay-usdt" type="button" data-i18n="access_pay_usdt">
           Buy Access Pass (USDT)
         </button>
       </div>
@@ -4003,15 +4003,35 @@ window.connectWallet = cxConnectWallet;
       }
     }
 
-    function initWalletButtons() {
-      $("#btn-connect")?.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  openAccessModal(); 
-});
+   function initWalletButtons() {
+  // ✅ Hero button: opens Access modal (NOT appkite)
+  $("#btn-connect")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openAccessModal();
+  });
 
-      $("#ap-connect")?.addEventListener("click", async () => { await cxConnectWallet(); });
-    }
+  // ✅ DNA connect stays the same (appkite flow untouched)
+  $("#ap-connect")?.addEventListener("click", async () => {
+    await cxConnectWallet();
+  });
+
+  // ✅ Access modal buttons (for now: just verify click flow)
+  $("#btn-pay-bnb")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    alert("BNB flow: next step = send tx to Pass contract");
+  });
+
+  $("#btn-pay-usdt")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    alert("USDT flow: next step = approve USDT + buy");
+  });
+}
+
+
+    
    function openAccessModal() {
   const m = $("#access-modal");
   if (!m) return;
