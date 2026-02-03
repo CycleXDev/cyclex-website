@@ -4128,14 +4128,39 @@ async function accessUpdatePricesUI(usdPrice) {
     const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
 if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
 
-if (window.ethers?.parseUnits) {
-  const preciseStr = bnbAmt.toFixed(18); // full 18 decimals for wei
-  window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
+
+try {
+  const provider =
+    (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
+      ? wallet.providerRaw
+      : window.ethereum;
+
+  if (!provider?.request) throw new Error("No provider");
+
+  // eth_call to quoteBNBWei() on SALE
+  const data = "0x427f3499"; // quoteBNBWei()
+  const raw = await provider.request({
+    method: "eth_call",
+    params: [{ to: ACCESS_SALE_OR_RECEIVER, data }, "latest"],
+  });
+
+  // raw is hex uint256
+  const wei = BigInt(raw);
+  window.__ACCESS_BNB_WEI  = wei;
   window.__ACCESS_BNB_TEXT = bnbText; // UI only
-} else {
-  window.__ACCESS_BNB_WEI  = null;
+} catch (e2) {
+  console.warn("quoteBNBWei() failed, fallback to Binance-derived wei:", e2);
+
+  // fallback (less safe): Binance-derived estimate
+  if (window.ethers?.parseUnits) {
+    const preciseStr = bnbAmt.toFixed(18);
+    window.__ACCESS_BNB_WEI = window.ethers.parseUnits(preciseStr, 18);
+  } else {
+    window.__ACCESS_BNB_WEI = null;
+  }
   window.__ACCESS_BNB_TEXT = bnbText;
 }
+
 
     // enable buttons
     if (bnbBtn)  bnbBtn.disabled = false;
@@ -4180,8 +4205,8 @@ const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955"; // USDT (BSC)
 const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f"; // ✅ CycleXPassSale (BSC mainnet)
 
 // TEMP: fixed BNB price (for UI + tx). Later: compute from USD.
-const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
-const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
+//const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
+//const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
 
 async function accessBuyFlow(kind) {
   try {
