@@ -4297,43 +4297,47 @@ async function accessBuyFlow(kind) {
       }
     }
 
-  if (kind === "bnb") {
+ if (kind === "bnb") {
   const SALE = ACCESS_SALE_OR_RECEIVER;
 
-  // ✅ Get the exact on-chain required msg.value (wei)
-  // quoteBNBWei() selector: 0x427cd499
+  // ✅ quoteBNBWei() selector (confirmed from your Remix success)
+  const QUOTE_SELECTOR = "0x427d7349"; // quoteBNBWei()
+
   let quotedHex;
   try {
     quotedHex = await provider.request({
       method: "eth_call",
-      params: [{ to: SALE, data: "0x427cd499" }, "latest"],
+      params: [{ to: SALE, data: QUOTE_SELECTOR }, "latest"],
     });
   } catch (e) {
     console.error("quoteBNBWei eth_call failed:", e);
-    accessSetStatus("On-chain quote reverted. Sale/oracle may be paused or quote needs a parameter (usd). Check Remix quoteBNBWei().");
+    accessSetStatus("BNB quote failed (revert). Check sale paused / oracle stale.");
     return;
   }
 
   let PRICE_WEI;
   try {
     PRICE_WEI = BigInt(quotedHex || "0x0");
-  } catch {
+  } catch (e) {
+    console.error("Bad quote hex:", quotedHex, e);
     accessSetStatus("Bad quote returned from contract.");
     return;
   }
 
   if (PRICE_WEI <= 0n) {
-    accessSetStatus("Sale quote is 0. Sale may be paused or oracle stale.");
+    accessSetStatus("Quote returned 0. Sale may be paused / oracle stale.");
     return;
   }
+
+  // ✅ buyWithBNB() selector (your contract)
+  const BUY_SELECTOR = "0x20f1fc61";
 
   const txHash = await provider.request({
     method: "eth_sendTransaction",
     params: [{
       from,
       to: SALE,
-      // ✅ buyWithBNB()
-      data: "0x20f1fc61",
+      data: BUY_SELECTOR,
       value: "0x" + PRICE_WEI.toString(16),
     }],
   });
@@ -4357,6 +4361,7 @@ async function accessBuyFlow(kind) {
   }
   return;
 }
+
 
 
     if (kind === "usdt") {
