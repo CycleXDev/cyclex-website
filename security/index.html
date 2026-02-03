@@ -4117,61 +4117,79 @@ async function accessUpdatePricesUI(usdPrice) {
   const usdtEl = document.getElementById("access-price-usdt");
   if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
 
-  // BNB side: live convert
+  // BNB side
   const bnbEl = document.getElementById("access-price-bnb");
   if (bnbEl) bnbEl.textContent = "…";
 
-  try {
-    const bnbUsd = await accessFetchBnbUsd();        // live BNB price in USD/USDT
-    const bnbAmt = usdPrice / bnbUsd;               // BNB amount for $usdPrice
-
-    const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
-
-
-try {
+  // helper: grab provider (AppKit raw provider preferred)
   const provider =
     (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
       ? wallet.providerRaw
       : window.ethereum;
 
-  if (!provider?.request) throw new Error("No provider");
+  // --------
+  // 1) Try ON-CHAIN quote from your Sale contract: quoteBNBWei()
+  // --------
+  try {
+    if (!provider || !provider.request) throw new Error("No EIP-1193 provider");
 
-  // eth_call to quoteBNBWei() on SALE
-  const data = "0x427f3499"; // quoteBNBWei()
-  const raw = await provider.request({
-    method: "eth_call",
-    params: [{ to: ACCESS_SALE_OR_RECEIVER, data }, "latest"],
-  });
+    const SALE = ACCESS_SALE_OR_RECEIVER; // 0x1993b2...
+    const data = "0x427d7349"; // ✅ quoteBNBWei()
 
-  // raw is hex uint256
-  const wei = BigInt(raw);
-  window.__ACCESS_BNB_WEI  = wei;
-  window.__ACCESS_BNB_TEXT = bnbText; // UI only
-} catch (e2) {
-  console.warn("quoteBNBWei() failed, fallback to Binance-derived wei:", e2);
+    const raw = await provider.request({
+      method: "eth_call",
+      params: [{ to: SALE, data }, "latest"],
+    });
 
-  // fallback (less safe): Binance-derived estimate
-  if (window.ethers?.parseUnits) {
-    const preciseStr = bnbAmt.toFixed(18);
-    window.__ACCESS_BNB_WEI = window.ethers.parseUnits(preciseStr, 18);
-  } else {
-    window.__ACCESS_BNB_WEI = null;
-  }
-  window.__ACCESS_BNB_TEXT = bnbText;
-}
+    const wei = BigInt(raw || "0x0");
+    if (wei <= 0n) throw new Error("quoteBNBWei returned 0");
 
+    // store for tx
+    window.__ACCESS_BNB_WEI = wei;
+
+    // UI text
+    const bnbAmt = Number(wei) / 1e18;
+    const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+    window.__ACCESS_BNB_TEXT = bnbText;
+    if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
 
     // enable buttons
     if (bnbBtn)  bnbBtn.disabled = false;
     if (usdtBtn) usdtBtn.disabled = false;
-  } catch (e) {
-    console.error("BNB price load failed:", e);
+    return;
+  } catch (eOnchain) {
+    console.warn("quoteBNBWei() failed, fallback to Binance price:", eOnchain);
+  }
+
+  // --------
+  // 2) Fallback: Binance-derived conversion (your current approach)
+  // --------
+  try {
+    const bnbUsd = await accessFetchBnbUsd();  // live BNB price in USD/USDT
+    const bnbAmt = usdPrice / bnbUsd;         // BNB amount for $usdPrice
+
+    const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+    window.__ACCESS_BNB_TEXT = bnbText;
+    if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+    if (window.ethers?.parseUnits) {
+      const preciseStr = bnbAmt.toFixed(18);
+      window.__ACCESS_BNB_WEI = window.ethers.parseUnits(preciseStr, 18);
+    } else {
+      window.__ACCESS_BNB_WEI = null;
+    }
+
+    // enable buttons (BNB only if we have wei)
+    if (usdtBtn) usdtBtn.disabled = false;
+    if (bnbBtn)  bnbBtn.disabled = !window.__ACCESS_BNB_WEI;
+  } catch (eBinance) {
+    console.error("BNB price load failed:", eBinance);
     if (bnbEl) bnbEl.textContent = "—";
     // still allow USDT, keep BNB disabled
     if (usdtBtn) usdtBtn.disabled = false;
   }
 }
+
 
 
 function openAccessModal() {
@@ -4292,7 +4310,7 @@ async function accessBuyFlow(kind) {
     });
   } catch (e) {
     console.error("quoteBNBWei eth_call failed:", e);
-    accessSetStatus("Could not fetch on-chain BNB quote. Try again.");
+    accessSetStatus("On-chain quote reverted. Sale/oracle may be paused or quote needs a parameter (usd). Check Remix quoteBNBWei().");
     return;
   }
 
