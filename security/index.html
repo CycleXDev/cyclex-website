@@ -4279,13 +4279,33 @@ async function accessBuyFlow(kind) {
       }
     }
 
-   if (kind === "bnb") {
+  if (kind === "bnb") {
   const SALE = ACCESS_SALE_OR_RECEIVER;
 
-  // value (wei) computed in accessUpdatePricesUI()
-  const PRICE_WEI = window.__ACCESS_BNB_WEI;
-  if (!PRICE_WEI) {
-    accessSetStatus("Loading BNB price… try again in a second.");
+  // ✅ Get the exact on-chain required msg.value (wei)
+  // quoteBNBWei() selector: 0x427cd499
+  let quotedHex;
+  try {
+    quotedHex = await provider.request({
+      method: "eth_call",
+      params: [{ to: SALE, data: "0x427cd499" }, "latest"],
+    });
+  } catch (e) {
+    console.error("quoteBNBWei eth_call failed:", e);
+    accessSetStatus("Could not fetch on-chain BNB quote. Try again.");
+    return;
+  }
+
+  let PRICE_WEI;
+  try {
+    PRICE_WEI = BigInt(quotedHex || "0x0");
+  } catch {
+    accessSetStatus("Bad quote returned from contract.");
+    return;
+  }
+
+  if (PRICE_WEI <= 0n) {
+    accessSetStatus("Sale quote is 0. Sale may be paused or oracle stale.");
     return;
   }
 
@@ -4294,15 +4314,14 @@ async function accessBuyFlow(kind) {
     params: [{
       from,
       to: SALE,
-      // ✅ call buyWithBNB()
+      // ✅ buyWithBNB()
       data: "0x20f1fc61",
-      value: "0x" + BigInt(PRICE_WEI).toString(16),
+      value: "0x" + PRICE_WEI.toString(16),
     }],
   });
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
-  // ✅ fix: pass provider into the confirm loop
   const ok = await accessWaitForConfirm(provider, txHash);
 
   if (ok) {
@@ -4320,6 +4339,7 @@ async function accessBuyFlow(kind) {
   }
   return;
 }
+
 
     if (kind === "usdt") {
   // ✅ USDT on BSC (mainnet)
