@@ -6950,16 +6950,19 @@ if (dnaFullAccess) {
 //} catch {}
 
     // Best-effort: save score (ignore failures)
-try {
-  const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
-  const u = new URL("/api/saveScore", DNA_API_BASE);
-  const resp = await fetch(u.toString(), {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ net, score: scoreNow })
-  });
-  if (!resp.ok) throw new Error(`saveScore ${resp.status}`);
-} catch {}
+if (ENABLE_SAVE_SCORE) {
+  // Best-effort: save score (ignore failures)
+  try {
+    const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
+    const u = new URL("/api/saveScore", DNA_API_BASE);
+    const resp = await fetch(u.toString(), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ net, score: scoreNow })
+    });
+    if (!resp.ok) throw new Error(`saveScore ${resp.status}`);
+  } catch {}
+}
 
     const tips = (Array.isArray(data) ? null : data?.tips);
     dnaRenderTips(Array.isArray(rows) ? rows : []);
