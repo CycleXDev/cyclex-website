@@ -54,23 +54,57 @@ export default {
     //   POST /api/activity  { t: "wallet_scan"|"risky_approvals"|"high_risk_contract", n: 1..50 }
     // -------------------------
     if (url.pathname === "/api/activity") {
+            // TEMP: disable live activity counter (no KV, no load)
+            const activityEnabled = (env.ACTIVITY_ENABLED || "1") === "1";
+            if (!activityEnabled) {
+              if (request.method === "GET") {
+                return json({ disabled: true, wallets: 0, riskyApprovals: 0, highRiskContracts: 0, updatedAt: Date.now() }, 200, allowOrigin);
+              }
+              if (request.method === "POST") {
+                return json({ disabled: true, ok: false }, 200, allowOrigin);
+              }
+              return json({ error: "Method not allowed" }, 405, allowOrigin);
+            }
+      
       // must have ACTIVITY_KV binding
       if (!env.ACTIVITY_KV) {
         return json({ error: "Server missing ACTIVITY_KV binding" }, 500, allowOrigin);
       }
 
-      // GET: return counters
-      if (request.method === "GET") {
-        const wallets = Number(await env.ACTIVITY_KV.get("wallets_scanned") || "0") || 0;
-        const riskyApprovals = Number(await env.ACTIVITY_KV.get("risky_approvals") || "0") || 0;
-        const highRiskContracts = Number(await env.ACTIVITY_KV.get("high_risk_contracts") || "0") || 0;
+      // GET: return counters (CACHED)
+if (request.method === "GET") {
+  const ttl = Math.max(0, parseInt(String(env.ACTIVITY_CACHE_TTL || "1800"), 10) || 1800);
 
-        return json(
-          { wallets, riskyApprovals, highRiskContracts, updatedAt: Date.now() },
-          200,
-          allowOrigin
-        );
-      }
+  // Cache key per origin (avoid CORS mix between cyclex.network and www)
+  const cacheKey = new Request(url.toString() + `|o=${allowOrigin}`, { method: "GET" });
+  const cache = caches.default;
+
+  // 1) try cache first (no KV load)
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
+  // 2) fetch from KV once
+  const wallets = Number(await env.ACTIVITY_KV.get("wallets_scanned") || "0") || 0;
+  const riskyApprovals = Number(await env.ACTIVITY_KV.get("risky_approvals") || "0") || 0;
+  const highRiskContracts = Number(await env.ACTIVITY_KV.get("high_risk_contracts") || "0") || 0;
+
+  const body = JSON.stringify({ wallets, riskyApprovals, highRiskContracts, updatedAt: Date.now() });
+
+  const resp = new Response(body, {
+    status: 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...corsHeaders(allowOrigin),
+      // Cache on Cloudflare edge
+      "cache-control": `public, s-maxage=${ttl}`,
+    },
+  });
+
+  // 3) store in cache
+  ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+  return resp;
+}
+
 
       // POST: increment counters
       if (request.method === "POST") {
@@ -112,6 +146,12 @@ export default {
         const curVal = Number(await env.ACTIVITY_KV.get(key) || "0") || 0;
         const nextVal = curVal + n;
         await env.ACTIVITY_KV.put(key, String(nextVal));
+       // purge GET cache after updates (must match GET cacheKey exactly)
+        const purgeKey = new Request(new URL("/api/activity", url.origin).toString() + `|o=${allowOrigin}`, { method: "GET" });
+        ctx.waitUntil(caches.default.delete(purgeKey));
+
+
+
 
         return json({ ok: true, key, next: nextVal }, 200, allowOrigin);
       }
