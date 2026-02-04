@@ -4272,6 +4272,16 @@ const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
 // TEMP: fixed BNB price (for UI + tx). Later: compute from USD.
 const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
 const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
+async function waitForAccounts(provider, maxMs = 8000) {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    const accs = await provider.request({ method: "eth_accounts" }).catch(() => []);
+    const a = accs?.[0];
+    if (a) return a;
+    await new Promise(r => setTimeout(r, 250));
+  }
+  return "";
+}
 
 async function accessBuyFlow(kind) {
   try {
@@ -4298,20 +4308,9 @@ async function accessBuyFlow(kind) {
       return;
     }
 
-    let accounts = await provider.request({ method: "eth_accounts" });
-    let from = accounts?.[0];
+   const from = await waitForAccounts(provider, 8000);
+if (!from) return; // user didn't connect / session not ready
 
-    // Sometimes it takes a beat for the session to appear
-    if (!from) {
-      await new Promise(r => setTimeout(r, 250));
-      accounts = await provider.request({ method: "eth_accounts" });
-      from = accounts?.[0];
-    }
-
-    if (!from) {
-      // user closed AppKit or didn't connect
-      return;
-    }
 
     // 2) Ensure BSC (chainId 56 = 0x38)
     const TARGET_CHAIN = "0x38";
@@ -4356,15 +4355,27 @@ async function accessBuyFlow(kind) {
 
   const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
 
+const txParams = {
+  from,
+  to: PASS_CONTRACT,
+  value: "0x" + BigInt(PRICE_WEI).toString(16),
+  data: BUY_WITH_BNB_SELECTOR
+};
+
+try {
+  // preflight: will this tx succeed?
+  await provider.request({ method: "eth_estimateGas", params: [txParams] });
+} catch (e) {
+  accessSetStatus("BNB purchase would fail (estimateGas). Check selector/contract state.");
+  console.warn("estimateGas failed:", e);
+  return;
+}
+
 const txHash = await provider.request({
   method: "eth_sendTransaction",
-  params: [{
-    from,
-    to: PASS_CONTRACT,
-    value: "0x" + BigInt(PRICE_WEI).toString(16),
-    data: BUY_WITH_BNB_SELECTOR
-  }],
+  params: [txParams],
 });
+
 
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
@@ -6588,12 +6599,17 @@ function dnaVerifiedChip(verified) {
 }
 
 function dnaBindRevokeButtons(net) {
-  $$("#ap-table [data-revoke]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const tk = btn.getAttribute("data-token");
-      const sp = btn.getAttribute("data-spender");
-      await dnaRevokeOne(net, tk, sp);
-    });
+  const table = document.getElementById("ap-table");
+  if (!table || table.__revokeBound) return;
+  table.__revokeBound = true;
+
+  table.addEventListener("click", async (e) => {
+    const btn = e.target.closest?.("[data-revoke]");
+    if (!btn) return;
+
+    const tk = btn.getAttribute("data-token");
+    const sp = btn.getAttribute("data-spender");
+    await dnaRevokeOne(net, tk, sp);
   });
 }
 
@@ -7354,9 +7370,9 @@ async function dnaRequestFullAccess() {
   try {
     dnaLockApprovalsUI("checking");
 
-if (!wallet?.address || !wallet?.signer) {
-  const ok = await window.cxConnectWallet?.({ silent: false }); // interactive connect
-  if (!ok || !wallet?.address || !wallet?.signer) {
+if (!wallet?.address) {
+  const ok = await window.cxConnectWallet?.({ silent: false }); // user asked for full access => ok to prompt
+  if (!ok || !wallet?.address) {
     dnaLockApprovalsUI("error");
     return;
   }
@@ -8562,6 +8578,26 @@ try {
   el.scrollIntoView({ behavior: "smooth", block: "start" });
 }, 450);
     }
+
+    // =========================
+// DNA — export for console/tests
+// =========================
+try {
+  window.dnaScan = window.dnaScan || dnaScan;
+  window.dnaConnectWallet = window.dnaConnectWallet || dnaConnectWallet;
+
+  window.dnaRequestFullAccess = window.dnaRequestFullAccess || dnaRequestFullAccess;
+  window.dnaCheckCycxEligibility_BSC = window.dnaCheckCycxEligibility_BSC || dnaCheckCycxEligibility_BSC;
+
+  window.initWalletSecurityDNAUi = window.initWalletSecurityDNAUi || initWalletSecurityDNAUi;
+  window.initDnaCycxGate = window.initDnaCycxGate || initDnaCycxGate;
+
+  // optional (helps console tests)
+  window.withRpcFallback = window.withRpcFallback || withRpcFallback;
+  window.E = window.E || E;
+} catch (e) {
+  console.warn("DNA exports failed:", e);
+}
 
     // =========================
     // Boot
