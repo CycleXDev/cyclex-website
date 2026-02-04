@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4117,79 +4118,36 @@ async function accessUpdatePricesUI(usdPrice) {
   const usdtEl = document.getElementById("access-price-usdt");
   if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
 
-  // BNB side
+  // BNB side: live convert
   const bnbEl = document.getElementById("access-price-bnb");
   if (bnbEl) bnbEl.textContent = "…";
 
-  // helper: grab provider (AppKit raw provider preferred)
-  const provider =
-    (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
-      ? wallet.providerRaw
-      : window.ethereum;
-
-  // --------
-  // 1) Try ON-CHAIN quote from your Sale contract: quoteBNBWei()
-  // --------
   try {
-    if (!provider || !provider.request) throw new Error("No EIP-1193 provider");
+    const bnbUsd = await accessFetchBnbUsd();        // live BNB price in USD/USDT
+    const bnbAmt = usdPrice / bnbUsd;               // BNB amount for $usdPrice
 
-    const SALE = ACCESS_SALE_OR_RECEIVER; // 0x1993b2...
-    const data = "0x427d7349"; // ✅ quoteBNBWei()
-
-    const raw = await provider.request({
-      method: "eth_call",
-      params: [{ to: SALE, data }, "latest"],
-    });
-
-    const wei = BigInt(raw || "0x0");
-    if (wei <= 0n) throw new Error("quoteBNBWei returned 0");
-
-    // store for tx
-    window.__ACCESS_BNB_WEI = wei;
-
-    // UI text
-    const bnbAmt = Number(wei) / 1e18;
     const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-    window.__ACCESS_BNB_TEXT = bnbText;
-    if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+if (window.ethers?.parseUnits) {
+  const preciseStr = bnbAmt.toFixed(18); // full 18 decimals for wei
+  window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
+  window.__ACCESS_BNB_TEXT = bnbText; // UI only
+} else {
+  window.__ACCESS_BNB_WEI  = null;
+  window.__ACCESS_BNB_TEXT = bnbText;
+}
 
     // enable buttons
     if (bnbBtn)  bnbBtn.disabled = false;
     if (usdtBtn) usdtBtn.disabled = false;
-    return;
-  } catch (eOnchain) {
-    console.warn("quoteBNBWei() failed, fallback to Binance price:", eOnchain);
-  }
-
-  // --------
-  // 2) Fallback: Binance-derived conversion (your current approach)
-  // --------
-  try {
-    const bnbUsd = await accessFetchBnbUsd();  // live BNB price in USD/USDT
-    const bnbAmt = usdPrice / bnbUsd;         // BNB amount for $usdPrice
-
-    const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-    window.__ACCESS_BNB_TEXT = bnbText;
-    if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
-
-    if (window.ethers?.parseUnits) {
-      const preciseStr = bnbAmt.toFixed(18);
-      window.__ACCESS_BNB_WEI = window.ethers.parseUnits(preciseStr, 18);
-    } else {
-      window.__ACCESS_BNB_WEI = null;
-    }
-
-    // enable buttons (BNB only if we have wei)
-    if (usdtBtn) usdtBtn.disabled = false;
-    if (bnbBtn)  bnbBtn.disabled = !window.__ACCESS_BNB_WEI;
-  } catch (eBinance) {
-    console.error("BNB price load failed:", eBinance);
+  } catch (e) {
+    console.error("BNB price load failed:", e);
     if (bnbEl) bnbEl.textContent = "—";
     // still allow USDT, keep BNB disabled
     if (usdtBtn) usdtBtn.disabled = false;
   }
 }
-
 
 
 function openAccessModal() {
@@ -4220,11 +4178,11 @@ function openAccessModal() {
 // =========================
 const ACCESS_USD_PRICE = 9; // later: 19 after sold count
 const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955"; // USDT (BSC)
-const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f"; // ✅ CycleXPassSale (BSC mainnet)
+const ACCESS_SALE_OR_RECEIVER = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9"; // TODO: replace with real SALE contract later
 
 // TEMP: fixed BNB price (for UI + tx). Later: compute from USD.
-//const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
-//const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
+const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
+const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
 
 async function accessBuyFlow(kind) {
   try {
@@ -4297,97 +4255,29 @@ async function accessBuyFlow(kind) {
       }
     }
 
-if (kind === "bnb") {
-  const SALE = ACCESS_SALE_OR_RECEIVER;
+   if (kind === "bnb") {
+  const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
 
-  // ✅ try quoteBNBWei() first, but include `from` (important!)
-  const QUOTE_SELECTOR = "0x427d7349"; // quoteBNBWei()
-
-  let quotedHex;
-  try {
-    quotedHex = await provider.request({
-      method: "eth_call",
-      params: [{
-        from,           // ✅ THIS is the fix
-        to: SALE,
-        data: QUOTE_SELECTOR
-      }, "latest"],
-    });
-  } catch (e) {
-    console.error("quoteBNBWei eth_call failed:", e);
-    accessSetStatus("BNB quote reverted. Trying fallback quote…");
-  }
-
-  let PRICE_WEI = 0n;
-
-  // decode result if we got one
-  if (quotedHex && quotedHex !== "0x") {
-    try {
-      PRICE_WEI = BigInt(quotedHex);
-    } catch (e) {
-      console.error("Bad quote hex:", quotedHex, e);
-      PRICE_WEI = 0n;
-    }
-  }
-
-  // ✅ Fallback: if quoteBNBWei reverted/empty, try quoteBNBWeiForUSD(uint256)
-  // (your Remix shows this exists: QUOTEBNBWEIFORUSD)
-  if (PRICE_WEI <= 0n) {
-    try {
-      // function selector for quoteBNBWeiForUSD(uint256) computed once via ethers
-      // We'll encode manually: selector + 32-byte usdDollars
-      // NOTE: usdDollars is an integer like 9 (NOT 9e18)
-      const usd = BigInt(ACCESS_USD_PRICE || 9);
-
-      // selector = first 4 bytes of keccak("quoteBNBWeiForUSD(uint256)")
-      // We'll compute it using ethers if available, otherwise use your existing known selector if you have it.
-      let data;
-      if (window.ethers?.id) {
-        const sel = window.ethers.id("quoteBNBWeiForUSD(uint256)").slice(0, 10);
-        const arg = usd.toString(16).padStart(64, "0");
-        data = sel + arg;
-      } else {
-        // If ethers isn't present, we can't compute selector safely.
-        throw new Error("ethers not available for fallback selector");
-      }
-
-      const hex2 = await provider.request({
-        method: "eth_call",
-        params: [{
-          from,         // ✅ include from here too
-          to: SALE,
-          data
-        }, "latest"],
-      });
-
-      if (hex2 && hex2 !== "0x") PRICE_WEI = BigInt(hex2);
-    } catch (e2) {
-      console.error("quoteBNBWeiForUSD eth_call failed:", e2);
-      accessSetStatus("On-chain quote failed. (Paused/oracle/selector).");
-      return;
-    }
-  }
-
-  if (PRICE_WEI <= 0n) {
-    accessSetStatus("Quote returned 0. Sale may be paused / oracle stale.");
+  // use the LIVE wei we computed when opening the modal
+  const PRICE_WEI = window.__ACCESS_BNB_WEI;
+  if (!PRICE_WEI) {
+    accessSetStatus("Loading BNB price… try again in a second.");
     return;
   }
-
-  const BUY_SELECTOR = "0x20f1fc61"; // buyWithBNB()
 
   const txHash = await provider.request({
     method: "eth_sendTransaction",
     params: [{
       from,
-      to: SALE,
-      data: BUY_SELECTOR,
-      value: "0x" + PRICE_WEI.toString(16),
+      to: PASS_CONTRACT,
+      // safe conversion even if PRICE_WEI is not a pure BigInt for some reason
+      value: "0x" + BigInt(PRICE_WEI).toString(16),
     }],
   });
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
-  const ok = await accessWaitForConfirm(provider, txHash);
+  const ok = await accessWaitForConfirm(txHash);
 
   if (ok) {
     accessSetStatus("Confirmed ✅");
@@ -4406,13 +4296,12 @@ if (kind === "bnb") {
 }
 
 
-
     if (kind === "usdt") {
   // ✅ USDT on BSC (mainnet)
   const USDT = "0x55d398326f99059fF775485246999027B3197955";
 
   // ✅ Your sale/pass contract (same as BNB receiver for now)
-  const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+  const PASS_CONTRACT = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9";
 
   // Minimal ERC20 ABI (approve + decimals)
   const ERC20_ABI = [
@@ -4439,7 +4328,7 @@ if (kind === "bnb") {
   const signer = await web3Provider.getSigner();
 
   // amount in USDT (for now: 9 USDT)
-  const usdPrice = ACCESS_USD_PRICE;
+  const usdPrice = 9; // later dynamic 9/19
   const usdtContract = new ethers.Contract(USDT, ERC20_ABI, signer);
   const sale = new ethers.Contract(PASS_CONTRACT, SALE_ABI, signer);
 
