@@ -4312,11 +4312,10 @@ const txHash = await provider.request({
     { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
   ];
 
-  // Sale ABI placeholder (we will match it to your contract next)
-  // You MUST have a function like: buyWithUSDT(uint256 amount)
-  const SALE_ABI = [
-    { "constant": false, "inputs": [{ "name": "amount", "type": "uint256" }], "name": "buyWithUSDT", "outputs": [], "type": "function" }
-  ];
+ const SALE_ABI = [
+  { "constant": false, "inputs": [], "name": "buyWithUSDT", "outputs": [], "type": "function" }
+];
+
 
   accessSetStatus("Preparing USDT checkout…");
 
@@ -4345,7 +4344,7 @@ const txHash = await provider.request({
 
   // 2) buy
   accessSetStatus("Buying pass…");
-  const tx2 = await sale.buyWithUSDT(amount);
+  const tx2 = await sale.buyWithUSDT();
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
   const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
