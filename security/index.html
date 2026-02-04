@@ -153,35 +153,127 @@
   body.lang-switching{animation:langFade .28s ease-out}
   @keyframes langFade{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 
-  /* Hero */
-  .hero{text-align:center;max-width:980px;margin:0 auto 16px;animation:fadeUp .8s ease-out forwards}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-  .hero-kicker{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:12px}
-  .hero-title{font-size:clamp(36px,4.7vw,56px);line-height:1.05;font-weight:900;margin-bottom:12px;letter-spacing:-.02em}
-  .hero-subtitle{max-width:760px;margin:0 auto 16px;font-size:15px;line-height:1.5;color:var(--text-muted)}
-  .hero-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-bottom:12px}
+ /* =========================
+   HERO (SECURITY HUB — MAIN-SITE TITLE GRADIENT)
+   ========================= */
+.hero{
+  position:relative;
+  text-align:center;
+  max-width:980px;
+  margin:0 auto 16px;
+  padding:18px 0 18px;
+  animation:fadeUp .8s ease-out forwards;
+}
 
-    .hero-micro{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:10px;
-    margin: 2px 0 0;
-    font-size:12px;
-    line-height:1.35;
-    color: rgba(244,246,255,.78);
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* Premium glow like main site */
+.hero::before{
+  content:"";
+  position:absolute;
+  inset:-70px 0 -40px;
+  z-index:-1;
+  border-radius:80px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(0,229,255,.10), transparent 62%),
+    radial-gradient(circle at 26% 40%, rgba(124,92,255,.08), transparent 66%);
+  opacity:.65;
+  filter: blur(18px);
+  pointer-events:none;
+}
+
+.hero-kicker{
+  font-size:12px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color: rgba(0,229,255,.92);
+  margin-bottom:14px;
+}
+
+.hero-title{
+  font-size:clamp(36px,4.7vw,56px);
+  line-height:1.05;
+  font-weight:950;
+  margin-bottom:12px;
+  letter-spacing:-.035em;
+  display:inline-block;
+  padding-bottom:.10em;
+}
+
+/* Title gradient — WHITE → TURQUOISE → CYAN (main-page feel) */
+@supports (-webkit-background-clip:text){
+  .hero-title{
+    background: linear-gradient(100deg,
+      rgba(244,246,255,1) 0%,
+      rgba(180,255,250,.98) 24%,
+      rgba(0,229,255,.98) 52%,
+      rgba(0,210,255,.92) 74%,
+      rgba(244,246,255,.92) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color: transparent;
+    animation: titleSheen 6.6s ease-in-out infinite;
+    background-size: 240% 240%;
+    text-shadow:none;
   }
-  .hero-micro .micro-item{
-    opacity:.92;
+  @keyframes titleSheen{
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
   }
-  .hero-micro .micro-dot{
-    opacity:.35;
-    user-select:none;
+}
+
+/* Keep single-line title on wide screens (like main site) */
+@media (min-width:980px){
+  .hero-title{
+    white-space:nowrap;
+    letter-spacing:-0.04em;
+    font-size:clamp(46px,4.4vw,80px);
   }
-  @media (max-width:520px){
-    .hero-micro{gap:8px}
-  }
+  .hero-title br{display:none;}
+}
+
+.hero-subtitle{
+  max-width:760px;
+  margin:0 auto 16px;
+  font-size:15px;
+  line-height:1.5;
+  color:var(--text-muted);
+}
+
+.hero-actions{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+/* Microcopy under buttons */
+.hero-micro{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:2px 0 0;
+  font-size:12px;
+  line-height:1.35;
+  color: rgba(244,246,255,.72);
+}
+.hero-micro .micro-item{opacity:.88;}
+.hero-micro .micro-dot{
+  opacity:.42;
+  font-size:13px;
+  transform: translateY(-.5px);
+  user-select:none;
+}
+@media (max-width:520px){
+  .hero-micro{gap:8px;}
+}
 
   .btn{
     border-radius:999px;border:none;
