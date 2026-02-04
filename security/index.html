@@ -4156,69 +4156,74 @@ async function accessQuoteBNBWeiOnchain(_providerIgnored) {
 
 
 async function accessUpdatePricesUI(usdPrice) {
-  // disable until we know BNB price
-  const bnbBtn  = document.getElementById("btn-pay-bnb");
-  const usdtBtn = document.getElementById("btn-pay-usdt");
-  if (bnbBtn)  bnbBtn.disabled = true;
-  if (usdtBtn) usdtBtn.disabled = true;
-
-  // USDT side: exact
-  const usdtEl = document.getElementById("access-price-usdt");
-  if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
-
-  // BNB side
-  const bnbEl = document.getElementById("access-price-bnb");
-  if (bnbEl) bnbEl.textContent = "…";
-
+  accessSetBusy(true);
   try {
-    // 0) Prefer on-chain quote
-    const provider =
-      (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
-        ? wallet.providerRaw
-        : window.ethereum;
+    // disable until we know BNB price
+    const bnbBtn  = document.getElementById("btn-pay-bnb");
+    const usdtBtn = document.getElementById("btn-pay-usdt");
+    if (bnbBtn)  bnbBtn.disabled = true;
+    if (usdtBtn) usdtBtn.disabled = true;
 
-    if (provider?.request) {
-      try {
-        const quoteWei = await accessQuoteBNBWeiOnchain(provider);
-        const quoteBnb = Number(quoteWei) / 1e18;
+    // USDT side: exact
+    const usdtEl = document.getElementById("access-price-usdt");
+    if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
 
-        const bnbText = quoteBnb.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-        if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+    // BNB side
+    const bnbEl = document.getElementById("access-price-bnb");
+    if (bnbEl) bnbEl.textContent = "…";
 
-        window.__ACCESS_BNB_WEI  = quoteWei;
-        window.__ACCESS_BNB_TEXT = bnbText;
+    try {
+      // 0) Prefer on-chain quote
+      const provider =
+        (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
+          ? wallet.providerRaw
+          : window.ethereum;
 
-        if (bnbBtn)  bnbBtn.disabled = false;
-        if (usdtBtn) usdtBtn.disabled = false;
-        return;
-      } catch (e) {
-        console.warn("on-chain quote failed, fallback to Binance:", e);
+      if (provider?.request) {
+        try {
+          const quoteWei = await accessQuoteBNBWeiOnchain(provider);
+          const quoteBnb = Number(quoteWei) / 1e18;
+
+          const bnbText = quoteBnb.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+          if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+          window.__ACCESS_BNB_WEI  = quoteWei;
+          window.__ACCESS_BNB_TEXT = bnbText;
+
+          if (bnbBtn)  bnbBtn.disabled = false;
+          if (usdtBtn) usdtBtn.disabled = false;
+          return;
+        } catch (e) {
+          console.warn("on-chain quote failed, fallback to Binance:", e);
+        }
       }
+
+      // 1) Fallback: Binance conversion
+      const bnbUsd = await accessFetchBnbUsd();
+      const bnbAmt = usdPrice / bnbUsd;
+
+      const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+      if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+      if (window.ethers?.parseUnits) {
+        const preciseStr = bnbAmt.toFixed(18);
+        window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
+        window.__ACCESS_BNB_TEXT = bnbText;
+      } else {
+        window.__ACCESS_BNB_WEI  = null;
+        window.__ACCESS_BNB_TEXT = bnbText;
+      }
+
+      if (bnbBtn)  bnbBtn.disabled = false;
+      if (usdtBtn) usdtBtn.disabled = false;
+
+    } catch (e) {
+      console.error("BNB price load failed:", e);
+      if (bnbEl) bnbEl.textContent = "—";
+      if (usdtBtn) usdtBtn.disabled = false;
     }
-
-    // 1) Fallback: Binance conversion
-    const bnbUsd = await accessFetchBnbUsd();
-    const bnbAmt = usdPrice / bnbUsd;
-
-    const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-    if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
-
-    if (window.ethers?.parseUnits) {
-      const preciseStr = bnbAmt.toFixed(18);
-      window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
-      window.__ACCESS_BNB_TEXT = bnbText;
-    } else {
-      window.__ACCESS_BNB_WEI  = null;
-      window.__ACCESS_BNB_TEXT = bnbText;
-    }
-
-    if (bnbBtn)  bnbBtn.disabled = false;
-    if (usdtBtn) usdtBtn.disabled = false;
-
-  } catch (e) {
-    console.error("BNB price load failed:", e);
-    if (bnbEl) bnbEl.textContent = "—";
-    if (usdtBtn) usdtBtn.disabled = false;
+  } finally {
+    accessSetBusy(false);
   }
 }
 
@@ -4232,9 +4237,8 @@ function openAccessModal() {
   m.classList.add("is-open");
   m.setAttribute("aria-hidden", "false");
 
-  const usdPrice = 9; // later dynamic
-  // fire-and-forget (updates UI + enables buttons when ready)
-  accessUpdatePricesUI(usdPrice);
+  accessUpdatePricesUI(ACCESS_USD_PRICE);
+
 }
 
     function accessSetBusy(on) {
@@ -4254,6 +4258,11 @@ const ACCESS_USD_PRICE = 9; // later: 19 after sold count
 const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955"; // USDT (BSC)
 const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
     const ACCESS_READ_RPCS = [
+  "https://bsc-rpc.publicnode.com",
+  "https://bsc.publicnode.com",
+  "https://bsc.rpc.blxrbdn.com",
+  "https://1rpc.io/bnb",
+  "https://rpc.ankr.com/bsc",
   "https://bsc-dataseed.binance.org/",
   "https://bsc-dataseed1.defibit.io/",
   "https://bsc-dataseed1.ninicoin.io/"
@@ -7294,22 +7303,25 @@ function dnaUnlockApprovalsUI() {
 async function dnaCheckCycxEligibility_BSC() {
   if (!wallet?.address) return { ok: false, reason: "no_wallet" };
 
-  const BSC_RPC =
-    window.BSC_RPC_URL ||
-    "https://bsc-dataseed.binance.org";
+  // ✅ Use your existing RPC fallback pool for BSC reads
+  const r = await withRpcFallback("bsc", async (provider) => {
+    const token = new E.Contract(CYCX_BSC_ADDRESS, CYCX_GATE_ABI, provider);
 
-  const provider = new E.JsonRpcProvider(BSC_RPC);
-  const token = new E.Contract(CYCX_BSC_ADDRESS, CYCX_GATE_ABI, provider);
+    let decimals = 18;
+    try { decimals = Number(await token.decimals()); } catch {}
 
-  let decimals = 18;
-  try { decimals = Number(await token.decimals()); } catch {}
+    const bal = await token.balanceOf(wallet.address);
+    const minRaw = BigInt(CYCX_MIN_TOKENS) * (10n ** BigInt(decimals));
+    const eligible = (BigInt(bal) >= minRaw);
 
-  const bal = await token.balanceOf(wallet.address);
-  const minRaw = BigInt(CYCX_MIN_TOKENS) * (10n ** BigInt(decimals));
-  const eligible = (BigInt(bal) >= minRaw);
+    return { eligible, bal: BigInt(bal), decimals };
+  }, { timeoutMs: 9000 });
 
-  return { ok: true, eligible, bal: BigInt(bal), decimals };
+  if (!r.ok) return { ok: false, reason: "rpc_failed" };
+
+  return { ok: true, eligible: r.res.eligible, bal: r.res.bal, decimals: r.res.decimals };
 }
+
 
 
 async function dnaRequestFullAccess() {
