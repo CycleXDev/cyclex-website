@@ -4106,6 +4106,29 @@ async function accessFetchBnbUsd() {
   return px;
 }
 
+    async function accessQuoteBNBWeiOnchain(provider) {
+  // Sale contract (same as receiver)
+  const SALE = ACCESS_SALE_OR_RECEIVER;
+
+  // ✅ correct selector from BscScan: quoteBNBWei()
+  const QUOTE_BNB_WEI_SELECTOR = "0x42773499";
+
+  // Use connected wallet address as "from" (matches Remix behavior)
+  const accounts = await provider.request({ method: "eth_accounts" });
+  const from = accounts?.[0];
+
+  const out = await provider.request({
+    method: "eth_call",
+    params: [{ from, to: SALE, data: QUOTE_BNB_WEI_SELECTOR }, "latest"]
+  });
+
+  // returns uint256 (wei)
+  const wei = BigInt(out);
+  if (wei <= 0n) throw new Error("QUOTE_ZERO");
+  return wei;
+}
+
+
 async function accessUpdatePricesUI(usdPrice) {
   // disable until we know BNB price
   const bnbBtn  = document.getElementById("btn-pay-bnb");
@@ -4121,31 +4144,61 @@ async function accessUpdatePricesUI(usdPrice) {
   const bnbEl = document.getElementById("access-price-bnb");
   if (bnbEl) bnbEl.textContent = "…";
 
-  try {
-    const bnbUsd = await accessFetchBnbUsd();        // live BNB price in USD/USDT
-    const bnbAmt = usdPrice / bnbUsd;               // BNB amount for $usdPrice
+try {
+  // 0) Prefer on-chain quote (stable + matches contract)
+  const provider =
+    (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
+      ? wallet.providerRaw
+      : window.ethereum;
 
-    const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+  if (provider?.request) {
+    try {
+      const quoteWei = await accessQuoteBNBWeiOnchain(provider);
 
-if (window.ethers?.parseUnits) {
-  const preciseStr = bnbAmt.toFixed(18); // full 18 decimals for wei
-  window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
-  window.__ACCESS_BNB_TEXT = bnbText; // UI only
-} else {
-  window.__ACCESS_BNB_WEI  = null;
-  window.__ACCESS_BNB_TEXT = bnbText;
-}
+      // UI text
+      const quoteBnb = Number(quoteWei) / 1e18;
+      const bnbText = quoteBnb.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
 
-    // enable buttons
-    if (bnbBtn)  bnbBtn.disabled = false;
-    if (usdtBtn) usdtBtn.disabled = false;
-  } catch (e) {
-    console.error("BNB price load failed:", e);
-    if (bnbEl) bnbEl.textContent = "—";
-    // still allow USDT, keep BNB disabled
-    if (usdtBtn) usdtBtn.disabled = false;
+      if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+      // store for tx
+      window.__ACCESS_BNB_WEI  = quoteWei;
+      window.__ACCESS_BNB_TEXT = bnbText;
+
+      // enable buttons
+      if (bnbBtn)  bnbBtn.disabled = false;
+      if (usdtBtn) usdtBtn.disabled = false;
+      return; // ✅ done
+    } catch (e) {
+      console.warn("on-chain quote failed, fallback to Binance:", e);
+      // continue to Binance fallback
+    }
   }
+
+  // 1) Fallback: Binance price -> USD->BNB conversion (your existing logic)
+  const bnbUsd = await accessFetchBnbUsd();
+  const bnbAmt = usdPrice / bnbUsd;
+
+  const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+  if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+  if (window.ethers?.parseUnits) {
+    const preciseStr = bnbAmt.toFixed(18);
+    window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
+    window.__ACCESS_BNB_TEXT = bnbText;
+  } else {
+    window.__ACCESS_BNB_WEI  = null;
+    window.__ACCESS_BNB_TEXT = bnbText;
+  }
+
+  if (bnbBtn)  bnbBtn.disabled = false;
+  if (usdtBtn) usdtBtn.disabled = false;
+
+} catch (e) {
+  console.error("BNB price load failed:", e);
+  if (bnbEl) bnbEl.textContent = "—";
+  // still allow USDT, keep BNB disabled
+  if (usdtBtn) usdtBtn.disabled = false;
 }
 
 
