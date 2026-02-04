@@ -4178,7 +4178,7 @@ function openAccessModal() {
 // =========================
 const ACCESS_USD_PRICE = 9; // later: 19 after sold count
 const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955"; // USDT (BSC)
-const ACCESS_SALE_OR_RECEIVER = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9"; // TODO: replace with real SALE contract later
+const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
 
 // TEMP: fixed BNB price (for UI + tx). Later: compute from USD.
 const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
@@ -4265,19 +4265,22 @@ async function accessBuyFlow(kind) {
     return;
   }
 
-  const txHash = await provider.request({
-    method: "eth_sendTransaction",
-    params: [{
-      from,
-      to: PASS_CONTRACT,
-      // safe conversion even if PRICE_WEI is not a pure BigInt for some reason
-      value: "0x" + BigInt(PRICE_WEI).toString(16),
-    }],
-  });
+  const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
+
+const txHash = await provider.request({
+  method: "eth_sendTransaction",
+  params: [{
+    from,
+    to: PASS_CONTRACT,
+    value: "0x" + BigInt(PRICE_WEI).toString(16),
+    data: BUY_WITH_BNB_SELECTOR
+  }],
+});
+
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
-  const ok = await accessWaitForConfirm(txHash);
+  const ok = await accessWaitForConfirm(provider, txHash);
 
   if (ok) {
     accessSetStatus("Confirmed ✅");
@@ -4301,7 +4304,7 @@ async function accessBuyFlow(kind) {
   const USDT = "0x55d398326f99059fF775485246999027B3197955";
 
   // ✅ Your sale/pass contract (same as BNB receiver for now)
-  const PASS_CONTRACT = "0x20b1a64dCB18A69d06533B6F97741b4201d34bf9";
+  const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
 
   // Minimal ERC20 ABI (approve + decimals)
   const ERC20_ABI = [
