@@ -4106,27 +4106,53 @@ async function accessFetchBnbUsd() {
   return px;
 }
 
-    async function accessQuoteBNBWeiOnchain(provider) {
-  // Sale contract (same as receiver)
+  async function accessReadEthCall(to, data) {
+  let lastErr = null;
+
+  for (const url of ACCESS_READ_RPCS) {
+    try {
+      const body = {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_call",
+        params: [{ to, data }, "latest"]
+      };
+
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(`HTTP_${r.status}`);
+      if (j.error) throw new Error(j.error.message || "RPC_ERROR");
+      if (!j.result) throw new Error("NO_RESULT");
+
+      return j.result; // hex
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw lastErr || new Error("ALL_RPCS_FAILED");
+}
+
+
+async function accessQuoteBNBWeiOnchain(_providerIgnored) {
   const SALE = ACCESS_SALE_OR_RECEIVER;
 
-  // ✅ correct selector from BscScan: quoteBNBWei()
+  // selector from BscScan: quoteBNBWei()
   const QUOTE_BNB_WEI_SELECTOR = "0x42773499";
 
-  // Use connected wallet address as "from" (matches Remix behavior)
-  const accounts = await provider.request({ method: "eth_accounts" });
-  const from = accounts?.[0];
+  // do NOT use wallet/provider RPC (twnodes etc). Use our read-only RPC pool.
+  const out = await accessReadEthCall(SALE, QUOTE_BNB_WEI_SELECTOR);
 
-  const out = await provider.request({
-    method: "eth_call",
-    params: [{ from, to: SALE, data: QUOTE_BNB_WEI_SELECTOR }, "latest"]
-  });
-
-  // returns uint256 (wei)
   const wei = BigInt(out);
   if (wei <= 0n) throw new Error("QUOTE_ZERO");
   return wei;
 }
+
 
 
 async function accessUpdatePricesUI(usdPrice) {
@@ -4227,6 +4253,12 @@ function openAccessModal() {
 const ACCESS_USD_PRICE = 9; // later: 19 after sold count
 const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955"; // USDT (BSC)
 const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
+    const ACCESS_READ_RPCS = [
+  "https://bsc-dataseed.binance.org/",
+  "https://bsc-dataseed1.defibit.io/",
+  "https://bsc-dataseed1.ninicoin.io/"
+];
+
 
 // TEMP: fixed BNB price (for UI + tx). Later: compute from USD.
 const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
