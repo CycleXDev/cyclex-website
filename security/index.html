@@ -4345,6 +4345,12 @@ if (!from) return; // user didn't connect / session not ready
 
    if (kind === "bnb") {
   const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+  if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
+  accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
+  console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT, "ACCESS_SALE_OR_RECEIVER:", ACCESS_SALE_OR_RECEIVER);
+  return;
+}
+
 
   // use the LIVE wei we computed when opening the modal
   const PRICE_WEI = window.__ACCESS_BNB_WEI;
