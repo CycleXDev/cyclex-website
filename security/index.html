@@ -2056,26 +2056,46 @@ a.tool-card[data-tool="approvals"]::after{
   text-align: center;
 }
 /* =========================
-   TOP BAR — BREAK OUT OF CONTAINER (viewport width)
-   paste at END of CSS
+   TOP BAR — BREAK OUT (SAFE, NO SIDE SHIFT)
    ========================= */
+
+/* give the top-bar a viewport-based width */
 .top-bar{
-  /* keep your sticky */
   position: sticky;
   top: 14px;
   z-index: 999;
 
-  /* ✅ break out from parent max-width */
   width: calc(100vw - 24px);
-  max-width: 794px;
+  max-width: 1160px;
 
-  /* center it relative to viewport */
-  left: 50%;
-  transform: translateX(-50%);
+  /* ✅ center using margin, no transforms */
+  margin-left: auto;
+  margin-right: auto;
 
-  /* keep spacing */
-  margin: 0 auto 30px;
+  /* ✅ cancel any accidental offsets */
+  left: auto !important;
+  right: auto !important;
+  transform: none !important;
 }
+
+/* if a parent/container centers but clamps width, remove the clamp ONLY for the bar */
+.top-bar{
+  /* “negative margin breakout” technique */
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+
+  /* and then re-center the bar itself */
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* keep the bar centered inside the breakout space */
+.top-bar{
+  /* inner centering */
+  display: flex;
+  margin-top: 0;
+}
+
 
 
 </style>
