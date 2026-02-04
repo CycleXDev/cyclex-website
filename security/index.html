@@ -4140,66 +4140,62 @@ async function accessUpdatePricesUI(usdPrice) {
   const usdtEl = document.getElementById("access-price-usdt");
   if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
 
-  // BNB side: live convert
+  // BNB side
   const bnbEl = document.getElementById("access-price-bnb");
   if (bnbEl) bnbEl.textContent = "…";
 
-try {
-  // 0) Prefer on-chain quote (stable + matches contract)
-  const provider =
-    (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
-      ? wallet.providerRaw
-      : window.ethereum;
+  try {
+    // 0) Prefer on-chain quote
+    const provider =
+      (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
+        ? wallet.providerRaw
+        : window.ethereum;
 
-  if (provider?.request) {
-    try {
-      const quoteWei = await accessQuoteBNBWeiOnchain(provider);
+    if (provider?.request) {
+      try {
+        const quoteWei = await accessQuoteBNBWeiOnchain(provider);
+        const quoteBnb = Number(quoteWei) / 1e18;
 
-      // UI text
-      const quoteBnb = Number(quoteWei) / 1e18;
-      const bnbText = quoteBnb.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+        const bnbText = quoteBnb.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+        if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
 
-      if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+        window.__ACCESS_BNB_WEI  = quoteWei;
+        window.__ACCESS_BNB_TEXT = bnbText;
 
-      // store for tx
-      window.__ACCESS_BNB_WEI  = quoteWei;
-      window.__ACCESS_BNB_TEXT = bnbText;
-
-      // enable buttons
-      if (bnbBtn)  bnbBtn.disabled = false;
-      if (usdtBtn) usdtBtn.disabled = false;
-      return; // ✅ done
-    } catch (e) {
-      console.warn("on-chain quote failed, fallback to Binance:", e);
-      // continue to Binance fallback
+        if (bnbBtn)  bnbBtn.disabled = false;
+        if (usdtBtn) usdtBtn.disabled = false;
+        return;
+      } catch (e) {
+        console.warn("on-chain quote failed, fallback to Binance:", e);
+      }
     }
+
+    // 1) Fallback: Binance conversion
+    const bnbUsd = await accessFetchBnbUsd();
+    const bnbAmt = usdPrice / bnbUsd;
+
+    const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+    if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+    if (window.ethers?.parseUnits) {
+      const preciseStr = bnbAmt.toFixed(18);
+      window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
+      window.__ACCESS_BNB_TEXT = bnbText;
+    } else {
+      window.__ACCESS_BNB_WEI  = null;
+      window.__ACCESS_BNB_TEXT = bnbText;
+    }
+
+    if (bnbBtn)  bnbBtn.disabled = false;
+    if (usdtBtn) usdtBtn.disabled = false;
+
+  } catch (e) {
+    console.error("BNB price load failed:", e);
+    if (bnbEl) bnbEl.textContent = "—";
+    if (usdtBtn) usdtBtn.disabled = false;
   }
-
-  // 1) Fallback: Binance price -> USD->BNB conversion (your existing logic)
-  const bnbUsd = await accessFetchBnbUsd();
-  const bnbAmt = usdPrice / bnbUsd;
-
-  const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-  if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
-
-  if (window.ethers?.parseUnits) {
-    const preciseStr = bnbAmt.toFixed(18);
-    window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
-    window.__ACCESS_BNB_TEXT = bnbText;
-  } else {
-    window.__ACCESS_BNB_WEI  = null;
-    window.__ACCESS_BNB_TEXT = bnbText;
-  }
-
-  if (bnbBtn)  bnbBtn.disabled = false;
-  if (usdtBtn) usdtBtn.disabled = false;
-
-} catch (e) {
-  console.error("BNB price load failed:", e);
-  if (bnbEl) bnbEl.textContent = "—";
-  // still allow USDT, keep BNB disabled
-  if (usdtBtn) usdtBtn.disabled = false;
 }
+
 
 
 function openAccessModal() {
@@ -4441,6 +4437,7 @@ window.accessSetStatus  = accessSetStatus;
 // (optional helpers)
 window.accessUpdatePricesUI = accessUpdatePricesUI;
 window.accessWaitForConfirm = accessWaitForConfirm;
+window.accessQuoteBNBWeiOnchain = accessQuoteBNBWeiOnchain;
 
 
 async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
