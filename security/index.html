@@ -5406,7 +5406,9 @@ if (silent) return false;
     await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
   }
 
-  const providerRaw = await waitForWalletProvider(12000);
+  // Mobile round-trip can take longer (AppKit -> wallet app -> back)
+const providerRaw = await waitForWalletProvider(45000);
+
   if (!providerRaw) {
     if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
     try { await window.CxAppKitModal?.close?.(); } catch {}
