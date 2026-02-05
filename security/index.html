@@ -5668,30 +5668,18 @@ async function waitForAccounts(provider, maxMs = 30000) {
   if (!provider?.request) return "";
 
   const start = Date.now();
-  let requested = false;
-
   while (Date.now() - start < maxMs) {
     try {
-      // passive read
-      let accs = await provider.request({ method: "eth_accounts" });
-      let a = accs?.[0] || "";
+      const accs = await provider.request({ method: "eth_accounts" });
+      const a = accs?.[0] || "";
       if (a) return a;
-
-      // mobile/appkit: one active permission request
-      if (!requested) {
-        requested = true;
-        try {
-          accs = await provider.request({ method: "eth_requestAccounts" });
-          a = accs?.[0] || "";
-          if (a) return a;
-        } catch {}
-      }
     } catch {}
 
     await new Promise(r => setTimeout(r, 350));
   }
   return "";
 }
+
 
 
 async function accessBuyFlow(kind) {
@@ -5718,32 +5706,33 @@ await cxConnectWallet();
 let provider = null;
 let from = "";
 
-function pickBestProvider() {
-  // 1) AppKit raw provider
-  const raw = window?.wallet?.providerRaw;
-  if (raw?.request) return raw;
+// 1) immediate attempt
+provider =
+  (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
+    ? window.wallet.providerRaw
+    : window.ethereum;
 
-  // 2) injected providers list (mobile can expose multiple)
-  const eth = window.ethereum;
-  const list = Array.isArray(eth?.providers) ? eth.providers : [];
-  const mm = list.find(p => p?.isMetaMask && p?.request);
-  if (mm) return mm;
-
-  // 3) fallback single injected provider
-  if (eth?.request) return eth;
-
-  return null;
+if (provider?.request) {
+  from = await waitForAccounts(provider, 12000);
 }
 
-// try for up to ~20s to allow mobile return/hydration
-for (let i = 0; i < 20; i++) {
-  provider = pickBestProvider();
-  if (provider?.request) {
-    from = await waitForAccounts(provider, 1800);
+// 2) mobile recovery: wait for appkit session hydration
+if (!from) {
+  for (let i = 0; i < 12; i++) {
+    await new Promise(r => setTimeout(r, 500));
+
+    provider =
+      (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
+        ? window.wallet.providerRaw
+        : window.ethereum;
+
+    if (!provider?.request) continue;
+
+    from = await waitForAccounts(provider, 2500);
     if (from) break;
   }
-  await new Promise(r => setTimeout(r, 500));
 }
+
 
 
 if (!provider?.request || !from) {
@@ -5806,24 +5795,6 @@ if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
   accessSetStatus("Couldn't fetch live BNB quote. Try again.");
   return;
 }
-// mobile resume guard: wait until app is visible + provider responsive
-if (document.hidden) {
-  await new Promise((resolve) => {
-    const done = () => {
-      document.removeEventListener("visibilitychange", onVis);
-      resolve();
-    };
-    const onVis = () => {
-      if (!document.hidden) done();
-    };
-    document.addEventListener("visibilitychange", onVis);
-    setTimeout(done, 2500); // fallback
-  });
-}
-
-// short hydration pause for AppKit/MetaMask mobile bridge
-await new Promise(r => setTimeout(r, 350));
-
 
   const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
 
@@ -5843,12 +5814,20 @@ try {
   return;
 }
 
-const txHash = await provider.request({
-  method: "eth_sendTransaction",
-  params: [txParams],
-});
-
-
+let txHash = "";
+try {
+  txHash = await provider.request({
+    method: "eth_sendTransaction",
+    params: [txParams],
+  });
+} catch (e1) {
+  // mobile wake-up retry: short delay then retry once
+  await new Promise(r => setTimeout(r, 1600));
+  txHash = await provider.request({
+    method: "eth_sendTransaction",
+    params: [txParams],
+  });
+}
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
