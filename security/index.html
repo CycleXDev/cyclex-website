@@ -5783,19 +5783,17 @@ document.addEventListener("visibilitychange", () => {
 async function accessBuyFlow(kind) {
   try {
     accessSetBusy(true);
-    __accessPendingKind = kind; // חשוב למובייל resume
 
     // 0) Connect via AppKit
     if (typeof cxConnectWallet !== "function") {
       console.warn("cxConnectWallet is missing - AppKit connect not available.");
       accessSetStatus("Wallet connect is not available.");
-      __accessPendingKind = null;
       return;
     }
 
     await cxConnectWallet();
 
-    // 1) Provider
+    // 1) Provider (AppKit session first, then window.ethereum fallback)
     const provider =
       (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
         ? window.wallet.providerRaw
@@ -5804,16 +5802,17 @@ async function accessBuyFlow(kind) {
     if (!provider || !provider.request) {
       console.warn("No EIP-1193 provider found after AppKit connect.");
       accessSetStatus("No wallet provider found.");
-      return; // נשאיר pending כדי שה-resume יתפוס כשיחזור מהאפליקציה
+      return;
     }
 
     // IMPORTANT: do NOT eth_requestAccounts here
     const from = await waitForAccounts(provider, 8000);
     if (!from) {
-      accessSetStatus("Wallet not connected yet. Return from wallet app and try again.");
-      return; // pending נשאר בשביל resume
+      accessSetStatus("Wallet not connected. Please connect and try again.");
+      return;
     }
 
+    // keep wallet state synced (important for mobile / appkit)
     window.wallet = window.wallet || {};
     window.wallet.address = from;
 
@@ -5841,7 +5840,6 @@ async function accessBuyFlow(kind) {
         });
       } else if (err && err.code === 4001) {
         accessSetStatus("Network switch canceled.");
-        __accessPendingKind = null;
         return;
       } else {
         throw err;
@@ -5852,21 +5850,21 @@ async function accessBuyFlow(kind) {
     if (kind === "bnb") {
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
 
+      // safety: prevent undefined contract on mobile/scoped env
       if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
         accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
         console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT, "ACCESS_SALE_OR_RECEIVER:", ACCESS_SALE_OR_RECEIVER);
-        __accessPendingKind = null;
         return;
       }
 
       const PRICE_WEI = window.__ACCESS_BNB_WEI;
       if (!PRICE_WEI) {
         accessSetStatus("Loading BNB price… try again in a second.");
-        __accessPendingKind = null;
         return;
       }
 
       const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
+
       const txParams = {
         from,
         to: PASS_CONTRACT,
@@ -5879,7 +5877,6 @@ async function accessBuyFlow(kind) {
       } catch (e) {
         accessSetStatus("BNB purchase would fail (estimateGas). Check balance/contract state.");
         console.warn("estimateGas failed:", e);
-        __accessPendingKind = null;
         return;
       }
 
@@ -5889,9 +5886,8 @@ async function accessBuyFlow(kind) {
       });
 
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
-      const ok = await accessWaitForConfirm(provider, txHash);
 
-      __accessPendingKind = null; // הצליח להגיע לשידור tx -> לנקות pending
+      const ok = await accessWaitForConfirm(provider, txHash);
 
       if (ok) {
         accessSetStatus("Confirmed ✅");
@@ -5917,7 +5913,6 @@ async function accessBuyFlow(kind) {
       if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
         accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
         console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT, "ACCESS_SALE_OR_RECEIVER:", ACCESS_SALE_OR_RECEIVER);
-        __accessPendingKind = null;
         return;
       }
 
@@ -5934,7 +5929,6 @@ async function accessBuyFlow(kind) {
 
       if (!window.ethers) {
         accessSetStatus("USDT checkout needs ethers.js.");
-        __accessPendingKind = null;
         return;
       }
 
@@ -5959,8 +5953,6 @@ async function accessBuyFlow(kind) {
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
       const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
-      __accessPendingKind = null;
-
       if (ok) {
         accessSetStatus("Confirmed ✅");
         setTimeout(() => {
@@ -5978,30 +5970,14 @@ async function accessBuyFlow(kind) {
       return;
     }
 
-    __accessPendingKind = null;
-
   } catch (e) {
     console.error("accessBuyFlow error:", e);
-
-    if (e && (e.code === 4001 || String(e.message || "").toLowerCase().includes("user rejected"))) {
-      accessSetStatus("Canceled in wallet.");
-      __accessPendingKind = null;
-      return;
-    }
-
-    const msg = String(e?.message || "").toLowerCase();
-    const maybeHandoff =
-      msg.includes("pending") ||
-      msg.includes("already processing") ||
-      msg.includes("request already pending");
-
-    if (!maybeHandoff) __accessPendingKind = null;
-
     accessSetStatus("Action failed. Please try again.");
   } finally {
     accessSetBusy(false);
   }
 }
+
 
 
 
