@@ -1867,18 +1867,21 @@ a.tool-card[data-tool="approvals"]::after{
   html, body{ overflow-x: hidden; }
 
   /* =========================================================
-     DESKTOP — Equal action buttons in panels
+     DESKTOP ONLY — Equal action buttons in tool panels
      ========================================================= */
 
-  /* בסיס כללי */
+  /* בסיס: יישור אנכי */
   #panel-dev .row,
   #panel-tx .row,
   #panel-liq .row,
-  #panel-rpc .row{
+  #panel-rpc .row,
+  #panel-dna .row{
     align-items: stretch;
   }
 
-  /* ---------- DEV TOOLS ---------- */
+  /* =========================================================
+     DEV TOOLS
+     ========================================================= */
   #panel-dev #bm-generate,
   #panel-dev #bm-copy{
     flex: 1 1 0 !important;
@@ -1896,7 +1899,9 @@ a.tool-card[data-tool="approvals"]::after{
     min-width: 0 !important;
   }
 
-  /* ---------- TX DECODER ---------- */
+  /* =========================================================
+     TX DECODER
+     ========================================================= */
   #panel-tx .tx-actions,
   #panel-tx .row:has(#tx-decode),
   #panel-tx .row:has(#btn-tx-decode),
@@ -1926,7 +1931,9 @@ a.tool-card[data-tool="approvals"]::after{
     min-width: 0 !important;
   }
 
-  /* ---------- LIQUIDITY ---------- */
+  /* =========================================================
+     LIQUIDITY
+     ========================================================= */
   #panel-liq #liq-run,
   #panel-liq #liq-copy-link,
   #panel-liq #liq-share-x{
@@ -1936,70 +1943,13 @@ a.tool-card[data-tool="approvals"]::after{
     min-width: 0 !important;
   }
 
-  /* ---------- DNA (FIXED) ---------- */
-
-  /* שורת CONNECT / SCAN / RESET: אבא משותף */
-  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
-    :has(> #dna-connect):has(> #dna-scan):has(> #dna-reset),
-  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
-    :has(#dna-connect):has(#dna-scan):has(#dna-reset){
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    gap: 10px !important;
-    align-items: stretch !important;
-  }
-
-  /* במקרה שהכפתור הירוק עטוף */
-  #panel-dna #dna-connect-wrap{
-    flex: 1 1 0 !important;
-    width: calc((100% - 20px)/3) !important;
-    max-width: calc((100% - 20px)/3) !important;
-    min-width: 0 !important;
-  }
-  #panel-dna #dna-connect-wrap > #dna-connect{
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  #panel-dna #dna-connect,
-  #panel-dna #dna-scan,
-  #panel-dna #dna-reset{
-    flex: 1 1 0 !important;
-    width: calc((100% - 20px)/3) !important;
-    max-width: calc((100% - 20px)/3) !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-  }
-
-  /* שורת SEED / HISTORY */
-  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
-    :has(> #dna-seed):has(> #dna-history),
-  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
-    :has(> #dna-seed):has(> #dna-use-scan-history),
-  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
-    :has(#dna-seed):has(#dna-history),
-  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
-    :has(#dna-seed):has(#dna-use-scan-history){
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    gap: 10px !important;
-    align-items: stretch !important;
-  }
-
-  #panel-dna #dna-seed,
-  #panel-dna #dna-history,
-  #panel-dna #dna-use-scan-history{
-    flex: 1 1 0 !important;
-    width: calc(50% - 5px) !important;
-    max-width: calc(50% - 5px) !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-  }
-
-  /* ---------- RPC ---------- */
+  /* =========================================================
+     RPC — TEST / COPY BEST / SHARE X on one row
+     ========================================================= */
   #panel-rpc .row:has(#rpc-test):has(#rpc-copy-best),
   #panel-rpc .row:has(#rpc-test):has(#rpc-share-x),
-  #panel-rpc .row:has(#rpc-copy-best):has(#rpc-share-x){
+  #panel-rpc .row:has(#rpc-copy-best):has(#rpc-share-x),
+  #panel-rpc :is(.row,.actions,.btn-row,.controls,div):has(> #rpc-test):has(> #rpc-copy-best):has(> #rpc-share-x){
     display: flex !important;
     flex-wrap: nowrap !important;
     gap: 10px !important;
@@ -2013,16 +1963,89 @@ a.tool-card[data-tool="approvals"]::after{
     width: calc((100% - 20px)/3) !important;
     max-width: calc((100% - 20px)/3) !important;
     min-width: 0 !important;
+    margin: 0 !important;
   }
 
-  /* טקסט אחיד בכפתורים */
+  /* =========================================================
+     DNA — ROBUST FIX (IDs changed in your DOM)
+     ========================================================= */
+
+  /* 1) שורת CONNECT + SCAN + RESET
+     - connect id known: #dna-connect
+     - scan/reset אצלך בלי id עקבי => נתפסים לפי טקסט/קלאסים בשורה של connect
+  */
+  #panel-dna :is(.row,.actions,.controls,.btn-row,div):has(#dna-connect){
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  /* CONNECT */
+  #panel-dna #dna-connect{
+    flex: 1 1 0 !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    order: 3 !important; /* כדי לקבל Scan Reset Connect אם צריך */
+  }
+
+  /* SCAN + RESET fallback:
+     כל btn-ghost / btn-primary באותה שורה של dna-connect */
+  #panel-dna :is(.row,.actions,.controls,.btn-row,div):has(#dna-connect)
+    > :is(button,a,.btn,.btn-ghost,.btn-primary):not(#dna-connect){
+    flex: 1 1 0 !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* אם יש עטיפה פנימית לכפתורים — תתיישר גם היא */
+  #panel-dna :is(.row,.actions,.controls,.btn-row,div):has(#dna-connect)
+    > :is(div,span,p){
+    min-width: 0 !important;
+  }
+
+  /* 2) שורת תחתונה: SEED COMMON TOKENS + USE SCAN HISTORY
+     (אצלך בלי ids קבועים, לכן לפי container של textarea + שתי פעולות שאחריו) */
+  #panel-dna :is(.row,.actions,.controls,.btn-row,div):has(textarea)
+    + :is(.row,.actions,.controls,.btn-row,div){
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  #panel-dna :is(.row,.actions,.controls,.btn-row,div):has(textarea)
+    + :is(.row,.actions,.controls,.btn-row,div)
+    > :is(button,a,.btn){
+    flex: 1 1 0 !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 3) אם הכפתורים יושבים באותו אבא של textarea (fallback נוסף) */
+  #panel-dna :is(.row,.actions,.controls,.btn-row,div):has(textarea)
+    > :is(button,a,.btn){
+    flex: 1 1 0 !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* גובה אחיד + ללא שבירת שורה */
   #panel-dev .btn,
   #panel-tx .btn,
   #panel-liq .btn,
-  #panel-dna .btn,
-  #panel-rpc .btn{
-    white-space: nowrap !important;
+  #panel-rpc .btn,
+  #panel-dna .btn{
     min-height: 52px !important;
+    white-space: nowrap !important;
   }
 }
 
@@ -2795,79 +2818,43 @@ body::after{
 }
 
 /* =========================================================
-   FINAL MOBILE PATCH — Access modal + TX + LIQ + DEV TOOLS
-   paste LAST
+   MOBILE FINAL CLEAN PATCH (single block, paste LAST)
    ========================================================= */
 @media (max-width: 900px){
 
-  /* -------------------------------------------------------
-     1) Get Access popup — force true centered modal on mobile
-     ------------------------------------------------------- */
+  /* -----------------------------------------------
+     A) Get Access modal/card — force centered mobile
+     ----------------------------------------------- */
   :is(
-    #access-modal,
-    #modal-access,
-    .access-modal,
-    .popup-access,
-    [role="dialog"][id*="access"],
-    [role="dialog"][class*="access"],
-    .modal[id*="access"],
-    .popup[id*="access"]
+    #access-modal, #modal-access, .access-modal, .popup-access,
+    [id*="access"][id*="modal"], [class*="access"][class*="modal"],
+    [id*="access"][class*="popup"], [class*="access"][class*="popup"],
+    section:has(#btn-pay-bnb):has(#btn-pay-usdt),
+    div:has(#btn-pay-bnb):has(#btn-pay-usdt)
   ){
     position: fixed !important;
-    inset: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 0 !important;
-    bottom: 0 !important;
-    width: 100vw !important;
-    height: 100dvh !important;
+    left: 50% !important;
+    top: 12px !important;
+    transform: translateX(-50%) !important;
+    width: min(680px, 94vw) !important;
+    max-width: 94vw !important;
+    max-height: calc(100dvh - 24px) !important;
     margin: 0 !important;
-    padding: 12px !important;
-
-    display: grid !important;
-    align-content: center !important;
-    justify-items: center !important;
-
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-
-    transform: none !important;
+    overflow: auto !important;
     z-index: 9999 !important;
     box-sizing: border-box !important;
   }
 
-  :is(
-    #access-modal,
-    #modal-access,
-    .access-modal,
-    .popup-access,
-    [role="dialog"][id*="access"],
-    [role="dialog"][class*="access"],
-    .modal[id*="access"],
-    .popup[id*="access"]
-  ) > :is(.card,.modal-card,.sheet,.panel,.content,.inner,section,article,div){
-    width: min(680px, 94vw) !important;
-    max-width: min(680px, 94vw) !important;
-    max-height: calc(100dvh - 24px) !important;
-    margin: 0 auto !important;
-    overflow: auto !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
-
-  /* avoid horizontal shift from parent transforms */
   html, body{
     overflow-x: hidden !important;
   }
-  /* -------------------------------------------------------
-     2) TX Decoder: DECODE + COPY MARKDOWN same row
-     ------------------------------------------------------- */
+
+  /* -----------------------------------------------
+     B) TX Decoder: Decode + Copy Markdown same row
+     ----------------------------------------------- */
   #panel-tx .tx-actions,
   #panel-tx .row:has(#tx-decode),
-  #panel-tx .row:has(#btn-tx-decode),
-  #panel-tx .row:has(#tx-run),
   #panel-tx .row:has(#tx-copy-md),
-  #panel-tx .row:has(#btn-tx-copy),
   #panel-tx .row:has(#tx-copy-markdown){
     display: flex !important;
     flex-wrap: wrap !important;
@@ -2878,59 +2865,46 @@ body::after{
   #panel-tx #tx-decode,
   #panel-tx #btn-tx-decode,
   #panel-tx #tx-run,
-  #panel-tx [data-action="tx-decode"],
-  #panel-tx [data-action="decode-tx"],
+  #panel-tx [data-action*="decode"],
   #panel-tx #tx-copy-md,
   #panel-tx #btn-tx-copy,
   #panel-tx #tx-copy-markdown,
-  #panel-tx [data-action="tx-copy-markdown"],
-  #panel-tx [data-action="copy-markdown"]{
+  #panel-tx [data-action*="copy-markdown"]{
     flex: 1 1 calc(50% - 5px) !important;
     width: calc(50% - 5px) !important;
     max-width: calc(50% - 5px) !important;
     min-width: 0 !important;
   }
 
-/* =========================================================
-   FINAL MOBILE PATCH — LIQ + MONITOR BUTTON LAYOUT
-   (paste LAST, replaces old block for these 2 issues)
-   ========================================================= */
-@media (max-width: 900px){
-
-  /* -------------------------------------------------------
-     1) LIQUIDITY PANEL
-     - SCAN full row
-     - COPY + SHARE side by side under it
-     ------------------------------------------------------- */
+  /* -----------------------------------------------
+     C) Liquidity: Scan full row, then Copy + Share
+     ----------------------------------------------- */
   #panel-liq .row:has(#liq-run),
   #panel-liq .row:has([id^="liq-copy"]),
   #panel-liq .row:has([id^="liq-share"]),
   #panel-liquidity .row:has(#liq-run),
   #panel-liquidity .row:has([id^="liq-copy"]),
   #panel-liquidity .row:has([id^="liq-share"]){
-    display:flex !important;
-    flex-wrap:wrap !important;
-    gap:10px !important;
-    align-items:stretch !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
   }
 
-  /* SCAN */
   #panel-liq #liq-run,
-  #panel-liq [id="liq-scan"],
+  #panel-liq #liq-scan,
   #panel-liq [id^="liq-run"],
   #panel-liq [data-action*="scan"],
   #panel-liquidity #liq-run,
-  #panel-liquidity [id="liq-scan"],
+  #panel-liquidity #liq-scan,
   #panel-liquidity [id^="liq-run"],
   #panel-liquidity [data-action*="scan"]{
-    order:1 !important;
-    flex:1 1 100% !important;
-    width:100% !important;
-    max-width:100% !important;
-    min-width:0 !important;
+    order: 1 !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
-  /* COPY SHARE LINK + SHARE TO X */
   #panel-liq [id^="liq-copy"],
   #panel-liq [id^="liq-share"],
   #panel-liq [data-action*="copy"],
@@ -2939,21 +2913,18 @@ body::after{
   #panel-liquidity [id^="liq-share"],
   #panel-liquidity [data-action*="copy"],
   #panel-liquidity [data-action*="share"]{
-    order:2 !important;
-    flex:1 1 calc(50% - 5px) !important;
-    width:calc(50% - 5px) !important;
-    max-width:calc(50% - 5px) !important;
-    min-width:0 !important;
+    order: 2 !important;
+    flex: 1 1 calc(50% - 5px) !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
   }
 
-
-/* =======================================================
-     2) CONTRACT MONITOR (inside DEV TOOLS)
-     - ADD full row on top
-     - CHECK ALL + COPY JSON side-by-side
-     - table readable + horizontal scroll
-     ======================================================= */
-
+  /* -----------------------------------------------
+     D) Bookmarklet + Monitor
+     Generate/Copy full row
+     Add full row, then Check/Copy side-by-side
+     ----------------------------------------------- */
   #panel-dev #bm-generate,
   #panel-dev #btn-bm-generate,
   #panel-dev [data-action="bm-generate"],
@@ -2961,11 +2932,9 @@ body::after{
   #panel-dev #btn-bm-copy,
   #panel-dev [data-action="bm-copy"],
   #panel-bookmark #bm-generate,
-  #panel-bookmark .btn#bm-generate,
   #panel-bookmark #btn-bm-generate,
   #panel-bookmark [data-action="bm-generate"],
   #panel-bookmark #bm-copy,
-  #panel-bookmark .btn#bm-copy,
   #panel-bookmark #btn-bm-copy,
   #panel-bookmark [data-action="bm-copy"]{
     flex: 1 1 100% !important;
@@ -2975,20 +2944,15 @@ body::after{
   }
 
   #panel-dev #mon-add,
-  #panel-dev #btn-mon-add,
-  #panel-dev [data-action="mon-add"],
-  #panel-dev [id*="mon"][id*="add"],
   #panel-monitor #mon-add,
-  #panel-monitor #btn-mon-add,
-  #panel-monitor [data-action="mon-add"],
-  #panel-monitor [id*="mon"][id*="add"],
   #panel-dev [id^="mon-add"],
-  #panel-monitor [id^="mon-add"]{
+  #panel-monitor [id^="mon-add"],
+  #panel-dev [data-action*="mon-add"],
+  #panel-monitor [data-action*="mon-add"]{
     order: 1 !important;
     flex: 1 1 100% !important;
     width: 100% !important;
     max-width: 100% !important;
-    min-width: 0 !important;
   }
 
   #panel-dev [id^="mon-check"],
@@ -3004,6 +2968,9 @@ body::after{
     min-width: 0 !important;
   }
 
+  /* -----------------------------------------------
+     E) Contract monitor table readability on mobile
+     ----------------------------------------------- */
   #panel-dev #mon-table,
   #panel-monitor #mon-table{
     display: block !important;
@@ -3016,91 +2983,62 @@ body::after{
 
   #panel-dev #mon-table table,
   #panel-monitor #mon-table table{
+    min-width: 620px !important;
     width: max-content !important;
-    min-width: 620px !important;
-    border-collapse: separate !important;
-  }
-
-  #panel-dev #mon-table .table,
-  #panel-monitor #mon-table .table,
-  #panel-dev #mon-table .trow,
-  #panel-monitor #mon-table .trow,
-  #panel-dev #mon-table .row,
-  #panel-monitor #mon-table .row{
-    min-width: 620px !important;
+    table-layout: auto !important;
   }
 
   #panel-dev #mon-table th,
-  #panel-monitor #mon-table th,
   #panel-dev #mon-table td,
+  #panel-monitor #mon-table th,
   #panel-monitor #mon-table td,
   #panel-dev #mon-table .cell,
   #panel-monitor #mon-table .cell{
     white-space: nowrap !important;
   }
+}
+/* =========================================================
+   TEXT POLISH (mobile) — add LAST
+   ========================================================= */
+@media (max-width: 900px){
 
-  #panel-dev #mon-table td:first-child,
-  #panel-monitor #mon-table td:first-child,
-  #panel-dev #mon-table .contract,
-  #panel-monitor #mon-table .contract,
-  #panel-dev #mon-table [data-col*="contract"],
-  #panel-monitor #mon-table [data-col*="contract"]{
-    max-width: 260px !important;
-    overflow: hidden !important;
+  /* General readable text inside cards/panels */
+  #access-modal p, #modal-access p, [id*="access"] p,
+  #panel-tx p, #panel-liq p, #panel-liquidity p, #panel-dev p, #panel-monitor p,
+  #panel-tx .small, #panel-liq .small, #panel-liquidity .small, #panel-dev .small, #panel-monitor .small,
+  #panel-tx .tip, #panel-liq .tip, #panel-liquidity .tip, #panel-dev .tip, #panel-monitor .tip{
+    line-height: 1.42 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  /* Keep long helper lines clean (without horizontal breakage) */
+  #panel-liq [id*="liq-dex"], 
+  #panel-liq [id*="liq-note"],
+  #panel-liquidity [id*="liq-dex"], 
+  #panel-liquidity [id*="liq-note"],
+  #panel-dev #bm-tip,
+  #panel-bookmark #bm-tip{
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  /* Inputs / mono strings not too aggressive */
+  #panel-dev .mono, #panel-bookmark .mono, #panel-tx .mono,
+  #panel-dev input, #panel-bookmark input, #panel-tx input, #panel-liq input{
     text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
+  }
+
+  /* Access modal inner text spacing */
+  :is(#access-modal, #modal-access, [id*="access"]) :is(.small, .tip, .hint){
+    line-height: 1.45 !important;
   }
 }
 
- /* -------------------------------------------------------
-     2) Tables — prevent clipping/cut columns in mobile
-     ------------------------------------------------------- */
-  #rpc-table, #liq-table, #mon-table, #tx-table,
-  #panel-rpc .table, #panel-liq .table, #panel-dev .table, #panel-monitor .table, #panel-tx .table{
-    width: 100% !important;
-    max-width: 100% !important;
-    display: block !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-
-  #rpc-table table, #liq-table table, #mon-table table, #tx-table table,
-  #panel-rpc .table table, #panel-liq .table table, #panel-dev .table table, #panel-monitor .table table, #panel-tx .table table{
-    width: 100% !important;
-    min-width: 0 !important;
-    table-layout: fixed !important;
-    border-collapse: collapse !important;
-  }
-
-  #rpc-table th, #rpc-table td, #rpc-table .cell,
-  #liq-table th, #liq-table td, #liq-table .cell,
-  #mon-table th, #mon-table td, #mon-table .cell,
-  #tx-table th, #tx-table td, #tx-table .cell,
-  #panel-rpc .table .cell, #panel-liq .table .cell, #panel-dev .table .cell, #panel-monitor .table .cell, #panel-tx .table .cell{
-    min-width: 0 !important;
-    max-width: 100% !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  /* Contract Monitor table — clean 2-column layout */
-  #mon-table .trow,
-  #panel-monitor #mon-table .trow,
-  #panel-dev #mon-table .trow{
-    display: grid !important;
-    grid-template-columns: minmax(0,1fr) minmax(70px,92px) !important;
-    gap: 8px !important;
-    align-items: center !important;
-  }
-
-  #mon-table .cell:nth-child(2),
-  #panel-monitor #mon-table .cell:nth-child(2),
-  #panel-dev #mon-table .cell:nth-child(2){
-    text-align: right !important;
-    justify-self: end !important;
-  }
-}
 
 </style>
    
