@@ -2640,51 +2640,72 @@ body::after{
    ========================================================= */
 @media (max-width: 900px){
 
-  /* -------------------------------------------------------
-     1) GET ACCESS modal stays stable (not "breaking" fullscreen)
-     ------------------------------------------------------- */
-  #access-modal.cx-modal,
-  #accessModal.cx-modal,
-  #access-modal,
-  #accessModal{
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 9999 !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
-    padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
-    padding-right: 10px !important;
-    padding-left: 10px !important;
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
-    overflow-y: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    min-height: 100dvh !important;
+  /* =======================================================
+     1) GET ACCESS modal - stable + לא שובר AppKit
+     ======================================================= */
+
+  /* כשהמודל סגור - שלא יתפוס קליקים */
+  #access-modal[aria-hidden="true"],
+  #accessModal[aria-hidden="true"]{
+    pointer-events: none !important;
   }
 
-  /* support common "open" states */
+  /* רק כשהמודל פתוח */
   #access-modal.is-open,
   #accessModal.is-open,
   #access-modal[aria-hidden="false"],
   #accessModal[aria-hidden="false"]{
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1200 !important; /* מתחת ל-AppKit */
     display: flex !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+
+    padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
+    padding-right: 10px !important;
+    padding-left: 10px !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
+
+    min-height: 100dvh !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
   }
 
-  #access-modal .cx-modal__dialog,
-  #accessModal .cx-modal__dialog{
-    width: min(680px, 100%) !important;
+  /* מעטפת פנימית יציבה (כמו בתמונה התקינה) */
+  #access-modal.is-open .cx-modal__dialog,
+  #accessModal.is-open .cx-modal__dialog,
+  #access-modal[aria-hidden="false"] .cx-modal__dialog,
+  #accessModal[aria-hidden="false"] .cx-modal__dialog,
+  #access-modal.is-open .modal-content,
+  #accessModal.is-open .modal-content,
+  #access-modal[aria-hidden="false"] .modal-content,
+  #accessModal[aria-hidden="false"] .modal-content{
+    width: min(680px, calc(100vw - 20px)) !important;
     margin: 0 auto !important;
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px) !important;
+    max-height: calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 20px) !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
+    transform: none !important;
   }
 
   #access-modal .cx-modal__body,
   #accessModal .cx-modal__body,
   #access-modal .modal-body,
   #accessModal .modal-body{
-    overflow: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
     max-height: none !important;
+  }
+
+  /* AppKit/Web3Modal תמיד מעל המודל הזה */
+  w3m-modal,
+  appkit-modal,
+  wui-modal,
+  [data-testid="w3m-modal"]{
+    z-index: 2147483646 !important;
   }
  
   /* -------------------------------------------------------
@@ -2775,12 +2796,13 @@ body::after{
   }
 
 
-  /* -------------------------------------------------------
+/* =======================================================
      2) CONTRACT MONITOR (inside DEV TOOLS)
      - ADD full row on top
-     - CHECK ALL + COPY JSON side by side below
-     ------------------------------------------------------- */
-   /* Generate + Copy Bookmarklet = each full row */
+     - CHECK ALL + COPY JSON side-by-side
+     - table readable + horizontal scroll
+     ======================================================= */
+
   #panel-dev #bm-generate,
   #panel-dev #btn-bm-generate,
   #panel-dev [data-action="bm-generate"],
@@ -2795,13 +2817,12 @@ body::after{
   #panel-bookmark .btn#bm-copy,
   #panel-bookmark #btn-bm-copy,
   #panel-bookmark [data-action="bm-copy"]{
-    flex:1 1 100% !important;
-    width:100% !important;
-    max-width:100% !important;
-    min-width:0 !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
   }
 
-  /* ADD = full row at top */
   #panel-dev #mon-add,
   #panel-dev #btn-mon-add,
   #panel-dev [data-action="mon-add"],
@@ -2809,37 +2830,73 @@ body::after{
   #panel-monitor #mon-add,
   #panel-monitor #btn-mon-add,
   #panel-monitor [data-action="mon-add"],
-  #panel-monitor [id*="mon"][id*="add"]{
-    order:1 !important;
-    flex:1 1 100% !important;
-    width:100% !important;
-    max-width:100% !important;
-    min-width:0 !important;
-  }
- 
-
-  /* ADD (top, full width) */
+  #panel-monitor [id*="mon"][id*="add"],
   #panel-dev [id^="mon-add"],
   #panel-monitor [id^="mon-add"]{
-    order:1 !important;
-    flex:1 1 100% !important;
-    width:100% !important;
-    max-width:100% !important;
-    min-width:0 !important;
+    order: 1 !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
   }
 
-  /* CHECK ALL + COPY JSON (second row, 2 cols) */
   #panel-dev [id^="mon-check"],
   #panel-dev [id^="mon-expor"],
   #panel-dev [id^="mon-copy"],
   #panel-monitor [id^="mon-check"],
   #panel-monitor [id^="mon-expor"],
   #panel-monitor [id^="mon-copy"]{
-    order:2 !important;
-    flex:1 1 calc(50% - 5px) !important;
-    width:calc(50% - 5px) !important;
-    max-width:calc(50% - 5px) !important;
-    min-width:0 !important;
+    order: 2 !important;
+    flex: 1 1 calc(50% - 5px) !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
+  }
+
+  #panel-dev #mon-table,
+  #panel-monitor #mon-table{
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  #panel-dev #mon-table table,
+  #panel-monitor #mon-table table{
+    width: max-content !important;
+    min-width: 620px !important;
+    border-collapse: separate !important;
+  }
+
+  #panel-dev #mon-table .table,
+  #panel-monitor #mon-table .table,
+  #panel-dev #mon-table .trow,
+  #panel-monitor #mon-table .trow,
+  #panel-dev #mon-table .row,
+  #panel-monitor #mon-table .row{
+    min-width: 620px !important;
+  }
+
+  #panel-dev #mon-table th,
+  #panel-monitor #mon-table th,
+  #panel-dev #mon-table td,
+  #panel-monitor #mon-table td,
+  #panel-dev #mon-table .cell,
+  #panel-monitor #mon-table .cell{
+    white-space: nowrap !important;
+  }
+
+  #panel-dev #mon-table td:first-child,
+  #panel-monitor #mon-table td:first-child,
+  #panel-dev #mon-table .contract,
+  #panel-monitor #mon-table .contract,
+  #panel-dev #mon-table [data-col*="contract"],
+  #panel-monitor #mon-table [data-col*="contract"]{
+    max-width: 260px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 }
 
