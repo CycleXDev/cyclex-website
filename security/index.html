@@ -1862,7 +1862,7 @@ a.tool-card[data-tool="approvals"]::after{
 #panel-approvals #dna-elig-msg.elig-warn{ color: #ffd36a !important; }
 .hidden{ display:none !important; }
      
-   @media (min-width: 901px){
+  @media (min-width: 901px){
   html{ zoom: 1.10; }
   html, body{ overflow-x: hidden; }
 
@@ -1873,7 +1873,9 @@ a.tool-card[data-tool="approvals"]::after{
   /* בסיס: כל שורת כפתורים בפאנלים */
   #panel-dev .row,
   #panel-tx .row,
-  #panel-liq .row{
+  #panel-liq .row,
+  #panel-dna .row,
+  #panel-rpc .row{
     align-items: stretch;
   }
 
@@ -1898,9 +1900,31 @@ a.tool-card[data-tool="approvals"]::after{
   }
 
   /* ---------- תמונה 2: TX DECODER ---------- */
+  /* שורת הכפתורים עצמה: תמיד flex + בלי wrap */
+  #panel-tx .tx-actions,
+  #panel-tx .row:has(#tx-decode),
+  #panel-tx .row:has(#btn-tx-decode),
+  #panel-tx .row:has(#tx-run),
+  #panel-tx .row:has(#tx-copy-md),
+  #panel-tx .row:has(#btn-tx-copy),
+  #panel-tx .row:has(#tx-copy-markdown){
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
   /* DECODE + COPY MARKDOWN */
   #panel-tx #tx-decode,
-  #panel-tx #tx-copy-md{
+  #panel-tx #btn-tx-decode,
+  #panel-tx #tx-run,
+  #panel-tx [data-action="tx-decode"],
+  #panel-tx [data-action="decode-tx"],
+  #panel-tx #tx-copy-md,
+  #panel-tx #btn-tx-copy,
+  #panel-tx #tx-copy-markdown,
+  #panel-tx [data-action="tx-copy-markdown"],
+  #panel-tx [data-action="copy-markdown"]{
     flex: 1 1 0 !important;
     width: calc(50% - 5px) !important;
     max-width: calc(50% - 5px) !important;
@@ -1913,19 +1937,107 @@ a.tool-card[data-tool="approvals"]::after{
   #panel-liq #liq-copy-link,
   #panel-liq #liq-share-x{
     flex: 1 1 0 !important;
-    width: calc((100% - 20px)/3) !important;      
+    width: calc((100% - 20px)/3) !important;      /* 2 gaps של 10px */
     max-width: calc((100% - 20px)/3) !important;
     min-width: 0 !important;
   }
 
+  /* ---------- DNA: CONNECT + SCAN + RESET באותה שורה ---------- */
+  #panel-dna .row:has(#dna-connect),
+  #panel-dna .row:has(#btn-dna-connect),
+  #panel-dna .row:has(#dna-scan),
+  #panel-dna .row:has(#btn-dna-scan),
+  #panel-dna .row:has(#dna-reset),
+  #panel-dna .row:has(#btn-dna-reset){
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  /* 3 כפתורים בשורה אחת */
+  #panel-dna #dna-connect,
+  #panel-dna #btn-dna-connect,
+  #panel-dna [data-action="dna-connect"],
+  #panel-dna #dna-scan,
+  #panel-dna #btn-dna-scan,
+  #panel-dna [data-action="dna-scan"],
+  #panel-dna #dna-reset,
+  #panel-dna #btn-dna-reset,
+  #panel-dna [data-action="dna-reset"]{
+    flex: 1 1 0 !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+    min-width: 0 !important;
+  }
+
+  /* DNA תחתון: SEED + USE על כל השורה */
+  #panel-dna .row:has(#dna-seed),
+  #panel-dna .row:has(#btn-dna-seed),
+  #panel-dna .row:has(#dna-history),
+  #panel-dna .row:has(#btn-dna-history),
+  #panel-dna .row:has(#dna-use-scan-history){
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  #panel-dna #dna-seed,
+  #panel-dna #btn-dna-seed,
+  #panel-dna [data-action="dna-seed"],
+  #panel-dna #dna-history,
+  #panel-dna #btn-dna-history,
+  #panel-dna #dna-use-scan-history,
+  #panel-dna [data-action="dna-history"],
+  #panel-dna [data-action="use-scan-history"]{
+    flex: 1 1 0 !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
+  }
+
+  /* ---------- RPC CHECKER: TEST + COPY + SHARE באותה שורה ---------- */
+  #panel-rpc .row:has(#rpc-run),
+  #panel-rpc .row:has(#btn-rpc-run),
+  #panel-rpc .row:has(#rpc-copy-best),
+  #panel-rpc .row:has(#btn-rpc-copy),
+  #panel-rpc .row:has(#rpc-share-x),
+  #panel-rpc .row:has(#btn-rpc-share-x){
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  #panel-rpc #rpc-run,
+  #panel-rpc #btn-rpc-run,
+  #panel-rpc [data-action="rpc-run"],
+  #panel-rpc [data-action="test-rpcs"],
+  #panel-rpc #rpc-copy-best,
+  #panel-rpc #btn-rpc-copy,
+  #panel-rpc [data-action="rpc-copy-best"],
+  #panel-rpc [data-action="copy-best-rpc"],
+  #panel-rpc #rpc-share-x,
+  #panel-rpc #btn-rpc-share-x,
+  #panel-rpc [data-action="rpc-share-x"],
+  #panel-rpc [data-action="share-rpc-x"]{
+    flex: 1 1 0 !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+    min-width: 0 !important;
+  }
+
+  /* טקסט בכפתורים לא ישבור גובה */
   #panel-dev .btn,
   #panel-tx .btn,
-  #panel-liq .btn{
+  #panel-liq .btn,
+  #panel-dna .btn,
+  #panel-rpc .btn{
     white-space: nowrap !important;
     min-height: 52px !important;
   }
 }
-
 
  /* =========================
    ACCESS MODAL (PASS / CYCX) — Premium centered
