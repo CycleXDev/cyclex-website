@@ -5715,35 +5715,36 @@ const wasOpen = !!(modalEl && (
 await cxConnectWallet();
 
 
- let provider = null;
+let provider = null;
 let from = "";
 
-// 1) immediate attempt
-provider =
-  (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
-    ? window.wallet.providerRaw
-    : window.ethereum;
+function pickBestProvider() {
+  // 1) AppKit raw provider
+  const raw = window?.wallet?.providerRaw;
+  if (raw?.request) return raw;
 
-if (provider?.request) {
-  from = await waitForAccounts(provider, 12000);
+  // 2) injected providers list (mobile can expose multiple)
+  const eth = window.ethereum;
+  const list = Array.isArray(eth?.providers) ? eth.providers : [];
+  const mm = list.find(p => p?.isMetaMask && p?.request);
+  if (mm) return mm;
+
+  // 3) fallback single injected provider
+  if (eth?.request) return eth;
+
+  return null;
 }
 
-// 2) mobile recovery: wait for appkit session hydration
-if (!from) {
-  for (let i = 0; i < 12; i++) {
-    await new Promise(r => setTimeout(r, 500));
-
-    provider =
-      (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
-        ? window.wallet.providerRaw
-        : window.ethereum;
-
-    if (!provider?.request) continue;
-
-    from = await waitForAccounts(provider, 2500);
+// try for up to ~20s to allow mobile return/hydration
+for (let i = 0; i < 20; i++) {
+  provider = pickBestProvider();
+  if (provider?.request) {
+    from = await waitForAccounts(provider, 1800);
     if (from) break;
   }
+  await new Promise(r => setTimeout(r, 500));
 }
+
 
 if (!provider?.request || !from) {
   if (wasOpen) openAccessModal();
