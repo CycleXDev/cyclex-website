@@ -5729,16 +5729,20 @@ const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
 // TEMP: fixed BNB price (for UI + tx). Later: compute from USD.
 const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
 const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
-async function waitForAccounts(provider, maxMs = 8000) {
+    
+async function waitForAccounts(provider, maxMs = 20000) {
   const start = Date.now();
   while (Date.now() - start < maxMs) {
-    const accs = await provider.request({ method: "eth_accounts" }).catch(() => []);
-    const a = accs?.[0];
-    if (a) return a;
-    await new Promise(r => setTimeout(r, 250));
+    try {
+      const accs = await provider.request({ method: "eth_accounts" }).catch(() => []);
+      const a = accs?.[0];
+      if (a) return a;
+    } catch (_) {}
+    await new Promise(r => setTimeout(r, 400));
   }
   return "";
 }
+
 
 async function accessBuyFlow(kind) {
   try {
@@ -5753,20 +5757,26 @@ async function accessBuyFlow(kind) {
     // This should open AppKit modal and create an active session when user connects
     await cxConnectWallet();
 
-    // 1) IMPORTANT: after AppKit connect, DO NOT call eth_requestAccounts
-    // Use eth_accounts (no popups, no PUBLIC_requestAccounts errors)
-    const provider =
-  (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
-    ? wallet.providerRaw
+  // 1) wait a moment for mobile deep-link return/session hydration
+await new Promise(r => setTimeout(r, 350));
+
+// IMPORTANT: after AppKit connect, DO NOT call eth_requestAccounts
+const provider =
+  (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
+    ? window.wallet.providerRaw
     : window.ethereum;
 
-    if (!provider || !provider.request) {
-      console.warn("No EIP-1193 provider found after AppKit connect.");
-      return;
-    }
+if (!provider || !provider.request) {
+  accessSetStatus("Wallet provider not ready. Tap Pay again.");
+  console.warn("No EIP-1193 provider found after AppKit connect.");
+  return;
+}
 
-   const from = await waitForAccounts(provider, 8000);
-if (!from) return; // user didn't connect / session not ready
+const from = await waitForAccounts(provider, 20000);
+if (!from) {
+  accessSetStatus("Wallet session still syncing. Tap Pay again.");
+  return;
+}
 
 
     // 2) Ensure BSC (chainId 56 = 0x38)
@@ -5988,8 +5998,6 @@ async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
 
   return false;
 }
-
-
 
 
 function closeAccessModal() {
