@@ -5734,23 +5734,11 @@ if (!from) {
 }
 
 if (!provider?.request || !from) {
-  // one last active wake-up on mobile before giving up
-  if (provider?.request) {
-    try {
-      const accs = await provider.request({ method: "eth_requestAccounts" });
-      from = accs?.[0] || "";
-    } catch {}
-  }
-
-  if (!provider?.request || !from) {
-    if (wasOpen) openAccessModal();
-    accessSetStatus("Wallet not connected yet. Tap Buy once more.");
-    console.warn("provider/from timeout", { hasProvider: !!provider, from });
-    return;
-  }
+  if (wasOpen) openAccessModal();
+  accessSetStatus("Wallet not connected yet. Tap Buy once more.");
+  console.warn("provider/from timeout", { hasProvider: !!provider, from });
+  return;
 }
-
-
 
     // 2) Ensure BSC (chainId 56 = 0x38)
     const TARGET_CHAIN = "0x38";
