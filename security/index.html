@@ -2176,145 +2176,208 @@ body::after{
   filter: saturate(1.05) brightness(1.02);
   box-shadow: 0 24px 64px rgba(34,230,167,.34), inset 0 1px 0 rgba(255,255,255,.30) !important;
 }
+
 /* =========================================================
-   MOBILE RE-FIX (features only) — compact + clean
-   Put at VERY END of CSS
+   MOBILE STABILITY PATCH (POPUP + FEATURE TEXT)
+   put LAST in CSS
    ========================================================= */
 @media (max-width: 900px){
 
-  /* 1) Keep cards full width but compact */
-  .tool-panel,
-  .panel,
-  .feature-card{
-    width: 100% !important;
-    max-width: 100% !important;
+  /* ---------- A) Access popup fix ---------- */
+  /* targets common modal wrappers + your access modal */
+  #access-modal,
+  .access-modal,
+  .modal.access,
+  .modal-card,
+  .modal-content{
+    width: min(94vw, 560px) !important;
+    max-width: 94vw !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
     box-sizing: border-box !important;
   }
 
-  /* 2) Header layout: title left, CLOSE small on right */
+  /* keep modal fully visible on mobile */
+  #access-modal .modal-body,
+  .access-modal .modal-body,
+  .modal.access .modal-body{
+    max-height: calc(100dvh - 120px) !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* popup CTA buttons full width and clean */
+  #access-modal .btn,
+  #access-modal button,
+  #access-modal a.btn{
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 54px !important;
+    padding: 10px 16px !important;
+    box-sizing: border-box !important;
+    white-space: normal !important;
+    line-height: 1.15 !important;
+  }
+
+  /* ---------- B) Feature cards text/layout fix ---------- */
+  /* IMPORTANT: force single-column layout inside tool card head */
   .tool-head,
   .panel-head,
   .feature-head{
-    display: grid !important;
-    grid-template-columns: minmax(0,1fr) auto !important;
-    align-items: start !important;
-    column-gap: 10px !important;
-    row-gap: 8px !important;
+    display: block !important;
+    position: relative !important;
+    min-width: 0 !important;
   }
 
-  /* wallet chip stays on its own row, not pushing title narrow */
+  /* small close button on the right */
+  .tool-head .btn-close,
+  .panel-head .btn-close,
+  .feature-head .btn-close,
+  .tool-head .close-btn,
+  .panel-head .close-btn,
+  .feature-head .close-btn,
+  .tool-head .btn[data-action="close"],
+  .panel-head .btn[data-action="close"],
+  .feature-head .btn[data-action="close"]{
+    float: right !important;
+    clear: none !important;
+    width: auto !important;
+    min-width: 102px !important;
+    height: 42px !important;
+    padding: 0 16px !important;
+    margin: 4px 0 8px 10px !important;
+    border-radius: 999px !important;
+    font-size: 15px !important;
+    letter-spacing: .08em !important;
+    white-space: nowrap !important;
+  }
+
+  /* wallet chip should not squeeze headline */
+  .wallet-chip,
+  .wallet-pill,
   .tool-head .wallet-chip,
   .panel-head .wallet-chip,
-  .feature-head .wallet-chip,
-  .tool-head .wallet-pill,
-  .panel-head .wallet-pill,
-  .feature-head .wallet-pill{
-    grid-column: 1 / -1 !important;
-    justify-self: end !important;
-    max-width: 100% !important;
-    margin: 0 0 2px 0 !important;
+  .feature-head .wallet-chip{
+    float: right !important;
+    clear: right !important;
+    max-width: 62% !important;
+    margin: 0 0 8px 10px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
 
-  /* CLOSE button back to compact size */
-  .btn-close,
-  .close-btn,
-  .tool-head .btn,
-  .panel-head .btn,
-  .feature-head .btn{
-    height: 42px !important;
-    min-height: 42px !important;
-    min-width: 104px !important;
-    padding: 0 16px !important;
-    border-radius: 999px !important;
-    font-size: 15px !important;
-    letter-spacing: .08em !important;
-    white-space: nowrap !important;
-    align-self: start !important;
+  /* clear floats so content starts correctly */
+  .tool-head::after,
+  .panel-head::after,
+  .feature-head::after{
+    content: "" !important;
+    display: block !important;
+    clear: both !important;
   }
 
-  /* 3) Typography reset to normal mobile proportions */
-  .tool-panel h1,
-  .panel h1,
-  .tool-panel h2,
-  .panel h2{
-    font-size: clamp(34px, 8.4vw, 48px) !important;
-    line-height: 1.02 !important;
+  /* headline: normal wrapping, no "vertical letters" */
+  .tool-title,
+  .panel-title,
+  .feature-title,
+  .tool-head h1,
+  .tool-head h2,
+  .panel-head h1,
+  .panel-head h2,
+  .feature-head h1,
+  .feature-head h2{
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 10px 0 !important;
+    font-size: clamp(44px, 8.2vw, 56px) !important;
+    line-height: 1.03 !important;
     letter-spacing: -0.01em !important;
-    margin: 6px 0 10px !important;
-    max-width: 16ch !important;
-    overflow-wrap: normal !important;
+    white-space: normal !important;
     word-break: normal !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
   }
 
+  /* description/body text: readable line width */
+  .tool-subtitle,
+  .panel-subtitle,
+  .feature-subtitle,
+  .tool-desc,
+  .panel-desc,
+  .feature-desc,
   .tool-panel p,
-  .panel p,
-  .feature-text,
-  .muted{
+  .panel p{
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     font-size: 16px !important;
     line-height: 1.45 !important;
-    max-width: 34ch !important;
-    overflow-wrap: break-word !important;
+    white-space: normal !important;
     word-break: normal !important;
-    hyphens: auto;
+    overflow-wrap: break-word !important;
+    hyphens: auto !important;
   }
 
-  .kicker,
-  .eyebrow,
-  .tool-kicker{
-    font-size: 13px !important;
-    letter-spacing: .16em !important;
+  /* make sure internal columns don't stay desktop-like */
+  .tool-layout,
+  .panel-layout,
+  .feature-layout,
+  .tool-grid,
+  .panel-grid{
+    display: block !important;
+    grid-template-columns: 1fr !important;
   }
 
-  /* 4) Prevent "one word per line" effect */
-  .tool-panel .left,
-  .panel .left,
-  .tool-copy,
-  .hero-copy{
-    min-width: 0 !important;
-    width: auto !important;
-  }
-
-  /* 5) Buttons in body stay normal (not huge) */
-  .btn,
-  button.btn,
-  a.btn{
+  /* inputs/buttons in features */
+  .tool-panel .btn,
+  .panel .btn,
+  .feature-card .btn{
     min-height: 50px !important;
     padding: 0 16px !important;
     font-size: 14px !important;
-    letter-spacing: .06em !important;
+    white-space: nowrap !important;
   }
 
-  /* 6) form controls size */
-  input, select, textarea, .input, .select{
+  .tool-panel input,
+  .tool-panel select,
+  .panel input,
+  .panel select{
     min-height: 50px !important;
     font-size: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 }
 
-/* very small phones */
+/* extra small phones */
 @media (max-width: 390px){
-  .tool-panel h1,
-  .panel h1,
-  .tool-panel h2,
-  .panel h2{
-    font-size: clamp(30px, 9vw, 42px) !important;
-    max-width: 14ch !important;
+  .tool-title,
+  .panel-title,
+  .feature-title,
+  .tool-head h1,
+  .tool-head h2,
+  .panel-head h1,
+  .panel-head h2,
+  .feature-head h1,
+  .feature-head h2{
+    font-size: clamp(36px, 9vw, 48px) !important;
   }
 
-  .btn-close,
-  .close-btn,
-  .tool-head .btn,
-  .panel-head .btn,
-  .feature-head .btn{
-    min-width: 96px !important;
+  .tool-head .btn-close,
+  .panel-head .btn-close,
+  .feature-head .btn-close,
+  .tool-head .close-btn,
+  .panel-head .close-btn,
+  .feature-head .close-btn{
+    min-width: 94px !important;
     height: 40px !important;
     font-size: 14px !important;
   }
 }
-
 
 
 
