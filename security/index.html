@@ -2752,71 +2752,7 @@ body::after{
     min-width:0 !important;
   }
 
-  /* -----------------------------------------------
-     A) Get Access popup — FIX (no broad selectors)
-     ----------------------------------------------- */
-  :is(
-    #access-modal,
-    #modal-access,
-    .access-modal,
-    .popup-access,
-    [id*="access-modal"],
-    [role="dialog"][id*="access"],
-    [role="dialog"][class*="access"]
-  ){
-    position: fixed !important;
-    inset: 0 !important;
-    padding: 12px !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    transform: none !important;
-    z-index: 10000 !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Neutralize old generic direct-child rules */
-  :is(
-    #access-modal,
-    #modal-access,
-    .access-modal,
-    .popup-access,
-    [id*="access-modal"]
-  ) > div{
-    width: auto !important;
-    max-width: none !important;
-    max-height: none !important;
-    margin: 0 !important;
-    overflow: visible !important;
-    transform: none !important;
-  }
-
-  /* Real popup card only */
-  :is(
-    #access-modal,
-    #modal-access,
-    .access-modal,
-    .popup-access,
-    [id*="access-modal"]
-  ) > :is(
-    .card,
-    .modal-card,
-    .access-card,
-    .popup-card,
-    .dialog-card,
-    .sheet,
-    .panel,
-    .content,
-    .inner
-  ){
-    width: min(94vw, 640px) !important;
-    max-width: min(94vw, 640px) !important;
-    max-height: calc(100dvh - 24px) !important;
-    margin: 0 auto !important;
-    overflow: auto !important;
-    position: relative !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
+ 
 
   /* -----------------------------------------------
      B) TX Decoder: Decode + Copy markdown same row
@@ -3052,19 +2988,20 @@ body::after{
     pointer-events: none !important;
   }
 
-  /* OPEN state only */
-  :is(
-    #access-modal.open, #access-modal.is-open, #access-modal[open="true"], #access-modal[aria-hidden="false"],
-    #modal-access.open, #modal-access.is-open, #modal-access[open="true"], #modal-access[aria-hidden="false"],
-    .access-modal.open, .access-modal.is-open, .access-modal[open="true"], .access-modal[aria-hidden="false"],
-    .popup-access.open, .popup-access.is-open, .popup-access[open="true"], .popup-access[aria-hidden="false"],
-    [id*="access-modal"].open, [id*="access-modal"].is-open, [id*="access-modal"][open="true"], [id*="access-modal"][aria-hidden="false"]
-  ){
-    display: grid !important;
-    place-items: center !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-  }
+/* OPEN state only */
+:is(
+  #access-modal.open, #access-modal.is-open, #access-modal[open="true"], #access-modal[aria-hidden="false"],
+  #modal-access.open, #modal-access.is-open, #modal-access[open="true"], #modal-access[aria-hidden="false"],
+  .access-modal.open, .access-modal.is-open, .access-modal[open="true"], .access-modal[aria-hidden="false"],
+  .popup-access.open, .popup-access.is-open, .popup-access[open="true"], .popup-access[aria-hidden="false"],
+  [id*="access-modal"].open, [id*="access-modal"].is-open, [id*="access-modal"][open="true"], [id*="access-modal"][aria-hidden="false"]
+){
+  display: flex !important;              
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
 
   /* Card */
   :is(#access-modal, #modal-access, .access-modal, .popup-access, [id*="access-modal"])
@@ -3100,12 +3037,11 @@ wui-dialog,
 .w3m-overlay,
 .walletconnect-modal,
 .walletconnect-modal__base,
-[data-testid="w3m-modal"],
-[class*="w3m-overlay"],
-[class*="w3m-modal"]{
+[data-testid="w3m-modal"]{
   z-index: var(--z-appkit) !important;
   position: fixed !important;
 }
+
 
 
 
@@ -5752,8 +5688,11 @@ async function accessBuyFlow(kind) {
       return;
     }
 
-    // This should open AppKit modal and create an active session when user connects
-    await cxConnectWallet();
+    const wasOpen = document.getElementById("access-modal")?.classList.contains("is-open");
+if (wasOpen) closeAccessModal();
+
+await cxConnectWallet();
+
 
   // 1) wait a moment for mobile deep-link return/session hydration
 await new Promise(r => setTimeout(r, 350));
@@ -5772,7 +5711,8 @@ if (!provider || !provider.request) {
 
 const from = await waitForAccounts(provider, 20000);
 if (!from) {
-  accessSetStatus("Wallet session still syncing. Tap Pay again.");
+  if (wasOpen) openAccessModal();
+  accessSetStatus("Wallet not connected. Please try again.");
   return;
 }
 
