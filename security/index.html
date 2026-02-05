@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,7 +22,7 @@
   <title>CycleX – Security Hub</title>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
- <style>
+   <style>
   :root{
     --bg-main:#05060a;
     --bg-gradient-start:#05060a;
@@ -3112,7 +3113,6 @@ wui-dialog,
 
 
 </style>
-
    
    
 </head>
@@ -5740,45 +5740,37 @@ async function waitForAccounts(provider, maxMs = 8000) {
   }
   return "";
 }
-   
 
 async function accessBuyFlow(kind) {
   try {
     accessSetBusy(true);
 
-    // 0) Connect via AppKit
+    // 0) Connect via AppKit (opens the wallet picker with many options)
     if (typeof cxConnectWallet !== "function") {
       console.warn("cxConnectWallet is missing - AppKit connect not available.");
-      accessSetStatus("Wallet connect is not available.");
       return;
     }
 
+    // This should open AppKit modal and create an active session when user connects
     await cxConnectWallet();
 
-    // 1) Provider (AppKit session first, then window.ethereum fallback)
+    // 1) IMPORTANT: after AppKit connect, DO NOT call eth_requestAccounts
+    // Use eth_accounts (no popups, no PUBLIC_requestAccounts errors)
     const provider =
-      (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
-        ? window.wallet.providerRaw
-        : window.ethereum;
+  (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
+    ? wallet.providerRaw
+    : window.ethereum;
 
     if (!provider || !provider.request) {
       console.warn("No EIP-1193 provider found after AppKit connect.");
-      accessSetStatus("No wallet provider found.");
       return;
     }
 
-    // IMPORTANT: do NOT eth_requestAccounts here
-    const from = await waitForAccounts(provider, 8000);
-    if (!from) {
-      accessSetStatus("Wallet not connected. Please connect and try again.");
-      return;
-    }
+   const from = await waitForAccounts(provider, 8000);
+if (!from) return; // user didn't connect / session not ready
 
-    // keep wallet state synced (important for mobile / appkit)
-    window.wallet = window.wallet || {};
-    window.wallet.address = from;
 
-    // 2) Ensure BSC
+    // 2) Ensure BSC (chainId 56 = 0x38)
     const TARGET_CHAIN = "0x38";
     try {
       const chainId = await provider.request({ method: "eth_chainId" });
@@ -5789,6 +5781,7 @@ async function accessBuyFlow(kind) {
         });
       }
     } catch (err) {
+      // If chain isn't added
       if (err && (err.code === 4902 || String(err.message || "").includes("4902"))) {
         await provider.request({
           method: "wallet_addEthereumChain",
@@ -5801,147 +5794,150 @@ async function accessBuyFlow(kind) {
           }],
         });
       } else if (err && err.code === 4001) {
-        accessSetStatus("Network switch canceled.");
+        // user canceled switch
         return;
       } else {
         throw err;
       }
     }
 
-    // ===== BNB FLOW =====
-    if (kind === "bnb") {
-      const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+   if (kind === "bnb") {
+  const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+  if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
+  accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
+  console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT, "ACCESS_SALE_OR_RECEIVER:", ACCESS_SALE_OR_RECEIVER);
+  return;
+}
 
-      // safety: prevent undefined contract on mobile/scoped env
-      if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
-        accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
-        console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT, "ACCESS_SALE_OR_RECEIVER:", ACCESS_SALE_OR_RECEIVER);
-        return;
-      }
 
-      const PRICE_WEI = window.__ACCESS_BNB_WEI;
-      if (!PRICE_WEI) {
-        accessSetStatus("Loading BNB price… try again in a second.");
-        return;
-      }
+  // use the LIVE wei we computed when opening the modal
+  const PRICE_WEI = window.__ACCESS_BNB_WEI;
+  if (!PRICE_WEI) {
+    accessSetStatus("Loading BNB price… try again in a second.");
+    return;
+  }
 
-      const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
+  const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
 
-      const txParams = {
-        from,
-        to: PASS_CONTRACT,
-        value: "0x" + BigInt(PRICE_WEI).toString(16),
-        data: BUY_WITH_BNB_SELECTOR
-      };
+const txParams = {
+  from,
+  to: PASS_CONTRACT,
+  value: "0x" + BigInt(PRICE_WEI).toString(16),
+  data: BUY_WITH_BNB_SELECTOR
+};
 
-      try {
-        await provider.request({ method: "eth_estimateGas", params: [txParams] });
-      } catch (e) {
-        accessSetStatus("BNB purchase would fail (estimateGas). Check balance/contract state.");
-        console.warn("estimateGas failed:", e);
-        return;
-      }
+try {
+  // preflight: will this tx succeed?
+  await provider.request({ method: "eth_estimateGas", params: [txParams] });
+} catch (e) {
+  accessSetStatus("BNB purchase would fail (estimateGas). Check selector/contract state.");
+  console.warn("estimateGas failed:", e);
+  return;
+}
 
-      const txHash = await provider.request({
-        method: "eth_sendTransaction",
-        params: [txParams],
-      });
+const txHash = await provider.request({
+  method: "eth_sendTransaction",
+  params: [txParams],
+});
 
-      accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
-      const ok = await accessWaitForConfirm(provider, txHash);
 
-      if (ok) {
-        accessSetStatus("Confirmed ✅");
-        setTimeout(() => {
-          closeAccessModal();
-          accessSetStatus("");
-        }, 900);
-      } else {
-        accessSetStatus("Pending on-chain… You can close this window.");
-        setTimeout(() => {
-          closeAccessModal();
-          accessSetStatus("");
-        }, 3500);
-      }
-      return;
-    }
+  accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
-    // ===== USDT FLOW =====
+  const ok = await accessWaitForConfirm(provider, txHash);
+
+  if (ok) {
+    accessSetStatus("Confirmed ✅");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 900);
+  } else {
+    accessSetStatus("Pending on-chain… You can close this window.");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 3500);
+  }
+  return;
+}
+
+
     if (kind === "usdt") {
-      const USDT = "0x55d398326f99059fF775485246999027B3197955";
-      const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+  // ✅ USDT on BSC (mainnet)
+  const USDT = "0x55d398326f99059fF775485246999027B3197955";
 
-      if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
-        accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
-        console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT, "ACCESS_SALE_OR_RECEIVER:", ACCESS_SALE_OR_RECEIVER);
-        return;
-      }
+  // ✅ Your sale/pass contract (same as BNB receiver for now)
+  const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
 
-      const ERC20_ABI = [
-        { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
-        { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
-      ];
+  // Minimal ERC20 ABI (approve + decimals)
+  const ERC20_ABI = [
+    { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
+    { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
+  ];
 
-      const SALE_ABI = [
-        { "constant": false, "inputs": [], "name": "buyWithUSDT", "outputs": [], "type": "function" }
-      ];
+ const SALE_ABI = [
+  { "constant": false, "inputs": [], "name": "buyWithUSDT", "outputs": [], "type": "function" }
+];
 
-      accessSetStatus("Preparing USDT checkout…");
 
-      if (!window.ethers) {
-        accessSetStatus("USDT checkout needs ethers.js.");
-        return;
-      }
+  accessSetStatus("Preparing USDT checkout…");
 
-      const ethers = window.ethers;
-      const web3Provider = new ethers.BrowserProvider(provider);
-      const signer = await web3Provider.getSigner();
+  // We'll use ethers if it exists, otherwise we stop here cleanly.
+  if (!window.ethers) {
+    accessSetStatus("USDT checkout needs ethers.js (next step).");
+    return;
+  }
 
-      const usdPrice = 9;
-      const usdtContract = new ethers.Contract(USDT, ERC20_ABI, signer);
-      const sale = new ethers.Contract(PASS_CONTRACT, SALE_ABI, signer);
+  const ethers = window.ethers;
+  const web3Provider = new ethers.BrowserProvider(provider);
+  const signer = await web3Provider.getSigner();
 
-      const decimals = Number(await usdtContract.decimals());
-      const amount = ethers.parseUnits(String(usdPrice), decimals);
+  // amount in USDT (for now: 9 USDT)
+  const usdPrice = 9; // later dynamic 9/19
+  const usdtContract = new ethers.Contract(USDT, ERC20_ABI, signer);
+  const sale = new ethers.Contract(PASS_CONTRACT, SALE_ABI, signer);
 
-      accessSetStatus("Approve USDT…");
-      const tx1 = await usdtContract.approve(PASS_CONTRACT, amount);
-      await tx1.wait();
+  const decimals = Number(await usdtContract.decimals());
+  const amount = ethers.parseUnits(String(usdPrice), decimals);
 
-      accessSetStatus("Buying pass…");
-      const tx2 = await sale.buyWithUSDT();
+  // 1) approve
+  accessSetStatus("Approve USDT…");
+  const tx1 = await usdtContract.approve(PASS_CONTRACT, amount);
+  await tx1.wait();
 
-      accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
-      const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
+  // 2) buy
+  accessSetStatus("Buying pass…");
+  const tx2 = await sale.buyWithUSDT();
 
-      if (ok) {
-        accessSetStatus("Confirmed ✅");
-        setTimeout(() => {
-          closeAccessModal();
-          accessSetStatus("");
-        }, 900);
-      } else {
-        accessSetStatus("Pending on-chain… You can close this window.");
-        setTimeout(() => {
-          closeAccessModal();
-          accessSetStatus("");
-        }, 3500);
-      }
+  accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
+  const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
-      return;
-    }
+  if (ok) {
+    accessSetStatus("Confirmed ✅");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 900);
+  } else {
+    accessSetStatus("Pending on-chain… You can close this window.");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 3500);
+  }
+
+  return;
+}
+
 
   } catch (e) {
+    // no alerts - keep it smooth
     console.error("accessBuyFlow error:", e);
-    accessSetStatus("Action failed. Please try again.");
   } finally {
     accessSetBusy(false);
   }
 }
-
-
-
 
 function accessSetStatus(msg) {
   const el = document.getElementById("access-status");
