@@ -5684,17 +5684,25 @@ async function accessUpdatePricesUI(usdPrice) {
 
 
 
-function openAccessModal() {
+async function openAccessModal() {
   accessSetStatus("");
   const m = document.getElementById("access-modal");
   if (!m) return;
+
+  const maybeDisconnected =
+    !window.wallet?.address &&
+    !window.ethereum?.selectedAddress;
+
+  if (maybeDisconnected) {
+    await cxResetStuckWalletSession();
+  }
 
   m.classList.add("is-open");
   m.setAttribute("aria-hidden", "false");
 
   accessUpdatePricesUI(ACCESS_USD_PRICE);
-
 }
+
 
     function accessSetBusy(on) {
   const bnbBtn = document.getElementById("btn-pay-bnb");
@@ -5727,7 +5735,40 @@ const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
 // TEMP: fixed BNB price (for UI + tx). Later: compute from USD.
 const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
 const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
-    
+
+
+async function cxResetStuckWalletSession() {
+  try {
+    if (window.wallet?.providerRaw?.disconnect) {
+      await window.wallet.providerRaw.disconnect().catch(() => {});
+    }
+  } catch {}
+
+  try {
+    if (window.wallet) {
+      window.wallet.address = "";
+      window.wallet.providerRaw = null;
+    }
+  } catch {}
+
+  try {
+    const keys = Object.keys(localStorage);
+    for (const k of keys) {
+      const lk = k.toLowerCase();
+      if (
+        lk.includes("appkit") ||
+        lk.includes("reown") ||
+        lk.includes("walletconnect") ||
+        lk.includes("w3m") ||
+        lk.includes("web3modal")
+      ) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch {}
+}
+
+
 async function waitForAccounts(provider, maxMs = 20000) {
   const start = Date.now();
   while (Date.now() - start < maxMs) {
@@ -5745,6 +5786,9 @@ async function waitForAccounts(provider, maxMs = 20000) {
 async function accessBuyFlow(kind) {
   try {
     accessSetBusy(true);
+    if (!window.wallet?.address && !window.ethereum?.selectedAddress) {
+  await cxResetStuckWalletSession();
+}
 
     // 0) Connect via AppKit (opens the wallet picker with many options)
     if (typeof cxConnectWallet !== "function") {
@@ -5970,6 +6014,23 @@ window.ACCESS_RECEIVER = ACCESS_SALE_OR_RECEIVER;
 window.accessUpdatePricesUI = accessUpdatePricesUI;
 window.accessWaitForConfirm = accessWaitForConfirm;
 window.accessQuoteBNBWeiOnchain = accessQuoteBNBWeiOnchain;
+    
+    document.addEventListener("visibilitychange", async () => {
+  if (document.visibilityState !== "visible") return;
+
+  const p =
+    (window.wallet?.providerRaw?.request) ? window.wallet.providerRaw : window.ethereum;
+  if (!p?.request) return;
+
+  const accs = await p.request({ method: "eth_accounts" }).catch(() => []);
+  const a = accs?.[0] || "";
+
+  window.wallet = window.wallet || {};
+  window.wallet.address = a || "";
+
+  if (!a) accessSetBusy(false);
+});
+
 
 
 async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
