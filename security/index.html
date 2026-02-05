@@ -2638,87 +2638,54 @@ body::after{
    FINAL MOBILE PATCH — Access modal + TX + LIQ + DEV TOOLS
    paste LAST
    ========================================================= */
-/* -------------------------------------------------------
-   GET ACCESS modal — mobile safe fix (larger, less scroll)
-   ------------------------------------------------------- */
 @media (max-width: 900px){
 
-  #access-modal.cx-modal{
+  /* -------------------------------------------------------
+     1) GET ACCESS modal stays stable (not "breaking" fullscreen)
+     ------------------------------------------------------- */
+  #access-modal.cx-modal,
+  #accessModal.cx-modal,
+  #access-modal,
+  #accessModal{
     position: fixed !important;
     inset: 0 !important;
-    width: 100vw !important;
-    height: 100dvh !important;
-    padding: 6px !important;            
-    box-sizing: border-box !important;
     z-index: 9999 !important;
-  }
-
-  /* open states only */
-  #access-modal.cx-modal.is-open,
-  #access-modal.cx-modal.open{
-    display: flex !important;
-    align-items: center !important;
+    align-items: flex-start !important;
     justify-content: center !important;
-  }
-
-  /* closed state */
-  #access-modal.cx-modal:not(.is-open):not(.open){
-    display: none !important;
-    pointer-events: none !important;
-  }
-
-  #access-modal .cx-modal__dialog{
-    width: min(720px, calc(100vw - 12px)) !important;  
-    max-width: calc(100vw - 12px) !important;
-    max-height: calc(100dvh - 12px) !important;       
-    margin: 0 !important;
-    border-radius: 18px !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-  }
-
-  #access-modal .cx-modal__top{
-    padding: 12px !important; 
-  }
-
-  #access-modal .cx-modal__body{
-    max-height: calc(100dvh - 122px) !important; 
+    padding-top: calc(env(safe-area-inset-top, 0px) + 10px) !important;
+    padding-right: 10px !important;
+    padding-left: 10px !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px) !important;
     overflow-y: auto !important;
-    overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch !important;
-    padding: 12px !important;
+    min-height: 100dvh !important;
   }
 
-  #access-modal .cx-modal__actions{
+  /* support common "open" states */
+  #access-modal.is-open,
+  #accessModal.is-open,
+  #access-modal[aria-hidden="false"],
+  #accessModal[aria-hidden="false"]{
+    display: flex !important;
+  }
+
+  #access-modal .cx-modal__dialog,
+  #accessModal .cx-modal__dialog{
+    width: min(680px, 100%) !important;
+    margin: 0 auto !important;
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 20px) !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 10px !important;
+    overflow: hidden !important;
   }
 
-  #access-modal .cx-modal__actions .btn{
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    flex: 0 0 auto !important;
+  #access-modal .cx-modal__body,
+  #accessModal .cx-modal__body,
+  #access-modal .modal-body,
+  #accessModal .modal-body{
+    overflow: auto !important;
+    max-height: none !important;
   }
-}
-
-/* very small phones */
-@media (max-width: 390px){
-  #access-modal.cx-modal{ padding: 4px !important; }
-  #access-modal .cx-modal__dialog{
-    width: calc(100vw - 8px) !important;
-    max-width: calc(100vw - 8px) !important;
-    max-height: calc(100dvh - 8px) !important;
-    border-radius: 16px !important;
-  }
-  #access-modal .cx-modal__body{
-    max-height: calc(100dvh - 114px) !important;
-    padding: 10px !important;
-  }
-}
-
-
  
   /* -------------------------------------------------------
      2) TX Decoder: DECODE + COPY MARKDOWN same row
