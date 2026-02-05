@@ -3181,6 +3181,83 @@ wui-dialog,
     text-overflow: ellipsis !important;
   }
 }
+/* =========================================================
+   DNA BUTTONS — HARD OVERRIDE (PASTE LAST, VERY LAST)
+   ========================================================= */
+
+/* --- שלישיית הכפתורים: CONNECT + SCAN + RESET באותה שורה --- */
+#panel-approvals :is(#dna-connect, #dna-scan, #dna-run, #dna-reset){
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* אם שלושתם באותו row */
+#panel-approvals .row:has(#dna-connect):has(:is(#dna-scan,#dna-run)):has(#dna-reset){
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:10px !important;
+  align-items:stretch !important;
+}
+
+/* אם SCAN נקרא dna-run */
+#panel-approvals .row:has(#dna-connect):has(#dna-run):has(#dna-reset){
+  display:grid !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  gap:10px !important;
+}
+
+/* בטל חוקים ישנים של order/flex שדוחפים שורות */
+#panel-approvals #dna-connect,
+#panel-approvals #dna-scan,
+#panel-approvals #dna-run,
+#panel-approvals #dna-reset{
+  order:unset !important;
+  flex:unset !important;
+  width:100% !important;
+}
+
+/* --- שני הכפתורים התחתונים: SEED + USE HISTORY על כל השורה --- */
+#panel-approvals .row:has(#dna-seed-common):has(#dna-use-history),
+#panel-approvals .row:has(#dna-seed):has(#dna-history),
+#panel-approvals .row:has([id*="seed"]):has([id*="history"]){
+  display:grid !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:10px !important;
+  align-items:stretch !important;
+}
+
+#panel-approvals :is(
+  #dna-seed-common,#dna-use-history,#dna-seed,#dna-history,
+  [id*="seed"].btn,[id*="history"].btn
+){
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+  flex:unset !important;
+  order:unset !important;
+}
+
+/* --- מובייל: לבטל ספציפית את הבלוק הישן שהכריח connect full-row --- */
+@media (max-width:900px){
+  #panel-approvals .row:has(#dna-connect):has(:is(#dna-scan,#dna-run)):has(#dna-reset){
+    grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  }
+
+  #panel-approvals .row:has(#dna-seed-common):has(#dna-use-history),
+  #panel-approvals .row:has(#dna-seed):has(#dna-history),
+  #panel-approvals .row:has([id*="seed"]):has([id*="history"]){
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+  #panel-approvals #dna-connect,
+  #panel-approvals #dna-scan,
+  #panel-approvals #dna-run,
+  #panel-approvals #dna-reset{
+    flex:unset !important;
+    width:100% !important;
+    max-width:100% !important;
+  }
+}
 
 
 
