@@ -5664,39 +5664,21 @@ const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
 const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
 const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
     
-async function waitForAccounts(provider, maxMs = 20000) {
+async function waitForAccounts(provider, maxMs = 30000) {
   if (!provider?.request) return "";
 
-  return await new Promise((resolve) => {
-    let done = false;
-    const finish = (v) => {
-      if (done) return;
-      done = true;
-      try { provider.removeListener?.("accountsChanged", onAcc); } catch {}
-      clearInterval(iv);
-      clearTimeout(to);
-      resolve(v || "");
-    };
-
-    const onAcc = (accs) => {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    try {
+      const accs = await provider.request({ method: "eth_accounts" });
       const a = accs?.[0] || "";
-      if (a) finish(a);
-    };
+      if (a) return a;
+    } catch {}
 
-    try { provider.on?.("accountsChanged", onAcc); } catch {}
-
-    const iv = setInterval(async () => {
-      try {
-        const accs = await provider.request({ method: "eth_accounts" });
-        const a = accs?.[0] || "";
-        if (a) finish(a);
-      } catch {}
-    }, 400);
-
-    const to = setTimeout(() => finish(""), maxMs);
-  });
+    await new Promise(r => setTimeout(r, 350));
+  }
+  return "";
 }
-
 
 
 async function accessBuyFlow(kind) {
@@ -5723,28 +5705,39 @@ await cxConnectWallet();
  let provider = null;
 let from = "";
 
-// Mobile-safe: give wallet time to restore session/provider after returning from wallet app
-for (let i = 0; i < 8; i++) {
-  provider =
-    (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
-      ? window.wallet.providerRaw
-      : window.ethereum;
+// 1) immediate attempt
+provider =
+  (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
+    ? window.wallet.providerRaw
+    : window.ethereum;
 
-  if (provider?.request) {
-    from = await waitForAccounts(provider, 3000); // short poll per round
+if (provider?.request) {
+  from = await waitForAccounts(provider, 12000);
+}
+
+// 2) mobile recovery: wait for appkit session hydration
+if (!from) {
+  for (let i = 0; i < 12; i++) {
+    await new Promise(r => setTimeout(r, 500));
+
+    provider =
+      (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
+        ? window.wallet.providerRaw
+        : window.ethereum;
+
+    if (!provider?.request) continue;
+
+    from = await waitForAccounts(provider, 2500);
     if (from) break;
   }
-
-  await new Promise(r => setTimeout(r, 500));
 }
 
 if (!provider?.request || !from) {
   if (wasOpen) openAccessModal();
-  accessSetStatus("Wallet provider not ready. Please tap Buy again.");
+  accessSetStatus("Wallet not connected yet. Tap Buy once more.");
   console.warn("provider/from timeout", { hasProvider: !!provider, from });
   return;
 }
-
 
 
     // 2) Ensure BSC (chainId 56 = 0x38)
