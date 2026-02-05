@@ -5740,45 +5740,7 @@ async function waitForAccounts(provider, maxMs = 8000) {
   }
   return "";
 }
-    // ===== Mobile resume (MetaMask/AppKit return) =====
-let __accessPendingKind = null;
-let __accessResumeBusy = false;
-
-function accessGetProviderSafe() {
-  return (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
-    ? window.wallet.providerRaw
-    : window.ethereum;
-}
-
-async function accessResumeIfNeeded() {
-  if (__accessResumeBusy) return;
-  if (!__accessPendingKind) return;
-
-  const provider = accessGetProviderSafe();
-  if (!provider?.request) return;
-
-  __accessResumeBusy = true;
-  try {
-    const accs = await provider.request({ method: "eth_accounts" }).catch(() => []);
-    const chainId = await provider.request({ method: "eth_chainId" }).catch(() => null);
-
-    if (Array.isArray(accs) && accs[0] && chainId === "0x38") {
-      const kind = __accessPendingKind;
-      __accessPendingKind = null;
-      accessSetBusy(false);
-      accessSetStatus("Wallet connected. Continuing checkout…");
-      await accessBuyFlow(kind);
-    }
-  } finally {
-    __accessResumeBusy = false;
-  }
-}
-
-window.addEventListener("focus", accessResumeIfNeeded);
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) accessResumeIfNeeded();
-});
-
+   
 
 async function accessBuyFlow(kind) {
   try {
