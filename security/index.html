@@ -2767,8 +2767,6 @@ body::after{
     position: fixed !important;
     inset: 0 !important;
     padding: 12px !important;
-    display: grid !important;
-    place-items: center !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
     transform: none !important;
@@ -3032,83 +3030,54 @@ body::after{
     line-height: 1.45 !important;
   }
 }
-/* =========================================================
-   DNA DESKTOP FIX — CLEAN / SCOPED / LAST
-   affects ONLY #panel-approvals
-   ========================================================= */
-@media (min-width: 901px){
+/* HOTFIX: Access modal should open only when app marks it open */
+@media (max-width: 900px){
 
-  /* 0) נטרול side effects מכל חוקי DNA ישנים ורחבים */
-  #panel-approvals .row,
-  #panel-approvals .actions,
-  #panel-approvals .btn-row,
-  #panel-approvals .controls{
-    min-width: 0 !important;
+  /* Base modal box styling only (NO forced display) */
+  :is(#access-modal, #modal-access, .access-modal, .popup-access, [id*="access-modal"]){
+    position: fixed !important;
+    inset: 0 !important;
+    padding: 12px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    transform: none !important;
+    z-index: 10000 !important;
+    box-sizing: border-box !important;
   }
 
-  /* 1) שורת הכפתורים העליונה:
-     Scan + Reset + Connect
-     (השורה שמכילה את #dna-connect) */
-  #panel-approvals :is(.row,.actions,.btn-row,.controls):has(> #dna-connect){
+  /* CLOSED state (default) */
+  :is(#access-modal, #modal-access, .access-modal, .popup-access, [id*="access-modal"]):not(.open):not(.is-open):not([open="true"]):not([aria-hidden="false"]){
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* OPEN state only */
+  :is(
+    #access-modal.open, #access-modal.is-open, #access-modal[open="true"], #access-modal[aria-hidden="false"],
+    #modal-access.open, #modal-access.is-open, #modal-access[open="true"], #modal-access[aria-hidden="false"],
+    .access-modal.open, .access-modal.is-open, .access-modal[open="true"], .access-modal[aria-hidden="false"],
+    .popup-access.open, .popup-access.is-open, .popup-access[open="true"], .popup-access[aria-hidden="false"],
+    [id*="access-modal"].open, [id*="access-modal"].is-open, [id*="access-modal"][open="true"], [id*="access-modal"][aria-hidden="false"]
+  ){
     display: grid !important;
-    grid-template-columns: repeat(3, minmax(0,1fr)) !important;
-    gap: 10px !important;
-    align-items: stretch !important;
+    place-items: center !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 
-  /* כל הכפתורים באותה שורה */
-  #panel-approvals :is(.row,.actions,.btn-row,.controls):has(> #dna-connect) > .btn,
-  #panel-approvals :is(.row,.actions,.btn-row,.controls):has(> #dna-connect) > button,
-  #panel-approvals :is(.row,.actions,.btn-row,.controls):has(> #dna-connect) > a.btn{
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-    min-height: 52px !important;
-    white-space: nowrap !important;
-  }
-
-  /* סדר: Scan | Reset | Connect */
-  #panel-approvals :is(.row,.actions,.btn-row,.controls):has(> #dna-connect) > #dna-connect{
-    order: 3 !important;
-  }
-
-  /* 2) שורת הכפתורים התחתונה:
-     Seed Common Tokens + Use Scan History
-     (השורה שמיד אחרי הבלוק עם textarea) */
-  #panel-approvals :is(.row,.actions,.btn-row,.controls):has(textarea)
-    + :is(.row,.actions,.btn-row,.controls){
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
-    gap: 10px !important;
-    align-items: stretch !important;
-  }
-
-  #panel-approvals :is(.row,.actions,.btn-row,.controls):has(textarea)
-    + :is(.row,.actions,.btn-row,.controls) > .btn,
-  #panel-approvals :is(.row,.actions,.btn-row,.controls):has(textarea)
-    + :is(.row,.actions,.btn-row,.controls) > button,
-  #panel-approvals :is(.row,.actions,.btn-row,.controls):has(textarea)
-    + :is(.row,.actions,.btn-row,.controls) > a.btn{
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
-    margin: 0 !important;
-    min-height: 52px !important;
-    white-space: nowrap !important;
-  }
-
-  /* 3) טקסט וכתובת שלא ידחפו layout */
-  #panel-approvals #dna-wallet,
-  #panel-approvals #dna-address,
-  #panel-approvals #dna-status .mono{
-    max-width: 100% !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    display: inline-block !important;
+  /* Card */
+  :is(#access-modal, #modal-access, .access-modal, .popup-access, [id*="access-modal"])
+  > :is(.card,.modal-card,.access-card,.popup-card,.dialog-card,.sheet,.panel,.content,.inner){
+    width: min(94vw, 640px) !important;
+    max-width: min(94vw, 640px) !important;
+    max-height: calc(100dvh - 24px) !important;
+    margin: 0 auto !important;
+    overflow: auto !important;
+    box-sizing: border-box !important;
   }
 }
+
 
 
 </style>
