@@ -5415,6 +5415,20 @@ if (silent) return false;
 
   wallet.providerRaw = providerRaw;
   attachProviderListeners(providerRaw);
+    // Ensure mobile wallet session is fully authorized (important for MetaMask/AppKit on mobile)
+  try {
+    const accs = await providerRaw.request({ method: "eth_requestAccounts" });
+    if (!accs || !accs[0]) {
+      if (!silent) setStatus(stQuick, "warn", "No wallet account returned. Try connect again.");
+      try { await window.CxAppKitModal?.close?.(); } catch {}
+      return false;
+    }
+  } catch (e) {
+    if (!silent) setStatus(stQuick, "warn", `Wallet authorization failed: ${String(e?.message || e)}`);
+    try { await window.CxAppKitModal?.close?.(); } catch {}
+    return false;
+  }
+
 
   const bp = new E.BrowserProvider(providerRaw);
   wallet.browserProvider = bp;
