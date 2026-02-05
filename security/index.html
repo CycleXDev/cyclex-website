@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,7 +58,7 @@
     --scroll-offset: 96px;
   }
 
-  *{box-sizing:border-box;margin:0;padding:0}
+ *{box-sizing:border-box;margin:0;padding:0}
   html,body{min-height:100%}
   html{
     font-size:16px;
@@ -87,6 +86,7 @@
   @keyframes fadeBody{from{opacity:0}to{opacity:1}}
   a{color:inherit;text-decoration:none}
 
+
   .page-shell{
     width:100%;
     max-width:1160px;
@@ -103,96 +103,493 @@
   .cell{min-width:0}
   .wrap{white-space:normal;overflow-wrap:anywhere}
 
-  /* Top bar */
-  .top-bar{
-    position:sticky; top:14px; z-index:999;
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding:12px 18px;
-    margin:0 auto 32px;
-    width:100%;
-    max-width:1160px;
-    border-radius:999px;
-    background:rgba(8,10,22,.55);
-    backdrop-filter:blur(18px);
-    -webkit-backdrop-filter:blur(18px);
-    border:1px solid rgba(255,255,255,.14);
-    box-shadow:0 20px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
-  }
-  .brand{display:flex;align-items:center;gap:10px;min-width:0}
-  .brand-logo{
-    width:44px;height:44px;border-radius:16px;object-fit:contain;
-    box-shadow:0 12px 32px rgba(0,0,0,.8);
-    flex:0 0 auto;
-  }
-  .brand-text{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .brand-title{
-    font-weight:800;letter-spacing:.05em;font-size:18px;text-transform:uppercase;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .brand-sub{
-    font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--text-muted);
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
+  /* =========================
+   TOP BAR (SECURITY — MAIN SITE STYLE)
+   ========================= */
+.top-bar{
+  position:sticky;
+  top:14px;
+  z-index:999;
 
-  .lang-switch{
-    display:inline-flex;align-items:center;padding:4px;border-radius:999px;gap:2px;
-    background:rgba(255,255,255,.06);
-    backdrop-filter:blur(10px);
-    border:1px solid rgba(255,255,255,.16);
-    box-shadow:0 12px 36px rgba(0,0,0,.55);
-    flex:0 0 auto;
-  }
-  .lang-btn{
-    border:none;background:transparent;color:var(--text-muted);
-    font-size:11px;padding:6px 9px;border-radius:999px;cursor:pointer;
-    transition:background var(--transition-fast),color var(--transition-fast),transform var(--transition-fast);
-    user-select:none;white-space:nowrap;
-  }
-  .lang-btn:hover{transform:translateY(-1px)}
-  .lang-btn.active{background:rgba(0,229,255,.14);color:var(--accent-cyan)}
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
 
-  body.lang-switching{animation:langFade .28s ease-out}
-  @keyframes langFade{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  padding:12px 16px;
+  margin:0 auto 30px;
 
-  /* Hero */
-  .hero{text-align:center;max-width:980px;margin:0 auto 16px;animation:fadeUp .8s ease-out forwards}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
-  .hero-kicker{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-cyan);margin-bottom:12px}
-  .hero-title{font-size:clamp(36px,4.7vw,56px);line-height:1.05;font-weight:900;margin-bottom:12px;letter-spacing:-.02em}
-  .hero-subtitle{max-width:760px;margin:0 auto 16px;font-size:15px;line-height:1.5;color:var(--text-muted)}
-  .hero-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-bottom:10px}
+  width: min(1160px, calc(100% - 24px)); /* feel "edge-to-edge" like home */
+  border-radius:999px;
 
-  .btn{
-    border-radius:999px;border:none;
-    padding:12px 22px;
-    font-size:13px;font-weight:700;
-    letter-spacing:.04em;text-transform:uppercase;
-    cursor:pointer;
-    display:inline-flex;align-items:center;justify-content:center;gap:8px;
-    transition:transform var(--transition-fast),box-shadow var(--transition-fast),background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast);
-    user-select:none;white-space:nowrap;max-width:100%;min-width:0;
+  background: rgba(10,12,22,.50);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(18px) saturate(1.12);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+
+  box-shadow: 0 14px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06);
+  overflow:hidden;
+}
+
+/* premium gradient rim */
+.top-bar::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:999px;
+  padding:1px;
+  background: linear-gradient(120deg,
+    rgba(0,229,255,.22),
+    rgba(124,92,255,.16),
+    rgba(255,255,255,.10)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events:none;
+  opacity:.55;
+}
+
+/* Left: brand */
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  position:relative;
+  z-index:1;
+  min-width:0;
+}
+.brand-logo{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  object-fit:contain;
+
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 12px 32px rgba(0,0,0,.7);
+
+  flex:0 0 auto;
+}
+.brand-text{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+}
+.brand-title{
+  font-weight:950;
+  letter-spacing:.10em;
+  font-size:13px;
+  text-transform:uppercase;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.brand-sub{
+  font-size:10px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color: var(--dim, rgba(244,246,255,.56));
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Center nav (optional — if exists in this page) */
+.top-nav{
+  position:relative;
+  z-index:1;
+  margin: 0 auto;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:center;
+  flex:1 1 auto;
+
+  padding:0;
+  background:transparent;
+  border:none;
+  box-shadow:none;
+}
+.top-link{
+  position:relative;
+  font-size:11px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color: rgba(244,246,255,.72);
+
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid transparent;
+  background:transparent;
+
+  transition: background .18s var(--ease, ease-out),
+              border-color .18s var(--ease, ease-out),
+              transform .18s var(--ease, ease-out),
+              color .18s var(--ease, ease-out);
+  white-space:nowrap;
+}
+.top-link:hover{
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.12);
+  transform: translateY(-1px);
+  color: rgba(244,246,255,.90);
+}
+.top-link.active{ color: rgba(244,246,255,.90); }
+.top-link::after{
+  content:"";
+  position:absolute;
+  left:0; right:0;
+  bottom:-6px;
+  height:1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+  opacity:0;
+  transition: opacity .22s var(--ease, ease-out);
+}
+.top-link:hover::after,
+.top-link.active::after{ opacity:1; }
+
+/* Right group wrapper (optional — if exists) */
+.top-right{
+  position:relative;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex:0 0 auto;
+}
+
+/* Lang switch */
+.lang-switch{
+  position:relative;
+  z-index:1;
+
+  display:inline-flex;
+  align-items:center;
+  padding:4px;
+  border-radius:999px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.12);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 26px rgba(0,0,0,.35);
+  gap:2px;
+
+  flex:0 0 auto;
+}
+.lang-btn{
+  border:none;
+  background:transparent;
+  color: var(--dim, rgba(244,246,255,.56));
+  font-size:11px;
+  padding:6px 10px;
+  border-radius:999px;
+  cursor:pointer;
+  user-select:none;
+  white-space:nowrap;
+  transition: transform .18s var(--ease, ease-out),
+              background .18s var(--ease, ease-out),
+              color .18s var(--ease, ease-out);
+}
+.lang-btn:hover{ transform: translateY(-1px); }
+.lang-btn.active{
+  background: rgba(0,229,255,.14);
+  color: rgba(0,229,255,.95);
+}
+
+/* keep your lang fade */
+body.lang-switching{ animation: langFade .28s ease-out; }
+@keyframes langFade{
+  from{opacity:.5;transform:translateY(4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* =========================
+   HERO (SECURITY HUB — PREMIUM, MAIN-SITE STYLE)
+   ========================= */
+.hero{
+  position:relative;
+  max-width:1100px;
+  margin:18px auto 16px;
+  padding:18px 0 18px;
+  text-align:center;
+  animation: heroIn .7s var(--ease, ease-out) both;
+}
+
+@keyframes heroIn{
+  from{opacity:0; transform:translateY(14px)}
+  to{opacity:1; transform:translateY(0)}
+}
+
+.hero::before{
+  content:"";
+  position:absolute;
+  inset:-70px 0 -40px;
+  z-index:-1;
+  border-radius:80px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(0,229,255,.10), transparent 62%),
+    radial-gradient(circle at 26% 40%, rgba(124,92,255,.08), transparent 66%);
+  opacity:.65;
+  filter: blur(18px);
+  pointer-events:none;
+}
+
+.hero-kicker{
+  font-size:12px;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  color: rgba(0,229,255,.92);
+  margin-bottom:14px;
+}
+
+.hero-title{
+  font-size: clamp(40px, 4.6vw, 76px);
+  line-height: 1.12;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+  margin-bottom: 12px;
+  display: inline-block;
+  padding-bottom: .10em;
+}
+
+@supports (-webkit-background-clip:text){
+  .hero-title{
+    background: linear-gradient(110deg,
+      rgba(244,246,255,1) 0%,
+      rgba(0,229,255,.98) 40%,
+      rgba(124,92,255,.86) 76%,
+      rgba(244,246,255,.92) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color: transparent;
+    animation: titleSheen 6.6s ease-in-out infinite;
+    background-size: 220% 220%;
+    text-shadow:none;
   }
-  .btn:disabled{opacity:.55;cursor:not-allowed}
-  .btn-primary{
-    background:linear-gradient(135deg,var(--accent-cyan),#7df2ff);
-    color:#020308;
-    box-shadow:0 14px 40px rgba(0,229,255,.35);
+  @keyframes titleSheen{
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
   }
-  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 18px 60px rgba(0,229,255,.55)}
-  .btn-secondary{
-    background:linear-gradient(135deg,var(--accent-green),#b9ffcf);
-    color:#020308;
-    box-shadow:0 14px 40px rgba(0,230,118,.35);
+}
+
+/* Keep single-line title on wide screens */
+@media (min-width:980px){
+  .hero-title{
+    white-space:nowrap;
+    letter-spacing:-0.04em;
+    font-size: clamp(46px, 4.4vw, 80px);
   }
-  .btn-secondary:hover{transform:translateY(-1px);box-shadow:0 18px 60px rgba(0,230,118,.6)}
-  .btn-ghost{
-    background:rgba(255,255,255,.05);
-    border:1px solid rgba(255,255,255,.16);
-    color:var(--text-main);
-    box-shadow:0 12px 34px rgba(0,0,0,.45);
+  .hero-title br{ display:none; }
+}
+
+.hero-subtitle{
+  margin-left:auto;
+  margin-right:auto;
+  max-width:72ch;
+  font-size:16px;
+  line-height:1.75;
+  color: var(--muted, var(--text-muted));
+  margin-bottom:16px;
+}
+
+/* =========================
+   BUTTON ROW (MAIN-SITE CLEAN)
+   ========================= */
+.hero-actions{
+  margin-top:14px;
+  width:100%;
+  max-width:980px;
+  margin-left:auto;
+  margin-right:auto;
+
+  display:flex;
+  justify-content:center;
+  align-items:stretch;
+  gap:12px;
+
+  flex-wrap: nowrap;
+}
+
+.hero-actions .btn{
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 520px;
+}
+
+/* Buttons — main-site style */
+.btn{
+  position:relative;
+  border-radius:999px;
+  border:1px solid transparent;
+  padding:13px 26px;
+  font-size:13px;
+  font-weight:950;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  transition: transform .32s var(--ease, ease-out),
+              box-shadow .32s var(--ease, ease-out),
+              background .32s var(--ease, ease-out),
+              color .32s var(--ease, ease-out),
+              border-color .32s var(--ease, ease-out),
+              filter .32s var(--ease, ease-out);
+  isolation:isolate;
+  min-height:52px; /* premium uniform height */
+  user-select:none;
+  white-space:nowrap;
+}
+.btn:focus-visible{ outline:none; box-shadow: 0 0 0 3px rgba(0,229,255,.22); }
+.btn:disabled{ opacity:.55; cursor:not-allowed; }
+
+.btn-primary{
+  background: linear-gradient(135deg, rgba(0,229,255,1), rgba(125,242,255,1));
+  color:#03040a;
+  box-shadow: 0 22px 90px rgba(0,229,255,.38);
+  border-color: rgba(0,229,255,.18);
+}
+.btn-primary::after{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:999px;
+  background: linear-gradient(120deg,
+    transparent 0%,
+    rgba(255,255,255,.58) 18%,
+    transparent 36%,
+    transparent 100%);
+  transform: translateX(-120%);
+  opacity:.65;
+  z-index:-1;
+  transition: transform .65s var(--ease, ease-out);
+  filter: blur(.2px);
+}
+.btn-primary:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 30px 130px rgba(0,229,255,.48);
+  filter: saturate(1.05);
+}
+.btn-primary:hover::after{ transform: translateX(120%); }
+
+/* Use glass secondary for both secondary + ghost in Security Hub */
+.btn-secondary,
+.btn-ghost{
+  background: rgba(255,255,255,.030);
+  color: var(--text, var(--text-main));
+  border-color: rgba(255,255,255,.16);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 55px rgba(0,0,0,.34);
+}
+.btn-secondary:hover,
+.btn-ghost:hover{
+  transform: translateY(-2px);
+  border-color: rgba(0,229,255,.24);
+  box-shadow: 0 24px 90px rgba(0,0,0,.56);
+}
+
+/* Mobile: stack buttons like main site */
+@media (max-width:979px){
+  .hero{ text-align:center; }
+  .hero-subtitle{ margin-left:auto; margin-right:auto; }
+  .hero-actions{
+    flex-direction: column;
+    max-width: 520px;
+    margin-left:auto;
+    margin-right:auto;
+    flex-wrap: nowrap;
   }
-  .btn-ghost:hover{transform:translateY(-1px);border-color:rgba(0,229,255,.26)}
-  .note-line{margin-top:10px;font-size:12px;color:var(--text-muted);line-height:1.45}
+  .hero-actions .btn{
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 520px;
+  }
+}
+
+/* =========================
+   MICROCOPY + NOTE (SECURITY HUB)
+   ========================= */
+.hero-micro{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px;
+  margin: 8px 0 0;
+  font-size:12px;
+  line-height:1.35;
+  color: rgba(244,246,255,.72);
+}
+.hero-micro .micro-item{ opacity:.88; }
+.hero-micro .micro-dot{
+  opacity:.42;
+  font-size:13px;
+  transform: translateY(-.5px);
+  user-select:none;
+}
+@media (max-width:520px){
+  .hero-micro{ gap:8px; }
+}
+
+.note-line{
+  margin:18px auto 0;
+  max-width:820px;
+  text-align:center;
+  font-size:13px;
+  color: var(--dim, var(--text-muted));
+  line-height:1.55;
+}
+     /* ===== SECURITY HERO CTA OVERRIDE (no HTML changes) ===== */
+/* Back to Site -> glass (transparent) */
+.hero-actions a.btn-primary{
+  background: rgba(255,255,255,.030) !important;
+  color: var(--text, var(--text-main)) !important;
+  border-color: rgba(255,255,255,.16) !important;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 55px rgba(0,0,0,.34) !important;
+}
+.hero-actions a.btn-primary:hover{
+  transform: translateY(-2px);
+  border-color: rgba(0,229,255,.24) !important;
+  box-shadow: 0 24px 90px rgba(0,0,0,.56) !important;
+}
+
+/* Get Access -> premium colored (cyan) */
+.hero-actions #btn-connect.btn-secondary{
+  background: linear-gradient(135deg, rgba(0,229,255,1), rgba(125,242,255,1)) !important;
+  color:#03040a !important;
+  border-color: rgba(0,229,255,.18) !important;
+  box-shadow: 0 22px 90px rgba(0,229,255,.38) !important;
+}
+.hero-actions #btn-connect.btn-secondary::after{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:999px;
+  background: linear-gradient(120deg,
+    transparent 0%,
+    rgba(255,255,255,.58) 18%,
+    transparent 36%,
+    transparent 100%);
+  transform: translateX(-120%);
+  opacity:.65;
+  z-index:-1;
+  transition: transform .65s var(--ease, ease-out);
+  filter: blur(.2px);
+}
+.hero-actions #btn-connect.btn-secondary:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 30px 130px rgba(0,229,255,.48) !important;
+  filter: saturate(1.05);
+}
+.hero-actions #btn-connect.btn-secondary:hover::after{
+  transform: translateX(120%);
+}
+
+
 
   /* =========================
      Tool grid (single source of truth)
@@ -202,18 +599,21 @@
     max-width:1160px;
     margin:0 auto;
   }
-  .tool-grid-title{
-    text-align:center;
-    margin:12px 0 6px;
-    font-size:12px;letter-spacing:.16em;text-transform:uppercase;
-    color:rgba(244,246,255,.72);
-  }
+ .tool-grid-title{
+  text-align:center;
+  margin: -14px 0 6px;  
+  font-size:12px;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:rgba(244,246,255,.72);
+}
+
 
   .tool-grid{
     display:grid;
     grid-template-columns:repeat(3, minmax(0, 1fr));
     gap:var(--tool-grid-gap);
-    margin-top:12px;
+    margin-top:6px;
     align-items:stretch;
   }
 
@@ -1386,17 +1786,17 @@ a.tool-card[data-tool="approvals"]::after{
 
 
 /* ===== DNA: lock Score/Risk position (no wrap jump) ===== */
-#panel-approvals .grid-2 > .card:nth-child(2) > .row:first-child{
+/*#panel-approvals .grid-2 > .card:nth-child(2) > .row:first-child{
   flex-wrap: nowrap !important;
   align-items: flex-start !important;
-}
+}*/
 
-#panel-approvals .grid-2 > .card:nth-child(2) > .row:first-child > .row{
+/*#panel-approvals .grid-2 > .card:nth-child(2) > .row:first-child > .row{
   margin-left: auto !important;
   flex-wrap: nowrap !important;
   justify-content: flex-end !important;
   align-items: center !important;
-}
+}*/
 
 #panel-approvals .grid-2 > .card:nth-child(2) > .row:first-child > .row .pill{
   flex: 0 0 auto !important;
@@ -1462,10 +1862,112 @@ a.tool-card[data-tool="approvals"]::after{
 #panel-approvals #dna-elig-msg.elig-warn{ color: #ffd36a !important; }
 .hidden{ display:none !important; }
      
-     @media (min-width: 901px){
+@media (min-width: 901px){
   html{ zoom: 1.10; }
   html, body{ overflow-x: hidden; }
+
+  /* =========================================================
+     DESKTOP ONLY — Equal action buttons in tool panels
+     ========================================================= */
+
+  /* בסיס: יישור אנכי */
+  #panel-dev .row,
+  #panel-tx .row,
+  #panel-liq .row,
+  #panel-rpc .row,
+  #panel-dna .row{
+    align-items: stretch;
+  }
+
+  /* =========================================================
+     DEV TOOLS
+     ========================================================= */
+  #panel-dev #bm-generate,
+  #panel-dev #bm-copy{
+    flex: 1 1 0 !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
+  }
+
+  #panel-dev #mon-add,
+  #panel-dev #mon-check,
+  #panel-dev #mon-copy{
+    flex: 1 1 0 !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+    min-width: 0 !important;
+  }
+
+  /* =========================================================
+     TX DECODER
+     ========================================================= */
+  #panel-tx .tx-actions,
+  #panel-tx .row:has(#tx-decode),
+  #panel-tx .row:has(#btn-tx-decode),
+  #panel-tx .row:has(#tx-run),
+  #panel-tx .row:has(#tx-copy-md),
+  #panel-tx .row:has(#btn-tx-copy),
+  #panel-tx .row:has(#tx-copy-markdown){
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  #panel-tx #tx-decode,
+  #panel-tx #btn-tx-decode,
+  #panel-tx #tx-run,
+  #panel-tx [data-action="tx-decode"],
+  #panel-tx [data-action="decode-tx"],
+  #panel-tx #tx-copy-md,
+  #panel-tx #btn-tx-copy,
+  #panel-tx #tx-copy-markdown,
+  #panel-tx [data-action="tx-copy-markdown"],
+  #panel-tx [data-action="copy-markdown"]{
+    flex: 1 1 0 !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
+  }
+
+  /* =========================================================
+     LIQUIDITY
+     ========================================================= */
+  #panel-liq #liq-run,
+  #panel-liq #liq-copy-link,
+  #panel-liq #liq-share-x{
+    flex: 1 1 0 !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+    min-width: 0 !important;
+  }
+
+  /* =========================================================
+     RPC — TEST / COPY BEST / SHARE X on one row
+     ========================================================= */
+  #panel-rpc .row:has(#rpc-test):has(#rpc-copy-best),
+  #panel-rpc .row:has(#rpc-test):has(#rpc-share-x),
+  #panel-rpc .row:has(#rpc-copy-best):has(#rpc-share-x),
+  #panel-rpc :is(.row,.actions,.btn-row,.controls,div):has(> #rpc-test):has(> #rpc-copy-best):has(> #rpc-share-x){
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  #panel-rpc #rpc-test,
+  #panel-rpc #rpc-copy-best,
+  #panel-rpc #rpc-share-x{
+    flex: 1 1 0 !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
 }
+
 
  /* =========================
    ACCESS MODAL (PASS / CYCX) — Premium centered
@@ -1659,6 +2161,953 @@ a.tool-card[data-tool="approvals"]::after{
   opacity: .85;
   text-align: center;
 }
+/* ===== SAFE BACKGROUND OVERRIDE ===== */
+html{ background:#05060a !important; }
+
+body{
+  background:
+    radial-gradient(1200px 720px at 14% 10%, rgba(124,92,255,.18), transparent 58%),
+    radial-gradient(1200px 720px at 86% 12%, rgba(0,229,255,.16), transparent 56%),
+    radial-gradient(980px 680px at 55% 120%, rgba(0,58,76,.40), transparent 62%),
+    linear-gradient(160deg, #05060a, #0b0a18, #021b24) !important;
+  background-repeat:no-repeat !important;
+  background-attachment:fixed !important;
+  background-size:cover !important;
+}
+
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(740px 640px at 20% 14%, rgba(0,229,255,.12), transparent 60%),
+    radial-gradient(940px 780px at 78% 18%, rgba(124,92,255,.11), transparent 62%),
+    radial-gradient(820px 700px at 52% 78%, rgba(93,255,178,.07), transparent 64%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+  background-size:auto,auto,auto,260px 260px;
+  background-repeat:no-repeat,no-repeat,no-repeat,repeat;
+  opacity:.10;
+  mix-blend-mode:overlay;
+  z-index:0;
+}
+
+body::after{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  background: radial-gradient(circle at 50% 18%, transparent 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.60) 100%);
+  opacity:.74;
+  z-index:0;
+}
+
+/* keep content above overlays */
+.page-shell,.top-bar,.hero,.tool-grid-wrap,.panel-shell{
+  position:relative;
+  z-index:1;
+}
+
+/* =========================================================
+   FINAL CTA COLORS — GREEN + CYAN (DROP-IN, LAST IN FILE)
+   ========================================================= */
+
+/* 1) HERO */
+.hero-actions #btn-connect.btn-secondary{
+  background: linear-gradient(135deg, #22e6a7 0%, #63f5bf 100%) !important;
+  color: #04130e !important;
+  border: 1px solid rgba(34,230,167,.42) !important;
+  box-shadow: 0 16px 46px rgba(34,230,167,.28), inset 0 1px 0 rgba(255,255,255,.28) !important;
+  text-shadow: none !important;
+}
+.hero-actions #btn-connect.btn-secondary:hover{
+  transform: translateY(-1px);
+  filter: saturate(1.05) brightness(1.02);
+  box-shadow: 0 24px 64px rgba(34,230,167,.34), inset 0 1px 0 rgba(255,255,255,.30) !important;
+}
+
+/* RUN QUICK SCAN -> cyan like SCAN */
+.hero-actions .btn-ghost,
+.hero-actions [data-action="quick-scan"],
+.hero-actions a[href*="#panel-quick"],
+.hero-actions a[href*="quick-scan"]{
+  background: linear-gradient(135deg, #21d4ee 0%, #67e8f9 100%) !important;
+  color: #041022 !important;
+  border: 1px solid rgba(33,212,238,.42) !important;
+  box-shadow: 0 16px 46px rgba(33,212,238,.28), inset 0 1px 0 rgba(255,255,255,.25) !important;
+  text-shadow: none !important;
+}
+.hero-actions .btn-ghost:hover,
+.hero-actions [data-action="quick-scan"]:hover,
+.hero-actions a[href*="#panel-quick"]:hover,
+.hero-actions a[href*="quick-scan"]:hover{
+  transform: translateY(-1px);
+  filter: saturate(1.05) brightness(1.02);
+  box-shadow: 0 24px 64px rgba(33,212,238,.34) !important;
+}
+
+/* 2) DNA PANEL (FIXED IDS) */
+#panel-approvals #dna-connect,
+#panel-approvals #dna-full-access{
+  background: linear-gradient(135deg, #22e6a7 0%, #63f5bf 100%) !important;
+  color: #04130e !important;
+  border: 1px solid rgba(34,230,167,.42) !important;
+  box-shadow: 0 16px 46px rgba(34,230,167,.28), inset 0 1px 0 rgba(255,255,255,.28) !important;
+  text-shadow: none !important;
+}
+#panel-approvals #dna-connect:hover,
+#panel-approvals #dna-full-access:hover{
+  transform: translateY(-1px);
+  filter: saturate(1.05) brightness(1.02);
+  box-shadow: 0 24px 64px rgba(34,230,167,.34), inset 0 1px 0 rgba(255,255,255,.30) !important;
+}
+#panel-approvals #dna-connect:disabled,
+#panel-approvals #dna-full-access:disabled{
+  opacity: .62 !important;
+  cursor: not-allowed !important;
+}
+
+/* 3) ACCESS MODAL USDT */
+#access-modal #btn-pay-usdt{
+  background: linear-gradient(135deg, #22e6a7 0%, #63f5bf 100%) !important;
+  color: #04130e !important;
+  border: 1px solid rgba(34,230,167,.42) !important;
+  box-shadow: 0 16px 46px rgba(34,230,167,.28), inset 0 1px 0 rgba(255,255,255,.28) !important;
+  text-shadow: none !important;
+}
+#access-modal #btn-pay-usdt:hover{
+  transform: translateY(-1px);
+  filter: saturate(1.05) brightness(1.02);
+  box-shadow: 0 24px 64px rgba(34,230,167,.34), inset 0 1px 0 rgba(255,255,255,.30) !important;
+}
+
+/* =========================================================
+   MOBILE FEATURE TEXT PATCH (FEATURES ONLY)
+   no modal / no cards / no overlay changes
+   put LAST in CSS
+   ========================================================= */
+@media (max-width: 900px){
+
+  /* header container */
+  .tool-head,
+  .panel-head,
+  .feature-head{
+    display: block !important;
+    position: relative !important;
+    min-width: 0 !important;
+  }
+
+  /* CLOSE button: small pill, right side */
+  .tool-head .btn-close,
+  .panel-head .btn-close,
+  .feature-head .btn-close,
+  .tool-head .close-btn,
+  .panel-head .close-btn,
+  .feature-head .close-btn,
+  .tool-head .btn[data-action="close"],
+  .panel-head .btn[data-action="close"],
+  .feature-head .btn[data-action="close"]{
+    float: right !important;
+    width: auto !important;
+    min-width: 100px !important;
+    height: 42px !important;
+    padding: 0 16px !important;
+    margin: 4px 0 8px 10px !important;
+    border-radius: 999px !important;
+    font-size: 15px !important;
+    letter-spacing: .06em !important;
+    white-space: nowrap !important;
+    line-height: 42px !important;
+  }
+
+  /* wallet chip: right, trimmed, does not crush title */
+  .wallet-chip,
+  .wallet-pill,
+  .tool-head .wallet-chip,
+  .panel-head .wallet-chip,
+  .feature-head .wallet-chip,
+  .tool-head .wallet-pill,
+  .panel-head .wallet-pill,
+  .feature-head .wallet-pill{
+    float: right !important;
+    clear: right !important;
+    max-width: 62% !important;
+    margin: 0 0 8px 10px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* clear floats before title/desc */
+  .tool-head::after,
+  .panel-head::after,
+  .feature-head::after{
+    content: "" !important;
+    display: block !important;
+    clear: both !important;
+  }
+
+  /* titles: normal rows (no vertical letters) */
+  .tool-title,
+  .panel-title,
+  .feature-title,
+  .tool-head h1,
+  .tool-head h2,
+  .panel-head h1,
+  .panel-head h2,
+  .feature-head h1,
+  .feature-head h2{
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 10px 0 !important;
+    font-size: clamp(34px, 8.4vw, 46px) !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.01em !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
+  }
+
+  /* body text: proper line flow */
+  .tool-subtitle,
+  .panel-subtitle,
+  .feature-subtitle,
+  .tool-desc,
+  .panel-desc,
+  .feature-desc,
+  .tool-panel p,
+  .panel p{
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 12px 0 !important;
+    font-size: 16px !important;
+    line-height: 1.48 !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    hyphens: auto !important;
+  }
+
+  /* prevent accidental desktop columns in open tool content */
+  .tool-layout,
+  .panel-layout,
+  .feature-layout{
+    min-width: 0 !important;
+  }
+}
+
+/* very small phones */
+@media (max-width: 390px){
+  .tool-title,
+  .panel-title,
+  .feature-title,
+  .tool-head h1,
+  .tool-head h2,
+  .panel-head h1,
+  .panel-head h2,
+  .feature-head h1,
+  .feature-head h2{
+    font-size: clamp(30px, 9vw, 40px) !important;
+    line-height: 1.1 !important;
+  }
+
+  .tool-head .btn-close,
+  .panel-head .btn-close,
+  .feature-head .btn-close,
+  .tool-head .close-btn,
+  .panel-head .close-btn,
+  .feature-head .close-btn{
+    min-width: 92px !important;
+    height: 40px !important;
+    font-size: 14px !important;
+    line-height: 40px !important;
+  }
+}
+/* =========================================================
+   DNA MOBILE FIX PATCH (paste LAST)
+   ========================================================= */
+@media (max-width: 900px){
+
+  /* 1) Header in DNA card: title full width, pills below */
+  #panel-approvals .grid-2 > .card:nth-child(2) > .row:first-child{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:10px !important;
+    flex-wrap:wrap !important;
+    min-width:0 !important;
+  }
+
+  #panel-approvals .grid-2 > .card:nth-child(2) > .row:first-child > .row{
+    margin-left:0 !important;
+    width:100% !important;
+    display:flex !important;
+    justify-content:space-between !important;
+    align-items:center !important;
+    flex-wrap:nowrap !important;
+    gap:8px !important;
+    min-width:0 !important;
+  }
+
+  #panel-approvals #dna-score,
+  #panel-approvals #dna-risk{
+    flex:1 1 0 !important;
+    min-width:0 !important;
+    max-width:calc(50% - 4px) !important;
+    padding:6px 9px !important;
+    font-size:12px !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+
+  /* 2) Wallet text / address never breaks layout */
+  #panel-approvals #dna-wallet,
+  #panel-approvals #dna-address,
+  #panel-approvals .pill .mono,
+  #panel-approvals #dna-status .mono{
+    max-width:100% !important;
+    min-width:0 !important;
+    display:inline-block !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    vertical-align:middle !important;
+  }
+
+  /* 3) Buttons layout: Connect full row, Scan+Reset in one row */
+  #panel-approvals #dna-connect{
+    width:100% !important;
+    max-width:100% !important;
+    flex:1 1 100% !important;
+    order:1 !important;
+  }
+
+  #panel-approvals #dna-scan,
+  #panel-approvals #dna-run,
+  #panel-approvals [data-action="dna-scan"],
+  #panel-approvals #dna-reset,
+  #panel-approvals [data-action="dna-reset"]{
+    flex:1 1 calc(50% - 6px) !important;
+    max-width:calc(50% - 6px) !important;
+    min-width:0 !important;
+    order:2 !important;
+  }
+
+  /* 4) Unlock button stays one line */
+  #panel-approvals #dna-full-access{
+    width:100% !important;
+    max-width:100% !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    letter-spacing:.02em !important;
+    font-size:clamp(12px, 3.6vw, 15px) !important;
+  }
+
+  /* 5) Locked text paragraph flows normally */
+  #panel-approvals #dna-approvals-locked .small{
+    white-space:normal !important;
+    word-break:normal !important;
+    overflow-wrap:anywhere !important;
+    line-height:1.45 !important;
+  }
+}
+
+/* =========================================================
+   RPC MOBILE LAYOUT + RESULTS FIX (paste LAST)
+   ========================================================= */
+@media (max-width: 900px){
+
+  /* ---------- Buttons layout ---------- */
+
+  /* Make known action wrappers wrap nicely (safe + scoped) */
+  #panel-rpc .share-row,
+  #panel-rpc .rpc-actions,
+  #panel-rpc .rpc-share,
+  #panel-rpc .rpc-btns,
+  #panel-rpc .row:has(#rpc-save),
+  #panel-rpc .row:has(#rpc-clear),
+  #panel-rpc .row:has(#rpc-clean),
+  #panel-rpc .row:has(#rpc-test),
+  #panel-rpc .row:has(#btn-rpc-test),
+  #panel-rpc .row:has(#rpc-copy-best),
+  #panel-rpc .row:has(#btn-rpc-copy),
+  #panel-rpc .row:has(#rpc-share-x),
+  #panel-rpc .row:has(#btn-rpc-share),
+  #panel-rpc .row:has(#rpc-run-custom),
+  #panel-rpc .row:has(#btn-rpc-custom){
+    display:flex !important;
+    flex-wrap:wrap !important;
+    gap:10px !important;
+    align-items:stretch !important;
+  }
+
+  /* Base button sizing in RPC panel */
+  #panel-rpc .btn{
+    min-width:0 !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+
+  /* SAVE + CLEAR together */
+  #panel-rpc #rpc-save,
+  #panel-rpc #rpc-clear,
+  #panel-rpc #rpc-clean{
+    flex:1 1 calc(50% - 5px) !important;
+    max-width:calc(50% - 5px) !important;
+    width:calc(50% - 5px) !important;
+    order:1 !important;
+  }
+
+  /* TEST RPCS full row */
+  #panel-rpc #rpc-test,
+  #panel-rpc #btn-rpc-test,
+  #panel-rpc [data-action="test-rpcs"],
+  #panel-rpc [data-action="rpc-test"]{
+    flex:1 1 100% !important;
+    max-width:100% !important;
+    width:100% !important;
+    order:2 !important;
+  }
+
+  /* COPY BEST RPC + SHARE TO X on same row */
+  #panel-rpc #rpc-copy-best,
+  #panel-rpc #btn-rpc-copy,
+  #panel-rpc [data-action="copy-best-rpc"],
+  #panel-rpc #rpc-share-x,
+  #panel-rpc #btn-rpc-share,
+  #panel-rpc [data-action="share-rpc-x"]{
+    flex:1 1 calc(50% - 5px) !important;
+    max-width:calc(50% - 5px) !important;
+    width:calc(50% - 5px) !important;
+    order:3 !important;
+  }
+
+  /* RUN CUSTOM TEST full row */
+  #panel-rpc #rpc-run-custom,
+  #panel-rpc #btn-rpc-custom,
+  #panel-rpc [data-action="rpc-custom-run"],
+  #panel-rpc [data-action="run-custom-test"]{
+    flex:1 1 100% !important;
+    max-width:100% !important;
+    width:100% !important;
+    order:4 !important;
+  }
+
+  /* ---------- Results table clarity ---------- */
+
+  #rpc-table{
+    overflow:hidden !important;
+  }
+
+  /* Header cleaner on mobile */
+  #rpc-table .trow.head.rpc{
+    grid-template-columns:1fr 110px !important; /* RPC | STATUS */
+    gap:10px !important;
+  }
+  #rpc-table .trow.head.rpc .cell:nth-child(2){ display:none !important; } /* hide "Metrics" label */
+  #rpc-table .trow.head.rpc .cell:nth-child(3){
+    text-align:right !important;
+    justify-self:end !important;
+  }
+
+  /* Each result row stacked cleanly: URL -> status -> metrics */
+  #rpc-table .trow.rpc{
+    grid-template-columns:1fr !important;
+    grid-template-rows:auto auto auto !important;
+    gap:8px !important;
+    align-items:start !important;
+    padding:11px 10px !important;
+  }
+
+  #rpc-table .rpc-url{
+    grid-column:1 !important;
+    grid-row:1 !important;
+    min-width:0 !important;
+  }
+
+  #rpc-table .rpc-url .rpc-host{
+    display:block !important;
+    font-size:clamp(16px, 4.6vw, 20px) !important;
+    line-height:1.12 !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+
+  #rpc-table .rpc-url .rpc-full{
+    margin-top:4px !important;
+    font-size:12px !important;
+    line-height:1.2 !important;
+    color:rgba(244,246,255,.68) !important;
+    white-space:normal !important;
+    overflow-wrap:anywhere !important;
+    word-break:break-word !important;
+    display:-webkit-box !important;
+    -webkit-box-orient:vertical !important;
+    -webkit-line-clamp:2 !important;
+    overflow:hidden !important;
+  }
+
+  #rpc-table .rpc-status{
+    grid-column:1 !important;
+    grid-row:2 !important;
+    justify-self:start !important;
+    white-space:nowrap !important;
+  }
+
+  #rpc-table .rpc-meta{
+    grid-column:1 !important;
+    grid-row:3 !important;
+    display:grid !important;
+    grid-template-columns:repeat(2, minmax(0,1fr)) !important; /* MS + Block / Call + Logs */
+    gap:8px !important;
+    align-items:stretch !important;
+  }
+
+  #rpc-table .rpc-meta .m{
+    min-width:0 !important;
+    width:100% !important;
+    justify-content:center !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+    padding:7px 8px !important;
+  }
+}
+
+/* Extra-small phones */
+@media (max-width: 420px){
+  #rpc-table .rpc-meta{
+    grid-template-columns:1fr !important;
+  }
+}
+/* =========================================================
+   RPC MOBILE HOTFIX — SAVE/CLEAR + RUN CUSTOM ONLY
+   paste AFTER your last patch
+   ========================================================= */
+@media (max-width: 900px){
+
+  /* ---------- SAVE + CLEAR on one row ---------- */
+  #panel-rpc .row:has(#rpc-save):has(#rpc-clear),
+  #panel-rpc .row:has(#rpc-save):has(#rpc-clean),
+  #panel-rpc .row:has([id*="save"]):has([id*="clear"]),
+  #panel-rpc .row:has([data-action*="save"]):has([data-action*="clear"]){
+    display:grid !important;
+    grid-template-columns:repeat(2, minmax(0,1fr)) !important;
+    gap:10px !important;
+    align-items:stretch !important;
+  }
+
+  #panel-rpc #rpc-save,
+  #panel-rpc #rpc-clear,
+  #panel-rpc #rpc-clean,
+  #panel-rpc [id*="save"].btn,
+  #panel-rpc [id*="clear"].btn,
+  #panel-rpc [id*="clean"].btn{
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    flex:1 1 auto !important;
+  }
+
+/* =========================================================
+   MOBILE FINAL — SINGLE CLEAN BLOCK (paste LAST)
+   כולל:
+   - Access popup fixed
+   - TX buttons row
+   - LIQ buttons layout
+   - Dev tools buttons layout
+   - Monitor table like RPC (horizontal scroll, no clipping)
+   - Text polish
+   ========================================================= */
+@media (max-width: 900px){
+
+  /* -----------------------------------------------
+     0) Global mobile safety
+     ----------------------------------------------- */
+  html, body{
+    overflow-x: hidden !important;
+  }
+
+  /* RUN CUSTOM TEST — keep custom run full row */
+  #panel-rpc .row > .btn:only-child,
+  #panel-rpc .row > button.btn:only-child,
+  #panel-rpc .rpc-actions > .btn:only-child,
+  #panel-rpc .rpc-btns > .btn:only-child,
+  #panel-rpc .share-row > .btn:only-child,
+  #panel-rpc [id*="custom"].btn,
+  #panel-rpc [id*="run-custom"].btn,
+  #panel-rpc [id*="rpc-custom"].btn,
+  #panel-rpc [data-action*="custom"]{
+    display:flex !important;
+    width:100% !important;
+    max-width:100% !important;
+    flex:0 0 100% !important;
+    min-width:0 !important;
+  }
+
+  /* -----------------------------------------------
+     A) Get Access popup — FIX (no broad selectors)
+     ----------------------------------------------- */
+  :is(
+    #access-modal,
+    #modal-access,
+    .access-modal,
+    .popup-access,
+    [id*="access-modal"],
+    [role="dialog"][id*="access"],
+    [role="dialog"][class*="access"]
+  ){
+    position: fixed !important;
+    inset: 0 !important;
+    padding: 12px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    transform: none !important;
+    z-index: 10000 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Neutralize old generic direct-child rules */
+  :is(
+    #access-modal,
+    #modal-access,
+    .access-modal,
+    .popup-access,
+    [id*="access-modal"]
+  ) > div{
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  /* Real popup card only */
+  :is(
+    #access-modal,
+    #modal-access,
+    .access-modal,
+    .popup-access,
+    [id*="access-modal"]
+  ) > :is(
+    .card,
+    .modal-card,
+    .access-card,
+    .popup-card,
+    .dialog-card,
+    .sheet,
+    .panel,
+    .content,
+    .inner
+  ){
+    width: min(94vw, 640px) !important;
+    max-width: min(94vw, 640px) !important;
+    max-height: calc(100dvh - 24px) !important;
+    margin: 0 auto !important;
+    overflow: auto !important;
+    position: relative !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+  }
+
+  /* -----------------------------------------------
+     B) TX Decoder: Decode + Copy markdown same row
+     ----------------------------------------------- */
+  #panel-tx .tx-actions,
+  #panel-tx .row:has(#tx-decode),
+  #panel-tx .row:has(#btn-tx-decode),
+  #panel-tx .row:has(#tx-run),
+  #panel-tx .row:has(#tx-copy-md),
+  #panel-tx .row:has(#btn-tx-copy),
+  #panel-tx .row:has(#tx-copy-markdown){
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  #panel-tx #tx-decode,
+  #panel-tx #btn-tx-decode,
+  #panel-tx #tx-run,
+  #panel-tx [data-action="tx-decode"],
+  #panel-tx [data-action="decode-tx"],
+  #panel-tx #tx-copy-md,
+  #panel-tx #btn-tx-copy,
+  #panel-tx #tx-copy-markdown,
+  #panel-tx [data-action="tx-copy-markdown"],
+  #panel-tx [data-action="copy-markdown"]{
+    flex: 1 1 calc(50% - 5px) !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
+  }
+
+  /* -----------------------------------------------
+     C) Liquidity:
+     Scan full row, Copy + Share side by side
+     ----------------------------------------------- */
+  #panel-liq .row:has(#liq-run),
+  #panel-liq .row:has(#liq-scan),
+  #panel-liq .row:has([id^="liq-copy"]),
+  #panel-liq .row:has([id^="liq-share"]),
+  #panel-liquidity .row:has(#liq-run),
+  #panel-liquidity .row:has(#liq-scan),
+  #panel-liquidity .row:has([id^="liq-copy"]),
+  #panel-liquidity .row:has([id^="liq-share"]){
+    display:flex !important;
+    flex-wrap:wrap !important;
+    gap:10px !important;
+    align-items:stretch !important;
+  }
+
+  /* SCAN */
+  #panel-liq #liq-run,
+  #panel-liq #liq-scan,
+  #panel-liq [id^="liq-run"],
+  #panel-liq [data-action*="scan"],
+  #panel-liquidity #liq-run,
+  #panel-liquidity #liq-scan,
+  #panel-liquidity [id^="liq-run"],
+  #panel-liquidity [data-action*="scan"]{
+    order:1 !important;
+    flex:1 1 100% !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+  }
+
+  /* COPY SHARE LINK + SHARE TO X */
+  #panel-liq [id^="liq-copy"],
+  #panel-liq [id^="liq-share"],
+  #panel-liq [data-action*="copy"],
+  #panel-liq [data-action*="share"],
+  #panel-liquidity [id^="liq-copy"],
+  #panel-liquidity [id^="liq-share"],
+  #panel-liquidity [data-action*="copy"],
+  #panel-liquidity [data-action*="share"]{
+    order:2 !important;
+    flex:1 1 calc(50% - 5px) !important;
+    width:calc(50% - 5px) !important;
+    max-width:calc(50% - 5px) !important;
+    min-width:0 !important;
+  }
+
+  /* -----------------------------------------------
+     D) Dev Tools buttons
+     Generate/Copy full row
+     Add full row
+     Check all + Copy JSON side by side
+     ----------------------------------------------- */
+
+  /* Bookmarklet buttons */
+  #panel-dev #bm-generate,
+  #panel-dev #btn-bm-generate,
+  #panel-dev [data-action="bm-generate"],
+  #panel-dev #bm-copy,
+  #panel-dev #btn-bm-copy,
+  #panel-dev [data-action="bm-copy"],
+  #panel-bookmark #bm-generate,
+  #panel-bookmark #btn-bm-generate,
+  #panel-bookmark [data-action="bm-generate"],
+  #panel-bookmark #bm-copy,
+  #panel-bookmark #btn-bm-copy,
+  #panel-bookmark [data-action="bm-copy"]{
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Monitor Add */
+  #panel-dev #mon-add,
+  #panel-dev #btn-mon-add,
+  #panel-dev [id^="mon-add"],
+  #panel-dev [data-action*="mon-add"],
+  #panel-monitor #mon-add,
+  #panel-monitor #btn-mon-add,
+  #panel-monitor [id^="mon-add"],
+  #panel-monitor [data-action*="mon-add"]{
+    order: 1 !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* Monitor Check + Copy JSON */
+  #panel-dev [id^="mon-check"],
+  #panel-dev [id^="mon-expor"],
+  #panel-dev [id^="mon-copy"],
+  #panel-monitor [id^="mon-check"],
+  #panel-monitor [id^="mon-expor"],
+  #panel-monitor [id^="mon-copy"]{
+    order: 2 !important;
+    flex: 1 1 calc(50% - 5px) !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
+  }
+
+  /* -----------------------------------------------
+     E) Tables — mon-table same behavior as RPC table
+     (scroll horizontally, no clipping)
+     ----------------------------------------------- */
+  #rpc-table, #liq-table, #mon-table, #tx-table,
+  #panel-rpc .table, #panel-liq .table, #panel-dev .table, #panel-monitor .table, #panel-tx .table{
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  #rpc-table .table, #liq-table .table, #mon-table .table, #tx-table .table,
+  #rpc-table table, #liq-table table, #mon-table table, #tx-table table,
+  #panel-rpc .table table, #panel-liq .table table, #panel-dev .table table, #panel-monitor .table table, #panel-tx .table table{
+    width: max-content !important;
+    min-width: 100% !important;
+    table-layout: auto !important;
+    border-collapse: collapse !important;
+  }
+
+  #rpc-table .trow, #liq-table .trow, #mon-table .trow, #tx-table .trow,
+  #panel-rpc .table .trow, #panel-liq .table .trow, #panel-dev .table .trow, #panel-monitor .table .trow, #panel-tx .table .trow{
+    min-width: max-content !important;
+  }
+
+  #rpc-table th, #rpc-table td, #rpc-table .cell,
+  #liq-table th, #liq-table td, #liq-table .cell,
+  #mon-table th, #mon-table td, #mon-table .cell,
+  #tx-table th, #tx-table td, #tx-table .cell,
+  #panel-rpc .table .cell, #panel-liq .table .cell, #panel-dev .table .cell, #panel-monitor .table .cell, #panel-tx .table .cell{
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    min-width: 0 !important;
+  }
+
+  /* -----------------------------------------------
+     F) Text polish (mobile)
+     ----------------------------------------------- */
+  #access-modal p, #modal-access p, [id*="access-modal"] p,
+  #panel-tx p, #panel-liq p, #panel-liquidity p, #panel-dev p, #panel-monitor p,
+  #panel-tx .small, #panel-liq .small, #panel-liquidity .small, #panel-dev .small, #panel-monitor .small,
+  #panel-tx .tip, #panel-liq .tip, #panel-liquidity .tip, #panel-dev .tip, #panel-monitor .tip{
+    line-height: 1.42 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  #panel-liq [id*="liq-dex"], 
+  #panel-liq [id*="liq-note"],
+  #panel-liquidity [id*="liq-dex"], 
+  #panel-liquidity [id*="liq-note"],
+  #panel-dev #bm-tip,
+  #panel-bookmark #bm-tip{
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  #panel-dev .mono, #panel-bookmark .mono, #panel-tx .mono,
+  #panel-dev input, #panel-bookmark input, #panel-tx input, #panel-liq input{
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
+  }
+
+  :is(#access-modal, #modal-access, [id*="access-modal"]) :is(.small, .tip, .hint){
+    line-height: 1.45 !important;
+  }
+}
+/* HOTFIX: Access modal should open only when app marks it open */
+@media (max-width: 900px){
+
+  /* Base modal box styling only (NO forced display) */
+  :is(#access-modal, #modal-access, .access-modal, .popup-access, [id*="access-modal"]){
+    position: fixed !important;
+    inset: 0 !important;
+    padding: 12px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    transform: none !important;
+    z-index: 10000 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* CLOSED state (default) */
+  :is(#access-modal, #modal-access, .access-modal, .popup-access, [id*="access-modal"]):not(.open):not(.is-open):not([open="true"]):not([aria-hidden="false"]){
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* OPEN state only */
+  :is(
+    #access-modal.open, #access-modal.is-open, #access-modal[open="true"], #access-modal[aria-hidden="false"],
+    #modal-access.open, #modal-access.is-open, #modal-access[open="true"], #modal-access[aria-hidden="false"],
+    .access-modal.open, .access-modal.is-open, .access-modal[open="true"], .access-modal[aria-hidden="false"],
+    .popup-access.open, .popup-access.is-open, .popup-access[open="true"], .popup-access[aria-hidden="false"],
+    [id*="access-modal"].open, [id*="access-modal"].is-open, [id*="access-modal"][open="true"], [id*="access-modal"][aria-hidden="false"]
+  ){
+    display: grid !important;
+    place-items: center !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  /* Card */
+  :is(#access-modal, #modal-access, .access-modal, .popup-access, [id*="access-modal"])
+  > :is(.card,.modal-card,.access-card,.popup-card,.dialog-card,.sheet,.panel,.content,.inner){
+    width: min(94vw, 640px) !important;
+    max-width: min(94vw, 640px) !important;
+    max-height: calc(100dvh - 24px) !important;
+    margin: 0 auto !important;
+    overflow: auto !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* AppKit must be above Access modal */
+:root{
+  --z-access-modal: 10000;
+  --z-appkit: 2147483000;
+}
+
+/* Your Access modal layer */
+@media (max-width: 900px){
+  :is(#access-modal, #modal-access, .access-modal, .popup-access, [id*="access-modal"]){
+    z-index: var(--z-access-modal) !important;
+  }
+}
+
+/* AppKit / Web3Modal containers (common selectors) */
+w3m-modal,
+w3m-router,
+w3m-overlay,
+w3m-modal-backdrop,
+wui-modal,
+wui-dialog,
+.w3m-modal,
+.w3m-overlay,
+.walletconnect-modal,
+.walletconnect-modal__base,
+[data-testid="w3m-modal"],
+[class*="w3m-overlay"],
+[class*="w3m-modal"]{
+  z-index: var(--z-appkit) !important;
+  position: fixed !important;
+}
 
 
 
@@ -1686,23 +3135,29 @@ a.tool-card[data-tool="approvals"]::after{
     </header>
 
     <main>
-      <section class="hero">
-        <div class="hero-kicker" data-i18n="hero_kicker">Security Hub</div>
-        <h1 class="hero-title" data-i18n="hero_title">CycleX Security Tools</h1>
-        <p class="hero-subtitle" data-i18n="hero_subtitle">
-          A lightweight, client-side toolkit for safer swaps, approvals hygiene, liquidity checks, RPC health, and transaction decoding across BSC + Ethereum.
-        </p>
+     <section class="hero">
+  <div class="hero-kicker" data-i18n="hero_kicker">CycleX Security Hub</div>
 
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="/" data-i18n="btn_back">Back to Site</a>
-          <button class="btn btn-secondary" id="btn-connect" data-i18n="btn_access">Get Access (PASS / CYCX)</button>
-          <button class="btn btn-ghost" id="btn-quick" data-i18n="btn_quick">Run Quick Scan</button>
-        </div>
+  <h1 class="hero-title" data-i18n="hero_title">Advanced Approval Intelligence</h1>
 
-        <div class="note-line" data-i18n="hero_note">
-          Note: These checks are informational and do not guarantee safety. Always verify independently.
-        </div>
-      </section>
+  <p class="hero-subtitle" data-i18n="hero_subtitle">
+    Understand your approvals, spot risky spenders, and unlock advanced revoke tools — across BSC + Ethereum.
+  </p>
+
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="/" data-i18n="btn_back">Back to Site</a>
+    <button class="btn btn-secondary" id="btn-connect" data-i18n="btn_access">Get Access (PASS / CYCX)</button>
+    <button class="btn btn-ghost" id="btn-quick" data-i18n="btn_quick">Run Quick Scan</button>
+  </div>
+       <div class="hero-micro">
+  <span class="micro-item" data-i18n="hero_micro_access">Unlock advanced approvals + revoke tools.</span>
+</div>
+
+
+  <div class="note-line" data-i18n="hero_note">
+    Note: These checks are informational and do not guarantee safety. No signatures. No transactions. Always verify contracts and URLs independently.
+  </div>
+</section>
 
       <section class="tool-grid-wrap">
         <div class="tool-grid-title" data-i18n="tools_kicker">CHOOSE A TOOL</div>
@@ -2576,16 +4031,16 @@ const translations = {
   en: {
     // header / hero
     brand_sub: "On-Chain Security & Rewards",
-    hero_kicker: "Security Hub",
-    hero_title: "CycleX Security Tools",
-    hero_subtitle:
-      "A lightweight, client-side toolkit for safer swaps, approvals hygiene, liquidity checks, RPC health, and transaction decoding across BSC + Ethereum.",
+    hero_kicker: "CycleX Security Hub",
+    hero_title: "Advanced Approval Intelligence",
+    hero_subtitle: "Understand your approvals, spot risky spenders, and unlock advanced revoke tools — across BSC + Ethereum.",
     btn_back: "Back to Site",
     btn_access: "Get Access (PASS / CYCX)",
     wallet_not_connected: "not connected",
     btn_quick: "Run Quick Scan",
-    hero_note:
-      "Note: These checks are informational and do not guarantee safety. Always verify independently.",
+    hero_note: "Note: These checks are informational and do not guarantee safety. No signatures. No transactions. Always verify contracts and URLs independently.",
+    hero_micro_quick: "Start here — no wallet needed.",
+    hero_micro_access: "Unlock advanced approvals + revoke tools.",
     tools_kicker: "CHOOSE A TOOL",
 
     // tiles
@@ -2860,16 +4315,16 @@ ph_rpc_dev_topic: "0xddf252ad... (Transfer) or leave empty"
   zh: {
     // header / hero
     brand_sub: "链上安全与奖励",
-    hero_kicker: "安全中心",
-    hero_title: "CycleX 安全工具",
-    hero_subtitle:
-      "轻量级客户端工具：更安全的交换、授权管理、流动性检查、RPC 健康检测与交易解码（BSC + 以太坊）。",
+    hero_kicker: "CycleX 安全中心",
+    hero_title: "高级授权洞察",
+    hero_subtitle: "了解你的授权，识别高风险 spender，并解锁高级撤销工具 —— 覆盖 BSC 与以太坊。",
     btn_back: "返回主站",
     btn_access: "获取访问权限（PASS / CYCX)",
     wallet_not_connected: "未连接",
     btn_quick: "运行快速扫描",
-    hero_note:
-      "提示：这些检查仅供参考，不保证安全。请务必自行验证。",
+    hero_note: "提示：这些检查仅供参考，不能保证安全。无需签名，无需交易。请务必自行核对合约与链接（URL）。",
+    hero_micro_quick: "从这里开始 — 无需连接钱包。",
+    hero_micro_access: "解锁高级授权分析 + 撤销工具。",
     tools_kicker: "选择工具",
 
     // tiles
@@ -3139,16 +4594,16 @@ ph_rpc_dev_topic: "0xddf252ad...（Transfer）或留空"
   ar: {
     // header / hero
     brand_sub: "أمان ومكافآت على السلسلة",
-    hero_kicker: "مركز الأمان",
-    hero_title: "أدوات CycleX الأمنية",
-    hero_subtitle:
-      "مجموعة خفيفة تعمل على المتصفح: swaps أكثر أماناً، إدارة approvals، فحص السيولة، صحة RPC، وفك تشفير المعاملات عبر BSC + Ethereum.",
+    hero_kicker: "مركز أمان CycleX",
+    hero_title: "ذكاء متقدم للأذونات",
+    hero_subtitle: "افهم أذوناتك، اكتشف الجهات عالية المخاطر، وافتح أدوات إلغاء متقدمة — عبر BSC وEthereum.",
     btn_back: "العودة للموقع",
     btn_access: "الحصول على الوصول (PASS / CYCX)",
     wallet_not_connected: "غير متصل",
     btn_quick: "تشغيل فحص سريع",
-    hero_note:
-      "ملاحظة: هذه الفحوصات معلوماتية ولا تضمن الأمان. تحقق دائماً بنفسك.",
+    hero_note: "ملاحظة: هذه الفحوصات معلوماتية ولا تضمن السلامة. بدون توقيع. بدون معاملات. تحقّق دائمًا من العقود والروابط (URL) بنفسك.",
+    hero_micro_quick: "ابدأ من هنا — لا حاجة لربط المحفظة.",
+    hero_micro_access: "افتح تحليلات أذونات متقدمة + أدوات الإلغاء.",
     tools_kicker: "اختر أداة",
 
     // tiles
@@ -3420,16 +4875,17 @@ ph_rpc_dev_topic: "0xddf252ad... (Transfer) أو اتركه فارغاً"
   ru: {
     // header / hero
     brand_sub: "Ончейн безопасность и награды",
-    hero_kicker: "Security Hub",
-    hero_title: "Инструменты безопасности CycleX",
-    hero_subtitle:
-      "Лёгкий клиентский набор: более безопасные swaps, гигиена approvals, проверка ликвидности, здоровье RPC и декодер транзакций для BSC + Ethereum.",
+    hero_kicker: "Центр безопасности CycleX",
+    hero_title: "Продвинутая аналитика разрешений",
+    hero_subtitle: "Понимайте свои approvals, выявляйте рискованных spender’ов и открывайте продвинутые инструменты revoke — для BSC и Ethereum.",
     btn_back: "Назад на сайт",
     btn_access: "Получить доступ (PASS / CYCX)",
     wallet_not_connected: "не подключен",
     btn_quick: "Запустить быстрый скан",
-    hero_note:
-      "Важно: проверки носят информационный характер и не гарантируют безопасность. Всегда проверяйте самостоятельно.",
+    hero_note: "Примечание: эти проверки носят информационный характер и не гарантируют безопасность. Без подписей. Без транзакций. Всегда проверяйте контракты и ссылки (URL) самостоятельно.",
+    hero_micro_quick: "Начните здесь — кошелёк не нужен.",
+    hero_micro_access: "Откройте продвинутый анализ approvals + инструменты revoke.",
+
     tools_kicker: "ВЫБЕРИТЕ ИНСТРУМЕНТ",
 
     // tiles
