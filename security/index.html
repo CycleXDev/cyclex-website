@@ -2178,53 +2178,20 @@ body::after{
 }
 
 /* =========================================================
-   MOBILE UNIFIED PATCH
-   - keeps feature text fix
-   - restores cards/tiles
-   - fixes access popup split/position
+   MOBILE TEXT-ONLY SAFE PATCH
+   (does NOT touch modal / overlay / cards layout)
    put LAST in CSS
    ========================================================= */
 @media (max-width: 900px){
 
-  /* -------------------------------------------------------
-     0) global safety (prevents random horizontal breaks)
-  ------------------------------------------------------- */
-  html, body{
-    max-width: 100% !important;
-    overflow-x: hidden !important;
+  /* keep header area stable */
+  .tool-head,
+  .panel-head,
+  .feature-head{
+    min-width: 0 !important;
   }
 
-  /* -------------------------------------------------------
-     1) CARDS / TILES — keep grid clean (do not break boxes)
-  ------------------------------------------------------- */
-  .tools-grid,
-  .cards-grid,
-  .feature-grid,
-  .tool-cards,
-  .tool-list{
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 14px !important;
-    width: 100% !important;
-  }
-
-
-  /* wallet chip stays right but doesn't crush title */
-  .wallet-chip,
-  .wallet-pill,
-  .tool-head .wallet-chip,
-  .panel-head .wallet-chip,
-  .feature-head .wallet-chip{
-    float: right !important;
-    clear: right !important;
-    max-width: 62% !important;
-    margin: 0 0 8px 10px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
-
-  /* close button small/right (feature panels only) */
+  /* close button stays small on the right */
   .tool-head .btn-close,
   .panel-head .btn-close,
   .feature-head .btn-close,
@@ -2235,16 +2202,25 @@ body::after{
   .panel-head .btn[data-action="close"],
   .feature-head .btn[data-action="close"]{
     float: right !important;
-    clear: none !important;
     width: auto !important;
-    min-width: 96px !important;
+    min-width: 92px !important;
     height: 40px !important;
     padding: 0 14px !important;
-    margin: 4px 0 8px 10px !important;
     border-radius: 999px !important;
     font-size: 14px !important;
-    letter-spacing: .06em !important;
     white-space: nowrap !important;
+    margin: 4px 0 8px 10px !important;
+  }
+
+  /* wallet chip not crushing title */
+  .wallet-chip,
+  .wallet-pill{
+    float: right !important;
+    max-width: 60% !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    margin: 0 0 8px 10px !important;
   }
 
   .tool-head::after,
@@ -2255,28 +2231,25 @@ body::after{
     clear: both !important;
   }
 
-  /* titles: prevent vertical-letter bug */
+  /* titles normal wrapping (fix vertical letters) */
   .tool-title,
   .panel-title,
   .feature-title,
   .tool-head h1, .tool-head h2,
   .panel-head h1, .panel-head h2,
   .feature-head h1, .feature-head h2{
-    display: block !important;
-    width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    margin: 0 0 10px 0 !important;
-    font-size: clamp(54px, 8.6vw, 40px) !important;
-    line-height: 1.06 !important;
-    letter-spacing: -0.01em !important;
+    font-size: clamp(40px, 8vw, 34px) !important;
+    line-height: 1.08 !important;
     white-space: normal !important;
     word-break: normal !important;
     overflow-wrap: normal !important;
     hyphens: none !important;
+    margin: 0 0 10px 0 !important;
   }
 
-  /* description/body */
+  /* body text readable in lines */
   .tool-subtitle,
   .panel-subtitle,
   .feature-subtitle,
@@ -2285,136 +2258,15 @@ body::after{
   .feature-desc,
   .tool-panel p,
   .panel p{
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 0 !important;
     font-size: 16px !important;
     line-height: 1.45 !important;
     white-space: normal !important;
     word-break: normal !important;
     overflow-wrap: break-word !important;
     hyphens: auto !important;
-  }
-
-  /* inner layouts */
-  .tool-layout,
-  .panel-layout,
-  .feature-layout,
-  .tool-grid,
-  .panel-grid{
-    display: block !important;
-    grid-template-columns: 1fr !important;
-  }
-
-  .tool-panel input,
-  .tool-panel select,
-  .panel input,
-  .panel select{
-    min-height: 50px !important;
-    font-size: 16px !important;
-    width: 100% !important;
     max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .tool-panel .btn,
-  .panel .btn,
-  .feature-card .btn{
-    min-height: 48px !important;
-    padding: 0 14px !important;
-    font-size: 14px !important;
-    white-space: nowrap !important;
-  }
-
-
-
-  /* the access popup panel itself */
-  #access-modal,
-  .access-modal,
-  .modal.access,
-  .modal[data-modal="access"]{
-    position: relative !important;
-    left: auto !important;
-    right: auto !important;
-    top: auto !important;
-    bottom: auto !important;
-    transform: none !important;
-    margin: 0 auto !important;
-
-    width: min(94vw, 560px) !important;
-    max-width: 94vw !important;
-    max-height: calc(100dvh - 20px) !important;
-
-    box-sizing: border-box !important;
-    overflow: hidden !important;
-    border-radius: 20px !important;
-  }
-
-  #access-modal .modal-body,
-  .access-modal .modal-body,
-  .modal.access .modal-body,
-  .modal[data-modal="access"] .modal-body{
-    max-height: calc(100dvh - 110px) !important;
-    overflow: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-    padding-bottom: 14px !important;
-  }
-
-
-
-  /* popup close icon/button */
-  #access-modal .modal-close,
-  .access-modal .modal-close,
-  .modal.access .modal-close,
-  .modal[data-modal="access"] .modal-close{
-    flex: 0 0 auto !important;
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
-    padding: 0 !important;
-  }
-
-  /* popup CTA buttons */
-  #access-modal .btn,
-  #access-modal button,
-  #access-modal a.btn{
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 52px !important;
-    box-sizing: border-box !important;
-    white-space: normal !important;
-    line-height: 1.15 !important;
   }
 }
-
-/* ---------------------------------------------------------
-   very small phones
---------------------------------------------------------- */
-@media (max-width: 390px){
-  .tool-title,
-  .panel-title,
-  .feature-title,
-  .tool-head h1, .tool-head h2,
-  .panel-head h1, .panel-head h2,
-  .feature-head h1, .feature-head h2{
-    font-size: clamp(29px, 9vw, 36px) !important;
-    line-height: 1.08 !important;
-  }
-
-  .tool-head .btn-close,
-  .panel-head .btn-close,
-  .feature-head .btn-close,
-  .tool-head .close-btn,
-  .panel-head .close-btn,
-  .feature-head .close-btn{
-    min-width: 88px !important;
-    height: 38px !important;
-    font-size: 13px !important;
-  }
-}
-
 
 
 </style>
