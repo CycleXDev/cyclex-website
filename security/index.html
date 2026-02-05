@@ -5665,22 +5665,50 @@ const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
 const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
     
 async function waitForAccounts(provider, maxMs = 20000) {
-  const start = Date.now();
-  while (Date.now() - start < maxMs) {
-    try {
-      const accs = await provider.request({ method: "eth_accounts" }).catch(() => []);
-      const a = accs?.[0];
-      if (a) return a;
-    } catch (_) {}
-    await new Promise(r => setTimeout(r, 400));
-  }
-  return "";
+  if (!provider?.request) return "";
+
+  return await new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => {
+      if (done) return;
+      done = true;
+      try { provider.removeListener?.("accountsChanged", onAcc); } catch {}
+      clearInterval(iv);
+      clearTimeout(to);
+      resolve(v || "");
+    };
+
+    const onAcc = (accs) => {
+      const a = accs?.[0] || "";
+      if (a) finish(a);
+    };
+
+    try { provider.on?.("accountsChanged", onAcc); } catch {}
+
+    const iv = setInterval(async () => {
+      try {
+        const accs = await provider.request({ method: "eth_accounts" });
+        const a = accs?.[0] || "";
+        if (a) finish(a);
+      } catch {}
+    }, 400);
+
+    const to = setTimeout(() => finish(""), maxMs);
+  });
 }
+
 
 
 async function accessBuyFlow(kind) {
   try {
     accessSetBusy(true);
+    const modalEl = document.getElementById("access-modal");
+const wasOpen = !!(modalEl && (
+  modalEl.classList.contains("is-open") ||
+  modalEl.classList.contains("open") ||
+  modalEl.getAttribute("aria-hidden") === "false"
+));
+
 
     // 0) Connect via AppKit (opens the wallet picker with many options)
     if (typeof cxConnectWallet !== "function") {
@@ -5688,33 +5716,35 @@ async function accessBuyFlow(kind) {
       return;
     }
 
-    const wasOpen = document.getElementById("access-modal")?.classList.contains("is-open");
-if (wasOpen) closeAccessModal();
 
 await cxConnectWallet();
 
 
-  // 1) wait a moment for mobile deep-link return/session hydration
-await new Promise(r => setTimeout(r, 350));
+ let provider = null;
+let from = "";
 
-// IMPORTANT: after AppKit connect, DO NOT call eth_requestAccounts
-const provider =
-  (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
-    ? window.wallet.providerRaw
-    : window.ethereum;
+// Mobile-safe: give wallet time to restore session/provider after returning from wallet app
+for (let i = 0; i < 8; i++) {
+  provider =
+    (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
+      ? window.wallet.providerRaw
+      : window.ethereum;
 
-if (!provider || !provider.request) {
-  accessSetStatus("Wallet provider not ready. Tap Pay again.");
-  console.warn("No EIP-1193 provider found after AppKit connect.");
-  return;
+  if (provider?.request) {
+    from = await waitForAccounts(provider, 3000); // short poll per round
+    if (from) break;
+  }
+
+  await new Promise(r => setTimeout(r, 500));
 }
 
-const from = await waitForAccounts(provider, 15000);
-if (!from) {
+if (!provider?.request || !from) {
   if (wasOpen) openAccessModal();
-  accessSetStatus("Wallet not connected. Please try again.");
+  accessSetStatus("Wallet provider not ready. Please tap Buy again.");
+  console.warn("provider/from timeout", { hasProvider: !!provider, from });
   return;
 }
+
 
 
     // 2) Ensure BSC (chainId 56 = 0x38)
