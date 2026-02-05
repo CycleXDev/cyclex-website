@@ -58,84 +58,33 @@
     --scroll-offset: 96px;
   }
 
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{min-height:100%}
-
-html{
-  font-size:16px;
-  -webkit-text-size-adjust:100%;
-  text-size-adjust:100%;
-  background: transparent; /* moved full background to body for home-like look */
-}
-
-body{
-  font-family:var(--sans);
-  color:var(--text-main);
-  min-height:100vh;
-  -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
-  overflow-x:hidden;
-  background:
-    radial-gradient(1200px 720px at 14% 10%, rgba(124,92,255,.18), transparent 58%),
-    radial-gradient(1200px 720px at 86% 12%, rgba(0,229,255,.16), transparent 56%),
-    radial-gradient(980px 680px at 55% 120%, rgba(0,58,76,.40), transparent 62%),
+ *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  html{
+    font-size:16px;
+    -webkit-text-size-adjust:100%;
+    text-size-adjust:100%;
+    background:
+    radial-gradient(circle at top left, rgba(124,92,255,.35) 0%, transparent 45%),
+    radial-gradient(circle at top right, rgba(0,229,255,.35) 0%, transparent 45%),
+    radial-gradient(circle at bottom, rgba(0,58,76,.55) 0%, transparent 55%),
     linear-gradient(160deg,var(--bg-gradient-start),var(--bg-gradient-mid),var(--bg-gradient-end));
-  animation:fadeBody .55s var(--ease, ease-out) both;
-  background-attachment: fixed;
-  position:relative;
-}
-@keyframes fadeBody{from{opacity:0}to{opacity:1}}
+    background-repeat:no-repeat;
+    background-attachment: fixed; /* ✅ makes it feel smooth while scrolling */
+  }
 
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  background:
-    radial-gradient(740px 640px at 20% 14%, rgba(0,229,255,.12), transparent 60%),
-    radial-gradient(940px 780px at 78% 18%, rgba(124,92,255,.11), transparent 62%),
-    radial-gradient(820px 700px at 52% 78%, rgba(93,255,178,.07), transparent 64%),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
-  background-size:auto, auto, auto, 260px 260px;
-  background-repeat:no-repeat, no-repeat, no-repeat, repeat;
-  opacity:.10;
-  animation: drift 18s linear infinite;
-  transform: translate3d(0,0,0) scale(1.12);
-  transform-origin:center;
-  mix-blend-mode: overlay;
-  filter: blur(.25px);
-  z-index:0;
-}
-
-body::after{
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  background: radial-gradient(circle at 50% 18%, transparent 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.60) 100%);
-  opacity:.82;
-  transform: scale(1.12);
-  transform-origin:center;
-  z-index:0;
-}
-
-/* keep all page content above overlays */
-.page-shell,
-.top-bar,
-.hero,
-.tool-grid-wrap,
-.panel-shell,
-.footer{
-  position:relative;
-  z-index:1;
-}
-
-/* ambient drift animation used by body::before */
-@keyframes drift{
-  0%   { transform: translate3d(0,0,0) scale(1.12); }
-  50%  { transform: translate3d(0,-8px,0) scale(1.125); }
-  100% { transform: translate3d(0,0,0) scale(1.12); }
-}
+  body{
+    font-family:var(--sans);
+    background:transparent;
+    color:var(--text-main);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    animation:fadeBody .7s ease-out forwards;
+    opacity:1;
+    overflow-x:hidden;
+  }
+  @keyframes fadeBody{from{opacity:0}to{opacity:1}}
+  a{color:inherit;text-decoration:none}
 
 
   .page-shell{
@@ -2109,6 +2058,54 @@ a.tool-card[data-tool="approvals"]::after{
   font-size: 13px;
   opacity: .85;
   text-align: center;
+}
+/* ===== BACKGROUND ONLY OVERRIDE (match home style) ===== */
+html{
+  background: transparent !important;
+}
+
+body{
+  background:
+    radial-gradient(1200px 720px at 14% 10%, rgba(124,92,255,.18), transparent 58%),
+    radial-gradient(1200px 720px at 86% 12%, rgba(0,229,255,.16), transparent 56%),
+    radial-gradient(980px 680px at 55% 120%, rgba(0,58,76,.40), transparent 62%),
+    linear-gradient(160deg, var(--bg0), var(--bg1), var(--bg2)) !important;
+  background-attachment: fixed !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+}
+
+/* grain + glow overlay */
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  background:
+    radial-gradient(740px 640px at 20% 14%, rgba(0,229,255,.12), transparent 60%),
+    radial-gradient(940px 780px at 78% 18%, rgba(124,92,255,.11), transparent 62%),
+    radial-gradient(820px 700px at 52% 78%, rgba(93,255,178,.07), transparent 64%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+  background-size:auto, auto, auto, 260px 260px;
+  background-repeat:no-repeat, no-repeat, no-repeat, repeat;
+  opacity:.10;
+  mix-blend-mode: overlay;
+  z-index:0;
+}
+
+/* vignette */
+body::after{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  background: radial-gradient(circle at 50% 18%, transparent 0%, rgba(0,0,0,.18) 55%, rgba(0,0,0,.60) 100%);
+  opacity:.82;
+  z-index:0;
+}
+
+/* make sure content stays above overlays */
+.page-shell, .top-bar, .hero, .tool-grid-wrap, .panel-shell{
+  position:relative;
+  z-index:1;
 }
 
 
