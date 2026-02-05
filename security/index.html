@@ -5805,6 +5805,23 @@ if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
   accessSetStatus("Couldn't fetch live BNB quote. Try again.");
   return;
 }
+// mobile resume guard: wait until app is visible + provider responsive
+if (document.hidden) {
+  await new Promise((resolve) => {
+    const done = () => {
+      document.removeEventListener("visibilitychange", onVis);
+      resolve();
+    };
+    const onVis = () => {
+      if (!document.hidden) done();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    setTimeout(done, 2500); // fallback
+  });
+}
+
+// short hydration pause for AppKit/MetaMask mobile bridge
+await new Promise(r => setTimeout(r, 350));
 
 
   const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
