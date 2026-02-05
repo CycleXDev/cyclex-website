@@ -1862,25 +1862,23 @@ a.tool-card[data-tool="approvals"]::after{
 #panel-approvals #dna-elig-msg.elig-warn{ color: #ffd36a !important; }
 .hidden{ display:none !important; }
      
- @media (min-width: 901px){
+@media (min-width: 901px){
   html{ zoom: 1.10; }
   html, body{ overflow-x: hidden; }
 
   /* =========================================================
-     DESKTOP ONLY — Equal action buttons in tool panels
+     DESKTOP — Equal action buttons in panels
      ========================================================= */
 
-  /* בסיס: כל שורת כפתורים בפאנלים */
+  /* בסיס כללי */
   #panel-dev .row,
   #panel-tx .row,
   #panel-liq .row,
-  #panel-dna .row,
   #panel-rpc .row{
     align-items: stretch;
   }
 
   /* ---------- DEV TOOLS ---------- */
-  /* שמאל: GENERATE + COPY BOOKMARKLET */
   #panel-dev #bm-generate,
   #panel-dev #bm-copy{
     flex: 1 1 0 !important;
@@ -1889,7 +1887,6 @@ a.tool-card[data-tool="approvals"]::after{
     min-width: 0 !important;
   }
 
-  /* ימין: ADD + CHECK ALL + COPY JSON */
   #panel-dev #mon-add,
   #panel-dev #mon-check,
   #panel-dev #mon-copy{
@@ -1939,47 +1936,12 @@ a.tool-card[data-tool="approvals"]::after{
     min-width: 0 !important;
   }
 
- @media (min-width: 901px){
-  /* =========================================================
-     DNA FIX — force exact button rows by direct parent
-     ========================================================= */
+  /* ---------- DNA (FIXED) ---------- */
 
-  /* 1) שורת CONNECT + SCAN + RESET */
-  #panel-dna #dna-connect,
-  #panel-dna #dna-scan,
-  #panel-dna #dna-reset{
-    min-width: 0 !important;
-    flex: 1 1 0 !important;
-    width: calc((100% - 20px)/3) !important;
-    max-width: calc((100% - 20px)/3) !important;
-  }
-
-  /* אם CONNECT בתוך עטיפה פנימית (נפוץ אצלך) */
-  #panel-dna #dna-connect-wrap,
-  #panel-dna #dna-connect-wrap > *{
-    min-width: 0 !important;
-  }
-  #panel-dna #dna-connect-wrap{
-    flex: 1 1 0 !important;
-    width: calc((100% - 20px)/3) !important;
-    max-width: calc((100% - 20px)/3) !important;
-  }
-  #panel-dna #dna-connect-wrap > #dna-connect{
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  /* כפה לאבא הישיר של 3 הכפתורים להיות flex */
-  #panel-dna #dna-connect:parent,
-  #panel-dna #dna-scan:parent,
-  #panel-dna #dna-reset:parent{
-    display: flex !important;
-  }
-
-  /* גיבוי אמיתי שעובד בדפדפן: אבא משותף באמצעות :has */
-  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+  /* שורת CONNECT / SCAN / RESET: אבא משותף */
+  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
     :has(> #dna-connect):has(> #dna-scan):has(> #dna-reset),
-  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
     :has(#dna-connect):has(#dna-scan):has(#dna-reset){
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -1987,23 +1949,36 @@ a.tool-card[data-tool="approvals"]::after{
     align-items: stretch !important;
   }
 
-  /* 2) שורת SEED + HISTORY */
-  #panel-dna #dna-seed,
-  #panel-dna #dna-history,
-  #panel-dna #dna-use-scan-history{
-    min-width: 0 !important;
+  /* במקרה שהכפתור הירוק עטוף */
+  #panel-dna #dna-connect-wrap{
     flex: 1 1 0 !important;
-    width: calc(50% - 5px) !important;
-    max-width: calc(50% - 5px) !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+    min-width: 0 !important;
+  }
+  #panel-dna #dna-connect-wrap > #dna-connect{
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
-  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+  #panel-dna #dna-connect,
+  #panel-dna #dna-scan,
+  #panel-dna #dna-reset{
+    flex: 1 1 0 !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* שורת SEED / HISTORY */
+  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
     :has(> #dna-seed):has(> #dna-history),
-  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
     :has(> #dna-seed):has(> #dna-use-scan-history),
-  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
     :has(#dna-seed):has(#dna-history),
-  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+  #panel-dna :is(.row, .actions, .controls, .btn-row, .toolbar, div)
     :has(#dna-seed):has(#dna-use-scan-history){
     display: flex !important;
     flex-wrap: nowrap !important;
@@ -2011,27 +1986,17 @@ a.tool-card[data-tool="approvals"]::after{
     align-items: stretch !important;
   }
 
-  /* גובה/טקסט אחיד לכפתורי DNA */
-  #panel-dna .btn{
-    min-height: 52px !important;
-    white-space: nowrap !important;
-  }
-
-  /* מנקה מרווחים שדוחפים שורות ב-DNA */
-  #panel-dna #dna-connect,
-  #panel-dna #dna-scan,
-  #panel-dna #dna-reset,
   #panel-dna #dna-seed,
   #panel-dna #dna-history,
   #panel-dna #dna-use-scan-history{
+    flex: 1 1 0 !important;
+    width: calc(50% - 5px) !important;
+    max-width: calc(50% - 5px) !important;
+    min-width: 0 !important;
     margin: 0 !important;
   }
-}
 
-
-  /* =========================================================
-     RPC — TEST / COPY BEST / SHARE X on one full row
-     ========================================================= */
+  /* ---------- RPC ---------- */
   #panel-rpc .row:has(#rpc-test):has(#rpc-copy-best),
   #panel-rpc .row:has(#rpc-test):has(#rpc-share-x),
   #panel-rpc .row:has(#rpc-copy-best):has(#rpc-share-x){
@@ -2050,7 +2015,7 @@ a.tool-card[data-tool="approvals"]::after{
     min-width: 0 !important;
   }
 
-  /* טקסט בכפתורים: לא לשבור שורות */
+  /* טקסט אחיד בכפתורים */
   #panel-dev .btn,
   #panel-tx .btn,
   #panel-liq .btn,
