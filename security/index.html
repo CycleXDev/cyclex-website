@@ -2178,13 +2178,59 @@ body::after{
 }
 
 /* =========================================================
-   MOBILE STABILITY PATCH (POPUP + FEATURE TEXT)
+   MOBILE UNIFIED PATCH
+   - keeps feature text fix
+   - restores cards/tiles
+   - fixes access popup split/position
    put LAST in CSS
    ========================================================= */
+@media (max-width: 900px){
 
+  /* -------------------------------------------------------
+     0) global safety (prevents random horizontal breaks)
+  ------------------------------------------------------- */
+  html, body{
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
 
-  /* ---------- B) Feature cards text/layout fix ---------- */
-  /* IMPORTANT: force single-column layout inside tool card head */
+  /* -------------------------------------------------------
+     1) CARDS / TILES — keep grid clean (do not break boxes)
+  ------------------------------------------------------- */
+  .tools-grid,
+  .cards-grid,
+  .feature-grid,
+  .tool-cards,
+  .tool-list{
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    width: 100% !important;
+  }
+
+  .tool-card,
+  .feature-card,
+  .tool-tile,
+  .card{
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
+  }
+
+  .tool-card::before,
+  .tool-card::after,
+  .feature-card::before,
+  .feature-card::after{
+    max-width: 100% !important;
+    pointer-events: none !important;
+  }
+
+  /* -------------------------------------------------------
+     2) FEATURE HEADERS — keep text readable + close small right
+  ------------------------------------------------------- */
   .tool-head,
   .panel-head,
   .feature-head{
@@ -2193,30 +2239,7 @@ body::after{
     min-width: 0 !important;
   }
 
-  /* small close button on the right */
-  .tool-head .btn-close,
-  .panel-head .btn-close,
-  .feature-head .btn-close,
-  .tool-head .close-btn,
-  .panel-head .close-btn,
-  .feature-head .close-btn,
-  .tool-head .btn[data-action="close"],
-  .panel-head .btn[data-action="close"],
-  .feature-head .btn[data-action="close"]{
-    float: right !important;
-    clear: none !important;
-    width: auto !important;
-    min-width: 102px !important;
-    height: 42px !important;
-    padding: 0 16px !important;
-    margin: 4px 0 8px 10px !important;
-    border-radius: 999px !important;
-    font-size: 15px !important;
-    letter-spacing: .08em !important;
-    white-space: nowrap !important;
-  }
-
-  /* wallet chip should not squeeze headline */
+  /* wallet chip stays right but doesn't crush title */
   .wallet-chip,
   .wallet-pill,
   .tool-head .wallet-chip,
@@ -2231,7 +2254,29 @@ body::after{
     text-overflow: ellipsis !important;
   }
 
-  /* clear floats so content starts correctly */
+  /* close button small/right (feature panels only) */
+  .tool-head .btn-close,
+  .panel-head .btn-close,
+  .feature-head .btn-close,
+  .tool-head .close-btn,
+  .panel-head .close-btn,
+  .feature-head .close-btn,
+  .tool-head .btn[data-action="close"],
+  .panel-head .btn[data-action="close"],
+  .feature-head .btn[data-action="close"]{
+    float: right !important;
+    clear: none !important;
+    width: auto !important;
+    min-width: 96px !important;
+    height: 40px !important;
+    padding: 0 14px !important;
+    margin: 4px 0 8px 10px !important;
+    border-radius: 999px !important;
+    font-size: 14px !important;
+    letter-spacing: .06em !important;
+    white-space: nowrap !important;
+  }
+
   .tool-head::after,
   .panel-head::after,
   .feature-head::after{
@@ -2240,23 +2285,20 @@ body::after{
     clear: both !important;
   }
 
-  /* headline: normal wrapping, no "vertical letters" */
+  /* titles: prevent vertical-letter bug */
   .tool-title,
   .panel-title,
   .feature-title,
-  .tool-head h1,
-  .tool-head h2,
-  .panel-head h1,
-  .panel-head h2,
-  .feature-head h1,
-  .feature-head h2{
+  .tool-head h1, .tool-head h2,
+  .panel-head h1, .panel-head h2,
+  .feature-head h1, .feature-head h2{
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
     margin: 0 0 10px 0 !important;
-    font-size: clamp(44px, 8.2vw, 56px) !important;
-    line-height: 1.03 !important;
+    font-size: clamp(54px, 8.6vw, 40px) !important;
+    line-height: 1.06 !important;
     letter-spacing: -0.01em !important;
     white-space: normal !important;
     word-break: normal !important;
@@ -2264,7 +2306,7 @@ body::after{
     hyphens: none !important;
   }
 
-  /* description/body text: readable line width */
+  /* description/body */
   .tool-subtitle,
   .panel-subtitle,
   .feature-subtitle,
@@ -2285,7 +2327,7 @@ body::after{
     hyphens: auto !important;
   }
 
-  /* make sure internal columns don't stay desktop-like */
+  /* inner layouts */
   .tool-layout,
   .panel-layout,
   .feature-layout,
@@ -2293,16 +2335,6 @@ body::after{
   .panel-grid{
     display: block !important;
     grid-template-columns: 1fr !important;
-  }
-
-  /* inputs/buttons in features */
-  .tool-panel .btn,
-  .panel .btn,
-  .feature-card .btn{
-    min-height: 50px !important;
-    padding: 0 16px !important;
-    font-size: 14px !important;
-    white-space: nowrap !important;
   }
 
   .tool-panel input,
@@ -2315,72 +2347,19 @@ body::after{
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
-}
 
-/* extra small phones */
-@media (max-width: 390px){
-  .tool-title,
-  .panel-title,
-  .feature-title,
-  .tool-head h1,
-  .tool-head h2,
-  .panel-head h1,
-  .panel-head h2,
-  .feature-head h1,
-  .feature-head h2{
-    font-size: clamp(36px, 9vw, 48px) !important;
-  }
-
-  .tool-head .btn-close,
-  .panel-head .btn-close,
-  .feature-head .btn-close,
-  .tool-head .close-btn,
-  .panel-head .close-btn,
-  .feature-head .close-btn{
-    min-width: 94px !important;
-    height: 40px !important;
+  .tool-panel .btn,
+  .panel .btn,
+  .feature-card .btn{
+    min-height: 48px !important;
+    padding: 0 14px !important;
     font-size: 14px !important;
-  }
-}
-
-/* =========================================================
-   MOBILE HOTFIX — KEEP FEATURE TYPOGRAPHY, FIX CARDS + POPUP
-   (drop-in, put LAST)
-   ========================================================= */
-@media (max-width: 900px){
-
-  /* ---------- 1) Restore cards/tiles layout ---------- */
-  .tools-grid,
-  .cards-grid,
-  .feature-grid,
-  .tool-cards,
-  .tool-list{
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 14px !important;
-    width: 100% !important;
+    white-space: nowrap !important;
   }
 
-  .tool-card,
-  .feature-card,
-  .tool-tile,
-  .card{
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    box-sizing: border-box !important;
-    overflow: hidden !important; /* prevents glass decoration bleed */
-  }
-
-  /* prevent decorative side shapes from pushing layout */
-  .tool-card::before,
-  .tool-card::after,
-  .feature-card::before,
-  .feature-card::after{
-    max-width: 100% !important;
-  }
-
-  /* ---------- 2) Popup container: centered + no split screen ---------- */
+  /* -------------------------------------------------------
+     3) ACCESS POPUP ONLY — centered, no split-screen
+  ------------------------------------------------------- */
   .modal-overlay,
   .overlay,
   .popup-overlay{
@@ -2388,16 +2367,16 @@ body::after{
     inset: 0 !important;
     width: 100vw !important;
     height: 100dvh !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
     padding: 10px !important;
     box-sizing: border-box !important;
     overflow: hidden !important;
     z-index: 9999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
-  /* only the access popup panel (keep other feature panels untouched) */
+  /* the access popup panel itself */
   #access-modal,
   .access-modal,
   .modal.access,
@@ -2413,12 +2392,12 @@ body::after{
     width: min(94vw, 560px) !important;
     max-width: 94vw !important;
     max-height: calc(100dvh - 20px) !important;
+
     box-sizing: border-box !important;
     overflow: hidden !important;
     border-radius: 20px !important;
   }
 
-  /* popup internal scroll only */
   #access-modal .modal-body,
   .access-modal .modal-body,
   .modal.access .modal-body,
@@ -2429,7 +2408,7 @@ body::after{
     padding-bottom: 14px !important;
   }
 
-  /* close row in popup */
+  /* popup header row */
   #access-modal .modal-head,
   .access-modal .modal-head,
   .modal.access .modal-head,
@@ -2440,6 +2419,7 @@ body::after{
     gap: 10px !important;
   }
 
+  /* popup close icon/button */
   #access-modal .modal-close,
   .access-modal .modal-close,
   .modal.access .modal-close,
@@ -2452,18 +2432,45 @@ body::after{
     padding: 0 !important;
   }
 
-  /* popup action buttons full width clean */
+  /* popup CTA buttons */
   #access-modal .btn,
   #access-modal button,
   #access-modal a.btn{
     width: 100% !important;
     max-width: 100% !important;
     min-height: 52px !important;
+    box-sizing: border-box !important;
     white-space: normal !important;
     line-height: 1.15 !important;
-    box-sizing: border-box !important;
   }
 }
+
+/* ---------------------------------------------------------
+   very small phones
+--------------------------------------------------------- */
+@media (max-width: 390px){
+  .tool-title,
+  .panel-title,
+  .feature-title,
+  .tool-head h1, .tool-head h2,
+  .panel-head h1, .panel-head h2,
+  .feature-head h1, .feature-head h2{
+    font-size: clamp(29px, 9vw, 36px) !important;
+    line-height: 1.08 !important;
+  }
+
+  .tool-head .btn-close,
+  .panel-head .btn-close,
+  .feature-head .btn-close,
+  .tool-head .close-btn,
+  .panel-head .close-btn,
+  .feature-head .close-btn{
+    min-width: 88px !important;
+    height: 38px !important;
+    font-size: 13px !important;
+  }
+}
+
 
 
 </style>
