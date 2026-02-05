@@ -2181,43 +2181,7 @@ body::after{
    MOBILE STABILITY PATCH (POPUP + FEATURE TEXT)
    put LAST in CSS
    ========================================================= */
-@media (max-width: 900px){
 
-  /* ---------- A) Access popup fix ---------- */
-  /* targets common modal wrappers + your access modal */
-  #access-modal,
-  .access-modal,
-  .modal.access,
-  .modal-card,
-  .modal-content{
-    width: min(94vw, 560px) !important;
-    max-width: 94vw !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
-  }
-
-  /* keep modal fully visible on mobile */
-  #access-modal .modal-body,
-  .access-modal .modal-body,
-  .modal.access .modal-body{
-    max-height: calc(100dvh - 120px) !important;
-    overflow: auto !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
-
-  /* popup CTA buttons full width and clean */
-  #access-modal .btn,
-  #access-modal button,
-  #access-modal a.btn{
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 54px !important;
-    padding: 10px 16px !important;
-    box-sizing: border-box !important;
-    white-space: normal !important;
-    line-height: 1.15 !important;
-  }
 
   /* ---------- B) Feature cards text/layout fix ---------- */
   /* IMPORTANT: force single-column layout inside tool card head */
@@ -2379,6 +2343,127 @@ body::after{
   }
 }
 
+/* =========================================================
+   MOBILE HOTFIX — KEEP FEATURE TYPOGRAPHY, FIX CARDS + POPUP
+   (drop-in, put LAST)
+   ========================================================= */
+@media (max-width: 900px){
+
+  /* ---------- 1) Restore cards/tiles layout ---------- */
+  .tools-grid,
+  .cards-grid,
+  .feature-grid,
+  .tool-cards,
+  .tool-list{
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    width: 100% !important;
+  }
+
+  .tool-card,
+  .feature-card,
+  .tool-tile,
+  .card{
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important; /* prevents glass decoration bleed */
+  }
+
+  /* prevent decorative side shapes from pushing layout */
+  .tool-card::before,
+  .tool-card::after,
+  .feature-card::before,
+  .feature-card::after{
+    max-width: 100% !important;
+  }
+
+  /* ---------- 2) Popup container: centered + no split screen ---------- */
+  .modal-overlay,
+  .overlay,
+  .popup-overlay{
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    z-index: 9999 !important;
+  }
+
+  /* only the access popup panel (keep other feature panels untouched) */
+  #access-modal,
+  .access-modal,
+  .modal.access,
+  .modal[data-modal="access"]{
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    margin: 0 auto !important;
+
+    width: min(94vw, 560px) !important;
+    max-width: 94vw !important;
+    max-height: calc(100dvh - 20px) !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    border-radius: 20px !important;
+  }
+
+  /* popup internal scroll only */
+  #access-modal .modal-body,
+  .access-modal .modal-body,
+  .modal.access .modal-body,
+  .modal[data-modal="access"] .modal-body{
+    max-height: calc(100dvh - 110px) !important;
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 14px !important;
+  }
+
+  /* close row in popup */
+  #access-modal .modal-head,
+  .access-modal .modal-head,
+  .modal.access .modal-head,
+  .modal[data-modal="access"] .modal-head{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+  }
+
+  #access-modal .modal-close,
+  .access-modal .modal-close,
+  .modal.access .modal-close,
+  .modal[data-modal="access"] .modal-close{
+    flex: 0 0 auto !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    padding: 0 !important;
+  }
+
+  /* popup action buttons full width clean */
+  #access-modal .btn,
+  #access-modal button,
+  #access-modal a.btn{
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 52px !important;
+    white-space: normal !important;
+    line-height: 1.15 !important;
+    box-sizing: border-box !important;
+  }
+}
 
 
 </style>
