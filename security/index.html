@@ -5714,45 +5714,35 @@ const wasOpen = !!(modalEl && (
     }
 
 
-await cxConnectWallet();
-
-
-let provider = null;
-let from = "";
-
-// 1) immediate attempt
-provider =
-  (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
-    ? window.wallet.providerRaw
-    : window.ethereum;
-
-if (provider?.request) {
-  from = await waitForAccounts(provider, 12000);
+const connected = await cxConnectWallet();
+if (!connected) {
+  if (wasOpen) openAccessModal();
+  accessSetStatus("Wallet connection was not completed. Try again.");
+  return;
 }
 
-// 2) mobile recovery: wait for appkit session hydration
-if (!from) {
-  for (let i = 0; i < 12; i++) {
-    await new Promise(r => setTimeout(r, 500));
+let provider =
+  (wallet?.providerRaw?.request && wallet.providerRaw) ||
+  (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+  window.ethereum;
 
-    provider =
-      (window.wallet && window.wallet.providerRaw && window.wallet.providerRaw.request)
-        ? window.wallet.providerRaw
-        : window.ethereum;
+let from = String(wallet?.address || "").trim();
 
-    if (!provider?.request) continue;
-
-    from = await waitForAccounts(provider, 2500);
-    if (from) break;
-  }
+// mobile fallback: ask once if address still empty
+if (!from && provider?.request) {
+  try {
+    const accs = await provider.request({ method: "eth_requestAccounts" });
+    from = accs?.[0] || "";
+  } catch {}
 }
 
 if (!provider?.request || !from) {
   if (wasOpen) openAccessModal();
   accessSetStatus("Wallet not connected yet. Tap Buy once more.");
-  console.warn("provider/from timeout", { hasProvider: !!provider, from });
+  console.warn("provider/from timeout", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
   return;
 }
+
 
     // 2) Ensure BSC (chainId 56 = 0x38)
     const TARGET_CHAIN = "0x38";
