@@ -5786,18 +5786,22 @@ if (!provider?.request || !from) {
 }
 
 
-let PRICE_WEI;
-try {
-  PRICE_WEI = await accessQuoteBNBWeiOnchain(provider);
-  window.__ACCESS_BNB_WEI = PRICE_WEI; 
-} catch (e) {
-  PRICE_WEI = window.__ACCESS_BNB_WEI;
+// Use cached price first (already prepared when modal opens) to avoid mobile delay
+let PRICE_WEI = window.__ACCESS_BNB_WEI;
+
+// fallback only if cache missing
+if (!PRICE_WEI) {
+  try {
+    PRICE_WEI = await accessQuoteBNBWeiOnchain(provider);
+    window.__ACCESS_BNB_WEI = PRICE_WEI;
+  } catch (e) {}
 }
 
 if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
   accessSetStatus("Couldn't fetch live BNB quote. Try again.");
   return;
 }
+
 
   const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
 
