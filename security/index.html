@@ -1939,46 +1939,95 @@ a.tool-card[data-tool="approvals"]::after{
     min-width: 0 !important;
   }
 
+ @media (min-width: 901px){
   /* =========================================================
-     DNA — 3 buttons top row + 2 buttons full row bottom
+     DNA FIX — force exact button rows by direct parent
      ========================================================= */
 
-  /* שורת SCAN / RESET / CONNECT WALLET */
-  #panel-dna .row:has(#dna-scan):has(#dna-reset),
-  #panel-dna .row:has(#dna-connect):has(#dna-scan),
-  #panel-dna .row:has(#dna-connect):has(#dna-reset){
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    gap: 10px !important;
-    align-items: stretch !important;
-  }
-
+  /* 1) שורת CONNECT + SCAN + RESET */
+  #panel-dna #dna-connect,
   #panel-dna #dna-scan,
-  #panel-dna #dna-reset,
-  #panel-dna #dna-connect{
+  #panel-dna #dna-reset{
+    min-width: 0 !important;
     flex: 1 1 0 !important;
     width: calc((100% - 20px)/3) !important;
     max-width: calc((100% - 20px)/3) !important;
-    min-width: 0 !important;
   }
 
-  /* שורת SEED COMMON TOKENS + USE SCAN HISTORY */
-  #panel-dna .row:has(#dna-seed):has(#dna-history),
-  #panel-dna .row:has(#dna-seed):has(#dna-use-scan-history){
+  /* אם CONNECT בתוך עטיפה פנימית (נפוץ אצלך) */
+  #panel-dna #dna-connect-wrap,
+  #panel-dna #dna-connect-wrap > *{
+    min-width: 0 !important;
+  }
+  #panel-dna #dna-connect-wrap{
+    flex: 1 1 0 !important;
+    width: calc((100% - 20px)/3) !important;
+    max-width: calc((100% - 20px)/3) !important;
+  }
+  #panel-dna #dna-connect-wrap > #dna-connect{
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* כפה לאבא הישיר של 3 הכפתורים להיות flex */
+  #panel-dna #dna-connect:parent,
+  #panel-dna #dna-scan:parent,
+  #panel-dna #dna-reset:parent{
+    display: flex !important;
+  }
+
+  /* גיבוי אמיתי שעובד בדפדפן: אבא משותף באמצעות :has */
+  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+    :has(> #dna-connect):has(> #dna-scan):has(> #dna-reset),
+  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+    :has(#dna-connect):has(#dna-scan):has(#dna-reset){
     display: flex !important;
     flex-wrap: nowrap !important;
     gap: 10px !important;
     align-items: stretch !important;
   }
 
+  /* 2) שורת SEED + HISTORY */
   #panel-dna #dna-seed,
   #panel-dna #dna-history,
   #panel-dna #dna-use-scan-history{
+    min-width: 0 !important;
     flex: 1 1 0 !important;
     width: calc(50% - 5px) !important;
     max-width: calc(50% - 5px) !important;
-    min-width: 0 !important;
   }
+
+  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+    :has(> #dna-seed):has(> #dna-history),
+  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+    :has(> #dna-seed):has(> #dna-use-scan-history),
+  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+    :has(#dna-seed):has(#dna-history),
+  #panel-dna :is(div, .card, .actions, .controls, .btn-row, .toolbar)
+    :has(#dna-seed):has(#dna-use-scan-history){
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    align-items: stretch !important;
+  }
+
+  /* גובה/טקסט אחיד לכפתורי DNA */
+  #panel-dna .btn{
+    min-height: 52px !important;
+    white-space: nowrap !important;
+  }
+
+  /* מנקה מרווחים שדוחפים שורות ב-DNA */
+  #panel-dna #dna-connect,
+  #panel-dna #dna-scan,
+  #panel-dna #dna-reset,
+  #panel-dna #dna-seed,
+  #panel-dna #dna-history,
+  #panel-dna #dna-use-scan-history{
+    margin: 0 !important;
+  }
+}
+
 
   /* =========================================================
      RPC — TEST / COPY BEST / SHARE X on one full row
