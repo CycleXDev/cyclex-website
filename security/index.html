@@ -5668,11 +5668,24 @@ async function waitForAccounts(provider, maxMs = 30000) {
   if (!provider?.request) return "";
 
   const start = Date.now();
+  let requested = false;
+
   while (Date.now() - start < maxMs) {
     try {
-      const accs = await provider.request({ method: "eth_accounts" });
-      const a = accs?.[0] || "";
+      // passive read
+      let accs = await provider.request({ method: "eth_accounts" });
+      let a = accs?.[0] || "";
       if (a) return a;
+
+      // mobile/appkit: one active permission request
+      if (!requested) {
+        requested = true;
+        try {
+          accs = await provider.request({ method: "eth_requestAccounts" });
+          a = accs?.[0] || "";
+          if (a) return a;
+        } catch {}
+      }
     } catch {}
 
     await new Promise(r => setTimeout(r, 350));
