@@ -5813,13 +5813,12 @@ const txParams = {
 };
 
 try {
-  // preflight: will this tx succeed?
+  // preflight only (non-blocking): on mobile some wallets fail estimateGas even when send works
   await provider.request({ method: "eth_estimateGas", params: [txParams] });
 } catch (e) {
-  accessSetStatus("BNB purchase would fail (estimateGas). Check selector/contract state.");
-  console.warn("estimateGas failed:", e);
-  return;
+  console.warn("estimateGas failed (continuing to send):", e);
 }
+
 
 const txHash = await provider.request({
   method: "eth_sendTransaction",
