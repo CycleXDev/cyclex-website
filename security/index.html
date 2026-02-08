@@ -5759,7 +5759,7 @@ async function accessBuyFlow(kind, opts = {}) {
       return;
     }
 
-    // Step 1: connect if needed
+    // 0) connect step
     if (!skipConnect) {
       const connected = await cxConnectWallet();
       if (!connected) {
@@ -5768,7 +5768,7 @@ async function accessBuyFlow(kind, opts = {}) {
         return;
       }
 
-      // Mobile flow: first tap connects, second tap continues checkout
+      // mobile two-step flow
       if (accessIsMobile() && !fromResume) {
         ACCESS_FLOW.pendingKind = kind;
         ACCESS_FLOW.pendingAt = Date.now();
@@ -5781,29 +5781,48 @@ async function accessBuyFlow(kind, opts = {}) {
       }
     }
 
-    // Step 2: get provider + address
-    const provider =
+    // 1) reacquire fresh provider/session on mobile resume/continue
+    let provider =
       (wallet?.providerRaw?.request && wallet.providerRaw) ||
       (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
       window.ethereum;
 
+    if (accessIsMobile() && (skipConnect || fromResume)) {
+      try {
+        const fresh = await waitForWalletProvider(12000);
+        if (fresh?.request) {
+          provider = fresh;
+          wallet.providerRaw = fresh;
+          attachProviderListeners(fresh);
+          try { wallet.browserProvider = new E.BrowserProvider(fresh); } catch {}
+        }
+      } catch {}
+    }
+
     let from = String(wallet?.address || "").trim();
 
-    if (!from && provider?.request) {
+    // force account refresh once (critical on mobile deep-link return)
+    if (provider?.request) {
       try {
         const accs = await provider.request({ method: "eth_requestAccounts" });
-        from = accs?.[0] || "";
-      } catch {}
+        if (accs?.[0]) {
+          from = accs[0];
+          try { wallet.address = E.getAddress(from); } catch { wallet.address = from; }
+          renderWalletLabels();
+        }
+      } catch (e) {
+        console.warn("eth_requestAccounts failed on continue:", e);
+      }
     }
 
     if (!provider?.request || !from) {
       if (wasOpen) openAccessModal();
-      accessSetStatus("Wallet not connected yet. Tap Buy once more.");
-      console.warn("provider/from timeout", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
+      accessSetStatus("Wallet not connected yet. Tap Continue Checkout again.");
+      console.warn("provider/from missing", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
       return;
     }
 
-    // Step 3: ensure BSC (56 / 0x38)
+    // 2) ensure BSC
     const TARGET_CHAIN = "0x38";
     try {
       const chainId = await provider.request({ method: "eth_chainId" });
@@ -5832,12 +5851,12 @@ async function accessBuyFlow(kind, opts = {}) {
       }
     }
 
-    // Step 4a: BNB purchase
+    // 3a) BNB flow
     if (kind === "bnb") {
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
       if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
         accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
-        console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT);
+        console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT, "ACCESS_SALE_OR_RECEIVER:", ACCESS_SALE_OR_RECEIVER);
         return;
       }
 
@@ -5855,52 +5874,28 @@ async function accessBuyFlow(kind, opts = {}) {
       }
 
       const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
-      // ---- BNB tx with small price buffer + gas buffer ----
-const baseWei = BigInt(PRICE_WEI);
+      const txParams = {
+        from,
+        to: PASS_CONTRACT,
+        value: "0x" + BigInt(PRICE_WEI).toString(16),
+        data: BUY_WITH_BNB_SELECTOR
+      };
 
-// 1% buffer למחיר כדי למנוע נפילה על תנודה קטנה
-// אם תרצה יותר מרווח: שנה ל-102n (2%)
-const valueWei = (baseWei * 101n) / 100n;
+      try {
+        await provider.request({ method: "eth_estimateGas", params: [txParams] });
+      } catch (e) {
+        console.warn("estimateGas failed (continuing to send):", e);
+      }
 
-const txForEstimate = {
-  from,
-  to: PASS_CONTRACT,
-  value: "0x" + valueWei.toString(16),
-  data: BUY_WITH_BNB_SELECTOR
-};
+      // tiny delay helps some mobile wallets after app switch
+      if (accessIsMobile()) await new Promise(r => setTimeout(r, 180));
 
-let gasHex = null;
-try {
-  const estGas = await provider.request({
-    method: "eth_estimateGas",
-    params: [txForEstimate]
-  });
-
-  // +20% gas buffer
-  const gasBuffered = (BigInt(estGas) * 120n) / 100n;
-  gasHex = "0x" + gasBuffered.toString(16);
-
-} catch (e) {
-  console.warn("estimateGas failed, fallback to wallet auto gas:", e);
-}
-
-
-const txParams = {
-  from,
-  to: PASS_CONTRACT,
-  value: "0x" + valueWei.toString(16),
-  data: BUY_WITH_BNB_SELECTOR,
-  gas: gasHex
-};
-
-const txHash = await provider.request({
-  method: "eth_sendTransaction",
-  params: [txParams],
-});
-
+      const txHash = await provider.request({
+        method: "eth_sendTransaction",
+        params: [txParams],
+      });
 
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
-
       const ok = await accessWaitForConfirm(provider, txHash);
 
       ACCESS_FLOW.pendingKind = null;
@@ -5926,13 +5921,13 @@ const txHash = await provider.request({
       return;
     }
 
-    // Step 4b: USDT purchase
+    // 3b) USDT flow
     if (kind === "usdt") {
       const USDT = ACCESS_USDT;
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
 
       const ERC20_ABI = [
-        { "constant": true,  "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
+        { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
         { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
       ];
       const SALE_ABI = [
@@ -6005,6 +6000,7 @@ const txHash = await provider.request({
   }
 }
 
+
 function closeAccessModal() {
   const m = $("#access-modal");
   if (!m) return;
@@ -6020,6 +6016,10 @@ function bindAccessModal() {
   const m = $("#access-modal");
   if (!m) return;
 
+  // prevent double-binding if function runs more than once
+  if (m.dataset.boundAccessModal === "1") return;
+  m.dataset.boundAccessModal = "1";
+
   // close buttons + backdrop
   m.querySelectorAll("[data-close-access]").forEach((el) => {
     el.addEventListener("click", closeAccessModal);
@@ -6029,38 +6029,41 @@ function bindAccessModal() {
   const bnbBtn = document.getElementById("btn-pay-bnb");
   const usdtBtn = document.getElementById("btn-pay-usdt");
 
-  bnbBtn?.addEventListener("click", (e) => {
+  bnbBtn?.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
     const isContinue = bnbBtn.dataset.continueCheckout === "1";
     if (isContinue) {
       accessSetStatus("Opening wallet for approval…");
-      accessBuyFlow("bnb", { skipConnect: true, fromResume: true });
+      await accessBuyFlow("bnb", { skipConnect: true, fromResume: true });
       return;
     }
 
-    accessBuyFlow("bnb");
+    await accessBuyFlow("bnb");
   });
 
-  usdtBtn?.addEventListener("click", (e) => {
+  usdtBtn?.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
     const isContinue = usdtBtn.dataset.continueCheckout === "1";
     if (isContinue) {
       accessSetStatus("Opening wallet for approval…");
-      accessBuyFlow("usdt", { skipConnect: true, fromResume: true });
+      await accessBuyFlow("usdt", { skipConnect: true, fromResume: true });
       return;
     }
 
-    accessBuyFlow("usdt");
+    await accessBuyFlow("usdt");
   });
 
-  // ESC to close
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeAccessModal();
-  });
+  // ESC to close (bind once)
+  if (!window.__accessEscBound) {
+    window.__accessEscBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeAccessModal();
+    });
+  }
 }
 
 // (optional) auto-resume hooks — left disabled for your current stable flow
