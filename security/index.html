@@ -3899,6 +3899,10 @@ wui-dialog,
 </div>
 
 <div class="cx-modal__status muted" id="access-status" aria-live="polite"></div>
+      <button id="btn-open-metamask" class="btn btn-secondary" style="display:none; margin-top:10px;">
+  Open Wallet to confirm
+</button>
+
 
       <div class="cx-modal__foot muted" data-i18n="access_foot">
         Early access: $9 for first 500 access passes, then $19. 1 pass per wallet.
@@ -5573,6 +5577,12 @@ async function accessFetchBnbUsd() {
   ACCESS_PRICE_CACHE = { ts: now, bnbUsd: px };
   return px;
 }
+    function accessToggleOpenWalletBtn(show) {
+  const b = document.getElementById("btn-open-metamask");
+  if (!b) return;
+  b.style.display = show ? "" : "none";
+}
+
 
   async function accessReadEthCall(to, data) {
   let lastErr = null;
@@ -5629,6 +5639,26 @@ async function accessUpdatePricesUI(usdPrice) {
     // disable until we know BNB price
     const bnbBtn  = document.getElementById("btn-pay-bnb");
     const usdtBtn = document.getElementById("btn-pay-usdt");
+    mmBtn?.addEventListener("click", async () => {
+  try {
+    const p =
+      (wallet?.providerRaw?.request && wallet.providerRaw) ||
+      window.ethereum;
+
+    // אם זה MetaMask - deeplink ישיר
+    const isMM = !!(p && (p.isMetaMask || window.ethereum?.isMetaMask));
+    if (isMM) {
+      window.location.href = "metamask://";
+      return;
+    }
+
+    // ארנק אחר: אי אפשר deeplink אחיד אמין
+    accessSetStatus("Open your wallet app to confirm the pending transaction.");
+  } catch {
+    accessSetStatus("Open your wallet app to confirm the pending transaction.");
+  }
+});
+
     if (bnbBtn)  bnbBtn.disabled = true;
     if (usdtBtn) usdtBtn.disabled = true;
 
@@ -5848,12 +5878,26 @@ const wasOpen = !!(modalEl && (
 __ACCESS_PENDING_KIND = kind;
 __ACCESS_PENDING_TS = Date.now();
 
-const connected = await cxConnectWallet();
+let connected = false;
+
+// אם כבר מחובר - לא פותחים שוב AppKit
+if (wallet?.address && wallet?.providerRaw?.request) {
+  try {
+    const accs = await wallet.providerRaw.request({ method: "eth_accounts" });
+    connected = !!accs?.[0];
+  } catch {}
+}
+
+if (!connected) {
+  connected = await cxConnectWallet();
+}
+
 if (!connected) {
   if (wasOpen) openAccessModal();
   accessSetStatus("Wallet connection was not completed. Try again.");
   return;
 }
+
 
 let provider =
   (wallet?.providerRaw?.request && wallet.providerRaw) ||
@@ -5965,6 +6009,21 @@ if (!IS_MOBILE) {
 accessSetStatus("פותח MetaMask לאישור העסקה…");
 
 const txHash = await sendTxWithRetry(provider, txParams);
+     __ACCESS_LAST_TX_HASH = txHash || "";
+__ACCESS_WAITING_CONFIRM = true;
+
+accessSetStatus("Transaction sent ✅ If wallet popup didn't open, tap 'Open Wallet to confirm'.");
+accessToggleOpenWalletBtn(false);
+
+if (IS_MOBILE) {
+  setTimeout(() => {
+    if (__ACCESS_WAITING_CONFIRM) {
+      accessToggleOpenWalletBtn(true);
+      accessSetStatus("Approval is waiting in your wallet. Tap 'Open Wallet to confirm'.");
+    }
+  }, 4000);
+}
+
      __ACCESS_PENDING_KIND = null;
 __ACCESS_PENDING_TS = 0;
 
@@ -5974,19 +6033,29 @@ __ACCESS_PENDING_TS = 0;
 
   const ok = await accessWaitForConfirm(provider, txHash);
 
-  if (ok) {
-    accessSetStatus("Confirmed ✅");
-    setTimeout(() => {
-      closeAccessModal();
-      accessSetStatus("");
-    }, 900);
-  } else {
-    accessSetStatus("Pending on-chain… You can close this window.");
-    setTimeout(() => {
-      closeAccessModal();
-      accessSetStatus("");
-    }, 3500);
-  }
+ if (ok) {
+  __ACCESS_WAITING_CONFIRM = false;
+  __ACCESS_LAST_TX_HASH = "";
+  accessToggleOpenWalletBtn(false);
+
+  accessSetStatus("Confirmed ✅");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 900);
+}
+ else {
+  __ACCESS_WAITING_CONFIRM = false;
+  __ACCESS_LAST_TX_HASH = "";
+  accessToggleOpenWalletBtn(false);
+
+  accessSetStatus("Pending on-chain… You can close this window.");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 3500);
+}
+
   return;
 }
 
@@ -6044,27 +6113,43 @@ __ACCESS_PENDING_TS = 0;
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
   const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
-  if (ok) {
-    accessSetStatus("Confirmed ✅");
-    setTimeout(() => {
-      closeAccessModal();
-      accessSetStatus("");
-    }, 900);
-  } else {
-    accessSetStatus("Pending on-chain… You can close this window.");
-    setTimeout(() => {
-      closeAccessModal();
-      accessSetStatus("");
-    }, 3500);
-  }
+ if (ok) {
+  __ACCESS_WAITING_CONFIRM = false;
+  __ACCESS_LAST_TX_HASH = "";
+  accessToggleOpenWalletBtn(false);
+
+  accessSetStatus("Confirmed ✅");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 900);
+}
+else {
+  __ACCESS_WAITING_CONFIRM = false;
+  __ACCESS_LAST_TX_HASH = "";
+  accessToggleOpenWalletBtn(false);
+
+  accessSetStatus("Pending on-chain… You can close this window.");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 3500);
+}
+
 
   return;
 }
 
 
  } catch (e) {
+  __ACCESS_WAITING_CONFIRM = false;
+  __ACCESS_LAST_TX_HASH = "";
+  accessToggleOpenWalletBtn(false);
+
   const code = Number(e?.code);
   const msg = String(e?.message || e || "");
+  ...
+
 
   if (code === 4001 || /user rejected/i.test(msg)) {
     accessSetStatus("העסקה בוטלה בארנק.");
@@ -6096,6 +6181,9 @@ window.accessSetStatus  = accessSetStatus;
 let __ACCESS_PENDING_KIND = null;   // "bnb" | "usdt" | null
 let __ACCESS_PENDING_TS = 0;
 let __ACCESS_TX_INFLIGHT = false;
+    let __ACCESS_LAST_TX_HASH = "";
+let __ACCESS_WAITING_CONFIRM = false;
+
 
 window.ACCESS_SALE_OR_RECEIVER = ACCESS_SALE_OR_RECEIVER;
 window.ACCESS_RECEIVER = ACCESS_SALE_OR_RECEIVER;
@@ -6137,6 +6225,7 @@ function closeAccessModal() {
   if (!m) return;
   m.classList.remove("is-open");
   m.setAttribute("aria-hidden", "true");
+  accessToggleOpenWalletBtn(false);
 }
 
 function bindAccessModal() {
@@ -6198,7 +6287,12 @@ usdtBtn?.addEventListener("click", (e) => {
     if (!accs?.[0]) return;
 
     accessSetStatus("ממשיך את הרכישה אוטומטית…");
-    await accessBuyFlow(__ACCESS_PENDING_KIND);
+   const kind = __ACCESS_PENDING_KIND;
+if (!kind) return;
+
+accessSetStatus("ממשיך את הרכישה אוטומטית…");
+await accessBuyFlow(kind);
+
   } catch {}
 }
 
