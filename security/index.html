@@ -5829,6 +5829,8 @@ async function sendTxWithRetry(provider, txParams, attempts = (IS_MOBILE ? 4 : 2
 
 async function accessBuyFlow(kind) {
   try {
+    if (__ACCESS_TX_INFLIGHT) return;
+__ACCESS_TX_INFLIGHT = true;
     accessSetBusy(true);
     const modalEl = document.getElementById("access-modal");
 const wasOpen = !!(modalEl && (
@@ -5843,7 +5845,8 @@ const wasOpen = !!(modalEl && (
       console.warn("cxConnectWallet is missing - AppKit connect not available.");
       return;
     }
-
+__ACCESS_PENDING_KIND = kind;
+__ACCESS_PENDING_TS = Date.now();
 
 const connected = await cxConnectWallet();
 if (!connected) {
@@ -5962,6 +5965,9 @@ if (!IS_MOBILE) {
 accessSetStatus("פותח MetaMask לאישור העסקה…");
 
 const txHash = await sendTxWithRetry(provider, txParams);
+     __ACCESS_PENDING_KIND = null;
+__ACCESS_PENDING_TS = 0;
+
 
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
@@ -6031,6 +6037,9 @@ const txHash = await sendTxWithRetry(provider, txParams);
   // 2) buy
   accessSetStatus("Buying pass…");
   const tx2 = await sale.buyWithUSDT();
+      __ACCESS_PENDING_KIND = null;
+__ACCESS_PENDING_TS = 0;
+
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
   const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
@@ -6068,7 +6077,9 @@ const txHash = await sendTxWithRetry(provider, txParams);
   console.error("accessBuyFlow error:", e);
 } finally {
   accessSetBusy(false);
+  __ACCESS_TX_INFLIGHT = false;
 }
+
 
 }
 
@@ -6082,6 +6093,10 @@ window.openAccessModal  = openAccessModal;
 window.closeAccessModal = closeAccessModal;
 window.accessBuyFlow    = accessBuyFlow;
 window.accessSetStatus  = accessSetStatus;
+let __ACCESS_PENDING_KIND = null;   // "bnb" | "usdt" | null
+let __ACCESS_PENDING_TS = 0;
+let __ACCESS_TX_INFLIGHT = false;
+
 window.ACCESS_SALE_OR_RECEIVER = ACCESS_SALE_OR_RECEIVER;
 window.ACCESS_RECEIVER = ACCESS_SALE_OR_RECEIVER;
 
@@ -6154,6 +6169,49 @@ usdtBtn?.addEventListener("click", (e) => {
     if (e.key === "Escape") closeAccessModal();
   });
 }
+    async function accessAutoResumeIfNeeded() {
+  try {
+    if (!IS_MOBILE) return;
+    if (!__ACCESS_PENDING_KIND) return;
+    if (__ACCESS_TX_INFLIGHT) return;
+
+    // חלון זמן סביר לרזומה אחרי חזרה מהארנק
+    if (Date.now() - __ACCESS_PENDING_TS > 90000) {
+      __ACCESS_PENDING_KIND = null;
+      __ACCESS_PENDING_TS = 0;
+      return;
+    }
+
+    // רק אם המודל פתוח (המשתמש בתהליך קנייה)
+    const modalEl = document.getElementById("access-modal");
+    const isOpen = !!(modalEl && (
+      modalEl.classList.contains("is-open") ||
+      modalEl.classList.contains("open") ||
+      modalEl.getAttribute("aria-hidden") === "false"
+    ));
+    if (!isOpen) return;
+
+    // ארנק חייב להיות מחובר
+    const p = (wallet?.providerRaw?.request && wallet.providerRaw) || window.ethereum;
+    if (!p?.request) return;
+    const accs = await p.request({ method: "eth_accounts" }).catch(() => []);
+    if (!accs?.[0]) return;
+
+    accessSetStatus("ממשיך את הרכישה אוטומטית…");
+    await accessBuyFlow(__ACCESS_PENDING_KIND);
+  } catch {}
+}
+
+// מאזינים לחזרה מה-wallet app
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    setTimeout(accessAutoResumeIfNeeded, 350);
+  }
+});
+window.addEventListener("focus", () => {
+  setTimeout(accessAutoResumeIfNeeded, 350);
+});
+
 
 
     // =========================
