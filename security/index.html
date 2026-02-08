@@ -5738,20 +5738,21 @@ if (!skipConnect) {
   }
 
   // Mobile: after returning from wallet app, continue checkout via resume hook
-  if (accessIsMobile() && !fromResume) {
-    ACCESS_FLOW.pendingKind = kind;
-    ACCESS_FLOW.pendingAt = Date.now();
+ if (accessIsMobile() && !fromResume) {
+  ACCESS_FLOW.pendingKind = kind;
+  ACCESS_FLOW.pendingAt = Date.now();
 
-    accessSetStatus("Wallet connected ✅ Returning to app to continue checkout…");
+  accessSetStatus("Wallet connected ✅ Returning to app(Wallet) to continue checkout…");
 
-    // close AppKit overlay if still open; keep Access modal flow isolated
-    try { await window.CxAppKitModal?.close?.(); } catch {}
+  // close AppKit overlay if still open
+  try { await window.CxAppKitModal?.close?.(); } catch {}
 
-    // attempt immediate resume (if already back in browser)
-    setTimeout(() => { accessResumeIfNeeded(); }, 200);
-    return;
-  }
+  // immediate try + keep polling until resume succeeds
+  setTimeout(() => { accessResumeIfNeeded(); }, 400);
+  startAccessResumePoll();
+  return;
 }
+
 
 
 let provider =
@@ -5864,6 +5865,10 @@ const txHash = await provider.request({
   if (ok) {
   ACCESS_FLOW.pendingKind = null;
   ACCESS_FLOW.pendingAt = 0;
+  if (__accessResumePollTimer) {
+  clearInterval(__accessResumePollTimer);
+  __accessResumePollTimer = null;
+}
 
   accessSetStatus("Confirmed ✅");
   setTimeout(() => {
@@ -5873,6 +5878,11 @@ const txHash = await provider.request({
 } else {
   ACCESS_FLOW.pendingKind = null;
   ACCESS_FLOW.pendingAt = 0;
+    if (__accessResumePollTimer) {
+  clearInterval(__accessResumePollTimer);
+  __accessResumePollTimer = null;
+}
+
 
   accessSetStatus("Pending on-chain… You can close this window.");
   setTimeout(() => {
@@ -5938,6 +5948,11 @@ const txHash = await provider.request({
   if (ok) {
     ACCESS_FLOW.pendingKind = null;
   ACCESS_FLOW.pendingAt = 0;
+    if (__accessResumePollTimer) {
+  clearInterval(__accessResumePollTimer);
+  __accessResumePollTimer = null;
+}
+
     accessSetStatus("Confirmed ✅");
     setTimeout(() => {
       closeAccessModal();
@@ -5946,6 +5961,11 @@ const txHash = await provider.request({
   } else {
     ACCESS_FLOW.pendingKind = null;
   ACCESS_FLOW.pendingAt = 0;
+    if (__accessResumePollTimer) {
+  clearInterval(__accessResumePollTimer);
+  __accessResumePollTimer = null;
+}
+
     accessSetStatus("Pending on-chain… You can close this window.");
     setTimeout(() => {
       closeAccessModal();
@@ -6015,6 +6035,38 @@ function accessSetStatus(msg) {
     ACCESS_FLOW.resuming = false;
   }
 }
+    let __accessResumePollTimer = null;
+
+function startAccessResumePoll() {
+  if (!accessIsMobile()) return;
+  if (__accessResumePollTimer) return;
+
+  const startedAt = Date.now();
+
+  __accessResumePollTimer = setInterval(async () => {
+    // stop after 70s safety
+    if (Date.now() - startedAt > 70000) {
+      clearInterval(__accessResumePollTimer);
+      __accessResumePollTimer = null;
+      return;
+    }
+
+    // nothing pending -> stop
+    if (!ACCESS_FLOW.pendingKind) {
+      clearInterval(__accessResumePollTimer);
+      __accessResumePollTimer = null;
+      return;
+    }
+
+    // run only when page is visible
+    if (document.visibilityState !== "visible") return;
+
+    try {
+      await accessResumeIfNeeded();
+    } catch {}
+  }, 1200);
+}
+
 
     // ✅ expose for console/tests (safe)
 window.openAccessModal  = openAccessModal;
