@@ -5393,10 +5393,17 @@ window.__wallet = wallet;
     async function cxConnectWallet({ silent = false } = {}) {
       const stQuick = $("#qs-status");
 if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
-  renderWalletLabels();
-  if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
-  try { await window.CxAppKitModal?.close?.(); } catch {}
-  return true;
+  try {
+    const p = wallet.providerRaw || wallet.browserProvider?.provider;
+    const accs = p?.request ? await p.request({ method: "eth_accounts" }) : [];
+    if (accs?.[0]) {
+      wallet.address = E.getAddress(accs[0]);
+      renderWalletLabels();
+      if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
+      try { await window.CxAppKitModal?.close?.(); } catch {}
+      return true;
+    }
+  } catch {}
 }
 
 if (silent) return false;
@@ -5697,6 +5704,74 @@ async function waitForAccounts(provider, maxMs = 30000) {
   }
   return "";
 }
+    const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+async function waitUntilAppVisible(maxMs = 12000) {
+  if (document.visibilityState === "visible") return true;
+
+  return await new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => {
+      if (done) return;
+      done = true;
+      clearTimeout(t);
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("focus", onFocus);
+      resolve(v);
+    };
+    const onVis = () => {
+      if (document.visibilityState === "visible") finish(true);
+    };
+    const onFocus = () => finish(true);
+
+    const t = setTimeout(() => finish(false), maxMs);
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("focus", onFocus);
+  });
+}
+
+async function waitProviderReadyForTx(provider, maxMs = 15000) {
+  if (!provider?.request) return "";
+  const start = Date.now();
+
+  while (Date.now() - start < maxMs) {
+    try {
+      const accs = await provider.request({ method: "eth_accounts" });
+      const a = accs?.[0] || "";
+      if (a) return a;
+    } catch {}
+    await sleep(300);
+  }
+  return "";
+}
+
+async function sendTxWithRetry(provider, txParams, attempts = (IS_MOBILE ? 4 : 2)) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await provider.request({
+        method: "eth_sendTransaction",
+        params: [txParams],
+      });
+    } catch (e) {
+      lastErr = e;
+      const msg = String(e?.message || "");
+      const code = Number(e?.code);
+
+      const transient =
+        code === -32002 || // request pending
+        /pending|not ready|resource unavailable|disconnected/i.test(msg);
+
+      if (!transient || i === attempts - 1) throw e;
+
+      await sleep(900 + i * 700);
+      if (IS_MOBILE) await waitUntilAppVisible(8000);
+    }
+  }
+  throw lastErr;
+}
+
 
 
 
@@ -5740,12 +5815,22 @@ if (!from && provider?.request) {
   } catch {}
 }
 
+if (IS_MOBILE) {
+  await waitUntilAppVisible(12000);
+}
+
+if (!from && provider?.request) {
+  const readyAddr = await waitProviderReadyForTx(provider, 15000);
+  if (readyAddr) from = readyAddr;
+}
+
 if (!provider?.request || !from) {
   if (wasOpen) openAccessModal();
-  accessSetStatus("Wallet not connected yet. Tap Buy once more.");
-  console.warn("provider/from timeout", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
+  accessSetStatus("Wallet עדיין לא מוכן. נסה שוב בעוד שנייה.");
+  console.warn("provider/from not ready", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
   return;
 }
+
 
 
     // 2) Ensure BSC (chainId 56 = 0x38)
@@ -5814,18 +5899,17 @@ const txParams = {
   data: BUY_WITH_BNB_SELECTOR
 };
 
-try {
-  // preflight only (non-blocking): on mobile some wallets fail estimateGas even when send works
-  await provider.request({ method: "eth_estimateGas", params: [txParams] });
-} catch (e) {
-  console.warn("estimateGas failed (continuing to send):", e);
+if (!IS_MOBILE) {
+  try {
+    await provider.request({ method: "eth_estimateGas", params: [txParams] });
+  } catch (e) {
+    console.warn("estimateGas failed (desktop, continuing):", e);
+  }
 }
 
+accessSetStatus("פותח MetaMask לאישור העסקה…");
 
-const txHash = await provider.request({
-  method: "eth_sendTransaction",
-  params: [txParams],
-});
+const txHash = await sendTxWithRetry(provider, txParams);
 
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
@@ -5917,12 +6001,23 @@ const txHash = await provider.request({
 }
 
 
-  } catch (e) {
-    // no alerts - keep it smooth
-    console.error("accessBuyFlow error:", e);
-  } finally {
-    accessSetBusy(false);
+ } catch (e) {
+  const code = Number(e?.code);
+  const msg = String(e?.message || e || "");
+
+  if (code === 4001 || /user rejected/i.test(msg)) {
+    accessSetStatus("העסקה בוטלה בארנק.");
+  } else if (code === -32002 || /pending|already pending/i.test(msg)) {
+    accessSetStatus("יש בקשה ממתינה בארנק. פתח MetaMask ואשר.");
+  } else {
+    accessSetStatus(`שגיאת רכישה: ${msg.slice(0, 140)}`);
   }
+
+  console.error("accessBuyFlow error:", e);
+} finally {
+  accessSetBusy(false);
+}
+
 }
 
 function accessSetStatus(msg) {
