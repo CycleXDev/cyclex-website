@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3899,10 +3900,6 @@ wui-dialog,
 </div>
 
 <div class="cx-modal__status muted" id="access-status" aria-live="polite"></div>
-      <button id="btn-open-metamask" class="btn btn-secondary" style="display:none; margin-top:10px;">
-  Open Wallet to confirm
-</button>
-
 
       <div class="cx-modal__foot muted" data-i18n="access_foot">
         Early access: $9 for first 500 access passes, then $19. 1 pass per wallet.
@@ -3950,55 +3947,17 @@ wui-dialog,
 
     window.CxAppKitModal = appkit;
 
-    async function waitForWalletProvider(timeoutMs = 70000) {
-  const start = Date.now();
-
-  const pickProvider = () => {
-    // 0) המקור הקיים שלך - נשאר ראשון כדי לא לשבור flow
-    try {
-      const p0 = window.CxAppKitModal?.getWalletProvider?.();
-      if (p0?.request) return p0;
-      if (p0) return p0;
-    } catch {}
-
-    // 1) אם נשמר כבר ב-state
-    if (window.wallet?.providerRaw?.request) return window.wallet.providerRaw;
-    if (window.wallet?.browserProvider?.provider?.request) return window.wallet.browserProvider.provider;
-
-    // 2) injected provider
-    if (window.ethereum?.request) return window.ethereum;
-
-    // 3) multiple injected providers (MetaMask וכו')
-    if (Array.isArray(window.ethereum?.providers)) {
-      const mm = window.ethereum.providers.find(p => p?.isMetaMask && p?.request);
-      if (mm) return mm;
-      const any = window.ethereum.providers.find(p => p?.request);
-      if (any) return any;
-    }
-
-    return null;
-  };
-
-  while (Date.now() - start < timeoutMs) {
-    const p = pickProvider();
-    if (p) {
-      if (typeof p.request === "function") {
+    async function waitForWalletProvider(timeoutMs = 12000) {
+      const start = Date.now();
+      while (Date.now() - start < timeoutMs) {
         try {
-          await p.request({ method: "eth_chainId" });
-          return p;
-        } catch {
-        }
-      } else {
-        return p;
+          const p = window.CxAppKitModal?.getWalletProvider?.();
+          if (p) return p;
+        } catch {}
+        await new Promise(r => setTimeout(r, 250));
       }
+      return null;
     }
-
-    await new Promise(r => setTimeout(r, 300));
-  }
-
-  return null;
-}
-
 
    // =========================
 // i18n (4 languages)
@@ -5435,32 +5394,21 @@ window.__wallet = wallet;
     async function cxConnectWallet({ silent = false } = {}) {
       const stQuick = $("#qs-status");
 if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
-  try {
-    const p = wallet.providerRaw || wallet.browserProvider?.provider;
-    const accs = p?.request ? await p.request({ method: "eth_accounts" }) : [];
-    if (accs?.[0]) {
-      wallet.address = E.getAddress(accs[0]);
-      renderWalletLabels();
-      if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
-      try { await window.CxAppKitModal?.close?.(); } catch {}
-      return true;
-    }
-  } catch {}
+  renderWalletLabels();
+  if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
+  try { await window.CxAppKitModal?.close?.(); } catch {}
+  return true;
 }
 
 if (silent) return false;
 
-     try {
+      try {
   if (!silent) {
     await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
-    if (IS_MOBILE) {
-      await waitUntilAppVisible(20000);
-    }
   }
 
   // Mobile round-trip can take longer (AppKit -> wallet app -> back)
-  const providerRaw = await waitForWalletProvider(70000);
-
+const providerRaw = await waitForWalletProvider(45000);
 
   if (!providerRaw) {
     if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
@@ -5472,27 +5420,17 @@ if (silent) return false;
   attachProviderListeners(providerRaw);
     // Ensure mobile wallet session is fully authorized (important for MetaMask/AppKit on mobile)
   try {
-  const accs = await providerRaw.request({ method: "eth_requestAccounts" });
-  if (!accs || !accs[0]) {
-    if (!silent) setStatus(stQuick, "warn", "No wallet account returned. Try connect again.");
+    const accs = await providerRaw.request({ method: "eth_requestAccounts" });
+    if (!accs || !accs[0]) {
+      if (!silent) setStatus(stQuick, "warn", "No wallet account returned. Try connect again.");
+      try { await window.CxAppKitModal?.close?.(); } catch {}
+      return false;
+    }
+  } catch (e) {
+    if (!silent) setStatus(stQuick, "warn", `Wallet authorization failed: ${String(e?.message || e)}`);
     try { await window.CxAppKitModal?.close?.(); } catch {}
     return false;
   }
-
-  // mobile settle: לפעמים החשבון נחשף רק רגע אחרי החזרה לאפליקציה
-  const settled = await waitForAccounts(providerRaw, 12000);
-  if (!settled) {
-    if (!silent) setStatus(stQuick, "warn", "Wallet session not settled yet. Please try again.");
-    try { await window.CxAppKitModal?.close?.(); } catch {}
-    return false;
-  }
-
-} catch (e) {
-  if (!silent) setStatus(stQuick, "warn", `Wallet authorization failed: ${String(e?.message || e)}`);
-  try { await window.CxAppKitModal?.close?.(); } catch {}
-  return false;
-}
-
 
 
   const bp = new E.BrowserProvider(providerRaw);
@@ -5577,12 +5515,6 @@ async function accessFetchBnbUsd() {
   ACCESS_PRICE_CACHE = { ts: now, bnbUsd: px };
   return px;
 }
-    function accessToggleOpenWalletBtn(show) {
-  const b = document.getElementById("btn-open-metamask");
-  if (!b) return;
-  b.style.display = show ? "" : "none";
-}
-
 
   async function accessReadEthCall(to, data) {
   let lastErr = null;
@@ -5639,26 +5571,6 @@ async function accessUpdatePricesUI(usdPrice) {
     // disable until we know BNB price
     const bnbBtn  = document.getElementById("btn-pay-bnb");
     const usdtBtn = document.getElementById("btn-pay-usdt");
-    mmBtn?.addEventListener("click", async () => {
-  try {
-    const p =
-      (wallet?.providerRaw?.request && wallet.providerRaw) ||
-      window.ethereum;
-
-    // אם זה MetaMask - deeplink ישיר
-    const isMM = !!(p && (p.isMetaMask || window.ethereum?.isMetaMask));
-    if (isMM) {
-      window.location.href = "metamask://";
-      return;
-    }
-
-    // ארנק אחר: אי אפשר deeplink אחיד אמין
-    accessSetStatus("Open your wallet app to confirm the pending transaction.");
-  } catch {
-    accessSetStatus("Open your wallet app to confirm the pending transaction.");
-  }
-});
-
     if (bnbBtn)  bnbBtn.disabled = true;
     if (usdtBtn) usdtBtn.disabled = true;
 
@@ -5786,81 +5698,11 @@ async function waitForAccounts(provider, maxMs = 30000) {
   }
   return "";
 }
-    const IS_MOBILE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-async function waitUntilAppVisible(maxMs = 12000) {
-  if (document.visibilityState === "visible") return true;
-
-  return await new Promise((resolve) => {
-    let done = false;
-    const finish = (v) => {
-      if (done) return;
-      done = true;
-      clearTimeout(t);
-      document.removeEventListener("visibilitychange", onVis);
-      window.removeEventListener("focus", onFocus);
-      resolve(v);
-    };
-    const onVis = () => {
-      if (document.visibilityState === "visible") finish(true);
-    };
-    const onFocus = () => finish(true);
-
-    const t = setTimeout(() => finish(false), maxMs);
-    document.addEventListener("visibilitychange", onVis);
-    window.addEventListener("focus", onFocus);
-  });
-}
-
-async function waitProviderReadyForTx(provider, maxMs = 15000) {
-  if (!provider?.request) return "";
-  const start = Date.now();
-
-  while (Date.now() - start < maxMs) {
-    try {
-      const accs = await provider.request({ method: "eth_accounts" });
-      const a = accs?.[0] || "";
-      if (a) return a;
-    } catch {}
-    await sleep(300);
-  }
-  return "";
-}
-
-async function sendTxWithRetry(provider, txParams, attempts = (IS_MOBILE ? 4 : 2)) {
-  let lastErr;
-  for (let i = 0; i < attempts; i++) {
-    try {
-      return await provider.request({
-        method: "eth_sendTransaction",
-        params: [txParams],
-      });
-    } catch (e) {
-      lastErr = e;
-      const msg = String(e?.message || "");
-      const code = Number(e?.code);
-
-      const transient =
-        code === -32002 || // request pending
-        /pending|not ready|resource unavailable|disconnected/i.test(msg);
-
-      if (!transient || i === attempts - 1) throw e;
-
-      await sleep(900 + i * 700);
-      if (IS_MOBILE) await waitUntilAppVisible(8000);
-    }
-  }
-  throw lastErr;
-}
-
 
 
 
 async function accessBuyFlow(kind) {
   try {
-    if (__ACCESS_TX_INFLIGHT) return;
-__ACCESS_TX_INFLIGHT = true;
     accessSetBusy(true);
     const modalEl = document.getElementById("access-modal");
 const wasOpen = !!(modalEl && (
@@ -5875,29 +5717,14 @@ const wasOpen = !!(modalEl && (
       console.warn("cxConnectWallet is missing - AppKit connect not available.");
       return;
     }
-__ACCESS_PENDING_KIND = kind;
-__ACCESS_PENDING_TS = Date.now();
 
-let connected = false;
 
-// אם כבר מחובר - לא פותחים שוב AppKit
-if (wallet?.address && wallet?.providerRaw?.request) {
-  try {
-    const accs = await wallet.providerRaw.request({ method: "eth_accounts" });
-    connected = !!accs?.[0];
-  } catch {}
-}
-
-if (!connected) {
-  connected = await cxConnectWallet();
-}
-
+const connected = await cxConnectWallet();
 if (!connected) {
   if (wasOpen) openAccessModal();
   accessSetStatus("Wallet connection was not completed. Try again.");
   return;
 }
-
 
 let provider =
   (wallet?.providerRaw?.request && wallet.providerRaw) ||
@@ -5914,22 +5741,12 @@ if (!from && provider?.request) {
   } catch {}
 }
 
-if (IS_MOBILE) {
-  await waitUntilAppVisible(12000);
-}
-
-if (!from && provider?.request) {
-  const readyAddr = await waitProviderReadyForTx(provider, 15000);
-  if (readyAddr) from = readyAddr;
-}
-
 if (!provider?.request || !from) {
   if (wasOpen) openAccessModal();
-  accessSetStatus("Wallet עדיין לא מוכן. נסה שוב בעוד שנייה.");
-  console.warn("provider/from not ready", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
+  accessSetStatus("Wallet not connected yet. Tap Buy once more.");
+  console.warn("provider/from timeout", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
   return;
 }
-
 
 
     // 2) Ensure BSC (chainId 56 = 0x38)
@@ -5998,64 +5815,37 @@ const txParams = {
   data: BUY_WITH_BNB_SELECTOR
 };
 
-if (!IS_MOBILE) {
-  try {
-    await provider.request({ method: "eth_estimateGas", params: [txParams] });
-  } catch (e) {
-    console.warn("estimateGas failed (desktop, continuing):", e);
-  }
+try {
+  // preflight only (non-blocking): on mobile some wallets fail estimateGas even when send works
+  await provider.request({ method: "eth_estimateGas", params: [txParams] });
+} catch (e) {
+  console.warn("estimateGas failed (continuing to send):", e);
 }
 
-accessSetStatus("Open wallet to approve TRX..");
 
-const txHash = await sendTxWithRetry(provider, txParams);
-     __ACCESS_LAST_TX_HASH = txHash || "";
-__ACCESS_WAITING_CONFIRM = true;
-
-accessSetStatus("Transaction sent ✅ If wallet popup didn't open, tap 'Open Wallet to confirm'.");
-accessToggleOpenWalletBtn(false);
-
-if (IS_MOBILE) {
-  setTimeout(() => {
-    if (__ACCESS_WAITING_CONFIRM) {
-      accessToggleOpenWalletBtn(true);
-      accessSetStatus("Approval is waiting in your wallet. Tap 'Open Wallet to confirm'.");
-    }
-  }, 4000);
-}
-
-     __ACCESS_PENDING_KIND = null;
-__ACCESS_PENDING_TS = 0;
-
+const txHash = await provider.request({
+  method: "eth_sendTransaction",
+  params: [txParams],
+});
 
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
   const ok = await accessWaitForConfirm(provider, txHash);
 
- if (ok) {
-  __ACCESS_WAITING_CONFIRM = false;
-  __ACCESS_LAST_TX_HASH = "";
-  accessToggleOpenWalletBtn(false);
-
-  accessSetStatus("Confirmed ✅");
-  setTimeout(() => {
-    closeAccessModal();
-    accessSetStatus("");
-  }, 900);
-}
- else {
-  __ACCESS_WAITING_CONFIRM = false;
-  __ACCESS_LAST_TX_HASH = "";
-  accessToggleOpenWalletBtn(false);
-
-  accessSetStatus("Pending on-chain… You can close this window.");
-  setTimeout(() => {
-    closeAccessModal();
-    accessSetStatus("");
-  }, 3500);
-}
-
+  if (ok) {
+    accessSetStatus("Confirmed ✅");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 900);
+  } else {
+    accessSetStatus("Pending on-chain… You can close this window.");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 3500);
+  }
   return;
 }
 
@@ -6106,65 +5896,34 @@ __ACCESS_PENDING_TS = 0;
   // 2) buy
   accessSetStatus("Buying pass…");
   const tx2 = await sale.buyWithUSDT();
-      __ACCESS_PENDING_KIND = null;
-__ACCESS_PENDING_TS = 0;
-
 
   accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
   const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
- if (ok) {
-  __ACCESS_WAITING_CONFIRM = false;
-  __ACCESS_LAST_TX_HASH = "";
-  accessToggleOpenWalletBtn(false);
-
-  accessSetStatus("Confirmed ✅");
-  setTimeout(() => {
-    closeAccessModal();
-    accessSetStatus("");
-  }, 900);
-}
-else {
-  __ACCESS_WAITING_CONFIRM = false;
-  __ACCESS_LAST_TX_HASH = "";
-  accessToggleOpenWalletBtn(false);
-
-  accessSetStatus("Pending on-chain… You can close this window.");
-  setTimeout(() => {
-    closeAccessModal();
-    accessSetStatus("");
-  }, 3500);
-}
-
+  if (ok) {
+    accessSetStatus("Confirmed ✅");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 900);
+  } else {
+    accessSetStatus("Pending on-chain… You can close this window.");
+    setTimeout(() => {
+      closeAccessModal();
+      accessSetStatus("");
+    }, 3500);
+  }
 
   return;
 }
 
 
- } catch (e) {
-  __ACCESS_WAITING_CONFIRM = false;
-  __ACCESS_LAST_TX_HASH = "";
-  accessToggleOpenWalletBtn(false);
-
-  const code = Number(e?.code);
-  const msg = String(e?.message || e || "");
-
-
-  if (code === 4001 || /user rejected/i.test(msg)) {
-    accessSetStatus("העסקה בוטלה בארנק.");
-  } else if (code === -32002 || /pending|already pending/i.test(msg)) {
-    accessSetStatus("יש בקשה ממתינה בארנק. פתח MetaMask ואשר.");
-  } else {
-    accessSetStatus(`שגיאת רכישה: ${msg.slice(0, 140)}`);
+  } catch (e) {
+    // no alerts - keep it smooth
+    console.error("accessBuyFlow error:", e);
+  } finally {
+    accessSetBusy(false);
   }
-
-  console.error("accessBuyFlow error:", e);
-} finally {
-  accessSetBusy(false);
-  __ACCESS_TX_INFLIGHT = false;
-}
-
-
 }
 
 function accessSetStatus(msg) {
@@ -6177,13 +5936,6 @@ window.openAccessModal  = openAccessModal;
 window.closeAccessModal = closeAccessModal;
 window.accessBuyFlow    = accessBuyFlow;
 window.accessSetStatus  = accessSetStatus;
-let __ACCESS_PENDING_KIND = null;   // "bnb" | "usdt" | null
-let __ACCESS_PENDING_TS = 0;
-let __ACCESS_TX_INFLIGHT = false;
-    let __ACCESS_LAST_TX_HASH = "";
-let __ACCESS_WAITING_CONFIRM = false;
-
-
 window.ACCESS_SALE_OR_RECEIVER = ACCESS_SALE_OR_RECEIVER;
 window.ACCESS_RECEIVER = ACCESS_SALE_OR_RECEIVER;
 
@@ -6224,7 +5976,6 @@ function closeAccessModal() {
   if (!m) return;
   m.classList.remove("is-open");
   m.setAttribute("aria-hidden", "true");
-  accessToggleOpenWalletBtn(false);
 }
 
 function bindAccessModal() {
@@ -6257,54 +6008,6 @@ usdtBtn?.addEventListener("click", (e) => {
     if (e.key === "Escape") closeAccessModal();
   });
 }
-    async function accessAutoResumeIfNeeded() {
-  try {
-    if (!IS_MOBILE) return;
-    if (!__ACCESS_PENDING_KIND) return;
-    if (__ACCESS_TX_INFLIGHT) return;
-
-    // חלון זמן סביר לרזומה אחרי חזרה מהארנק
-    if (Date.now() - __ACCESS_PENDING_TS > 90000) {
-      __ACCESS_PENDING_KIND = null;
-      __ACCESS_PENDING_TS = 0;
-      return;
-    }
-
-    // רק אם המודל פתוח (המשתמש בתהליך קנייה)
-    const modalEl = document.getElementById("access-modal");
-    const isOpen = !!(modalEl && (
-      modalEl.classList.contains("is-open") ||
-      modalEl.classList.contains("open") ||
-      modalEl.getAttribute("aria-hidden") === "false"
-    ));
-    if (!isOpen) return;
-
-    // ארנק חייב להיות מחובר
-    const p = (wallet?.providerRaw?.request && wallet.providerRaw) || window.ethereum;
-    if (!p?.request) return;
-    const accs = await p.request({ method: "eth_accounts" }).catch(() => []);
-    if (!accs?.[0]) return;
-
-    accessSetStatus("ממשיך את הרכישה אוטומטית…");
-   const kind = __ACCESS_PENDING_KIND;
-if (!kind) return;
-
-accessSetStatus("ממשיך את הרכישה אוטומטית…");
-await accessBuyFlow(kind);
-
-  } catch {}
-}
-
-// מאזינים לחזרה מה-wallet app
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    setTimeout(accessAutoResumeIfNeeded, 350);
-  }
-});
-window.addEventListener("focus", () => {
-  setTimeout(accessAutoResumeIfNeeded, 350);
-});
-
 
 
     // =========================
