@@ -5738,20 +5738,20 @@ if (!skipConnect) {
   }
 
   // Mobile: after returning from wallet app, continue checkout via resume hook
- if (accessIsMobile() && !fromResume) {
+if (accessIsMobile() && !fromResume) {
   ACCESS_FLOW.pendingKind = kind;
   ACCESS_FLOW.pendingAt = Date.now();
 
-  accessSetStatus("Wallet connected ✅ Returning to app(Wallet) to continue checkout…");
-
-  // close AppKit overlay if still open
+  // close AppKit overlay and ask explicit user action (stable on mobile)
   try { await window.CxAppKitModal?.close?.(); } catch {}
 
-  // immediate try + keep polling until resume succeeds
-  setTimeout(() => { accessResumeIfNeeded(); }, 400);
-  startAccessResumePoll();
+  accessSetStatus("Wallet connected ✅ Tap 'Continue Checkout' to open wallet and approve.");
+  accessSetContinueMode(kind);
+
+  // IMPORTANT: no auto-resume here
   return;
 }
+
 }
     
 
@@ -6003,6 +6003,35 @@ function accessSetStatus(msg) {
   if (!el) return;
   el.textContent = msg || "";
 }
+function accessSetContinueMode(kind) {
+  const btn = kind === "usdt"
+    ? document.getElementById("btn-pay-usdt")
+    : document.getElementById("btn-pay-bnb");
+  if (!btn) return;
+
+  // save original text once
+  if (!btn.dataset.origText) btn.dataset.origText = btn.textContent || "";
+
+  btn.textContent = "Continue Checkout";
+  btn.dataset.continueCheckout = "1";
+  btn.dataset.continueKind = kind;
+  btn.disabled = false;
+  btn.classList.remove("is-busy");
+}
+
+function accessClearContinueMode() {
+  ["btn-pay-bnb", "btn-pay-usdt"].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    if (btn.dataset.continueCheckout === "1") {
+      btn.textContent = btn.dataset.origText || btn.textContent;
+      delete btn.dataset.continueCheckout;
+      delete btn.dataset.continueKind;
+    }
+  });
+}
+
+    
     async function accessResumeIfNeeded() {
       if (!accessIsMobile()) return;
   // Access-only guard
@@ -6038,6 +6067,8 @@ function accessSetStatus(msg) {
   }
 }
     let __accessResumePollTimer = null;
+
+    
 
 function startAccessResumePoll() {
   if (!accessIsMobile()) return;
@@ -6115,7 +6146,12 @@ function closeAccessModal() {
   if (!m) return;
   m.classList.remove("is-open");
   m.setAttribute("aria-hidden", "true");
+
+  accessClearContinueMode();
+  ACCESS_FLOW.pendingKind = null;
+  ACCESS_FLOW.pendingAt = 0;
 }
+
 
 function bindAccessModal() {
   const m = $("#access-modal");
@@ -6132,14 +6168,33 @@ const usdtBtn = document.getElementById("btn-pay-usdt");
 bnbBtn?.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
+
+  const isContinue = bnbBtn.dataset.continueCheckout === "1";
+  if (isContinue) {
+    accessClearContinueMode();
+    accessSetStatus("Opening wallet for approval…");
+    accessBuyFlow("bnb", { skipConnect: true, fromResume: true });
+    return;
+  }
+
   accessBuyFlow("bnb");
 });
 
 usdtBtn?.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
+
+  const isContinue = usdtBtn.dataset.continueCheckout === "1";
+  if (isContinue) {
+    accessClearContinueMode();
+    accessSetStatus("Opening wallet for approval…");
+    accessBuyFlow("usdt", { skipConnect: true, fromResume: true });
+    return;
+  }
+
   accessBuyFlow("usdt");
 });
+
 
 
   // ESC to close
