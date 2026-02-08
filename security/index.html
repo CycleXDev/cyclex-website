@@ -5340,163 +5340,214 @@ function bindLangButtons(){
       });
     }
 
-    // =========================
-    // Wallet (AppKit) — single global state
-    // =========================
-    const wallet = {
-      providerRaw: null,     // EIP-1193
-      browserProvider: null, // ethers BrowserProvider
-      signer: null,
-      address: "",
-      chainId: 0
-    };
-    window.wallet = wallet;
-window.__wallet = wallet; 
+  // =========================
+// Wallet (AppKit) — single global state
+// =========================
+const wallet = {
+  providerRaw: null,     // EIP-1193
+  browserProvider: null, // ethers BrowserProvider
+  signer: null,
+  address: "",
+  chainId: 0
+};
+window.wallet = wallet;
+window.__wallet = wallet;
 
+function renderWalletLabels() {
+  const notConn = t(currentLang, "wallet_not_connected") || "not connected";
+  const labelTxt = wallet.address ? wallet.address : notConn;
 
-    function renderWalletLabels() {
-      const notConn = t(currentLang, "wallet_not_connected") || "not connected";
-      const labelTxt = wallet.address ? wallet.address : notConn;
+  const w1 = $("#walletLabel");
+  if (w1) w1.textContent = labelTxt;
 
-      const w1 = $("#walletLabel");
-      if (w1) w1.textContent = labelTxt;
+  const w2 = $("#ap-wallet");
+  if (w2) w2.textContent = labelTxt;
 
-      const w2 = $("#ap-wallet");
-      if (w2) w2.textContent = labelTxt;
+  const w3 = $("#liq-wallet");
+  if (w3) w3.textContent = labelTxt;
 
-      const w3 = $("#liq-wallet");
-      if (w3) w3.textContent = labelTxt;
-
-      const w4 = $("#ap-address");
-      if (w4) w4.textContent = wallet.address ? shortAddr(wallet.address) : "—";
-    }
-
-    function attachProviderListeners(p) {
-      try {
-        if (!p || typeof p.on !== "function") return;
-        p.removeAllListeners?.("accountsChanged");
-        p.removeAllListeners?.("chainChanged");
-
-        p.on("accountsChanged", async (accs) => {
-          const a = (accs && accs[0]) ? E.getAddress(accs[0]) : "";
-          wallet.address = a;
-          renderWalletLabels();
-        });
-
-        p.on("chainChanged", async (hex) => {
-          try { wallet.chainId = Number(hex); } catch { wallet.chainId = 0; }
-          renderWalletLabels();
-        });
-      } catch {}
-    }
-
-    async function cxConnectWallet({ silent = false } = {}) {
-      const stQuick = $("#qs-status");
-if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
-  renderWalletLabels();
-  if (!silent) setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
-  try { await window.CxAppKitModal?.close?.(); } catch {}
-  return true;
+  const w4 = $("#ap-address");
+  if (w4) w4.textContent = wallet.address ? shortAddr(wallet.address) : "—";
 }
 
-if (silent) return false;
-
-      try {
-  if (!silent) {
-    await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
-  }
-
-  // Mobile round-trip can take longer (AppKit -> wallet app -> back)
-const providerRaw = await waitForWalletProvider(45000);
-
-  if (!providerRaw) {
-    if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
-    try { await window.CxAppKitModal?.close?.(); } catch {}
-    return false;
-  }
-
-  wallet.providerRaw = providerRaw;
-  attachProviderListeners(providerRaw);
-    // Ensure mobile wallet session is fully authorized (important for MetaMask/AppKit on mobile)
+function attachProviderListeners(p) {
   try {
-    const accs = await providerRaw.request({ method: "eth_requestAccounts" });
-    if (!accs || !accs[0]) {
-      if (!silent) setStatus(stQuick, "warn", "No wallet account returned. Try connect again.");
+    if (!p || typeof p.on !== "function") return;
+    p.removeAllListeners?.("accountsChanged");
+    p.removeAllListeners?.("chainChanged");
+
+    p.on("accountsChanged", async (accs) => {
+      const a = (accs && accs[0]) ? E.getAddress(accs[0]) : "";
+      wallet.address = a;
+      renderWalletLabels();
+    });
+
+    p.on("chainChanged", async (hex) => {
+      try { wallet.chainId = Number(hex); } catch { wallet.chainId = 0; }
+      renderWalletLabels();
+    });
+  } catch {}
+}
+
+async function cxConnectWallet({ silent = false } = {}) {
+  const stQuick = $("#qs-status");
+
+  if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
+    renderWalletLabels();
+    if (!silent) {
+      setStatus(stQuick, "ok", `Wallet already connected: <span class="mono">${wallet.address}</span>`);
+    }
+    try { await window.CxAppKitModal?.close?.(); } catch {}
+    return true;
+  }
+
+  if (silent) return false;
+
+  try {
+    if (!silent) {
+      await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
+    }
+
+    // Mobile round-trip can take longer (AppKit -> wallet app -> back)
+    const providerRaw = await waitForWalletProvider(45000);
+
+    if (!providerRaw) {
+      if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
       try { await window.CxAppKitModal?.close?.(); } catch {}
       return false;
     }
-  } catch (e) {
-    if (!silent) setStatus(stQuick, "warn", `Wallet authorization failed: ${String(e?.message || e)}`);
+
+    wallet.providerRaw = providerRaw;
+    attachProviderListeners(providerRaw);
+
+    // Ensure mobile wallet session is fully authorized
+    try {
+      const accs = await providerRaw.request({ method: "eth_requestAccounts" });
+      if (!accs || !accs[0]) {
+        if (!silent) setStatus(stQuick, "warn", "No wallet account returned. Try connect again.");
+        try { await window.CxAppKitModal?.close?.(); } catch {}
+        return false;
+      }
+    } catch (e) {
+      if (!silent) setStatus(stQuick, "warn", `Wallet authorization failed: ${String(e?.message || e)}`);
+      try { await window.CxAppKitModal?.close?.(); } catch {}
+      return false;
+    }
+
+    const bp = new E.BrowserProvider(providerRaw);
+    wallet.browserProvider = bp;
+
+    const signer = await bp.getSigner();
+    wallet.signer = signer;
+
+    const addr = await signer.getAddress();
+    const net = await bp.getNetwork();
+
+    wallet.address = E.getAddress(addr);
+    wallet.chainId = Number(net.chainId || 0);
+
+    renderWalletLabels();
+    if (!silent) setStatus(stQuick, "ok", `Wallet connected: <span class="mono">${wallet.address}</span>`);
+    gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
+
     try { await window.CxAppKitModal?.close?.(); } catch {}
+    return true;
+  } catch (e) {
+    try { await window.CxAppKitModal?.close?.(); } catch {}
+    if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
     return false;
   }
-
-
-  const bp = new E.BrowserProvider(providerRaw);
-  wallet.browserProvider = bp;
-
-  const signer = await bp.getSigner();
-  wallet.signer = signer;
-
-  const addr = await signer.getAddress();
-  const net = await bp.getNetwork();
-
-  wallet.address = E.getAddress(addr);
-  wallet.chainId = Number(net.chainId || 0);
-
-  renderWalletLabels();
-  if (!silent) setStatus(stQuick, "ok", `Wallet connected: <span class="mono">${wallet.address}</span>`);
-  gtagEvent("sec_wallet_connected", { chainId: wallet.chainId });
-
-  try { await window.CxAppKitModal?.close?.(); } catch {}
-  return true;
-        
-
-} catch (e) {
-  try { await window.CxAppKitModal?.close?.(); } catch {}
-  if (!silent) setStatus(stQuick, "bad", `Wallet connect failed: ${String(e?.message || e)}`);
-  return false;
 }
-
-
-    }
 window.cxConnectWallet = cxConnectWallet;
 window.connectWallet = cxConnectWallet;
 
+async function ensureChain(targetChainId) {
+  const p = wallet.providerRaw;
+  if (!p?.request) return false;
+  try {
+    await p.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: "0x" + Number(targetChainId).toString(16) }]
+    });
+    await cxConnectWallet({ silent: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-    async function ensureChain(targetChainId) {
-      const p = wallet.providerRaw;
-      if (!p?.request) return false;
-      try {
-        await p.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: "0x" + Number(targetChainId).toString(16) }]
-        });
-        await cxConnectWallet({ silent: true });
-        return true;
-      } catch {
-        return false;
-      }
-    }
-
-   function initWalletButtons() {
-  // ✅ Hero button: opens Access modal (NOT appkite)
+function initWalletButtons() {
+  // Hero button: opens Access modal (NOT AppKit directly)
   $("#btn-connect")?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     openAccessModal();
   });
 
-  // ✅ DNA connect stays the same (appkite flow untouched)
+  // DNA connect stays the same
   $("#ap-connect")?.addEventListener("click", async () => {
     await cxConnectWallet();
   });
-
-
 }
 
+// =========================
+// ACCESS PASS — TEMP CONFIG (single declaration)
+// =========================
+const ACCESS_USD_PRICE = 9; // later: 19 after sold count
+const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955"; // USDT (BSC)
+const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
+const ACCESS_READ_RPCS = [
+  "https://bsc-rpc.publicnode.com",
+  "https://bsc.publicnode.com",
+  "https://bsc.rpc.blxrbdn.com",
+  "https://1rpc.io/bnb",
+  "https://rpc.ankr.com/bsc",
+  "https://bsc-dataseed.binance.org/",
+  "https://bsc-dataseed1.defibit.io/",
+  "https://bsc-dataseed1.ninicoin.io/"
+];
 
-  // Binance ticker: BNBUSDT
+// Optional fixed text (UI only)
+const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
+const ACCESS_BNB_PRICE_TEXT = "0.02 BNB";
+
+// Access-only mobile state (isolated; does NOT affect DNA/AppKit elsewhere)
+const ACCESS_FLOW = {
+  pendingKind: null, // "bnb" | "usdt" | null
+  pendingAt: 0,
+  resuming: false
+};
+
+let __accessResumePollTimer = null;
+
+// ---- Live price helpers (BNB/USDT) ----
+let ACCESS_PRICE_CACHE = { ts: 0, bnbUsd: null };
+
+function accessIsMobile() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+}
+
+async function waitForAccounts(provider, maxMs = 30000) {
+  if (!provider?.request) return "";
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    try {
+      const accs = await provider.request({ method: "eth_accounts" });
+      const a = accs?.[0] || "";
+      if (a) return a;
+    } catch {}
+    await new Promise(r => setTimeout(r, 350));
+  }
+  return "";
+}
+
+async function accessFetchBnbUsd() {
+  // cache 60s to avoid spamming
+  const now = Date.now();
+  if (ACCESS_PRICE_CACHE.bnbUsd && (now - ACCESS_PRICE_CACHE.ts) < 60000) {
+    return ACCESS_PRICE_CACHE.bnbUsd;
+  }
+
   const r = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT", { cache: "no-store" });
   if (!r.ok) throw new Error("BNB_PRICE_FETCH_FAILED");
   const j = await r.json();
@@ -5507,7 +5558,7 @@ window.connectWallet = cxConnectWallet;
   return px;
 }
 
-  async function accessReadEthCall(to, data) {
+async function accessReadEthCall(to, data) {
   let lastErr = null;
 
   for (const url of ACCESS_READ_RPCS) {
@@ -5539,221 +5590,20 @@ window.connectWallet = cxConnectWallet;
   throw lastErr || new Error("ALL_RPCS_FAILED");
 }
 
-
 async function accessQuoteBNBWeiOnchain(_providerIgnored) {
-  const SALE = ACCESS_SALE_OR_RECEIVER;
-
-  // selector from BscScan: quoteBNBWei()
-  const QUOTE_BNB_WEI_SELECTOR = "0x42773499";
-
-  // do NOT use wallet/provider RPC (twnodes etc). Use our read-only RPC pool.
-  const out = await accessReadEthCall(SALE, QUOTE_BNB_WEI_SELECTOR);
-
-  const wei = BigInt(out);
-  if (wei <= 0n) throw new Error("QUOTE_ZERO");
-  return wei;
-}
-
-
-
-async function accessUpdatePricesUI(usdPrice) {
-  accessSetBusy(true);
-  try {
-    // disable until we know BNB price
-    const bnbBtn  = document.getElementById("btn-pay-bnb");
-    const usdtBtn = document.getElementById("btn-pay-usdt");
-    if (bnbBtn)  bnbBtn.disabled = true;
-    if (usdtBtn) usdtBtn.disabled = true;
-
-    // USDT side: exact
-    const usdtEl = document.getElementById("access-price-usdt");
-    if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
-
-    // BNB side
-    const bnbEl = document.getElementById("access-price-bnb");
-    if (bnbEl) bnbEl.textContent = "…";
-
-    try {
-      // 0) Prefer on-chain quote
-      const provider =
-        (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
-          ? wallet.providerRaw
-          : window.ethereum;
-
-      if (provider?.request) {
-        try {
-          const quoteWei = await accessQuoteBNBWeiOnchain(provider);
-          const quoteBnb = Number(quoteWei) / 1e18;
-
-          const bnbText = quoteBnb.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-          if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
-
-          window.__ACCESS_BNB_WEI  = quoteWei;
-          window.__ACCESS_BNB_TEXT = bnbText;
-
-          if (bnbBtn)  bnbBtn.disabled = false;
-          if (usdtBtn) usdtBtn.disabled = false;
-          return;
-        } catch (e) {
-          console.warn("on-chain quote failed, fallback to Binance:", e);
-        }
-      }
-
-      // 1) Fallback: Binance conversion
-      const bnbUsd = await accessFetchBnbUsd();
-      const bnbAmt = usdPrice / bnbUsd;
-
-      const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-      if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
-
-      if (window.ethers?.parseUnits) {
-        const preciseStr = bnbAmt.toFixed(18);
-        window.__ACCESS_BNB_WEI  = window.ethers.parseUnits(preciseStr, 18);
-        window.__ACCESS_BNB_TEXT = bnbText;
-      } else {
-        window.__ACCESS_BNB_WEI  = null;
-        window.__ACCESS_BNB_TEXT = bnbText;
-      }
-
-      if (bnbBtn)  bnbBtn.disabled = false;
-      if (usdtBtn) usdtBtn.disabled = false;
-
-    } catch (e) {
-      console.error("BNB price load failed:", e);
-      if (bnbEl) bnbEl.textContent = "—";
-      if (usdtBtn) usdtBtn.disabled = false;
-    }
-  } finally {
-    accessSetBusy(false);
-  }
-}
-
-
-
-function openAccessModal() {
-  accessSetStatus("");
-  const m = document.getElementById("access-modal");
-  if (!m) return;
-
-  m.classList.add("is-open");
-  m.setAttribute("aria-hidden", "false");
-
-  accessUpdatePricesUI(ACCESS_USD_PRICE);
-
-}
-
-    function accessSetBusy(on) {
-  const bnbBtn = document.getElementById("btn-pay-bnb");
-  const usdtBtn = document.getElementById("btn-pay-usdt");
-
-  if (bnbBtn) bnbBtn.disabled = !!on;
-  if (usdtBtn) usdtBtn.disabled = !!on;
-
-  if (bnbBtn) bnbBtn.classList.toggle("is-busy", !!on);
-  if (usdtBtn) usdtBtn.classList.toggle("is-busy", !!on);
-}
-// =========================
-// ACCESS PASS — TEMP CONFIG
-// =========================
-const ACCESS_USD_PRICE = 9; // later: 19 after sold count
-const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955"; // USDT (BSC)
-const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
-const ACCESS_READ_RPCS = [
-  "https://bsc-rpc.publicnode.com",
-  "https://bsc.publicnode.com",
-  "https://bsc.rpc.blxrbdn.com",
-  "https://1rpc.io/bnb",
-  "https://rpc.ankr.com/bsc",
-  "https://bsc-dataseed.binance.org/",
-  "https://bsc-dataseed1.defibit.io/",
-  "https://bsc-dataseed1.ninicoin.io/"
-];
-
-// Access-only mobile flow state (isolated; does NOT affect other AppKit flows)
-const ACCESS_FLOW = {
-  pendingKind: null // "bnb" | "usdt" | null
-};
-
-function accessIsMobile() {
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
-}
-
-async function waitForAccounts(provider, maxMs = 12000) {
-  if (!provider?.request) return "";
-  const start = Date.now();
-  while (Date.now() - start < maxMs) {
-    try {
-      const accs = await provider.request({ method: "eth_accounts" });
-      const a = accs?.[0] || "";
-      if (a) return a;
-    } catch {}
-    await new Promise(r => setTimeout(r, 300));
-  }
-  return "";
-}
-
-// ---- Live price helpers (BNB/USDT) ----
-if (!window.__ACCESS_PRICE_CACHE__) {
-  window.__ACCESS_PRICE_CACHE__ = { ts: 0, bnbUsd: null };
-}
-const ACCESS_PRICE_CACHE = window.__ACCESS_PRICE_CACHE__;
-
-async function accessFetchBnbUsd() {
-  const now = Date.now();
-  if (ACCESS_PRICE_CACHE.bnbUsd && (now - ACCESS_PRICE_CACHE.ts) < 60000) {
-    return ACCESS_PRICE_CACHE.bnbUsd;
-  }
-
-  const r = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT", { cache: "no-store" });
-  if (!r.ok) throw new Error("BNB_PRICE_FETCH_FAILED");
-  const j = await r.json();
-  const px = Number(j.price);
-  if (!isFinite(px) || px <= 0) throw new Error("BNB_PRICE_BAD");
-
-  ACCESS_PRICE_CACHE.ts = now;
-  ACCESS_PRICE_CACHE.bnbUsd = px;
-  return px;
-}
-
-async function accessReadEthCall(to, data) {
-  let lastErr = null;
-
-  for (const url of ACCESS_READ_RPCS) {
-    try {
-      const body = {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "eth_call",
-        params: [{ to, data }, "latest"]
-      };
-
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(`HTTP_${r.status}`);
-      if (j.error) throw new Error(j.error.message || "RPC_ERROR");
-      if (!j.result) throw new Error("NO_RESULT");
-
-      return j.result;
-    } catch (e) {
-      lastErr = e;
-    }
-  }
-
-  throw lastErr || new Error("ALL_RPCS_FAILED");
-}
-
-async function accessQuoteBNBWeiOnchain() {
   const SALE = ACCESS_SALE_OR_RECEIVER;
   const QUOTE_BNB_WEI_SELECTOR = "0x42773499"; // quoteBNBWei()
   const out = await accessReadEthCall(SALE, QUOTE_BNB_WEI_SELECTOR);
+
   const wei = BigInt(out);
   if (wei <= 0n) throw new Error("QUOTE_ZERO");
   return wei;
+}
+
+function accessSetStatus(msg) {
+  const el = document.getElementById("access-status");
+  if (!el) return;
+  el.textContent = msg || "";
 }
 
 function accessSetBusy(on) {
@@ -5767,10 +5617,80 @@ function accessSetBusy(on) {
   if (usdtBtn) usdtBtn.classList.toggle("is-busy", !!on);
 }
 
-function accessSetStatus(msg) {
-  const el = document.getElementById("access-status");
-  if (!el) return;
-  el.textContent = msg || "";
+async function accessUpdatePricesUI(usdPrice) {
+  accessSetBusy(true);
+  try {
+    const bnbBtn = document.getElementById("btn-pay-bnb");
+    const usdtBtn = document.getElementById("btn-pay-usdt");
+    if (bnbBtn) bnbBtn.disabled = true;
+    if (usdtBtn) usdtBtn.disabled = true;
+
+    const usdtEl = document.getElementById("access-price-usdt");
+    if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
+
+    const bnbEl = document.getElementById("access-price-bnb");
+    if (bnbEl) bnbEl.textContent = "…";
+
+    try {
+      const provider =
+        (window.wallet && wallet.providerRaw && wallet.providerRaw.request)
+          ? wallet.providerRaw
+          : window.ethereum;
+
+      if (provider?.request) {
+        try {
+          const quoteWei = await accessQuoteBNBWeiOnchain(provider);
+          const quoteBnb = Number(quoteWei) / 1e18;
+          const bnbText = quoteBnb.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+
+          if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+          window.__ACCESS_BNB_WEI = quoteWei;
+          window.__ACCESS_BNB_TEXT = bnbText;
+
+          if (bnbBtn) bnbBtn.disabled = false;
+          if (usdtBtn) usdtBtn.disabled = false;
+          return;
+        } catch (e) {
+          console.warn("on-chain quote failed, fallback to Binance:", e);
+        }
+      }
+
+      const bnbUsd = await accessFetchBnbUsd();
+      const bnbAmt = usdPrice / bnbUsd;
+      const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+      if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+      if (window.ethers?.parseUnits) {
+        const preciseStr = bnbAmt.toFixed(18);
+        window.__ACCESS_BNB_WEI = window.ethers.parseUnits(preciseStr, 18);
+        window.__ACCESS_BNB_TEXT = bnbText;
+      } else {
+        window.__ACCESS_BNB_WEI = null;
+        window.__ACCESS_BNB_TEXT = bnbText;
+      }
+
+      if (bnbBtn) bnbBtn.disabled = false;
+      if (usdtBtn) usdtBtn.disabled = false;
+    } catch (e) {
+      console.error("BNB price load failed:", e);
+      if (bnbEl) bnbEl.textContent = "—";
+      if (usdtBtn) usdtBtn.disabled = false;
+    }
+  } finally {
+    accessSetBusy(false);
+  }
+}
+
+function openAccessModal() {
+  accessSetStatus("");
+  const m = document.getElementById("access-modal");
+  if (!m) return;
+
+  m.classList.add("is-open");
+  m.setAttribute("aria-hidden", "false");
+
+  accessUpdatePricesUI(ACCESS_USD_PRICE);
 }
 
 function accessSetContinueMode(kind) {
@@ -5780,6 +5700,7 @@ function accessSetContinueMode(kind) {
   if (!btn) return;
 
   if (!btn.dataset.origText) btn.dataset.origText = btn.textContent || "";
+
   btn.textContent = "Continue Checkout";
   btn.dataset.continueCheckout = "1";
   btn.dataset.continueKind = kind;
@@ -5799,101 +5720,25 @@ function accessClearContinueMode() {
   });
 }
 
-async function accessUpdatePricesUI(usdPrice) {
-  accessSetBusy(true);
-  try {
-    const bnbBtn = document.getElementById("btn-pay-bnb");
-    const usdtBtn = document.getElementById("btn-pay-usdt");
-    const usdtEl = document.getElementById("access-price-usdt");
-    const bnbEl = document.getElementById("access-price-bnb");
-
-    if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
-    if (bnbEl) bnbEl.textContent = "…";
-
-    try {
-      // Prefer on-chain quote
-      const quoteWei = await accessQuoteBNBWeiOnchain();
-      const quoteBnb = Number(quoteWei) / 1e18;
-      const bnbText = quoteBnb.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-
-      if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
-      window.__ACCESS_BNB_WEI = quoteWei;
-      window.__ACCESS_BNB_TEXT = bnbText;
-
-      if (bnbBtn) bnbBtn.disabled = false;
-      if (usdtBtn) usdtBtn.disabled = false;
-      return;
-    } catch (e) {
-      console.warn("on-chain quote failed, fallback to Binance:", e);
-    }
-
-    // Binance fallback
-    const bnbUsd = await accessFetchBnbUsd();
-    const bnbAmt = usdPrice / bnbUsd;
-    const bnbText = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
-
-    if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
-
-    if (window.ethers?.parseUnits) {
-      window.__ACCESS_BNB_WEI = window.ethers.parseUnits(bnbAmt.toFixed(18), 18);
-      window.__ACCESS_BNB_TEXT = bnbText;
-    } else {
-      window.__ACCESS_BNB_WEI = null;
-      window.__ACCESS_BNB_TEXT = bnbText;
-    }
-
-    if (bnbBtn) bnbBtn.disabled = false;
-    if (usdtBtn) usdtBtn.disabled = false;
-  } catch (e) {
-    console.error("BNB price load failed:", e);
-    const bnbEl = document.getElementById("access-price-bnb");
-    const usdtBtn = document.getElementById("btn-pay-usdt");
-    if (bnbEl) bnbEl.textContent = "—";
-    if (usdtBtn) usdtBtn.disabled = false;
-  } finally {
-    accessSetBusy(false);
-  }
-}
-
-function openAccessModal() {
-  accessSetStatus("");
-  const m = document.getElementById("access-modal");
-  if (!m) return;
-  m.classList.add("is-open");
-  m.setAttribute("aria-hidden", "false");
-  accessUpdatePricesUI(ACCESS_USD_PRICE);
-}
-
-function closeAccessModal() {
-  const m = document.getElementById("access-modal");
-  if (!m) return;
-  m.classList.remove("is-open");
-  m.setAttribute("aria-hidden", "true");
-
-  accessClearContinueMode();
-  if (window.ACCESS_FLOW) {
-    window.ACCESS_FLOW.pendingKind = null;
-    window.ACCESS_FLOW.pendingAt = 0;
-    window.ACCESS_FLOW.resuming = false;
-  }
-}
-
 async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
-  if (!provider?.request) return false;
-  const start = Date.now();
+  if (!provider || !provider.request) return false;
 
+  const start = Date.now();
   while (Date.now() - start < maxMs) {
     try {
       const receipt = await provider.request({
         method: "eth_getTransactionReceipt",
         params: [txHash],
       });
+
       if (receipt && receipt.status != null) {
         return receipt.status === "0x1" || receipt.status === 1 || receipt.status === true;
       }
     } catch {}
+
     await new Promise(r => setTimeout(r, 2000));
   }
+
   return false;
 }
 
@@ -5902,33 +5747,42 @@ async function accessBuyFlow(kind, opts = {}) {
     accessSetBusy(true);
     const { skipConnect = false, fromResume = false } = opts || {};
 
-    // connect via AppKit only when needed
-    if (!skipConnect) {
-      if (typeof cxConnectWallet !== "function") {
-        accessSetStatus("Wallet connect is not available.");
-        return;
-      }
+    const modalEl = document.getElementById("access-modal");
+    const wasOpen = !!(modalEl && (
+      modalEl.classList.contains("is-open") ||
+      modalEl.classList.contains("open") ||
+      modalEl.getAttribute("aria-hidden") === "false"
+    ));
 
+    if (typeof cxConnectWallet !== "function") {
+      console.warn("cxConnectWallet is missing - AppKit connect not available.");
+      return;
+    }
+
+    // Step 1: connect if needed
+    if (!skipConnect) {
       const connected = await cxConnectWallet();
       if (!connected) {
+        if (wasOpen) openAccessModal();
         accessSetStatus("Wallet connection was not completed. Try again.");
         return;
       }
 
-      // Mobile UX: explicit second tap
+      // Mobile flow: first tap connects, second tap continues checkout
       if (accessIsMobile() && !fromResume) {
-        if (window.ACCESS_FLOW) {
-          window.ACCESS_FLOW.pendingKind = kind;
-          window.ACCESS_FLOW.pendingAt = Date.now();
-        }
+        ACCESS_FLOW.pendingKind = kind;
+        ACCESS_FLOW.pendingAt = Date.now();
+
         try { await window.CxAppKitModal?.close?.(); } catch {}
+
         accessSetStatus("Wallet connected ✅ Tap 'Continue Checkout' to open wallet and approve.");
         accessSetContinueMode(kind);
         return;
       }
     }
 
-    let provider =
+    // Step 2: get provider + address
+    const provider =
       (wallet?.providerRaw?.request && wallet.providerRaw) ||
       (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
       window.ethereum;
@@ -5943,11 +5797,13 @@ async function accessBuyFlow(kind, opts = {}) {
     }
 
     if (!provider?.request || !from) {
+      if (wasOpen) openAccessModal();
       accessSetStatus("Wallet not connected yet. Tap Buy once more.");
+      console.warn("provider/from timeout", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
       return;
     }
 
-    // Ensure BSC
+    // Step 3: ensure BSC (56 / 0x38)
     const TARGET_CHAIN = "0x38";
     try {
       const chainId = await provider.request({ method: "eth_chainId" });
@@ -5976,98 +5832,104 @@ async function accessBuyFlow(kind, opts = {}) {
       }
     }
 
+    // Step 4a: BNB purchase
     if (kind === "bnb") {
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
       if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
-        accessSetStatus("PASS_CONTRACT missing/invalid.");
+        accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
+        console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT);
         return;
       }
 
       let PRICE_WEI = window.__ACCESS_BNB_WEI;
       if (!PRICE_WEI) {
-        PRICE_WEI = await accessQuoteBNBWeiOnchain();
-        window.__ACCESS_BNB_WEI = PRICE_WEI;
+        try {
+          PRICE_WEI = await accessQuoteBNBWeiOnchain(provider);
+          window.__ACCESS_BNB_WEI = PRICE_WEI;
+        } catch {}
       }
+
       if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
         accessSetStatus("Couldn't fetch live BNB quote. Try again.");
         return;
       }
 
       const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
-      const baseWei = BigInt(PRICE_WEI);
-      const valueWei = (baseWei * 101n) / 100n; // 1% buffer
-
-      const txForEstimate = {
-        from,
-        to: PASS_CONTRACT,
-        value: "0x" + valueWei.toString(16),
-        data: BUY_WITH_BNB_SELECTOR
-      };
-
-      let gasHex;
-      try {
-        const estGas = await provider.request({ method: "eth_estimateGas", params: [txForEstimate] });
-        const gasBuffered = (BigInt(estGas) * 120n) / 100n; // +20%
-        gasHex = "0x" + gasBuffered.toString(16);
-      } catch (e) {
-        accessSetStatus("BNB precheck failed. Try again.");
-        console.warn("estimateGas failed:", e);
-        return;
-      }
-
       const txParams = {
         from,
         to: PASS_CONTRACT,
-        value: "0x" + valueWei.toString(16),
-        data: BUY_WITH_BNB_SELECTOR,
-        gas: gasHex
+        value: "0x" + BigInt(PRICE_WEI).toString(16),
+        data: BUY_WITH_BNB_SELECTOR
       };
 
-      const txHash = await provider.request({ method: "eth_sendTransaction", params: [txParams] });
+      try {
+        // non-blocking preflight
+        await provider.request({ method: "eth_estimateGas", params: [txParams] });
+      } catch (e) {
+        console.warn("estimateGas failed (continuing to send):", e);
+      }
+
+      const txHash = await provider.request({
+        method: "eth_sendTransaction",
+        params: [txParams],
+      });
+
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
       const ok = await accessWaitForConfirm(provider, txHash);
-      if (window.ACCESS_FLOW) {
-        window.ACCESS_FLOW.pendingKind = null;
-        window.ACCESS_FLOW.pendingAt = 0;
+
+      ACCESS_FLOW.pendingKind = null;
+      ACCESS_FLOW.pendingAt = 0;
+      if (__accessResumePollTimer) {
+        clearInterval(__accessResumePollTimer);
+        __accessResumePollTimer = null;
       }
 
       if (ok) {
         accessSetStatus("Confirmed ✅");
-        setTimeout(() => { closeAccessModal(); accessSetStatus(""); }, 900);
+        setTimeout(() => {
+          closeAccessModal();
+          accessSetStatus("");
+        }, 900);
       } else {
         accessSetStatus("Pending on-chain… You can close this window.");
-        setTimeout(() => { closeAccessModal(); accessSetStatus(""); }, 3500);
+        setTimeout(() => {
+          closeAccessModal();
+          accessSetStatus("");
+        }, 3500);
       }
       return;
     }
 
+    // Step 4b: USDT purchase
     if (kind === "usdt") {
-      const USDT = "0x55d398326f99059fF775485246999027B3197955";
+      const USDT = ACCESS_USDT;
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
 
       const ERC20_ABI = [
-        { "constant": true, "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
+        { "constant": true,  "inputs": [], "name": "decimals", "outputs": [{ "name": "", "type": "uint8" }], "type": "function" },
         { "constant": false, "inputs": [{ "name": "spender", "type": "address" }, { "name": "amount", "type": "uint256" }], "name": "approve", "outputs": [{ "name": "", "type": "bool" }], "type": "function" }
       ];
-      const SALE_ABI = [{ "constant": false, "inputs": [], "name": "buyWithUSDT", "outputs": [], "type": "function" }];
+      const SALE_ABI = [
+        { "constant": false, "inputs": [], "name": "buyWithUSDT", "outputs": [], "type": "function" }
+      ];
+
+      accessSetStatus("Preparing USDT checkout…");
 
       if (!window.ethers) {
-        accessSetStatus("USDT checkout needs ethers.js.");
+        accessSetStatus("USDT checkout needs ethers.js (next step).");
         return;
       }
 
-      accessSetStatus("Preparing USDT checkout…");
       const ethers = window.ethers;
       const web3Provider = new ethers.BrowserProvider(provider);
       const signer = await web3Provider.getSigner();
 
-      const usdPrice = ACCESS_USD_PRICE;
       const usdtContract = new ethers.Contract(USDT, ERC20_ABI, signer);
       const sale = new ethers.Contract(PASS_CONTRACT, SALE_ABI, signer);
 
       const decimals = Number(await usdtContract.decimals());
-      const amount = ethers.parseUnits(String(usdPrice), decimals);
+      const amount = ethers.parseUnits(String(ACCESS_USD_PRICE), decimals);
 
       accessSetStatus("Approve USDT…");
       const tx1 = await usdtContract.approve(PASS_CONTRACT, amount);
@@ -6079,17 +5941,25 @@ async function accessBuyFlow(kind, opts = {}) {
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
       const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
-      if (window.ACCESS_FLOW) {
-        window.ACCESS_FLOW.pendingKind = null;
-        window.ACCESS_FLOW.pendingAt = 0;
+      ACCESS_FLOW.pendingKind = null;
+      ACCESS_FLOW.pendingAt = 0;
+      if (__accessResumePollTimer) {
+        clearInterval(__accessResumePollTimer);
+        __accessResumePollTimer = null;
       }
 
       if (ok) {
         accessSetStatus("Confirmed ✅");
-        setTimeout(() => { closeAccessModal(); accessSetStatus(""); }, 900);
+        setTimeout(() => {
+          closeAccessModal();
+          accessSetStatus("");
+        }, 900);
       } else {
         accessSetStatus("Pending on-chain… You can close this window.");
-        setTimeout(() => { closeAccessModal(); accessSetStatus(""); }, 3500);
+        setTimeout(() => {
+          closeAccessModal();
+          accessSetStatus("");
+        }, 3500);
       }
       return;
     }
@@ -6100,28 +5970,37 @@ async function accessBuyFlow(kind, opts = {}) {
       data: e?.data,
       full: e
     });
-    if (window.ACCESS_FLOW) {
-      window.ACCESS_FLOW.pendingKind = null;
-      window.ACCESS_FLOW.pendingAt = 0;
+
+    if (accessIsMobile()) {
+      ACCESS_FLOW.pendingKind = null;
+      ACCESS_FLOW.pendingAt = 0;
     }
-    accessSetStatus(String(e?.message || "Checkout failed. Try again."));
   } finally {
     accessSetBusy(false);
   }
 }
 
+function closeAccessModal() {
+  const m = $("#access-modal");
+  if (!m) return;
+  m.classList.remove("is-open");
+  m.setAttribute("aria-hidden", "true");
+
+  accessClearContinueMode();
+  ACCESS_FLOW.pendingKind = null;
+  ACCESS_FLOW.pendingAt = 0;
+}
+
 function bindAccessModal() {
-  const m = document.getElementById("access-modal");
+  const m = $("#access-modal");
   if (!m) return;
 
-  // prevent duplicate bind
-  if (m.dataset.boundAccess === "1") return;
-  m.dataset.boundAccess = "1";
-
+  // close buttons + backdrop
   m.querySelectorAll("[data-close-access]").forEach((el) => {
     el.addEventListener("click", closeAccessModal);
   });
 
+  // buy buttons
   const bnbBtn = document.getElementById("btn-pay-bnb");
   const usdtBtn = document.getElementById("btn-pay-usdt");
 
@@ -6146,17 +6025,41 @@ function bindAccessModal() {
     const isContinue = usdtBtn.dataset.continueCheckout === "1";
     if (isContinue) {
       accessSetStatus("Opening wallet for approval…");
-      accessBuyFlow("usdt", { skipConnect: true, fromResume: true }); // IMPORTANT
+      accessBuyFlow("usdt", { skipConnect: true, fromResume: true });
       return;
     }
 
     accessBuyFlow("usdt");
   });
 
+  // ESC to close
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeAccessModal();
   });
 }
+
+// (optional) auto-resume hooks — left disabled for your current stable flow
+// window.addEventListener("pageshow", () => {
+//   if (document.visibilityState === "visible") accessResumeIfNeeded();
+// });
+// window.addEventListener("focus", () => {
+//   if (document.visibilityState === "visible") accessResumeIfNeeded();
+// });
+// document.addEventListener("visibilitychange", () => {
+//   if (document.visibilityState === "visible") accessResumeIfNeeded();
+// });
+
+// expose for console/tests
+window.openAccessModal = openAccessModal;
+window.closeAccessModal = closeAccessModal;
+window.accessBuyFlow = accessBuyFlow;
+window.accessSetStatus = accessSetStatus;
+window.ACCESS_SALE_OR_RECEIVER = ACCESS_SALE_OR_RECEIVER;
+window.ACCESS_RECEIVER = ACCESS_SALE_OR_RECEIVER;
+window.accessUpdatePricesUI = accessUpdatePricesUI;
+window.accessWaitForConfirm = accessWaitForConfirm;
+window.accessQuoteBNBWeiOnchain = accessQuoteBNBWeiOnchain;
+
 
 // expose safe helpers
 window.openAccessModal = openAccessModal;
