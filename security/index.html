@@ -3946,17 +3946,55 @@ wui-dialog,
 
     window.CxAppKitModal = appkit;
 
-    async function waitForWalletProvider(timeoutMs = 12000) {
-      const start = Date.now();
-      while (Date.now() - start < timeoutMs) {
-        try {
-          const p = window.CxAppKitModal?.getWalletProvider?.();
-          if (p) return p;
-        } catch {}
-        await new Promise(r => setTimeout(r, 250));
-      }
-      return null;
+    async function waitForWalletProvider(timeoutMs = 70000) {
+  const start = Date.now();
+
+  const pickProvider = () => {
+    // 0) המקור הקיים שלך - נשאר ראשון כדי לא לשבור flow
+    try {
+      const p0 = window.CxAppKitModal?.getWalletProvider?.();
+      if (p0?.request) return p0;
+      if (p0) return p0;
+    } catch {}
+
+    // 1) אם נשמר כבר ב-state
+    if (window.wallet?.providerRaw?.request) return window.wallet.providerRaw;
+    if (window.wallet?.browserProvider?.provider?.request) return window.wallet.browserProvider.provider;
+
+    // 2) injected provider
+    if (window.ethereum?.request) return window.ethereum;
+
+    // 3) multiple injected providers (MetaMask וכו')
+    if (Array.isArray(window.ethereum?.providers)) {
+      const mm = window.ethereum.providers.find(p => p?.isMetaMask && p?.request);
+      if (mm) return mm;
+      const any = window.ethereum.providers.find(p => p?.request);
+      if (any) return any;
     }
+
+    return null;
+  };
+
+  while (Date.now() - start < timeoutMs) {
+    const p = pickProvider();
+    if (p) {
+      if (typeof p.request === "function") {
+        try {
+          await p.request({ method: "eth_chainId" });
+          return p;
+        } catch {
+        }
+      } else {
+        return p;
+      }
+    }
+
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  return null;
+}
+
 
    // =========================
 // i18n (4 languages)
@@ -5408,13 +5446,17 @@ if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browser
 
 if (silent) return false;
 
-      try {
+     try {
   if (!silent) {
     await window.CxAppKitModal?.open?.({ view: "ConnectWallet" });
+    if (IS_MOBILE) {
+      await waitUntilAppVisible(20000);
+    }
   }
 
   // Mobile round-trip can take longer (AppKit -> wallet app -> back)
-const providerRaw = await waitForWalletProvider(45000);
+  const providerRaw = await waitForWalletProvider(70000);
+
 
   if (!providerRaw) {
     if (!silent) setStatus(stQuick, "warn", "Wallet provider not ready (timeout). Try again.");
@@ -5426,17 +5468,27 @@ const providerRaw = await waitForWalletProvider(45000);
   attachProviderListeners(providerRaw);
     // Ensure mobile wallet session is fully authorized (important for MetaMask/AppKit on mobile)
   try {
-    const accs = await providerRaw.request({ method: "eth_requestAccounts" });
-    if (!accs || !accs[0]) {
-      if (!silent) setStatus(stQuick, "warn", "No wallet account returned. Try connect again.");
-      try { await window.CxAppKitModal?.close?.(); } catch {}
-      return false;
-    }
-  } catch (e) {
-    if (!silent) setStatus(stQuick, "warn", `Wallet authorization failed: ${String(e?.message || e)}`);
+  const accs = await providerRaw.request({ method: "eth_requestAccounts" });
+  if (!accs || !accs[0]) {
+    if (!silent) setStatus(stQuick, "warn", "No wallet account returned. Try connect again.");
     try { await window.CxAppKitModal?.close?.(); } catch {}
     return false;
   }
+
+  // mobile settle: לפעמים החשבון נחשף רק רגע אחרי החזרה לאפליקציה
+  const settled = await waitForAccounts(providerRaw, 12000);
+  if (!settled) {
+    if (!silent) setStatus(stQuick, "warn", "Wallet session not settled yet. Please try again.");
+    try { await window.CxAppKitModal?.close?.(); } catch {}
+    return false;
+  }
+
+} catch (e) {
+  if (!silent) setStatus(stQuick, "warn", `Wallet authorization failed: ${String(e?.message || e)}`);
+  try { await window.CxAppKitModal?.close?.(); } catch {}
+  return false;
+}
+
 
 
   const bp = new E.BrowserProvider(providerRaw);
