@@ -5682,6 +5682,17 @@ const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
 // TEMP: fixed BNB price (for UI + tx). Later: compute from USD.
 const ACCESS_BNB_PRICE_WEI = 20000000000000000n; // 0.02 BNB
 const ACCESS_BNB_PRICE_TEXT = "0.02 BNB"; // must match the wei above
+    // Access-only mobile flow state (isolated; does NOT affect other AppKit flows)
+const ACCESS_FLOW = {
+  pendingKind: null,     // "bnb" | "usdt" | null
+  pendingAt: 0,
+  resuming: false
+};
+
+function accessIsMobile() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+}
+
     
 async function waitForAccounts(provider, maxMs = 30000) {
   if (!provider?.request) return "";
@@ -5700,10 +5711,10 @@ async function waitForAccounts(provider, maxMs = 30000) {
 }
 
 
-
-async function accessBuyFlow(kind) {
+async function accessBuyFlow(kind, opts = {}) {
   try {
     accessSetBusy(true);
+    const { skipConnect = false, fromResume = false } = opts || {};
     const modalEl = document.getElementById("access-modal");
 const wasOpen = !!(modalEl && (
   modalEl.classList.contains("is-open") ||
@@ -5719,12 +5730,30 @@ const wasOpen = !!(modalEl && (
     }
 
 
-const connected = await cxConnectWallet();
-if (!connected) {
-  if (wasOpen) openAccessModal();
-  accessSetStatus("Wallet connection was not completed. Try again.");
-  return;
+if (!skipConnect) {
+  const connected = await cxConnectWallet();
+  if (!connected) {
+    if (wasOpen) openAccessModal();
+    accessSetStatus("Wallet connection was not completed. Try again.");
+    return;
+  }
+
+  // Mobile: after returning from wallet app, continue checkout via resume hook
+  if (accessIsMobile() && !fromResume) {
+    ACCESS_FLOW.pendingKind = kind;
+    ACCESS_FLOW.pendingAt = Date.now();
+
+    accessSetStatus("Wallet connected ✅ Returning to app to continue checkout…");
+
+    // close AppKit overlay if still open; keep Access modal flow isolated
+    try { await window.CxAppKitModal?.close?.(); } catch {}
+
+    // attempt immediate resume (if already back in browser)
+    setTimeout(() => { accessResumeIfNeeded(); }, 200);
+    return;
+  }
 }
+
 
 let provider =
   (wallet?.providerRaw?.request && wallet.providerRaw) ||
@@ -5834,18 +5863,25 @@ const txHash = await provider.request({
   const ok = await accessWaitForConfirm(provider, txHash);
 
   if (ok) {
-    accessSetStatus("Confirmed ✅");
-    setTimeout(() => {
-      closeAccessModal();
-      accessSetStatus("");
-    }, 900);
-  } else {
-    accessSetStatus("Pending on-chain… You can close this window.");
-    setTimeout(() => {
-      closeAccessModal();
-      accessSetStatus("");
-    }, 3500);
-  }
+  ACCESS_FLOW.pendingKind = null;
+  ACCESS_FLOW.pendingAt = 0;
+
+  accessSetStatus("Confirmed ✅");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 900);
+} else {
+  ACCESS_FLOW.pendingKind = null;
+  ACCESS_FLOW.pendingAt = 0;
+
+  accessSetStatus("Pending on-chain… You can close this window.");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 3500);
+}
+
   return;
 }
 
@@ -5901,12 +5937,16 @@ const txHash = await provider.request({
   const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
   if (ok) {
+    ACCESS_FLOW.pendingKind = null;
+  ACCESS_FLOW.pendingAt = 0;
     accessSetStatus("Confirmed ✅");
     setTimeout(() => {
       closeAccessModal();
       accessSetStatus("");
     }, 900);
   } else {
+    ACCESS_FLOW.pendingKind = null;
+  ACCESS_FLOW.pendingAt = 0;
     accessSetStatus("Pending on-chain… You can close this window.");
     setTimeout(() => {
       closeAccessModal();
@@ -5921,6 +5961,8 @@ const txHash = await provider.request({
   } catch (e) {
     // no alerts - keep it smooth
     console.error("accessBuyFlow error:", e);
+    ACCESS_FLOW.pendingKind = null;
+  ACCESS_FLOW.pendingAt = 0;
   } finally {
     accessSetBusy(false);
   }
@@ -5931,6 +5973,40 @@ function accessSetStatus(msg) {
   if (!el) return;
   el.textContent = msg || "";
 }
+    async function accessResumeIfNeeded() {
+  // Access-only guard
+  if (!ACCESS_FLOW.pendingKind) return;
+  if (ACCESS_FLOW.resuming) return;
+
+  // safety expiry (2 minutes)
+  if (!ACCESS_FLOW.pendingAt || (Date.now() - ACCESS_FLOW.pendingAt > 120000)) {
+    ACCESS_FLOW.pendingKind = null;
+    ACCESS_FLOW.pendingAt = 0;
+    ACCESS_FLOW.resuming = false;
+    return;
+  }
+
+  ACCESS_FLOW.resuming = true;
+  try {
+    // close AppKit spinner if still open
+    try { await window.CxAppKitModal?.close?.(); } catch {}
+
+    // wait tiny bit after returning from wallet app
+    await new Promise(r => setTimeout(r, 350));
+
+    const kind = ACCESS_FLOW.pendingKind;
+    ACCESS_FLOW.pendingKind = null;
+    ACCESS_FLOW.pendingAt = 0;
+
+    // continue buy flow WITHOUT reopening connect modal
+    await accessBuyFlow(kind, { skipConnect: true, fromResume: true });
+  } catch (e) {
+    console.warn("accessResumeIfNeeded error:", e);
+  } finally {
+    ACCESS_FLOW.resuming = false;
+  }
+}
+
     // ✅ expose for console/tests (safe)
 window.openAccessModal  = openAccessModal;
 window.closeAccessModal = closeAccessModal;
@@ -6008,6 +6084,17 @@ usdtBtn?.addEventListener("click", (e) => {
     if (e.key === "Escape") closeAccessModal();
   });
 }
+    // Mobile return hooks (Access-only resume)
+window.addEventListener("pageshow", () => {
+  if (document.visibilityState === "visible") accessResumeIfNeeded();
+});
+window.addEventListener("focus", () => {
+  if (document.visibilityState === "visible") accessResumeIfNeeded();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") accessResumeIfNeeded();
+});
+
 
 
     // =========================
