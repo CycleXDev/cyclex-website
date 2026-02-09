@@ -5456,7 +5456,37 @@ async function cxConnectWallet({ silent = false } = {}) {
     return true;
   }
 
-  if (silent) return false;
+  if (silent) {
+  try {
+    const p =
+      (wallet?.providerRaw?.request && wallet.providerRaw) ||
+      (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+      window.ethereum;
+
+    if (!p?.request) return false;
+
+    const accs = await p.request({ method: "eth_accounts" });
+    const a = safeGetAddress(accs?.[0] || "");
+    if (!a) return false;
+
+    wallet.providerRaw = p;
+    attachProviderListeners(p);
+
+    const bp = new E.BrowserProvider(p);
+    wallet.browserProvider = bp;
+    wallet.signer = await bp.getSigner();
+
+    const net = await bp.getNetwork();
+    wallet.address = a;
+    wallet.chainId = parseChainIdAny(net?.chainId);
+
+    renderWalletLabels();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 
   try {
     if (!silent) {
@@ -5783,6 +5813,42 @@ function removeContinueCheckoutButton() {
   const n = document.getElementById("continue-checkout-wrap");
   if (n) n.remove();
 }
+    let __resumePollTimer = null;
+
+function startResumePoll(maxMs = 8000, stepMs = 350) {
+  try {
+    if (__resumePollTimer) clearInterval(__resumePollTimer);
+  } catch {}
+
+  const started = Date.now();
+
+  __resumePollTimer = setInterval(async () => {
+    try {
+      await tryResumeCheckoutUI();
+
+      // stop if button already rendered
+      if (document.getElementById("btn-continue-checkout")) {
+        clearInterval(__resumePollTimer);
+        __resumePollTimer = null;
+        return;
+      }
+
+      // stop on timeout
+      if (Date.now() - started >= maxMs) {
+        clearInterval(__resumePollTimer);
+        __resumePollTimer = null;
+      }
+    } catch {}
+  }, stepMs);
+}
+
+function stopResumePoll() {
+  try {
+    if (__resumePollTimer) clearInterval(__resumePollTimer);
+  } catch {}
+  __resumePollTimer = null;
+}
+
 
 // called when app regains focus/visibility after wallet round-trip
 async function tryResumeCheckoutUI() {
@@ -5837,6 +5903,7 @@ function closeAccessModal() {
   m.setAttribute("aria-hidden", "true");
   clearPendingCheckoutKind();
   removeContinueCheckoutButton();
+  stopResumePoll();
 }
 
 
@@ -5903,10 +5970,13 @@ async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
 
 async function accessBuyFlow(kind) {
   try {
+    if (__accessFlowRunning) return;
+__accessFlowRunning = true;
     accessSetBusy(true);
     // mark pending checkout for mobile deep-link resume
 setPendingCheckoutKind(kind);
 removeContinueCheckoutButton();
+    if (isMobileLike()) startResumePoll(10000, 350);
 
 
     const modalEl = document.getElementById("access-modal");
@@ -5953,6 +6023,7 @@ if (!from && provider?.request) {
   if (wasOpen) openAccessModal();
   accessSetStatus("Wallet connected state is still syncing. Tap Continue checkout.");
   renderContinueCheckoutButton(kind);
+      if (isMobileLike()) startResumePoll(8000, 350);
   console.warn("provider/from timeout", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
   return;
 }
@@ -6062,13 +6133,14 @@ const txHash = await provider.request({
       if (ok) {
   clearPendingCheckoutKind();
   removeContinueCheckoutButton();
+        stopResumePoll();
   accessSetStatus("Confirmed ✅");
   setTimeout(() => {
     closeAccessModal();
     accessSetStatus("");
   }, 900);
 } else {
-
+stopResumePoll();
         accessSetStatus("Pending on-chain… You can close this window.");
         setTimeout(() => {
           closeAccessModal();
@@ -6122,13 +6194,14 @@ const txHash = await provider.request({
      if (ok) {
   clearPendingCheckoutKind();
   removeContinueCheckoutButton();
+       stopResumePoll();
   accessSetStatus("Confirmed ✅");
   setTimeout(() => {
     closeAccessModal();
     accessSetStatus("");
   }, 900);
 } else {
-
+stopResumePoll();
         accessSetStatus("Pending on-chain… You can close this window.");
         setTimeout(() => {
           closeAccessModal();
@@ -6141,10 +6214,14 @@ const txHash = await provider.request({
 
     accessSetStatus("Unsupported payment method.");
   } catch (e) {
-    console.error("accessBuyFlow error:", e);
-    accessSetStatus(`Checkout failed: ${String(e?.message || e)}`);
-  } finally {
+  console.error("accessBuyFlow error:", e);
+  stopResumePoll();                    
+  renderContinueCheckoutButton(kind);  
+  accessSetStatus(`Checkout failed: ${String(e?.message || e)}`);
+} finally {
+
     accessSetBusy(false);
+    __accessFlowRunning = false;
   }
 }
 
@@ -6187,17 +6264,25 @@ function bindAccessModal() {
 
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
-        // slight delay to let provider/session settle
-        setTimeout(tryResumeCheckoutUI, 250);
+        setTimeout(() => {
+          tryResumeCheckoutUI();
+          startResumePoll(8000, 350);
+        }, 250);
       }
     });
 
     window.addEventListener("focus", () => {
-      setTimeout(tryResumeCheckoutUI, 250);
+      setTimeout(() => {
+        tryResumeCheckoutUI();
+        startResumePoll(8000, 350);
+      }, 250);
     });
 
     window.addEventListener("pageshow", () => {
-      setTimeout(tryResumeCheckoutUI, 250);
+      setTimeout(() => {
+        tryResumeCheckoutUI();
+        startResumePoll(8000, 350);
+      }, 250);
     });
   }
 }
