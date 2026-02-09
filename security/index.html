@@ -5881,23 +5881,47 @@ async function accessBuyFlow(kind) {
       }
 
       const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
-      const txParams = {
-        from,
-        to: PASS_CONTRACT,
-        value: "0x" + BigInt(PRICE_WEI).toString(16),
-        data: BUY_WITH_BNB_SELECTOR
-      };
+     // ---- BNB tx with small price buffer + gas buffer ----
+const baseWei = BigInt(PRICE_WEI);
 
-      try {
-        await provider.request({ method: "eth_estimateGas", params: [txParams] });
-      } catch (e) {
-        console.warn("estimateGas failed (continuing to send):", e);
-      }
+const valueWei = (baseWei * 101n) / 100n;
 
-      const txHash = await provider.request({
-        method: "eth_sendTransaction",
-        params: [txParams],
-      });
+const txForEstimate = {
+  from,
+  to: PASS_CONTRACT,
+  value: "0x" + valueWei.toString(16),
+  data: BUY_WITH_BNB_SELECTOR
+};
+
+let gasHex = null;
+try {
+  const estGas = await provider.request({
+    method: "eth_estimateGas",
+    params: [txForEstimate]
+  });
+
+  // +20% gas buffer
+  const gasBuffered = (BigInt(estGas) * 120n) / 100n;
+  gasHex = "0x" + gasBuffered.toString(16);
+
+} catch (e) {
+  console.warn("estimateGas failed, fallback to wallet auto gas:", e);
+}
+
+
+const txParams = {
+  from,
+  to: PASS_CONTRACT,
+  value: "0x" + valueWei.toString(16),
+  data: BUY_WITH_BNB_SELECTOR,
+  ...(gasHex ? { gas: gasHex } : {})
+};
+
+
+const txHash = await provider.request({
+  method: "eth_sendTransaction",
+  params: [txParams],
+});
 
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
