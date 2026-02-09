@@ -5720,6 +5720,28 @@ function setPendingCheckoutKind(kind) {
 function getPendingCheckoutKind() {
   try { return sessionStorage.getItem(ACCESS_PENDING_KEY) || ""; } catch { return ""; }
 }
+    async function tryHydrateWalletAddressFromProvider() {
+  try {
+    const p =
+      (wallet?.providerRaw?.request && wallet.providerRaw) ||
+      (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+      window.ethereum;
+
+    if (!p?.request) return "";
+
+    const accs = await p.request({ method: "eth_accounts" });
+    const a = safeGetAddress(accs?.[0] || "");
+    if (a) {
+      wallet.address = a;
+      if (!wallet.providerRaw) wallet.providerRaw = p;
+      renderWalletLabels();
+    }
+    return a || "";
+  } catch {
+    return "";
+  }
+}
+
 
 function clearPendingCheckoutKind() {
   try { sessionStorage.removeItem(ACCESS_PENDING_KEY); } catch {}
@@ -5763,18 +5785,25 @@ function removeContinueCheckoutButton() {
 }
 
 // called when app regains focus/visibility after wallet round-trip
-function tryResumeCheckoutUI() {
+async function tryResumeCheckoutUI() {
   const kind = getPendingCheckoutKind();
   if (!kind) return;
 
-  // only show helper on mobile-like UX
   if (!isMobileLike()) return;
 
-  // require connected wallet first
-  const hasWallet = !!(wallet?.address && (wallet?.providerRaw || wallet?.browserProvider));
-  if (!hasWallet) return;
+  // hydrate address from provider if listeners haven't fired yet
+  const hydrated = await tryHydrateWalletAddressFromProvider();
 
-  // make sure modal is open so user sees action
+  const hasProvider = !!(
+    wallet?.providerRaw?.request ||
+    wallet?.browserProvider?.provider?.request ||
+    window.ethereum?.request
+  );
+
+  const hasWallet = !!(hydrated || wallet?.address);
+
+  if (!hasProvider || !hasWallet) return;
+
   const m = document.getElementById("access-modal");
   if (m && m.getAttribute("aria-hidden") === "true") {
     openAccessModal();
@@ -5783,6 +5812,7 @@ function tryResumeCheckoutUI() {
   accessSetStatus("Wallet connected. Continue checkout to complete payment.");
   renderContinueCheckoutButton(kind);
 }
+
 
 
 function openAccessModal() {
@@ -5904,21 +5934,29 @@ removeContinueCheckoutButton();
       (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
       window.ethereum;
 
-    let from = String(wallet?.address || "").trim();
+   let from = String(wallet?.address || "").trim();
 
-    if (!from && provider?.request) {
-      try {
-        const accs = await provider.request({ method: "eth_requestAccounts" });
-        from = accs?.[0] || "";
-      } catch {}
+// mobile-safe: first try silent accounts (no popup)
+if (!from && provider?.request) {
+  try {
+    const accs = await provider.request({ method: "eth_accounts" });
+    from = safeGetAddress(accs?.[0] || "");
+    if (from) {
+      wallet.address = from;
+      renderWalletLabels();
     }
+  } catch {}
+}
+
 
     if (!provider?.request || !from) {
-      if (wasOpen) openAccessModal();
-      accessSetStatus("Wallet not connected yet. Tap Buy once more.");
-      console.warn("provider/from timeout", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
-      return;
-    }
+  if (wasOpen) openAccessModal();
+  accessSetStatus("Wallet connected state is still syncing. Tap Continue checkout.");
+  renderContinueCheckoutButton(kind);
+  console.warn("provider/from timeout", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
+  return;
+}
+
 
     // Ensure BSC mainnet
     const TARGET_CHAIN = "0x38";
