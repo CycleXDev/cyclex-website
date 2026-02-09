@@ -6056,6 +6056,32 @@ function bindAccessModal() {
   const bnbBtn = document.getElementById("btn-pay-bnb");
   const usdtBtn = document.getElementById("btn-pay-usdt");
 
+  // helper: wake wallet session on mobile before sending tx
+  async function accessWakeWalletSession() {
+    try {
+      const provider =
+        (wallet?.providerRaw?.request && wallet.providerRaw) ||
+        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+        window.ethereum;
+
+      if (!provider?.request) return;
+
+      // try to wake/attach wallet app session
+      try { await provider.request({ method: "eth_requestAccounts" }); } catch {}
+
+      // ensure BSC to avoid silent no-op in some wallets
+      try {
+        const cid = await provider.request({ method: "eth_chainId" });
+        if (cid !== "0x38") {
+          await provider.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: "0x38" }]
+          });
+        }
+      } catch {}
+    } catch {}
+  }
+
   bnbBtn?.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -6063,6 +6089,10 @@ function bindAccessModal() {
     const isContinue = bnbBtn.dataset.continueCheckout === "1";
     if (isContinue) {
       accessSetStatus("Opening wallet for approval…");
+
+      // IMPORTANT: this improves mobile wallet pop-up behavior
+      await accessWakeWalletSession();
+
       await accessBuyFlow("bnb", { skipConnect: true, fromResume: true });
       return;
     }
@@ -6077,6 +6107,10 @@ function bindAccessModal() {
     const isContinue = usdtBtn.dataset.continueCheckout === "1";
     if (isContinue) {
       accessSetStatus("Opening wallet for approval…");
+
+      // IMPORTANT: this improves mobile wallet pop-up behavior
+      await accessWakeWalletSession();
+
       await accessBuyFlow("usdt", { skipConnect: true, fromResume: true });
       return;
     }
@@ -6092,6 +6126,7 @@ function bindAccessModal() {
     });
   }
 }
+
 
 // (optional) auto-resume hooks — left disabled for your current stable flow
 // window.addEventListener("pageshow", () => {
