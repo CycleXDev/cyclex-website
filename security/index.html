@@ -5878,8 +5878,6 @@ async function accessBuyFlow(kind, opts = {}) {
       // ---- BNB tx with small price buffer + gas buffer ----
 const baseWei = BigInt(PRICE_WEI);
 
-// 1% buffer למחיר כדי למנוע נפילה על תנודה קטנה
-// אם תרצה יותר מרווח: שנה ל-102n (2%)
 const valueWei = (baseWei * 101n) / 100n;
 
 const txForEstimate = {
@@ -5901,8 +5899,6 @@ try {
   gasHex = "0x" + gasBuffered.toString(16);
 
 } catch (e) {
-  // חשוב: לא עוצרים את הקנייה אם estimate נכשל
-  // נותנים לארנק לחשב גז בעצמו בזמן eth_sendTransaction
   console.warn("estimateGas failed, fallback to wallet auto gas:", e);
 }
 
