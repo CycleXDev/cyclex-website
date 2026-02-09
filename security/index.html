@@ -5730,6 +5730,7 @@ function accessSetStatus(msg) {
 // Mobile resume checkout helpers
 // =========================
 const ACCESS_PENDING_KEY = "cx_access_pending_kind";
+    let __accessFlowRunning = false;
 
 function isMobileLike() {
   try {
@@ -6215,15 +6216,14 @@ stopResumePoll();
     accessSetStatus("Unsupported payment method.");
   } catch (e) {
   console.error("accessBuyFlow error:", e);
-  stopResumePoll();                    
-  renderContinueCheckoutButton(kind);  
+  stopResumePoll();
+  renderContinueCheckoutButton(kind);
   accessSetStatus(`Checkout failed: ${String(e?.message || e)}`);
 } finally {
-
-    accessSetBusy(false);
-    __accessFlowRunning = false;
-  }
+  accessSetBusy(false);
+  __accessFlowRunning = false;
 }
+
 
 function bindAccessModal() {
   const m = $("#access-modal");
