@@ -5696,6 +5696,94 @@ function accessSetStatus(msg) {
   if (!el) return;
   el.textContent = msg || "";
 }
+    // =========================
+// Mobile resume checkout helpers
+// =========================
+const ACCESS_PENDING_KEY = "cx_access_pending_kind";
+
+function isMobileLike() {
+  try {
+    return window.matchMedia?.("(max-width: 900px)")?.matches ||
+      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+  } catch {
+    return false;
+  }
+}
+
+function setPendingCheckoutKind(kind) {
+  try {
+    if (kind) sessionStorage.setItem(ACCESS_PENDING_KEY, kind);
+    else sessionStorage.removeItem(ACCESS_PENDING_KEY);
+  } catch {}
+}
+
+function getPendingCheckoutKind() {
+  try { return sessionStorage.getItem(ACCESS_PENDING_KEY) || ""; } catch { return ""; }
+}
+
+function clearPendingCheckoutKind() {
+  try { sessionStorage.removeItem(ACCESS_PENDING_KEY); } catch {}
+}
+
+function renderContinueCheckoutButton(kind) {
+  const st = document.getElementById("access-status");
+  if (!st || !kind) return;
+
+  // avoid duplicate button
+  if (document.getElementById("btn-continue-checkout")) return;
+
+  const wrap = document.createElement("div");
+  wrap.id = "continue-checkout-wrap";
+  wrap.style.marginTop = "10px";
+
+  const btn = document.createElement("button");
+  btn.id = "btn-continue-checkout";
+  btn.type = "button";
+  btn.className = "btn btn-primary";
+  btn.textContent = "Continue checkout";
+  btn.style.width = "100%";
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try {
+      await accessBuyFlow(kind);
+    } finally {
+      // if flow didn't finish, we'll re-render as needed
+      btn.disabled = false;
+    }
+  });
+
+  wrap.appendChild(btn);
+  st.parentNode?.insertBefore(wrap, st.nextSibling);
+}
+
+function removeContinueCheckoutButton() {
+  const n = document.getElementById("continue-checkout-wrap");
+  if (n) n.remove();
+}
+
+// called when app regains focus/visibility after wallet round-trip
+function tryResumeCheckoutUI() {
+  const kind = getPendingCheckoutKind();
+  if (!kind) return;
+
+  // only show helper on mobile-like UX
+  if (!isMobileLike()) return;
+
+  // require connected wallet first
+  const hasWallet = !!(wallet?.address && (wallet?.providerRaw || wallet?.browserProvider));
+  if (!hasWallet) return;
+
+  // make sure modal is open so user sees action
+  const m = document.getElementById("access-modal");
+  if (m && m.getAttribute("aria-hidden") === "true") {
+    openAccessModal();
+  }
+
+  accessSetStatus("Wallet connected. Continue checkout to complete payment.");
+  renderContinueCheckoutButton(kind);
+}
+
 
 function openAccessModal() {
   accessSetStatus("");
@@ -5717,7 +5805,10 @@ function closeAccessModal() {
   if (!m) return;
   m.classList.remove("is-open");
   m.setAttribute("aria-hidden", "true");
+  clearPendingCheckoutKind();
+  removeContinueCheckoutButton();
 }
+
 
 // =========================
 // ACCESS PASS — TEMP CONFIG
@@ -5783,6 +5874,10 @@ async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
 async function accessBuyFlow(kind) {
   try {
     accessSetBusy(true);
+    // mark pending checkout for mobile deep-link resume
+setPendingCheckoutKind(kind);
+removeContinueCheckoutButton();
+
 
     const modalEl = document.getElementById("access-modal");
     const wasOpen = !!(modalEl && (
@@ -5927,12 +6022,15 @@ const txHash = await provider.request({
 
       const ok = await accessWaitForConfirm(provider, txHash);
       if (ok) {
-        accessSetStatus("Confirmed ✅");
-        setTimeout(() => {
-          closeAccessModal();
-          accessSetStatus("");
-        }, 900);
-      } else {
+  clearPendingCheckoutKind();
+  removeContinueCheckoutButton();
+  accessSetStatus("Confirmed ✅");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 900);
+} else {
+
         accessSetStatus("Pending on-chain… You can close this window.");
         setTimeout(() => {
           closeAccessModal();
@@ -5983,13 +6081,16 @@ const txHash = await provider.request({
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
       const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
-      if (ok) {
-        accessSetStatus("Confirmed ✅");
-        setTimeout(() => {
-          closeAccessModal();
-          accessSetStatus("");
-        }, 900);
-      } else {
+     if (ok) {
+  clearPendingCheckoutKind();
+  removeContinueCheckoutButton();
+  accessSetStatus("Confirmed ✅");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 900);
+} else {
+
         accessSetStatus("Pending on-chain… You can close this window.");
         setTimeout(() => {
           closeAccessModal();
@@ -6041,7 +6142,28 @@ function bindAccessModal() {
       if (e.key === "Escape") closeAccessModal();
     });
   }
+
+  // mobile wallet round-trip resume hooks (bind once)
+  if (!window.__accessResumeBound) {
+    window.__accessResumeBound = true;
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        // slight delay to let provider/session settle
+        setTimeout(tryResumeCheckoutUI, 250);
+      }
+    });
+
+    window.addEventListener("focus", () => {
+      setTimeout(tryResumeCheckoutUI, 250);
+    });
+
+    window.addEventListener("pageshow", () => {
+      setTimeout(tryResumeCheckoutUI, 250);
+    });
+  }
 }
+
 
 // Expose for console/tests
 window.openAccessModal = openAccessModal;
