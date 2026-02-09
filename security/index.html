@@ -5916,10 +5916,27 @@ const txParams = {
 };
 
 
-const txHash = await provider.request({
-  method: "eth_sendTransaction",
-  params: [txParams],
-});
+let txHash;
+try {
+  txHash = await provider.request({
+    method: "eth_sendTransaction",
+    params: [txParams],
+  });
+} catch (e) {
+  console.warn("sendTransaction first try failed:", e);
+  try {
+    await provider.request({ method: "eth_requestAccounts" });
+    txHash = await provider.request({
+      method: "eth_sendTransaction",
+      params: [txParams],
+    });
+  } catch (e2) {
+    accessSetStatus("Wallet did not open automatically. Open wallet app to approve pending request.");
+    console.warn("sendTransaction second try failed:", e2);
+    return;
+  }
+}
+
 
 
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
@@ -6056,67 +6073,34 @@ function bindAccessModal() {
   const bnbBtn = document.getElementById("btn-pay-bnb");
   const usdtBtn = document.getElementById("btn-pay-usdt");
 
-  // helper: wake wallet session on mobile before sending tx
-  async function accessWakeWalletSession() {
-    try {
-      const provider =
-        (wallet?.providerRaw?.request && wallet.providerRaw) ||
-        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
-        window.ethereum;
+ bnbBtn?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 
-      if (!provider?.request) return;
-
-      // try to wake/attach wallet app session
-      try { await provider.request({ method: "eth_requestAccounts" }); } catch {}
-
-      // ensure BSC to avoid silent no-op in some wallets
-      try {
-        const cid = await provider.request({ method: "eth_chainId" });
-        if (cid !== "0x38") {
-          await provider.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: "0x38" }]
-          });
-        }
-      } catch {}
-    } catch {}
+  const isContinue = bnbBtn.dataset.continueCheckout === "1";
+  if (isContinue) {
+    accessSetStatus("Opening wallet for approval…");
+    accessBuyFlow("bnb", { skipConnect: true, fromResume: true });
+    return;
   }
 
-  bnbBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  accessBuyFlow("bnb");
+});
 
-    const isContinue = bnbBtn.dataset.continueCheckout === "1";
-    if (isContinue) {
-      accessSetStatus("Opening wallet for approval…");
+usdtBtn?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 
-      // IMPORTANT: this improves mobile wallet pop-up behavior
-      await accessWakeWalletSession();
+  const isContinue = usdtBtn.dataset.continueCheckout === "1";
+  if (isContinue) {
+    accessSetStatus("Opening wallet for approval…");
+    accessBuyFlow("usdt", { skipConnect: true, fromResume: true });
+    return;
+  }
 
-      await accessBuyFlow("bnb", { skipConnect: true, fromResume: true });
-      return;
-    }
+  accessBuyFlow("usdt");
+});
 
-    await accessBuyFlow("bnb");
-  });
-
-  usdtBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const isContinue = usdtBtn.dataset.continueCheckout === "1";
-    if (isContinue) {
-      accessSetStatus("Opening wallet for approval…");
-
-      // IMPORTANT: this improves mobile wallet pop-up behavior
-      await accessWakeWalletSession();
-
-      await accessBuyFlow("usdt", { skipConnect: true, fromResume: true });
-      return;
-    }
-
-    await accessBuyFlow("usdt");
-  });
 
   // ESC to close (bind once)
   if (!window.__accessEscBound) {
