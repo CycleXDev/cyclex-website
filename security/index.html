@@ -5797,14 +5797,18 @@ function renderContinueCheckoutButton(kind) {
   btn.style.width = "100%";
 
   btn.addEventListener("click", async () => {
-    btn.disabled = true;
-    try {
-      await accessBuyFlow(kind);
-    } finally {
-      // if flow didn't finish, we'll re-render as needed
-      btn.disabled = false;
-    }
-  });
+  btn.disabled = true;
+  try {
+    __accessFlowRunning = false;
+
+    await cxConnectWallet({ silent: true });
+
+    await accessBuyFlow(kind);
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 
   wrap.appendChild(btn);
   st.parentNode?.insertBefore(wrap, st.nextSibling);
@@ -6021,13 +6025,26 @@ if (!from && provider?.request) {
 
 
     if (!provider?.request || !from) {
-  if (wasOpen) openAccessModal();
-  accessSetStatus("Wallet connected state is still syncing. Tap Continue checkout.");
-  renderContinueCheckoutButton(kind);
-      if (isMobileLike()) startResumePoll(8000, 350);
-  console.warn("provider/from timeout", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
-  return;
+  await new Promise(r => setTimeout(r, 450));
+  await cxConnectWallet({ silent: true }).catch(() => {});
+
+  provider =
+    (wallet?.providerRaw?.request && wallet.providerRaw) ||
+    (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+    window.ethereum;
+
+  from = String(wallet?.address || "").trim();
+
+  if (!provider?.request || !from) {
+    if (wasOpen) openAccessModal();
+    accessSetStatus("Wallet connected. Tap Continue checkout again.");
+    renderContinueCheckoutButton(kind);
+    if (isMobileLike()) startResumePoll(10000, 350);
+    console.warn("provider/from still missing", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
+    return;
+  }
 }
+
 
 
     // Ensure BSC mainnet
@@ -6227,6 +6244,8 @@ stopResumePoll();
 
 
 function bindAccessModal() {
+  if (window.__accessModalBound) return;
+  window.__accessModalBound = true;
   const m = $("#access-modal");
   if (!m) return;
 
