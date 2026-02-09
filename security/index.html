@@ -5726,11 +5726,10 @@ function accessSetStatus(msg) {
   if (!el) return;
   el.textContent = msg || "";
 }
-    // =========================
-// Mobile resume checkout helpers
+   // =========================
+// Mobile-safe checkout helpers (NO resume/poll flow)
 // =========================
-const ACCESS_PENDING_KEY = "cx_access_pending_kind";
-    let __accessFlowRunning = false;
+let __accessFlowRunning = false;
 
 function isMobileLike() {
   try {
@@ -5741,17 +5740,7 @@ function isMobileLike() {
   }
 }
 
-function setPendingCheckoutKind(kind) {
-  try {
-    if (kind) sessionStorage.setItem(ACCESS_PENDING_KEY, kind);
-    else sessionStorage.removeItem(ACCESS_PENDING_KEY);
-  } catch {}
-}
-
-function getPendingCheckoutKind() {
-  try { return sessionStorage.getItem(ACCESS_PENDING_KEY) || ""; } catch { return ""; }
-}
-    async function tryHydrateWalletAddressFromProvider() {
+async function tryHydrateWalletAddressFromProvider() {
   try {
     const p =
       (wallet?.providerRaw?.request && wallet.providerRaw) ||
@@ -5773,119 +5762,6 @@ function getPendingCheckoutKind() {
   }
 }
 
-
-function clearPendingCheckoutKind() {
-  try { sessionStorage.removeItem(ACCESS_PENDING_KEY); } catch {}
-}
-
-function renderContinueCheckoutButton(kind) {
-  const st = document.getElementById("access-status");
-  if (!st || !kind) return;
-
-  // avoid duplicate button
-  if (document.getElementById("btn-continue-checkout")) return;
-
-  const wrap = document.createElement("div");
-  wrap.id = "continue-checkout-wrap";
-  wrap.style.marginTop = "10px";
-
-  const btn = document.createElement("button");
-  btn.id = "btn-continue-checkout";
-  btn.type = "button";
-  btn.className = "btn btn-primary";
-  btn.textContent = "Continue checkout";
-  btn.style.width = "100%";
-
-  btn.addEventListener("click", async () => {
-  btn.disabled = true;
-  try {
-    __accessFlowRunning = false;
-
-    await cxConnectWallet({ silent: true });
-
-    await accessBuyFlow(kind);
-  } finally {
-    btn.disabled = false;
-  }
-});
-
-
-  wrap.appendChild(btn);
-  st.parentNode?.insertBefore(wrap, st.nextSibling);
-}
-
-function removeContinueCheckoutButton() {
-  const n = document.getElementById("continue-checkout-wrap");
-  if (n) n.remove();
-}
-    let __resumePollTimer = null;
-
-function startResumePoll(maxMs = 8000, stepMs = 350) {
-  try {
-    if (__resumePollTimer) clearInterval(__resumePollTimer);
-  } catch {}
-
-  const started = Date.now();
-
-  __resumePollTimer = setInterval(async () => {
-    try {
-      await tryResumeCheckoutUI();
-
-      // stop if button already rendered
-      if (document.getElementById("btn-continue-checkout")) {
-        clearInterval(__resumePollTimer);
-        __resumePollTimer = null;
-        return;
-      }
-
-      // stop on timeout
-      if (Date.now() - started >= maxMs) {
-        clearInterval(__resumePollTimer);
-        __resumePollTimer = null;
-      }
-    } catch {}
-  }, stepMs);
-}
-
-function stopResumePoll() {
-  try {
-    if (__resumePollTimer) clearInterval(__resumePollTimer);
-  } catch {}
-  __resumePollTimer = null;
-}
-
-
-// called when app regains focus/visibility after wallet round-trip
-async function tryResumeCheckoutUI() {
-  const kind = getPendingCheckoutKind();
-  if (!kind) return;
-
-  if (!isMobileLike()) return;
-
-  // hydrate address from provider if listeners haven't fired yet
-  const hydrated = await tryHydrateWalletAddressFromProvider();
-
-  const hasProvider = !!(
-    wallet?.providerRaw?.request ||
-    wallet?.browserProvider?.provider?.request ||
-    window.ethereum?.request
-  );
-
-  const hasWallet = !!(hydrated || wallet?.address);
-
-  if (!hasProvider || !hasWallet) return;
-
-  const m = document.getElementById("access-modal");
-  if (m && m.getAttribute("aria-hidden") === "true") {
-    openAccessModal();
-  }
-
-  accessSetStatus("Wallet connected. Continue checkout to complete payment.");
-  renderContinueCheckoutButton(kind);
-}
-
-
-
 function openAccessModal() {
   accessSetStatus("");
 
@@ -5895,7 +5771,6 @@ function openAccessModal() {
   m.classList.add("is-open");
   m.setAttribute("aria-hidden", "false");
 
-  // fire-and-forget, but catch to avoid unhandled promise
   accessUpdatePricesUI(ACCESS_USD_PRICE).catch((e) => {
     console.error("accessUpdatePricesUI failed:", e);
   });
@@ -5906,11 +5781,7 @@ function closeAccessModal() {
   if (!m) return;
   m.classList.remove("is-open");
   m.setAttribute("aria-hidden", "true");
-  clearPendingCheckoutKind();
-  removeContinueCheckoutButton();
-  stopResumePoll();
 }
-
 
 // =========================
 // ACCESS PASS — TEMP CONFIG
@@ -5931,10 +5802,6 @@ const ACCESS_READ_RPCS = [
   "https://bsc-dataseed1.ninicoin.io/"
 ];
 
-// NOTE: old fixed BNB constants intentionally removed to avoid confusion
-// const ACCESS_BNB_PRICE_WEI = ...
-// const ACCESS_BNB_PRICE_TEXT = ...
-
 async function waitForAccounts(provider, maxMs = 30000) {
   if (!provider?.request) return "";
 
@@ -5945,7 +5812,6 @@ async function waitForAccounts(provider, maxMs = 30000) {
       const a = accs?.[0] || "";
       if (a) return a;
     } catch {}
-
     await new Promise(r => setTimeout(r, 350));
   }
   return "";
@@ -5974,16 +5840,12 @@ async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
 }
 
 async function accessBuyFlow(kind) {
+  if (__accessFlowRunning) return;
+
+  __accessFlowRunning = true;
+  accessSetBusy(true);
+
   try {
-    if (__accessFlowRunning) return;
-__accessFlowRunning = true;
-    accessSetBusy(true);
-    // mark pending checkout for mobile deep-link resume
-setPendingCheckoutKind(kind);
-removeContinueCheckoutButton();
-    if (isMobileLike()) startResumePoll(10000, 350);
-
-
     const modalEl = document.getElementById("access-modal");
     const wasOpen = !!(modalEl && (
       modalEl.classList.contains("is-open") ||
@@ -5997,6 +5859,7 @@ removeContinueCheckoutButton();
       return;
     }
 
+    // 1) connect flow
     const connected = await cxConnectWallet();
     if (!connected) {
       if (wasOpen) openAccessModal();
@@ -6004,50 +5867,48 @@ removeContinueCheckoutButton();
       return;
     }
 
+    // 2) resolve provider + from (mobile-safe, short retries)
     let provider =
       (wallet?.providerRaw?.request && wallet.providerRaw) ||
       (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
       window.ethereum;
 
-   let from = String(wallet?.address || "").trim();
+    let from = String(wallet?.address || "").trim();
 
-// mobile-safe: first try silent accounts (no popup)
-if (!from && provider?.request) {
-  try {
-    const accs = await provider.request({ method: "eth_accounts" });
-    from = safeGetAddress(accs?.[0] || "");
-    if (from) {
-      wallet.address = from;
-      renderWalletLabels();
+    if (!from && provider?.request) {
+      try {
+        const accs = await provider.request({ method: "eth_accounts" });
+        from = safeGetAddress(accs?.[0] || "");
+        if (from) {
+          wallet.address = from;
+          renderWalletLabels();
+        }
+      } catch {}
     }
-  } catch {}
-}
 
+    if (!from) {
+      await tryHydrateWalletAddressFromProvider();
+      from = String(wallet?.address || "").trim();
+    }
+
+    // one short stabilization wait (mobile return timing)
+    if ((!provider?.request || !from) && isMobileLike()) {
+      await new Promise(r => setTimeout(r, 700));
+      await cxConnectWallet({ silent: true }).catch(() => {});
+      provider =
+        (wallet?.providerRaw?.request && wallet.providerRaw) ||
+        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+        window.ethereum;
+      from = String(wallet?.address || "").trim();
+    }
 
     if (!provider?.request || !from) {
-  await new Promise(r => setTimeout(r, 450));
-  await cxConnectWallet({ silent: true }).catch(() => {});
+      if (wasOpen) openAccessModal();
+      accessSetStatus("Wallet connected. Tap Buy again to continue.");
+      return;
+    }
 
-  provider =
-    (wallet?.providerRaw?.request && wallet.providerRaw) ||
-    (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
-    window.ethereum;
-
-  from = String(wallet?.address || "").trim();
-
-  if (!provider?.request || !from) {
-    if (wasOpen) openAccessModal();
-    accessSetStatus("Wallet connected. Tap Continue checkout again.");
-    renderContinueCheckoutButton(kind);
-    if (isMobileLike()) startResumePoll(10000, 350);
-    console.warn("provider/from still missing", { hasProvider: !!provider, from, walletAddress: wallet?.address || "" });
-    return;
-  }
-}
-
-
-
-    // Ensure BSC mainnet
+    // 3) Ensure BSC mainnet
     const TARGET_CHAIN = "0x38";
     try {
       const chainId = await provider.request({ method: "eth_chainId" });
@@ -6070,7 +5931,6 @@ if (!from && provider?.request) {
           }],
         });
       } else if (err && err.code === 4001) {
-        // user canceled switch
         accessSetStatus("Network switch was canceled.");
         return;
       } else {
@@ -6078,6 +5938,7 @@ if (!from && provider?.request) {
       }
     }
 
+    // 4) BNB flow
     if (kind === "bnb") {
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
       if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
@@ -6086,10 +5947,7 @@ if (!from && provider?.request) {
         return;
       }
 
-      // Use cached quote first
       let PRICE_WEI = window.__ACCESS_BNB_WEI;
-
-      // fallback if cache missing
       if (!PRICE_WEI) {
         try {
           PRICE_WEI = await accessQuoteBNBWeiOnchain();
@@ -6103,62 +5961,52 @@ if (!from && provider?.request) {
       }
 
       const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
-     // ---- BNB tx with small price buffer + gas buffer ----
-const baseWei = BigInt(PRICE_WEI);
 
-const valueWei = (baseWei * 101n) / 100n;
+      const baseWei = BigInt(PRICE_WEI);
+      const valueWei = (baseWei * 101n) / 100n; // +1% price buffer
 
-const txForEstimate = {
-  from,
-  to: PASS_CONTRACT,
-  value: "0x" + valueWei.toString(16),
-  data: BUY_WITH_BNB_SELECTOR
-};
+      const txForEstimate = {
+        from,
+        to: PASS_CONTRACT,
+        value: "0x" + valueWei.toString(16),
+        data: BUY_WITH_BNB_SELECTOR
+      };
 
-let gasHex = null;
-try {
-  const estGas = await provider.request({
-    method: "eth_estimateGas",
-    params: [txForEstimate]
-  });
+      let gasHex = null;
+      try {
+        const estGas = await provider.request({
+          method: "eth_estimateGas",
+          params: [txForEstimate]
+        });
+        const gasBuffered = (BigInt(estGas) * 120n) / 100n; // +20%
+        gasHex = "0x" + gasBuffered.toString(16);
+      } catch (e) {
+        console.warn("estimateGas failed, fallback to wallet auto gas:", e);
+      }
 
-  // +20% gas buffer
-  const gasBuffered = (BigInt(estGas) * 120n) / 100n;
-  gasHex = "0x" + gasBuffered.toString(16);
+      const txParams = {
+        from,
+        to: PASS_CONTRACT,
+        value: "0x" + valueWei.toString(16),
+        data: BUY_WITH_BNB_SELECTOR,
+        ...(gasHex ? { gas: gasHex } : {})
+      };
 
-} catch (e) {
-  console.warn("estimateGas failed, fallback to wallet auto gas:", e);
-}
-
-
-const txParams = {
-  from,
-  to: PASS_CONTRACT,
-  value: "0x" + valueWei.toString(16),
-  data: BUY_WITH_BNB_SELECTOR,
-  ...(gasHex ? { gas: gasHex } : {})
-};
-
-
-const txHash = await provider.request({
-  method: "eth_sendTransaction",
-  params: [txParams],
-});
+      const txHash = await provider.request({
+        method: "eth_sendTransaction",
+        params: [txParams],
+      });
 
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
       const ok = await accessWaitForConfirm(provider, txHash);
       if (ok) {
-  clearPendingCheckoutKind();
-  removeContinueCheckoutButton();
-        stopResumePoll();
-  accessSetStatus("Confirmed ✅");
-  setTimeout(() => {
-    closeAccessModal();
-    accessSetStatus("");
-  }, 900);
-} else {
-stopResumePoll();
+        accessSetStatus("Confirmed ✅");
+        setTimeout(() => {
+          closeAccessModal();
+          accessSetStatus("");
+        }, 900);
+      } else {
         accessSetStatus("Pending on-chain… You can close this window.");
         setTimeout(() => {
           closeAccessModal();
@@ -6168,6 +6016,7 @@ stopResumePoll();
       return;
     }
 
+    // 5) USDT flow
     if (kind === "usdt") {
       const USDT = ACCESS_USDT;
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
@@ -6209,17 +6058,13 @@ stopResumePoll();
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
       const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
-     if (ok) {
-  clearPendingCheckoutKind();
-  removeContinueCheckoutButton();
-       stopResumePoll();
-  accessSetStatus("Confirmed ✅");
-  setTimeout(() => {
-    closeAccessModal();
-    accessSetStatus("");
-  }, 900);
-} else {
-stopResumePoll();
+      if (ok) {
+        accessSetStatus("Confirmed ✅");
+        setTimeout(() => {
+          closeAccessModal();
+          accessSetStatus("");
+        }, 900);
+      } else {
         accessSetStatus("Pending on-chain… You can close this window.");
         setTimeout(() => {
           closeAccessModal();
@@ -6232,20 +6077,18 @@ stopResumePoll();
 
     accessSetStatus("Unsupported payment method.");
   } catch (e) {
-  console.error("accessBuyFlow error:", e);
-  stopResumePoll();
-  renderContinueCheckoutButton(kind);
-  accessSetStatus(`Checkout failed: ${String(e?.message || e)}`);
-} finally {
-  accessSetBusy(false);
-  __accessFlowRunning = false;
+    console.error("accessBuyFlow error:", e);
+    accessSetStatus(`Checkout failed: ${String(e?.message || e)}`);
+  } finally {
+    accessSetBusy(false);
+    __accessFlowRunning = false;
+  }
 }
-}
-
 
 function bindAccessModal() {
   if (window.__accessModalBound) return;
   window.__accessModalBound = true;
+
   const m = $("#access-modal");
   if (!m) return;
 
@@ -6275,34 +6118,6 @@ function bindAccessModal() {
     window.__accessEscBound = true;
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") closeAccessModal();
-    });
-  }
-
-  // mobile wallet round-trip resume hooks (bind once)
-  if (!window.__accessResumeBound) {
-    window.__accessResumeBound = true;
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        setTimeout(() => {
-          tryResumeCheckoutUI();
-          startResumePoll(8000, 350);
-        }, 250);
-      }
-    });
-
-    window.addEventListener("focus", () => {
-      setTimeout(() => {
-        tryResumeCheckoutUI();
-        startResumePoll(8000, 350);
-      }, 250);
-    });
-
-    window.addEventListener("pageshow", () => {
-      setTimeout(() => {
-        tryResumeCheckoutUI();
-        startResumePoll(8000, 350);
-      }, 250);
     });
   }
 }
