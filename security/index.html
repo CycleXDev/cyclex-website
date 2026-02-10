@@ -5916,7 +5916,7 @@ stopResumePoll();
 __resumeInProgress = false;
 
 accessSetStatus("Opening wallet app...");
-await accessBuyFlow(kind, { skipConnectModal: false, manual: true });
+await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
 
     } catch (err) {
       const msg = String(err?.message || err || "");
@@ -6028,10 +6028,6 @@ if (!__accessFlowRunning) {
 
 function openAccessModal() {
   accessSetStatus("");
-  __mobileAccessReadyToPay = false;
-__mobileAccessReadyKind = "";
-
-  
   const m = document.getElementById("access-modal");
   if (!m) return;
 
@@ -6126,9 +6122,9 @@ async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
 
 
 async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } = {}) {
-  if (__accessFlowRunning && !manual) return;
+  if (__accessFlowRunning) return;
+__accessFlowRunning = true;
 
-  __accessFlowRunning = true;
   accessSetBusy(true);
 
   try {
@@ -6532,7 +6528,7 @@ function bindAccessModal() {
 
     // STEP B: pay only (fresh user click)
     accessSetStatus("Step 2/2: Opening wallet for payment...");
-    await accessBuyFlow("bnb", { skipConnectModal: false, manual: true });
+    await accessBuyFlow("bnb", { skipConnectModal: true, manual: true });
   } catch (err) {
     const msg = String(err?.message || err || "");
     accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
@@ -6590,7 +6586,7 @@ function bindAccessModal() {
 
     // STEP B: pay only (fresh user click)
     accessSetStatus("Step 2/2: Opening wallet for payment...");
-    await accessBuyFlow("usdt", { skipConnectModal: false, manual: true });
+    await accessBuyFlow("usdt", { skipConnectModal: true, manual: true });
   } catch (err) {
     const msg = String(err?.message || err || "");
     accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
@@ -6612,8 +6608,11 @@ function bindAccessModal() {
       if (document.visibilityState === "visible") {
         setTimeout(() => {
           if (isMobileLike()) {
+  if (!__mobileAccessReadyToPay) {
   tryResumeCheckoutUI();
   startResumePoll(12000, 400);
+}
+
 }
 
         }, 250);
@@ -6623,8 +6622,11 @@ function bindAccessModal() {
     window.addEventListener("focus", () => {
       setTimeout(() => {
         if (isMobileLike()) {
+  if (!__mobileAccessReadyToPay) {
   tryResumeCheckoutUI();
   startResumePoll(12000, 400);
+}
+
 }
 
       }, 250);
@@ -6633,8 +6635,11 @@ function bindAccessModal() {
     window.addEventListener("pageshow", () => {
       setTimeout(() => {
         if (isMobileLike()) {
+  if (!__mobileAccessReadyToPay) {
   tryResumeCheckoutUI();
   startResumePoll(12000, 400);
+}
+
 }
 
       }, 250);
