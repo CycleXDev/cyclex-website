@@ -5767,12 +5767,13 @@ let __mobileAccessReadyToPay = false;
 
 function isMobileLike() {
   try {
-    return window.matchMedia?.("(max-width: 900px)")?.matches ||
-      /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+    // Mobile only by user agent (not by window width)
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
   } catch {
     return false;
   }
 }
+
 
 
 function setPendingCheckoutKind(kind) {
@@ -5914,7 +5915,7 @@ stopResumePoll();
 __resumeInProgress = false;
 
 accessSetStatus("Opening wallet app...");
-await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
+await accessBuyFlow(kind, { skipConnectModal: false, manual: true });
 
     } catch (err) {
       const msg = String(err?.message || err || "");
@@ -6026,6 +6027,9 @@ if (!__accessFlowRunning) {
 
 function openAccessModal() {
   accessSetStatus("");
+  __mobileAccessReadyToPay = false;
+__mobileAccessReadyKind = "";
+
   
   const m = document.getElementById("access-modal");
   if (!m) return;
@@ -6527,7 +6531,7 @@ function bindAccessModal() {
 
     // STEP B: pay only (fresh user click)
     accessSetStatus("Step 2/2: Opening wallet for payment...");
-    await accessBuyFlow("bnb", { skipConnectModal: true, manual: true });
+    await accessBuyFlow("bnb", { skipConnectModal: false, manual: true });
   } catch (err) {
     const msg = String(err?.message || err || "");
     accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
@@ -6585,7 +6589,7 @@ function bindAccessModal() {
 
     // STEP B: pay only (fresh user click)
     accessSetStatus("Step 2/2: Opening wallet for payment...");
-    await accessBuyFlow("usdt", { skipConnectModal: true, manual: true });
+    await accessBuyFlow("usdt", { skipConnectModal: false, manual: true });
   } catch (err) {
     const msg = String(err?.message || err || "");
     accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
