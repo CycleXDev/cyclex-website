@@ -5886,7 +5886,7 @@ function removeContinueCheckoutButton() {
 
     
 function renderContinueCheckoutButton(kind) {
-  if (isMobileLike()) return;
+ if (!isMobileLike()) return;
   const st = document.getElementById("access-status");
   if (!st || !kind) return;
   if (document.getElementById("btn-continue-checkout")) return;
@@ -6127,7 +6127,7 @@ async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
 
 
 async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } = {}) {
-  if (__accessFlowRunning) return;
+ if (__accessFlowRunning && !manual) return;
 __accessFlowRunning = true;
 
   accessSetBusy(true);
@@ -6238,6 +6238,17 @@ if (isMobileLike() && skipConnectModal) {
       renderContinueCheckoutButton(kind);
       return;
     }
+    // Mobile step-2: force wallet wake in direct user-click context
+if (isMobileLike() && skipConnectModal) {
+  try {
+    await withTimeout(
+      provider.request({ method: "eth_requestAccounts" }),
+      12000,
+      "WAKE_WALLET_TIMEOUT"
+    );
+  } catch {}
+}
+
 
     const TARGET_CHAIN = "0x38";
     try {
@@ -6336,8 +6347,8 @@ try {
 
   // On mobile, don't wait forever
   txHash = mobile
-    ? await withTimeout(sendPromise, 25000, "WALLET_OPEN_TIMEOUT")
-    : await sendPromise;
+  ? await withTimeout(sendPromise, 60000, "WALLET_OPEN_TIMEOUT")
+  : await sendPromise;
 } catch (e) {
   const msg = String(e?.message || e || "");
 
