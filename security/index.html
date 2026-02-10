@@ -5446,7 +5446,29 @@ function attachProviderListeners(p) {
 async function cxConnectWallet({ silent = false } = {}) {
   const stQuick = $("#qs-status");
 
-  // Already connected
+  // Already connected (but verify provider is still alive on mobile)
+if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
+  try {
+    const p =
+      (wallet?.providerRaw?.request && wallet.providerRaw) ||
+      (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+      window.ethereum;
+
+    // verify session/provider is still responsive
+    if (p?.request) {
+      await p.request({ method: "eth_accounts" });
+      const cid = await p.request({ method: "eth_chainId" }).catch(() => null);
+      if (cid) wallet.chainId = parseChainIdAny(cid);
+    }
+  } catch {
+    // stale mobile session -> force reconnect path below
+    wallet.providerRaw = null;
+    wallet.browserProvider = null;
+    wallet.signer = null;
+    wallet.address = "";
+    wallet.chainId = 0;
+  }
+
   if (wallet?.address && wallet?.signer && (wallet?.providerRaw || wallet?.browserProvider)) {
     renderWalletLabels();
     if (!silent) {
@@ -5455,6 +5477,8 @@ async function cxConnectWallet({ silent = false } = {}) {
     try { await window.CxAppKitModal?.close?.(); } catch {}
     return true;
   }
+}
+
 
   if (silent) {
   try {
@@ -5880,17 +5904,25 @@ function renderContinueCheckoutButton(kind) {
     btn.disabled = true;
 
     try {
-      setResumePaused(false); 
-      accessSetStatus("Opening wallet app...");
+      setResumePaused(false);
 
-      await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
+stopResumePoll();
+__resumeInProgress = false;
+
+accessSetStatus("Opening wallet app...");
+await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
+
     } catch (err) {
       const msg = String(err?.message || err || "");
       accessSetStatus("❌ Continue failed: " + msg.substring(0, 100));
     } finally {
       // if still pending, allow another click
       const stillPending = !!getPendingCheckoutKind();
-      if (stillPending) btn.disabled = false;
+if (stillPending) {
+  btn.disabled = false;
+  startResumePoll(12000, 400);
+}
+
     }
   });
 
@@ -5955,7 +5987,7 @@ async function tryResumeCheckoutUI() {
     }
 
     if (!hasProvider || !hasWallet) {
-      accessSetStatus("Connection approved. Please return to your wallet app to approve payment.");
+      accessSetStatus("Wallet session not ready. Tap Continue checkout.");
       renderContinueCheckoutButton(kind);
       return;
     }
@@ -5972,10 +6004,15 @@ async function tryResumeCheckoutUI() {
       return;
     }
 
-    if (!__accessFlowRunning) {
-      touchLastAttemptTs();
-      await accessBuyFlow(kind, { skipConnectModal: true, manual: false });
-    }
+if (document.getElementById("btn-continue-checkout")) {
+  return;
+}
+
+if (!__accessFlowRunning) {
+  touchLastAttemptTs();
+  await accessBuyFlow(kind, { skipConnectModal: true, manual: false });
+}
+
   } finally {
     __resumeInProgress = false;
   }
@@ -6063,6 +6100,17 @@ async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
   return false;
 }
 
+    function withTimeout(promise, ms, timeoutMsg = "TIMEOUT") {
+  let timer = null;
+  const t = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(timeoutMsg)), ms);
+  });
+  return Promise.race([promise, t]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+
 async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } = {}) {
   if (__accessFlowRunning && !manual) return;
 
@@ -6070,9 +6118,13 @@ async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } 
   accessSetBusy(true);
 
   try {
-    setPendingCheckoutKind(kind);
-    removeContinueCheckoutButton();
-    if (isMobileLike()) startResumePoll(12000, 400);
+   setPendingCheckoutKind(kind);
+
+// IMPORTANT:
+// Do not remove Continue button at flow start.
+// Keep it until txHash is actually returned.
+if (isMobileLike()) startResumePoll(12000, 400);
+
 
     const modalEl = document.getElementById("access-modal");
     const wasOpen = !!(modalEl && (
@@ -6223,30 +6275,62 @@ async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } 
         ...(gasHex ? { gas: gasHex } : {})
       };
 
-      accessSetStatus("Open wallet app to approve transaction…");
-      const txHash = await provider.request({
-        method: "eth_sendTransaction",
-        params: [txParams],
-      });
+      const mobile = isMobileLike();
+accessSetStatus("Open wallet app to approve transaction…");
 
-      accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
+let txHash = "";
+try {
+  const sendPromise = provider.request({
+    method: "eth_sendTransaction",
+    params: [txParams],
+  });
 
-      const ok = await accessWaitForConfirm(provider, txHash);
-      if (ok) {
-        clearPendingCheckoutKind();
-        setResumePaused(false);
-        removeContinueCheckoutButton();
-        stopResumePoll();
+  // On mobile, don't wait forever
+  txHash = mobile
+    ? await withTimeout(sendPromise, 25000, "WALLET_OPEN_TIMEOUT")
+    : await sendPromise;
+} catch (e) {
+  const msg = String(e?.message || e || "");
 
-        accessSetStatus("Confirmed ✅");
-        setTimeout(() => {
-          closeAccessModal();
-          accessSetStatus("");
-        }, 900);
-      } else {
-        accessSetStatus("Pending on-chain… You can close this window.");
-      }
-      return;
+  // keep pending + show continue again
+  setResumePaused(true);
+
+  if (/WALLET_OPEN_TIMEOUT/.test(msg)) {
+    accessSetStatus("Wallet did not open. Tap Continue checkout again.");
+  } else if (/user rejected|rejected|denied|cancel|4001/i.test(msg)) {
+    accessSetStatus("Payment canceled. Tap Continue checkout to retry.");
+  } else {
+    accessSetStatus("Could not open wallet. Tap Continue checkout.");
+  }
+
+  renderContinueCheckoutButton(kind);
+  return;
+}
+
+// only now tx really exists -> safe to remove continue button
+removeContinueCheckoutButton();
+stopResumePoll();
+setResumePaused(false);
+
+accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
+
+const ok = await accessWaitForConfirm(provider, txHash);
+if (ok) {
+  clearPendingCheckoutKind();
+
+  accessSetStatus("Confirmed ✅");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 900);
+} else {
+  // keep recovery path
+  setResumePaused(true);
+  accessSetStatus("Pending on-chain… If needed, tap Continue checkout.");
+  renderContinueCheckoutButton(kind);
+}
+return;
+
     }
 
     if (kind === "usdt") {
@@ -6319,7 +6403,7 @@ async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } 
       const k = getPendingCheckoutKind();
       if (k) renderContinueCheckoutButton(k);
     } else {
-      accessSetStatus(`Checkout failed: ${msg}`);
+      accessSetStatus(`Checkout failed: ${msg.substring(0, 120)}`);
       const k = getPendingCheckoutKind();
       if (k) renderContinueCheckoutButton(k);
     }
