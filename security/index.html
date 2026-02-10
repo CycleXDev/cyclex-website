@@ -5884,7 +5884,7 @@ function removeContinueCheckoutButton() {
 
     
 function renderContinueCheckoutButton(kind) {
-  if (isMobileLike()) return;
+  if (!isMobileLike()) return;
   const st = document.getElementById("access-status");
   if (!st || !kind) return;
   if (document.getElementById("btn-continue-checkout")) return;
@@ -6008,9 +6008,11 @@ async function tryResumeCheckoutUI() {
       return;
     }
 
-if (document.getElementById("btn-continue-checkout")) {
+const cc = document.getElementById("btn-continue-checkout");
+if (cc && cc.offsetParent !== null) {
   return;
 }
+
 
 if (!__accessFlowRunning) {
   touchLastAttemptTs();
@@ -6024,12 +6026,7 @@ if (!__accessFlowRunning) {
 
 function openAccessModal() {
   accessSetStatus("");
-  if (isMobileLike()) {
-  __mobileAccessReadyToPay = false;
-  __mobileAccessReadyKind = "";
-}
-
-
+  
   const m = document.getElementById("access-modal");
   if (!m) return;
 
@@ -6129,12 +6126,17 @@ async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } 
   __accessFlowRunning = true;
   accessSetBusy(true);
 
-  try {
-  if (!isMobileLike()) {
+  if (isMobileLike()) {
   setPendingCheckoutKind(kind);
   removeContinueCheckoutButton();
   startResumePoll(12000, 400);
+} else {
+  clearPendingCheckoutKind();
+  setResumePaused(false);
+  removeContinueCheckoutButton();
+  stopResumePoll();
 }
+
 
     const modalEl = document.getElementById("access-modal");
     const wasOpen = !!(modalEl && (
@@ -6151,13 +6153,25 @@ async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } 
     let connected = true;
 
 if (isMobileLike() && skipConnectModal) {
-  // In mobile pay-step, do NOT trigger connect flow again
   const p =
     (wallet?.providerRaw?.request && wallet.providerRaw) ||
     (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
     window.ethereum;
 
-  const fromNow = String(wallet?.address || "").trim();
+  let fromNow = String(wallet?.address || "").trim();
+
+  // hydrate once before deciding not connected
+  if (!fromNow && p?.request) {
+    try {
+      const accs = await p.request({ method: "eth_accounts" });
+      fromNow = safeGetAddress(accs?.[0] || "");
+      if (fromNow) {
+        wallet.address = fromNow;
+        renderWalletLabels();
+      }
+    } catch {}
+  }
+
   connected = !!(p?.request && fromNow);
 } else {
   connected = skipConnectModal
@@ -6590,7 +6604,7 @@ function bindAccessModal() {
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         setTimeout(() => {
-          if (!isMobileLike()) {
+          if (isMobileLike()) {
   tryResumeCheckoutUI();
   startResumePoll(12000, 400);
 }
@@ -6601,7 +6615,7 @@ function bindAccessModal() {
 
     window.addEventListener("focus", () => {
       setTimeout(() => {
-        if (!isMobileLike()) {
+        if (isMobileLike()) {
   tryResumeCheckoutUI();
   startResumePoll(12000, 400);
 }
@@ -6611,7 +6625,7 @@ function bindAccessModal() {
 
     window.addEventListener("pageshow", () => {
       setTimeout(() => {
-        if (!isMobileLike()) {
+        if (isMobileLike()) {
   tryResumeCheckoutUI();
   startResumePoll(12000, 400);
 }
