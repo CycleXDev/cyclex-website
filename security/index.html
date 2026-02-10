@@ -5857,15 +5857,16 @@ function renderContinueCheckoutButton(kind) {
   btn.textContent = "Continue checkout";
   btn.style.width = "100%";
 
-  btn.addEventListener("click", async () => {
+ btn.addEventListener("click", async () => {
+  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
     accessSetStatus("🔵 Button clicked...");
-    await new Promise(r => setTimeout(r, 500));
+    if (!isMobile) await new Promise(r => setTimeout(r, 500));
     
     btn.disabled = true;
     
     try {
       accessSetStatus("🔍 Step 1: Getting provider...");
-      await new Promise(r => setTimeout(r, 500));
+      if (!isMobile) await new Promise(r => setTimeout(r, 500));
       
       let provider =
         (wallet?.providerRaw?.request && wallet.providerRaw) ||
@@ -5874,47 +5875,57 @@ function renderContinueCheckoutButton(kind) {
 
       if (!provider?.request) {
         accessSetStatus("❌ No provider found!");
-        await new Promise(r => setTimeout(r, 2000));
+        if (!isMobile) await new Promise(r => setTimeout(r, 2000));
         btn.disabled = false;
         return;
       }
 
       accessSetStatus("✅ Provider OK. Getting address...");
-      await new Promise(r => setTimeout(r, 500));
+     if (!isMobile) await new Promise(r => setTimeout(r, 500));
       
       let from = String(wallet?.address || "").trim();
       
-      if (!from) {
-        accessSetStatus("🔍 Requesting accounts...");
-        await new Promise(r => setTimeout(r, 500));
-        
-        try {
-          const accs = await provider.request({ method: "eth_requestAccounts" });
-          from = safeGetAddress(accs?.[0] || "");
-          if (from) {
-            wallet.address = from;
-            renderWalletLabels();
-          }
-        } catch (e) {
-          accessSetStatus("❌ Failed to get address: " + String(e?.message || e).substring(0, 50));
-          await new Promise(r => setTimeout(r, 3000));
-          btn.disabled = false;
-          return;
-        }
+     if (!from) {
+  accessSetStatus("🔍 Requesting accounts...");
+  if (!isMobile) await new Promise(r => setTimeout(r, 500));
+
+  try {
+    let accs = [];
+    if (isMobile) {
+      accs = await provider.request({ method: "eth_accounts" });
+      if (!accs?.length) {
+        accs = await provider.request({ method: "eth_requestAccounts" });
       }
+    } else {
+      accs = await provider.request({ method: "eth_requestAccounts" });
+    }
+
+    from = safeGetAddress(accs?.[0] || "");
+    if (from) {
+      wallet.address = from;
+      renderWalletLabels();
+    }
+  } catch (e) {
+    accessSetStatus("❌ Failed to get address: " + String(e?.message || e).substring(0, 50));
+    if (!isMobile) await new Promise(r => setTimeout(r, 3000));
+    btn.disabled = false;
+    return;
+  }
+}
+
 
       if (!from) {
         accessSetStatus("❌ No wallet address!");
-        await new Promise(r => setTimeout(r, 2000));
+        if (!isMobile) await new Promise(r => setTimeout(r, 2000));
         btn.disabled = false;
         return;
       }
 
       accessSetStatus("✅ Address OK: " + from.substring(0, 10) + "...");
-      await new Promise(r => setTimeout(r, 500));
+     if (!isMobile) await new Promise(r => setTimeout(r, 500));
 
       accessSetStatus("🔍 Checking network...");
-      await new Promise(r => setTimeout(r, 500));
+     if (!isMobile) await new Promise(r => setTimeout(r, 500));
 
       const TARGET_CHAIN = "0x38";
       try {
@@ -5927,7 +5938,7 @@ function renderContinueCheckoutButton(kind) {
             params: [{ chainId: TARGET_CHAIN }],
           });
           accessSetStatus("✅ Switched to BSC");
-          await new Promise(r => setTimeout(r, 500));
+          if (!isMobile) await new Promise(r => setTimeout(r, 500));
         }
       } catch (err) {
         if (err && err.code === 4902) {
@@ -5947,7 +5958,7 @@ function renderContinueCheckoutButton(kind) {
 
       if (kind === "bnb") {
         accessSetStatus("🔍 Preparing BNB transaction...");
-        await new Promise(r => setTimeout(r, 500));
+        if (!isMobile) await new Promise(r => setTimeout(r, 500));
         
         const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
         let PRICE_WEI = window.__ACCESS_BNB_WEI;
@@ -5959,7 +5970,7 @@ function renderContinueCheckoutButton(kind) {
             window.__ACCESS_BNB_WEI = PRICE_WEI;
           } catch (e) {
             accessSetStatus("❌ Price fetch failed: " + String(e?.message || e).substring(0, 40));
-            await new Promise(r => setTimeout(r, 3000));
+            if (!isMobile) await new Promise(r => setTimeout(r, 3000));
             btn.disabled = false;
             return;
           }
@@ -5967,7 +5978,7 @@ function renderContinueCheckoutButton(kind) {
 
         if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
           accessSetStatus("❌ Invalid BNB price");
-          await new Promise(r => setTimeout(r, 2000));
+          if (!isMobile) await new Promise(r => setTimeout(r, 2000));
           btn.disabled = false;
           return;
         }
@@ -5983,13 +5994,13 @@ function renderContinueCheckoutButton(kind) {
           data: BUY_WITH_BNB_SELECTOR
         };
 
-        accessSetStatus("📱 Opening wallet app...");
-        await new Promise(r => setTimeout(r, 500));
-        
-        const txHash = await provider.request({
-          method: "eth_sendTransaction",
-          params: [txParams],
-        });
+        accessSetStatus(isMobile ? "📱 Opening wallet app now..." : "📱 Opening wallet app...");
+if (!isMobile) await new Promise(r => setTimeout(r, 500));
+
+const txHash = await provider.request({
+  method: "eth_sendTransaction",
+  params: [txParams],
+});
 
         accessSetStatus("✅ Transaction sent! Hash: " + txHash.substring(0, 10) + "...");
         
@@ -6018,7 +6029,7 @@ function renderContinueCheckoutButton(kind) {
     } catch (e) {
       const msg = String(e?.message || e || "");
       accessSetStatus("❌ ERROR: " + msg.substring(0, 80));
-      await new Promise(r => setTimeout(r, 4000));
+      if (!isMobile) await new Promise(r => setTimeout(r, 4000));
       btn.disabled = false;
     }
   });
