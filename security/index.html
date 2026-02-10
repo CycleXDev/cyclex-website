@@ -5841,7 +5841,6 @@ function removeContinueCheckoutButton() {
   if (n) n.remove();
 }
 
-// ✅ הקוד המלא שעשית
 function renderContinueCheckoutButton(kind) {
   const st = document.getElementById("access-status");
   if (!st || !kind) return;
@@ -5860,27 +5859,188 @@ function renderContinueCheckoutButton(kind) {
 
   btn.addEventListener("click", async () => {
     btn.disabled = true;
-    accessSetStatus("Opening wallet app...");
+    accessSetStatus("Preparing transaction...");
     
     try {
-      // ✅ FORCE CLEAR ALL LOCKS
-      __accessFlowRunning = false;
-      __resumeInProgress = false;
-      setResumePaused(false);
-      
-      // ✅ FORCE FRESH START - remove pending kind temporarily
-      const savedKind = kind;
-      clearPendingCheckoutKind();
-      
-      // Small delay to let UI update
-      await new Promise(r => setTimeout(r, 100));
-      
-      // ✅ RESTART THE FLOW COMPLETELY
-      await accessBuyFlow(savedKind, { skipConnectModal: false, manual: true });
-      
+      // Get provider
+      let provider =
+        (wallet?.providerRaw?.request && wallet.providerRaw) ||
+        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+        window.ethereum;
+
+      if (!provider?.request) {
+        accessSetStatus("Wallet not found. Please reconnect.");
+        btn.disabled = false;
+        return;
+      }
+
+      // Get wallet address
+      let from = String(wallet?.address || "").trim();
+      if (!from) {
+        try {
+          const accs = await provider.request({ method: "eth_requestAccounts" });
+          from = safeGetAddress(accs?.[0] || "");
+          if (from) {
+            wallet.address = from;
+            renderWalletLabels();
+          }
+        } catch (e) {
+          accessSetStatus("Failed to get wallet address.");
+          btn.disabled = false;
+          return;
+        }
+      }
+
+      if (!from) {
+        accessSetStatus("Wallet address not found.");
+        btn.disabled = false;
+        return;
+      }
+
+      // Ensure BSC network
+      const TARGET_CHAIN = "0x38";
+      try {
+        const chainId = await provider.request({ method: "eth_chainId" });
+        if (chainId !== TARGET_CHAIN) {
+          await provider.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: TARGET_CHAIN }],
+          });
+        }
+      } catch (err) {
+        if (err && err.code === 4902) {
+          await provider.request({
+            method: "wallet_addEthereumChain",
+            params: [{
+              chainId: TARGET_CHAIN,
+              chainName: "BNB Smart Chain",
+              nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+              rpcUrls: ["https://bsc-dataseed.binance.org/"],
+              blockExplorerUrls: ["https://bscscan.com/"],
+            }],
+          });
+        }
+      }
+
+      // Send transaction based on payment method
+      if (kind === "bnb") {
+        const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+        let PRICE_WEI = window.__ACCESS_BNB_WEI;
+
+        if (!PRICE_WEI) {
+          try {
+            PRICE_WEI = await accessQuoteBNBWeiOnchain();
+            window.__ACCESS_BNB_WEI = PRICE_WEI;
+          } catch {}
+        }
+
+        if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
+          accessSetStatus("Failed to get BNB price. Try again.");
+          btn.disabled = false;
+          return;
+        }
+
+        const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
+        const baseWei = BigInt(PRICE_WEI);
+        const valueWei = (baseWei * 101n) / 100n;
+
+        const txParams = {
+          from,
+          to: PASS_CONTRACT,
+          value: "0x" + valueWei.toString(16),
+          data: BUY_WITH_BNB_SELECTOR
+        };
+
+        accessSetStatus("Opening wallet to approve transaction...");
+        
+        const txHash = await provider.request({
+          method: "eth_sendTransaction",
+          params: [txParams],
+        });
+
+        accessSetStatus("Transaction sent ✅ Waiting for confirmation...");
+        
+        const ok = await accessWaitForConfirm(provider, txHash);
+        
+        clearPendingCheckoutKind();
+        setResumePaused(false);
+        removeContinueCheckoutButton();
+        stopResumePoll();
+
+        if (ok) {
+          accessSetStatus("Confirmed ✅");
+          setTimeout(() => {
+            closeAccessModal();
+            accessSetStatus("");
+          }, 900);
+        } else {
+          accessSetStatus("Pending on-chain... You can close this window.");
+        }
+
+      } else if (kind === "usdt") {
+        const USDT = ACCESS_USDT;
+        const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+
+        if (!window.ethers) {
+          accessSetStatus("USDT checkout needs ethers.js.");
+          btn.disabled = false;
+          return;
+        }
+
+        const ethers = window.ethers;
+        const web3Provider = new ethers.BrowserProvider(provider);
+        const signer = await web3Provider.getSigner();
+
+        const ERC20_ABI = [
+          { constant: true, inputs: [], name: "decimals", outputs: [{ name: "", type: "uint8" }], type: "function" },
+          { constant: false, inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], name: "approve", outputs: [{ name: "", type: "bool" }], type: "function" }
+        ];
+        const SALE_ABI = [
+          { constant: false, inputs: [], name: "buyWithUSDT", outputs: [], type: "function" }
+        ];
+
+        const usdtContract = new ethers.Contract(USDT, ERC20_ABI, signer);
+        const sale = new ethers.Contract(PASS_CONTRACT, SALE_ABI, signer);
+
+        const decimals = Number(await usdtContract.decimals());
+        const amount = ethers.parseUnits(String(ACCESS_USD_PRICE), decimals);
+
+        accessSetStatus("Approve USDT in wallet...");
+        const tx1 = await usdtContract.approve(PASS_CONTRACT, amount);
+        await tx1.wait();
+
+        accessSetStatus("Confirm purchase in wallet...");
+        const tx2 = await sale.buyWithUSDT();
+
+        accessSetStatus("Transaction sent ✅ Waiting for confirmation...");
+        const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
+
+        clearPendingCheckoutKind();
+        setResumePaused(false);
+        removeContinueCheckoutButton();
+        stopResumePoll();
+
+        if (ok) {
+          accessSetStatus("Confirmed ✅");
+          setTimeout(() => {
+            closeAccessModal();
+            accessSetStatus("");
+          }, 900);
+        } else {
+          accessSetStatus("Pending on-chain... You can close this window.");
+        }
+      }
+
     } catch (e) {
+      const msg = String(e?.message || e || "");
       console.error("Continue checkout error:", e);
-      accessSetStatus("Failed to open wallet. Please try again.");
+      
+      if (e?.code === 4001 || /reject|cancel|denied/i.test(msg)) {
+        accessSetStatus("Transaction canceled. Tap Continue when ready.");
+      } else {
+        accessSetStatus("Transaction failed: " + msg);
+      }
+      
       btn.disabled = false;
     }
   });
