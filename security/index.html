@@ -6257,19 +6257,16 @@ if (isMobileLike()) startResumePoll(12000, 400);
         data: BUY_WITH_BNB_SELECTOR
       };
 
-     let gasHex = null;
+    let gasHex = null;
+try {
+  const estGas = await provider.request({
+    method: "eth_estimateGas",
+    params: [txForEstimate]
+  });
+  const gasBuffered = (BigInt(estGas) * 120n) / 100n;
+  gasHex = "0x" + gasBuffered.toString(16);
+} catch {}
 
-// Mobile fix: skip estimateGas (can hang on WC/AppKit mobile sessions)
-if (!isMobileLike()) {
-  try {
-    const estGas = await provider.request({
-      method: "eth_estimateGas",
-      params: [txForEstimate]
-    });
-    const gasBuffered = (BigInt(estGas) * 120n) / 100n;
-    gasHex = "0x" + gasBuffered.toString(16);
-  } catch {}
-}
 
 
       const txParams = {
