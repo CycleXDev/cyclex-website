@@ -5761,6 +5761,9 @@ const ACCESS_LAST_ATTEMPT_TS_KEY = "cx_access_last_attempt_ts";
 let __accessFlowRunning = false;
 let __resumePollTimer = null;
 let __resumeInProgress = false;
+let __mobileAccessReadyToPay = false;
+    let __mobileAccessReadyKind = "";
+
 
 function isMobileLike() {
   try {
@@ -5881,6 +5884,7 @@ function removeContinueCheckoutButton() {
 
     
 function renderContinueCheckoutButton(kind) {
+  if (isMobileLike()) return;
   const st = document.getElementById("access-status");
   if (!st || !kind) return;
   if (document.getElementById("btn-continue-checkout")) return;
@@ -6020,6 +6024,11 @@ if (!__accessFlowRunning) {
 
 function openAccessModal() {
   accessSetStatus("");
+  if (isMobileLike()) {
+  __mobileAccessReadyToPay = false;
+  __mobileAccessReadyKind = "";
+}
+
 
   const m = document.getElementById("access-modal");
   if (!m) return;
@@ -6043,6 +6052,9 @@ function closeAccessModal() {
   setResumePaused(false);
   removeContinueCheckoutButton();
   stopResumePoll();
+  __mobileAccessReadyToPay = false;
+  __mobileAccessReadyKind = "";
+
 }
 
 // =========================
@@ -6118,13 +6130,11 @@ async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } 
   accessSetBusy(true);
 
   try {
-   setPendingCheckoutKind(kind);
-
-// IMPORTANT:
-// Do not remove Continue button at flow start.
-// Keep it until txHash is actually returned.
-if (isMobileLike()) startResumePoll(12000, 400);
-
+  if (!isMobileLike()) {
+  setPendingCheckoutKind(kind);
+  removeContinueCheckoutButton();
+  startResumePoll(12000, 400);
+}
 
     const modalEl = document.getElementById("access-modal");
     const wasOpen = !!(modalEl && (
@@ -6138,9 +6148,23 @@ if (isMobileLike()) startResumePoll(12000, 400);
       return;
     }
 
-    const connected = skipConnectModal
-      ? await cxConnectWallet({ silent: true })
-      : await cxConnectWallet();
+    let connected = true;
+
+if (isMobileLike() && skipConnectModal) {
+  // In mobile pay-step, do NOT trigger connect flow again
+  const p =
+    (wallet?.providerRaw?.request && wallet.providerRaw) ||
+    (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+    window.ethereum;
+
+  const fromNow = String(wallet?.address || "").trim();
+  connected = !!(p?.request && fromNow);
+} else {
+  connected = skipConnectModal
+    ? await cxConnectWallet({ silent: true })
+    : await cxConnectWallet();
+}
+
 
     if (!connected) {
       if (wasOpen) openAccessModal();
@@ -6174,7 +6198,7 @@ if (isMobileLike()) startResumePoll(12000, 400);
       from = String(wallet?.address || "").trim();
     }
 
-    if ((!provider?.request || !from) && isMobileLike()) {
+    if ((!provider?.request || !from) && isMobileLike() && !skipConnectModal) {
       await new Promise(r => setTimeout(r, 700));
       await cxConnectWallet({ silent: true }).catch(() => {});
       provider =
@@ -6319,7 +6343,8 @@ accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 const ok = await accessWaitForConfirm(provider, txHash);
 if (ok) {
   clearPendingCheckoutKind();
-
+  __mobileAccessReadyToPay = false;
+  __mobileAccessReadyKind = "";
   accessSetStatus("Confirmed ✅");
   setTimeout(() => {
     closeAccessModal();
@@ -6377,6 +6402,8 @@ return;
         setResumePaused(false);
         removeContinueCheckoutButton();
         stopResumePoll();
+        __mobileAccessReadyToPay = false;
+        __mobileAccessReadyKind = "";
 
         accessSetStatus("Confirmed ✅");
         setTimeout(() => {
@@ -6431,19 +6458,124 @@ function bindAccessModal() {
   const bnbBtn = document.getElementById("btn-pay-bnb");
   const usdtBtn = document.getElementById("btn-pay-usdt");
 
-  bnbBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setResumePaused(false); // fresh intent by user
-    accessBuyFlow("bnb", { manual: true });
-  });
+ bnbBtn?.addEventListener("click", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setResumePaused(false);
 
-  usdtBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setResumePaused(false); // fresh intent by user
+  // Desktop stays exactly the same behavior
+  if (!isMobileLike()) {
+    accessBuyFlow("bnb", { manual: true });
+    return;
+  }
+
+  // Mobile two-step flow
+  try {
+    // STEP A: connect only
+    if (!__mobileAccessReadyToPay || __mobileAccessReadyKind !== "bnb") {
+      accessSetStatus("Step 1/2: Connect wallet...");
+      const connected = await cxConnectWallet({ silent: false });
+
+      if (!connected) {
+        accessSetStatus("Connection failed. Tap again.");
+        return;
+      }
+
+      // Optional: ensure chain now (still in connect step)
+      const p =
+        (wallet?.providerRaw?.request && wallet.providerRaw) ||
+        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+        window.ethereum;
+
+      if (p?.request) {
+        const TARGET_CHAIN = "0x38";
+        try {
+          const chainId = await p.request({ method: "eth_chainId" });
+          if (chainId !== TARGET_CHAIN) {
+            await p.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: TARGET_CHAIN }],
+            });
+          }
+        } catch {}
+      }
+
+      // Make sure quote is ready BEFORE payment click
+      try { await accessUpdatePricesUI(ACCESS_USD_PRICE); } catch {}
+
+      __mobileAccessReadyToPay = true;
+      __mobileAccessReadyKind = "bnb";
+      accessSetStatus("Step 1 complete ✅ Tap BNB again to confirm payment.");
+      return;
+    }
+
+    // STEP B: pay only (fresh user click)
+    accessSetStatus("Step 2/2: Opening wallet for payment...");
+    await accessBuyFlow("bnb", { skipConnectModal: true, manual: true });
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
+  }
+});
+
+
+  usdtBtn?.addEventListener("click", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setResumePaused(false);
+
+  // Desktop stays exactly the same behavior
+  if (!isMobileLike()) {
     accessBuyFlow("usdt", { manual: true });
-  });
+    return;
+  }
+
+  // Mobile two-step flow
+  try {
+    // STEP A: connect only
+    if (!__mobileAccessReadyToPay || __mobileAccessReadyKind !== "usdt") {
+      accessSetStatus("Step 1/2: Connect wallet...");
+      const connected = await cxConnectWallet({ silent: false });
+
+      if (!connected) {
+        accessSetStatus("Connection failed. Tap again.");
+        return;
+      }
+
+      // Ensure BSC now (same as BNB flow)
+      const p =
+        (wallet?.providerRaw?.request && wallet.providerRaw) ||
+        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+        window.ethereum;
+
+      if (p?.request) {
+        const TARGET_CHAIN = "0x38";
+        try {
+          const chainId = await p.request({ method: "eth_chainId" });
+          if (chainId !== TARGET_CHAIN) {
+            await p.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: TARGET_CHAIN }],
+            });
+          }
+        } catch {}
+      }
+
+      __mobileAccessReadyToPay = true;
+      __mobileAccessReadyKind = "usdt";
+      accessSetStatus("Step 1 complete ✅ Tap USDT again to confirm payment.");
+      return;
+    }
+
+    // STEP B: pay only (fresh user click)
+    accessSetStatus("Step 2/2: Opening wallet for payment...");
+    await accessBuyFlow("usdt", { skipConnectModal: true, manual: true });
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
+  }
+});
+
 
   if (!window.__accessEscBound) {
     window.__accessEscBound = true;
@@ -6458,23 +6590,32 @@ function bindAccessModal() {
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") {
         setTimeout(() => {
-          tryResumeCheckoutUI();
-          startResumePoll(12000, 400);
+          if (!isMobileLike()) {
+  tryResumeCheckoutUI();
+  startResumePoll(12000, 400);
+}
+
         }, 250);
       }
     });
 
     window.addEventListener("focus", () => {
       setTimeout(() => {
-        tryResumeCheckoutUI();
-        startResumePoll(12000, 400);
+        if (!isMobileLike()) {
+  tryResumeCheckoutUI();
+  startResumePoll(12000, 400);
+}
+
       }, 250);
     });
 
     window.addEventListener("pageshow", () => {
       setTimeout(() => {
-        tryResumeCheckoutUI();
-       startResumePoll(12000, 400);
+        if (!isMobileLike()) {
+  tryResumeCheckoutUI();
+  startResumePoll(12000, 400);
+}
+
       }, 250);
     });
   } 
