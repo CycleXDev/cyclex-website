@@ -5920,7 +5920,7 @@ await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
       const stillPending = !!getPendingCheckoutKind();
 if (stillPending) {
   btn.disabled = false;
-  //startResumePoll(12000, 400);
+  startResumePoll(12000, 400);
 }
 
     }
@@ -6123,7 +6123,7 @@ async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } 
 // IMPORTANT:
 // Do not remove Continue button at flow start.
 // Keep it until txHash is actually returned.
-//if (isMobileLike()) startResumePoll(12000, 400);
+if (isMobileLike()) startResumePoll(12000, 400);
 
 
     const modalEl = document.getElementById("access-modal");
@@ -6257,15 +6257,20 @@ async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } 
         data: BUY_WITH_BNB_SELECTOR
       };
 
-      let gasHex = null;
-      try {
-        const estGas = await provider.request({
-          method: "eth_estimateGas",
-          params: [txForEstimate]
-        });
-        const gasBuffered = (BigInt(estGas) * 120n) / 100n;
-        gasHex = "0x" + gasBuffered.toString(16);
-      } catch {}
+     let gasHex = null;
+
+// Mobile fix: skip estimateGas (can hang on WC/AppKit mobile sessions)
+if (!isMobileLike()) {
+  try {
+    const estGas = await provider.request({
+      method: "eth_estimateGas",
+      params: [txForEstimate]
+    });
+    const gasBuffered = (BigInt(estGas) * 120n) / 100n;
+    gasHex = "0x" + gasBuffered.toString(16);
+  } catch {}
+}
+
 
       const txParams = {
         from,
@@ -6457,7 +6462,7 @@ function bindAccessModal() {
       if (document.visibilityState === "visible") {
         setTimeout(() => {
           tryResumeCheckoutUI();
-          //startResumePoll(12000, 400);
+          startResumePoll(12000, 400);
         }, 250);
       }
     });
@@ -6465,14 +6470,14 @@ function bindAccessModal() {
     window.addEventListener("focus", () => {
       setTimeout(() => {
         tryResumeCheckoutUI();
-        //startResumePoll(12000, 400);
+        startResumePoll(12000, 400);
       }, 250);
     });
 
     window.addEventListener("pageshow", () => {
       setTimeout(() => {
         tryResumeCheckoutUI();
-       // startResumePoll(12000, 400);
+       startResumePoll(12000, 400);
       }, 250);
     });
   } 
