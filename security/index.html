@@ -5841,6 +5841,7 @@ function removeContinueCheckoutButton() {
   if (n) n.remove();
 }
 
+// ✅ הקוד המלא שעשית
 function renderContinueCheckoutButton(kind) {
   const st = document.getElementById("access-status");
   if (!st || !kind) return;
@@ -5858,38 +5859,31 @@ function renderContinueCheckoutButton(kind) {
   btn.style.width = "100%";
 
   btn.addEventListener("click", async () => {
-  btn.disabled = true;
-  try {
-    // clear stale lock
-    __accessFlowRunning = false;
-
-    // ✅ FIX: Force wallet re-authorization on mobile to trigger wallet app
-    if (isMobileLike()) {
-      const provider =
-        (wallet?.providerRaw?.request && wallet.providerRaw) ||
-        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
-        window.ethereum;
-
-      if (provider?.request) {
-        try {
-          // This will force the wallet app to open
-          await provider.request({ method: "eth_requestAccounts" });
-        } catch (e) {
-          console.warn("eth_requestAccounts failed on continue:", e);
-        }
-      }
+    btn.disabled = true;
+    accessSetStatus("Opening wallet app...");
+    
+    try {
+      // ✅ FORCE CLEAR ALL LOCKS
+      __accessFlowRunning = false;
+      __resumeInProgress = false;
+      setResumePaused(false);
+      
+      // ✅ FORCE FRESH START - remove pending kind temporarily
+      const savedKind = kind;
+      clearPendingCheckoutKind();
+      
+      // Small delay to let UI update
+      await new Promise(r => setTimeout(r, 100));
+      
+      // ✅ RESTART THE FLOW COMPLETELY
+      await accessBuyFlow(savedKind, { skipConnectModal: false, manual: true });
+      
+    } catch (e) {
+      console.error("Continue checkout error:", e);
+      accessSetStatus("Failed to open wallet. Please try again.");
+      btn.disabled = false;
     }
-
-    // refresh wallet state
-    await cxConnectWallet({ silent: true }).catch(() => {});
-
-    // continue checkout flow
-    await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
-  } finally {
-    btn.disabled = false;
-  }
-});
-
+  });
 
   wrap.appendChild(btn);
   st.parentNode?.insertBefore(wrap, st.nextSibling);
