@@ -5842,18 +5842,9 @@ function removeContinueCheckoutButton() {
 }
 
 function renderContinueCheckoutButton(kind) {
-  console.log("🔵 renderContinueCheckoutButton called with kind:", kind);
-  
   const st = document.getElementById("access-status");
-  if (!st || !kind) {
-    console.log("❌ Missing status element or kind");
-    return;
-  }
-  
-  if (document.getElementById("btn-continue-checkout")) {
-    console.log("⚠️ Button already exists");
-    return;
-  }
+  if (!st || !kind) return;
+  if (document.getElementById("btn-continue-checkout")) return;
 
   const wrap = document.createElement("div");
   wrap.id = "continue-checkout-wrap";
@@ -5867,77 +5858,80 @@ function renderContinueCheckoutButton(kind) {
   btn.style.width = "100%";
 
   btn.addEventListener("click", async () => {
-    console.log("🟢 Continue button clicked! Kind:", kind);
+    accessSetStatus("🔵 Button clicked...");
+    await new Promise(r => setTimeout(r, 500));
+    
     btn.disabled = true;
-    accessSetStatus("Preparing transaction...");
     
     try {
-      console.log("🔍 Step 1: Getting provider...");
+      accessSetStatus("🔍 Step 1: Getting provider...");
+      await new Promise(r => setTimeout(r, 500));
       
       let provider =
         (wallet?.providerRaw?.request && wallet.providerRaw) ||
         (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
         window.ethereum;
 
-      console.log("🔍 Provider found:", !!provider?.request);
-
       if (!provider?.request) {
-        console.log("❌ No provider found");
-        accessSetStatus("Wallet not found. Please reconnect.");
+        accessSetStatus("❌ No provider found!");
+        await new Promise(r => setTimeout(r, 2000));
         btn.disabled = false;
         return;
       }
 
-      console.log("🔍 Step 2: Getting wallet address...");
+      accessSetStatus("✅ Provider OK. Getting address...");
+      await new Promise(r => setTimeout(r, 500));
       
       let from = String(wallet?.address || "").trim();
-      console.log("🔍 Current wallet.address:", from);
       
       if (!from) {
-        console.log("🔍 Trying eth_requestAccounts...");
+        accessSetStatus("🔍 Requesting accounts...");
+        await new Promise(r => setTimeout(r, 500));
+        
         try {
           const accs = await provider.request({ method: "eth_requestAccounts" });
-          console.log("🔍 Accounts returned:", accs);
           from = safeGetAddress(accs?.[0] || "");
           if (from) {
             wallet.address = from;
             renderWalletLabels();
-            console.log("✅ Got address:", from);
           }
         } catch (e) {
-          console.error("❌ eth_requestAccounts failed:", e);
-          accessSetStatus("Failed to get wallet address.");
+          accessSetStatus("❌ Failed to get address: " + String(e?.message || e).substring(0, 50));
+          await new Promise(r => setTimeout(r, 3000));
           btn.disabled = false;
           return;
         }
       }
 
       if (!from) {
-        console.log("❌ Still no address");
-        accessSetStatus("Wallet address not found.");
+        accessSetStatus("❌ No wallet address!");
+        await new Promise(r => setTimeout(r, 2000));
         btn.disabled = false;
         return;
       }
 
-      console.log("🔍 Step 3: Checking network...");
+      accessSetStatus("✅ Address OK: " + from.substring(0, 10) + "...");
+      await new Promise(r => setTimeout(r, 500));
+
+      accessSetStatus("🔍 Checking network...");
+      await new Promise(r => setTimeout(r, 500));
 
       const TARGET_CHAIN = "0x38";
       try {
         const chainId = await provider.request({ method: "eth_chainId" });
-        console.log("🔍 Current chainId:", chainId);
         
         if (chainId !== TARGET_CHAIN) {
-          console.log("🔍 Switching to BSC...");
+          accessSetStatus("🔄 Switching to BSC...");
           await provider.request({
             method: "wallet_switchEthereumChain",
             params: [{ chainId: TARGET_CHAIN }],
           });
-          console.log("✅ Switched to BSC");
+          accessSetStatus("✅ Switched to BSC");
+          await new Promise(r => setTimeout(r, 500));
         }
       } catch (err) {
-        console.log("⚠️ Network switch error:", err);
         if (err && err.code === 4902) {
-          console.log("🔍 Adding BSC network...");
+          accessSetStatus("🔧 Adding BSC network...");
           await provider.request({
             method: "wallet_addEthereumChain",
             params: [{
@@ -5951,29 +5945,29 @@ function renderContinueCheckoutButton(kind) {
         }
       }
 
-      console.log("🔍 Step 4: Preparing transaction for", kind);
-
       if (kind === "bnb") {
-        const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
-        console.log("🔍 PASS_CONTRACT:", PASS_CONTRACT);
+        accessSetStatus("🔍 Preparing BNB transaction...");
+        await new Promise(r => setTimeout(r, 500));
         
+        const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
         let PRICE_WEI = window.__ACCESS_BNB_WEI;
-        console.log("🔍 Cached PRICE_WEI:", PRICE_WEI);
 
         if (!PRICE_WEI) {
-          console.log("🔍 Fetching price from contract...");
+          accessSetStatus("🔍 Getting BNB price...");
           try {
             PRICE_WEI = await accessQuoteBNBWeiOnchain();
             window.__ACCESS_BNB_WEI = PRICE_WEI;
-            console.log("✅ Got PRICE_WEI:", PRICE_WEI);
           } catch (e) {
-            console.error("❌ Failed to get price:", e);
+            accessSetStatus("❌ Price fetch failed: " + String(e?.message || e).substring(0, 40));
+            await new Promise(r => setTimeout(r, 3000));
+            btn.disabled = false;
+            return;
           }
         }
 
         if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
-          console.log("❌ Invalid PRICE_WEI");
-          accessSetStatus("Failed to get BNB price. Try again.");
+          accessSetStatus("❌ Invalid BNB price");
+          await new Promise(r => setTimeout(r, 2000));
           btn.disabled = false;
           return;
         }
@@ -5989,20 +5983,17 @@ function renderContinueCheckoutButton(kind) {
           data: BUY_WITH_BNB_SELECTOR
         };
 
-        console.log("🔍 Transaction params:", txParams);
-        console.log("🔍 Step 5: Sending transaction...");
-        accessSetStatus("Opening wallet to approve transaction...");
+        accessSetStatus("📱 Opening wallet app...");
+        await new Promise(r => setTimeout(r, 500));
         
         const txHash = await provider.request({
           method: "eth_sendTransaction",
           params: [txParams],
         });
 
-        console.log("✅ Transaction sent! Hash:", txHash);
-        accessSetStatus("Transaction sent ✅ Waiting for confirmation...");
+        accessSetStatus("✅ Transaction sent! Hash: " + txHash.substring(0, 10) + "...");
         
         const ok = await accessWaitForConfirm(provider, txHash);
-        console.log("🔍 Transaction confirmed:", ok);
         
         clearPendingCheckoutKind();
         setResumePaused(false);
@@ -6010,41 +6001,31 @@ function renderContinueCheckoutButton(kind) {
         stopResumePoll();
 
         if (ok) {
-          accessSetStatus("Confirmed ✅");
+          accessSetStatus("🎉 Confirmed!");
           setTimeout(() => {
             closeAccessModal();
             accessSetStatus("");
           }, 900);
         } else {
-          accessSetStatus("Pending on-chain... You can close this window.");
+          accessSetStatus("⏳ Pending on-chain...");
         }
 
       } else if (kind === "usdt") {
-        console.log("🔍 USDT flow starting...");
-        // ... USDT code (same as before, add logs if needed)
+        accessSetStatus("🔍 USDT flow not tested in debug mode");
+        btn.disabled = false;
       }
 
     } catch (e) {
       const msg = String(e?.message || e || "");
-      console.error("❌❌❌ Continue checkout error:", e);
-      console.error("Error code:", e?.code);
-      console.error("Error message:", msg);
-      
-      if (e?.code === 4001 || /reject|cancel|denied/i.test(msg)) {
-        accessSetStatus("Transaction canceled. Tap Continue when ready.");
-      } else {
-        accessSetStatus("Transaction failed: " + msg);
-      }
-      
+      accessSetStatus("❌ ERROR: " + msg.substring(0, 80));
+      await new Promise(r => setTimeout(r, 4000));
       btn.disabled = false;
     }
   });
 
   wrap.appendChild(btn);
   st.parentNode?.insertBefore(wrap, st.nextSibling);
-  console.log("✅ Continue button created and added to DOM");
 }
-
 function startResumePoll(maxMs = 12000, stepMs = 400) {
   try { if (__resumePollTimer) clearInterval(__resumePollTimer); } catch {}
   const started = Date.now();
