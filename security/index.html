@@ -5863,7 +5863,24 @@ function renderContinueCheckoutButton(kind) {
     // clear stale lock
     __accessFlowRunning = false;
 
-    // refresh provider/account state without opening connect modal
+    // ✅ FIX: Force wallet re-authorization on mobile to trigger wallet app
+    if (isMobileLike()) {
+      const provider =
+        (wallet?.providerRaw?.request && wallet.providerRaw) ||
+        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+        window.ethereum;
+
+      if (provider?.request) {
+        try {
+          // This will force the wallet app to open
+          await provider.request({ method: "eth_requestAccounts" });
+        } catch (e) {
+          console.warn("eth_requestAccounts failed on continue:", e);
+        }
+      }
+    }
+
+    // refresh wallet state
     await cxConnectWallet({ silent: true }).catch(() => {});
 
     // continue checkout flow
