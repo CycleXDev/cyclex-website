@@ -5726,11 +5726,13 @@ function accessSetStatus(msg) {
   if (!el) return;
   el.textContent = msg || "";
 }
-    // =========================
-// Mobile resume checkout helpers (AUTO RESUME)
+// =========================
+// Mobile resume checkout helpers (AUTO RESUME, SAFE)
 // =========================
 const ACCESS_PENDING_KEY = "cx_access_pending_kind";
 const ACCESS_PENDING_TS_KEY = "cx_access_pending_ts";
+const ACCESS_RESUME_PAUSED_KEY = "cx_access_resume_paused";
+const ACCESS_LAST_ATTEMPT_TS_KEY = "cx_access_last_attempt_ts";
 
 let __accessFlowRunning = false;
 let __resumePollTimer = null;
@@ -5743,6 +5745,12 @@ function isMobileLike() {
   } catch {
     return false;
   }
+}
+
+function accessSetStatus(msg) {
+  const el = document.getElementById("access-status");
+  if (!el) return;
+  el.textContent = msg || "";
 }
 
 function setPendingCheckoutKind(kind) {
@@ -5776,6 +5784,30 @@ function clearPendingCheckoutKind() {
     sessionStorage.removeItem(ACCESS_PENDING_KEY);
     sessionStorage.removeItem(ACCESS_PENDING_TS_KEY);
   } catch {}
+}
+
+function setResumePaused(v) {
+  try {
+    if (v) sessionStorage.setItem(ACCESS_RESUME_PAUSED_KEY, "1");
+    else sessionStorage.removeItem(ACCESS_RESUME_PAUSED_KEY);
+  } catch {}
+}
+
+function isResumePaused() {
+  try { return sessionStorage.getItem(ACCESS_RESUME_PAUSED_KEY) === "1"; } catch { return false; }
+}
+
+function touchLastAttemptTs() {
+  try { sessionStorage.setItem(ACCESS_LAST_ATTEMPT_TS_KEY, String(Date.now())); } catch {}
+}
+
+function isAttemptCooldown(ms = 5000) {
+  try {
+    const ts = Number(sessionStorage.getItem(ACCESS_LAST_ATTEMPT_TS_KEY) || 0);
+    return !!ts && (Date.now() - ts < ms);
+  } catch {
+    return false;
+  }
 }
 
 async function tryHydrateWalletAddressFromProvider() {
@@ -5833,7 +5865,10 @@ function renderContinueCheckoutButton(kind) {
   btn.addEventListener("click", async () => {
     btn.disabled = true;
     try {
-      await accessBuyFlow(kind, { skipConnectModal: true });
+      // Manual click should re-enable auto-resume logic
+      setResumePaused(false);
+      touchLastAttemptTs();
+      await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
     } finally {
       btn.disabled = false;
     }
@@ -5874,8 +5909,10 @@ async function tryResumeCheckoutUI() {
   const kind = getPendingCheckoutKind();
   if (!kind) return;
   if (!isMobileLike()) return;
+
   if (!isPendingFresh()) {
     clearPendingCheckoutKind();
+    setResumePaused(false);
     return;
   }
 
@@ -5890,7 +5927,6 @@ async function tryResumeCheckoutUI() {
       wallet?.browserProvider?.provider?.request ||
       window.ethereum?.request
     );
-
     const hasWallet = !!(hydrated || wallet?.address);
 
     const m = document.getElementById("access-modal");
@@ -5899,16 +5935,26 @@ async function tryResumeCheckoutUI() {
     }
 
     if (!hasProvider || !hasWallet) {
-      accessSetStatus("Wallet connected. Please return to your wallet app and approve the payment request.");
+      accessSetStatus("Connection approved. Please return to your wallet app to approve payment.");
       renderContinueCheckoutButton(kind);
       return;
     }
 
-    // Auto-resume tx step after returning from wallet connect
+    // IMPORTANT: never auto-loop after user rejected/canceled
+    if (isResumePaused()) {
+      accessSetStatus("Payment not approved yet. Open wallet and tap Continue checkout when ready.");
+      renderContinueCheckoutButton(kind);
+      return;
+    }
+
+    // cooldown to prevent repeated auto-popup storms
+    if (isAttemptCooldown(5000)) {
+      return;
+    }
+
     if (!__accessFlowRunning) {
-      accessSetStatus("Finishing checkout… please confirm in wallet.");
-      removeContinueCheckoutButton();
-      await accessBuyFlow(kind, { skipConnectModal: true });
+      touchLastAttemptTs();
+      await accessBuyFlow(kind, { skipConnectModal: true, manual: false });
     }
   } finally {
     __resumeInProgress = false;
@@ -5932,10 +5978,12 @@ function openAccessModal() {
 function closeAccessModal() {
   const m = $("#access-modal");
   if (!m) return;
+
   m.classList.remove("is-open");
   m.setAttribute("aria-hidden", "true");
 
   clearPendingCheckoutKind();
+  setResumePaused(false);
   removeContinueCheckoutButton();
   stopResumePoll();
 }
@@ -5943,11 +5991,10 @@ function closeAccessModal() {
 // =========================
 // ACCESS PASS — TEMP CONFIG
 // =========================
-const ACCESS_USD_PRICE = 9; // later: 19 after sold count
-const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955"; // BSC USDT
+const ACCESS_USD_PRICE = 9;
+const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955";
 const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
 
-// Read-only RPC pool for quote calls
 const ACCESS_READ_RPCS = [
   "https://bsc-rpc.publicnode.com",
   "https://bsc.publicnode.com",
@@ -5996,7 +6043,7 @@ async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
   return false;
 }
 
-async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
+async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } = {}) {
   if (__accessFlowRunning) return;
 
   __accessFlowRunning = true;
@@ -6015,7 +6062,6 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
     ));
 
     if (typeof cxConnectWallet !== "function") {
-      console.warn("cxConnectWallet is missing - AppKit connect not available.");
       accessSetStatus("Wallet connector is not ready.");
       return;
     }
@@ -6026,11 +6072,9 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
 
     if (!connected) {
       if (wasOpen) openAccessModal();
-      accessSetStatus(
-        isMobileLike()
-          ? "Connection approved. Please return to your wallet app to approve payment."
-          : "Wallet connection was not completed. Try again."
-      );
+      // Do not auto-loop after failed connect
+      setResumePaused(true);
+      accessSetStatus("Connection completed. Open wallet app and tap Continue checkout to approve payment.");
       renderContinueCheckoutButton(kind);
       return;
     }
@@ -6070,12 +6114,12 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
 
     if (!provider?.request || !from) {
       if (wasOpen) openAccessModal();
-      accessSetStatus("Wallet connected. Please return to your wallet app and approve the payment request.");
+      setResumePaused(true);
+      accessSetStatus("Wallet connected. Open wallet app and tap Continue checkout to approve payment.");
       renderContinueCheckoutButton(kind);
       return;
     }
 
-    // Ensure BSC mainnet
     const TARGET_CHAIN = "0x38";
     try {
       const chainId = await provider.request({ method: "eth_chainId" });
@@ -6098,7 +6142,9 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
           }],
         });
       } else if (err && err.code === 4001) {
-        accessSetStatus("Network switch was canceled.");
+        // user canceled chain switch -> pause auto
+        setResumePaused(true);
+        accessSetStatus("Network switch canceled. Open wallet app and tap Continue checkout.");
         renderContinueCheckoutButton(kind);
         return;
       } else {
@@ -6110,7 +6156,6 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
       if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
         accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
-        console.warn("Invalid PASS_CONTRACT:", PASS_CONTRACT, "ACCESS_SALE_OR_RECEIVER:", ACCESS_SALE_OR_RECEIVER);
         return;
       }
 
@@ -6124,13 +6169,14 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
 
       if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
         accessSetStatus("Couldn't fetch live BNB quote. Try again.");
+        setResumePaused(true);
         renderContinueCheckoutButton(kind);
         return;
       }
 
       const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
       const baseWei = BigInt(PRICE_WEI);
-      const valueWei = (baseWei * 101n) / 100n; // +1%
+      const valueWei = (baseWei * 101n) / 100n;
 
       const txForEstimate = {
         from,
@@ -6145,11 +6191,9 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
           method: "eth_estimateGas",
           params: [txForEstimate]
         });
-        const gasBuffered = (BigInt(estGas) * 120n) / 100n; // +20%
+        const gasBuffered = (BigInt(estGas) * 120n) / 100n;
         gasHex = "0x" + gasBuffered.toString(16);
-      } catch (e) {
-        console.warn("estimateGas failed, fallback to wallet auto gas:", e);
-      }
+      } catch {}
 
       const txParams = {
         from,
@@ -6170,6 +6214,7 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
       const ok = await accessWaitForConfirm(provider, txHash);
       if (ok) {
         clearPendingCheckoutKind();
+        setResumePaused(false);
         removeContinueCheckoutButton();
         stopResumePoll();
 
@@ -6180,10 +6225,6 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
         }, 900);
       } else {
         accessSetStatus("Pending on-chain… You can close this window.");
-        setTimeout(() => {
-          closeAccessModal();
-          accessSetStatus("");
-        }, 3500);
       }
       return;
     }
@@ -6196,12 +6237,9 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
         { constant: true, inputs: [], name: "decimals", outputs: [{ name: "", type: "uint8" }], type: "function" },
         { constant: false, inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], name: "approve", outputs: [{ name: "", type: "bool" }], type: "function" }
       ];
-
       const SALE_ABI = [
         { constant: false, inputs: [], name: "buyWithUSDT", outputs: [], type: "function" }
       ];
-
-      accessSetStatus("Preparing USDT checkout…");
 
       if (!window.ethers) {
         accessSetStatus("USDT checkout needs ethers.js.");
@@ -6212,12 +6250,11 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
       const web3Provider = new ethers.BrowserProvider(provider);
       const signer = await web3Provider.getSigner();
 
-      const usdPrice = ACCESS_USD_PRICE;
       const usdtContract = new ethers.Contract(USDT, ERC20_ABI, signer);
       const sale = new ethers.Contract(PASS_CONTRACT, SALE_ABI, signer);
 
       const decimals = Number(await usdtContract.decimals());
-      const amount = ethers.parseUnits(String(usdPrice), decimals);
+      const amount = ethers.parseUnits(String(ACCESS_USD_PRICE), decimals);
 
       accessSetStatus("Approve USDT in wallet…");
       const tx1 = await usdtContract.approve(PASS_CONTRACT, amount);
@@ -6231,6 +6268,7 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
 
       if (ok) {
         clearPendingCheckoutKind();
+        setResumePaused(false);
         removeContinueCheckoutButton();
         stopResumePoll();
 
@@ -6241,26 +6279,32 @@ async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
         }, 900);
       } else {
         accessSetStatus("Pending on-chain… You can close this window.");
-        setTimeout(() => {
-          closeAccessModal();
-          accessSetStatus("");
-        }, 3500);
       }
-
       return;
     }
 
     accessSetStatus("Unsupported payment method.");
   } catch (e) {
-    console.error("accessBuyFlow error:", e);
-    accessSetStatus(
-      isMobileLike()
-        ? "Checkout paused. Please open your wallet app and approve the payment request, then tap Continue checkout."
-        : `Checkout failed: ${String(e?.message || e)}`
-    );
+    const msg = String(e?.message || e || "");
+    const code = Number(e?.code);
 
-    const kind = getPendingCheckoutKind();
-    if (kind) renderContinueCheckoutButton(kind);
+    // user rejected / canceled in wallet => PAUSE auto-resume
+    const isUserRejected =
+      code === 4001 ||
+      /user rejected|rejected|denied|cancel/i.test(msg);
+
+    if (isUserRejected) {
+      setResumePaused(true);
+      accessSetStatus("Payment request was canceled. Open wallet app and tap Continue checkout when ready.");
+      const k = getPendingCheckoutKind();
+      if (k) renderContinueCheckoutButton(k);
+    } else {
+      accessSetStatus(`Checkout failed: ${msg}`);
+      const k = getPendingCheckoutKind();
+      if (k) renderContinueCheckoutButton(k);
+    }
+
+    console.error("accessBuyFlow error:", e);
   } finally {
     accessSetBusy(false);
     __accessFlowRunning = false;
@@ -6274,28 +6318,27 @@ function bindAccessModal() {
   const m = $("#access-modal");
   if (!m) return;
 
-  // close buttons + backdrop
   m.querySelectorAll("[data-close-access]").forEach((el) => {
     el.addEventListener("click", closeAccessModal);
   });
 
-  // buy buttons
   const bnbBtn = document.getElementById("btn-pay-bnb");
   const usdtBtn = document.getElementById("btn-pay-usdt");
 
   bnbBtn?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    accessBuyFlow("bnb");
+    setResumePaused(false); // fresh intent by user
+    accessBuyFlow("bnb", { manual: true });
   });
 
   usdtBtn?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    accessBuyFlow("usdt");
+    setResumePaused(false); // fresh intent by user
+    accessBuyFlow("usdt", { manual: true });
   });
 
-  // ESC to close — bind once
   if (!window.__accessEscBound) {
     window.__accessEscBound = true;
     document.addEventListener("keydown", (e) => {
@@ -6303,7 +6346,6 @@ function bindAccessModal() {
     });
   }
 
-  // mobile return hooks
   if (!window.__accessResumeBound) {
     window.__accessResumeBound = true;
 
@@ -6332,8 +6374,6 @@ function bindAccessModal() {
   }
 }
 
-
-
 // Expose for console/tests
 window.openAccessModal = openAccessModal;
 window.closeAccessModal = closeAccessModal;
@@ -6341,11 +6381,9 @@ window.accessBuyFlow = accessBuyFlow;
 window.accessSetStatus = accessSetStatus;
 window.ACCESS_SALE_OR_RECEIVER = ACCESS_SALE_OR_RECEIVER;
 window.ACCESS_RECEIVER = ACCESS_SALE_OR_RECEIVER;
-
 window.accessUpdatePricesUI = accessUpdatePricesUI;
 window.accessWaitForConfirm = accessWaitForConfirm;
 window.accessQuoteBNBWeiOnchain = accessQuoteBNBWeiOnchain;
-
 
 
     // =========================
