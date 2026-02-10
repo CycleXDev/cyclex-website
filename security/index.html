@@ -5858,16 +5858,21 @@ function renderContinueCheckoutButton(kind) {
   btn.style.width = "100%";
 
   btn.addEventListener("click", async () => {
-    btn.disabled = true;
-    try {
-      // Manual click should re-enable auto-resume logic
-      setResumePaused(false);
-      touchLastAttemptTs();
-      await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
-    } finally {
-      btn.disabled = false;
-    }
-  });
+  btn.disabled = true;
+  try {
+    // clear stale lock
+    __accessFlowRunning = false;
+
+    // refresh provider/account state without opening connect modal
+    await cxConnectWallet({ silent: true }).catch(() => {});
+
+    // continue checkout flow
+    await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 
   wrap.appendChild(btn);
   st.parentNode?.insertBefore(wrap, st.nextSibling);
