@@ -6015,12 +6015,6 @@ if (cc && cc.offsetParent !== null) {
   return;
 }
 
-
-if (!__accessFlowRunning) {
-  touchLastAttemptTs();
-  await accessBuyFlow(kind, { skipConnectModal: true, manual: false });
-}
-
   } finally {
     __resumeInProgress = false;
   }
@@ -6133,8 +6127,8 @@ __accessFlowRunning = true;
   accessSetBusy(true);
 
   try {
-    if (isMobileLike()) {
-  clearPendingCheckoutKind();
+   if (isMobileLike()) {
+  setPendingCheckoutKind(kind);
   setResumePaused(false);
   removeContinueCheckoutButton();
   stopResumePoll();
@@ -6144,6 +6138,7 @@ __accessFlowRunning = true;
   removeContinueCheckoutButton();
   stopResumePoll();
 }
+
 
 
 
@@ -6238,18 +6233,7 @@ if (isMobileLike() && skipConnectModal) {
       renderContinueCheckoutButton(kind);
       return;
     }
-    // Mobile step-2: force wallet wake in direct user-click context
-if (isMobileLike() && skipConnectModal) {
-  try {
-    await withTimeout(
-      provider.request({ method: "eth_requestAccounts" }),
-      12000,
-      "WAKE_WALLET_TIMEOUT"
-    );
-  } catch {}
-}
-
-
+   
     const TARGET_CHAIN = "0x38";
     try {
       const chainId = await provider.request({ method: "eth_chainId" });
@@ -6315,24 +6299,12 @@ if (isMobileLike() && skipConnectModal) {
         data: BUY_WITH_BNB_SELECTOR
       };
 
-    let gasHex = null;
-try {
-  const estGas = await provider.request({
-    method: "eth_estimateGas",
-    params: [txForEstimate]
-  });
-  const gasBuffered = (BigInt(estGas) * 120n) / 100n;
-  gasHex = "0x" + gasBuffered.toString(16);
-} catch {}
-
-
-
+   
       const txParams = {
         from,
         to: PASS_CONTRACT,
         value: "0x" + valueWei.toString(16),
         data: BUY_WITH_BNB_SELECTOR,
-        ...(gasHex ? { gas: gasHex } : {})
       };
 
       const mobile = isMobileLike();
@@ -6545,7 +6517,7 @@ function bindAccessModal() {
 
     // STEP B: pay only (fresh user click)
     accessSetStatus("Step 2/2: Opening wallet for payment...");
-   await accessBuyFlow("bnb", { skipConnectModal: false, manual: true });
+   await accessBuyFlow("bnb", { skipConnectModal: true, manual: true });
   } catch (err) {
     const msg = String(err?.message || err || "");
     accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
@@ -6603,7 +6575,7 @@ function bindAccessModal() {
 
     // STEP B: pay only (fresh user click)
     accessSetStatus("Step 2/2: Opening wallet for payment...");
-    await accessBuyFlow("usdt", { skipConnectModal: false, manual: true });
+    await accessBuyFlow("usdt", { skipConnectModal: true, manual: true });
   } catch (err) {
     const msg = String(err?.message || err || "");
     accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
@@ -6617,52 +6589,6 @@ function bindAccessModal() {
       if (e.key === "Escape") closeAccessModal();
     });
   }
-
-  if (!window.__accessResumeBound) {
-    window.__accessResumeBound = true;
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") {
-        setTimeout(() => {
-          if (isMobileLike()) {
-  if (!__mobileAccessReadyToPay) {
-  tryResumeCheckoutUI();
-  startResumePoll(12000, 400);
-}
-
-}
-
-        }, 250);
-      }
-    });
-
-    window.addEventListener("focus", () => {
-      setTimeout(() => {
-        if (isMobileLike()) {
-  if (!__mobileAccessReadyToPay) {
-  tryResumeCheckoutUI();
-  startResumePoll(12000, 400);
-}
-
-}
-
-      }, 250);
-    });
-
-    window.addEventListener("pageshow", () => {
-      setTimeout(() => {
-        if (isMobileLike()) {
-  if (!__mobileAccessReadyToPay) {
-  tryResumeCheckoutUI();
-  startResumePoll(12000, 400);
-}
-
-}
-
-      }, 250);
-    });
-  } 
-}
 
 // Expose for console/tests
 window.openAccessModal = openAccessModal;
