@@ -5726,10 +5726,15 @@ function accessSetStatus(msg) {
   if (!el) return;
   el.textContent = msg || "";
 }
-   // =========================
-// Mobile-safe checkout helpers (NO resume/poll flow)
+    // =========================
+// Mobile resume checkout helpers (AUTO RESUME)
 // =========================
+const ACCESS_PENDING_KEY = "cx_access_pending_kind";
+const ACCESS_PENDING_TS_KEY = "cx_access_pending_ts";
+
 let __accessFlowRunning = false;
+let __resumePollTimer = null;
+let __resumeInProgress = false;
 
 function isMobileLike() {
   try {
@@ -5738,6 +5743,39 @@ function isMobileLike() {
   } catch {
     return false;
   }
+}
+
+function setPendingCheckoutKind(kind) {
+  try {
+    if (kind) {
+      sessionStorage.setItem(ACCESS_PENDING_KEY, kind);
+      sessionStorage.setItem(ACCESS_PENDING_TS_KEY, String(Date.now()));
+    } else {
+      sessionStorage.removeItem(ACCESS_PENDING_KEY);
+      sessionStorage.removeItem(ACCESS_PENDING_TS_KEY);
+    }
+  } catch {}
+}
+
+function getPendingCheckoutKind() {
+  try { return sessionStorage.getItem(ACCESS_PENDING_KEY) || ""; } catch { return ""; }
+}
+
+function isPendingFresh(maxAgeMs = 5 * 60 * 1000) {
+  try {
+    const ts = Number(sessionStorage.getItem(ACCESS_PENDING_TS_KEY) || 0);
+    if (!ts) return false;
+    return (Date.now() - ts) <= maxAgeMs;
+  } catch {
+    return false;
+  }
+}
+
+function clearPendingCheckoutKind() {
+  try {
+    sessionStorage.removeItem(ACCESS_PENDING_KEY);
+    sessionStorage.removeItem(ACCESS_PENDING_TS_KEY);
+  } catch {}
 }
 
 async function tryHydrateWalletAddressFromProvider() {
@@ -5754,11 +5792,132 @@ async function tryHydrateWalletAddressFromProvider() {
     if (a) {
       wallet.address = a;
       if (!wallet.providerRaw) wallet.providerRaw = p;
+      attachProviderListeners(wallet.providerRaw);
+
+      try {
+        if (!wallet.browserProvider) wallet.browserProvider = new E.BrowserProvider(wallet.providerRaw);
+        if (!wallet.signer) wallet.signer = await wallet.browserProvider.getSigner();
+        const net = await wallet.browserProvider.getNetwork();
+        wallet.chainId = parseChainIdAny(net?.chainId);
+      } catch {}
+
       renderWalletLabels();
     }
     return a || "";
   } catch {
     return "";
+  }
+}
+
+function accessSetStatus(msg) {
+  const el = document.getElementById("access-status");
+  if (!el) return;
+  el.textContent = msg || "";
+}
+
+function removeContinueCheckoutButton() {
+  const n = document.getElementById("continue-checkout-wrap");
+  if (n) n.remove();
+}
+
+function renderContinueCheckoutButton(kind) {
+  const st = document.getElementById("access-status");
+  if (!st || !kind) return;
+  if (document.getElementById("btn-continue-checkout")) return;
+
+  const wrap = document.createElement("div");
+  wrap.id = "continue-checkout-wrap";
+  wrap.style.marginTop = "10px";
+
+  const btn = document.createElement("button");
+  btn.id = "btn-continue-checkout";
+  btn.type = "button";
+  btn.className = "btn btn-primary";
+  btn.textContent = "Continue checkout";
+  btn.style.width = "100%";
+
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try {
+      await accessBuyFlow(kind, { skipConnectModal: true });
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  wrap.appendChild(btn);
+  st.parentNode?.insertBefore(wrap, st.nextSibling);
+}
+
+function startResumePoll(maxMs = 12000, stepMs = 400) {
+  try { if (__resumePollTimer) clearInterval(__resumePollTimer); } catch {}
+  const started = Date.now();
+
+  __resumePollTimer = setInterval(async () => {
+    try {
+      await tryResumeCheckoutUI();
+
+      if (!getPendingCheckoutKind()) {
+        clearInterval(__resumePollTimer);
+        __resumePollTimer = null;
+        return;
+      }
+
+      if (Date.now() - started >= maxMs) {
+        clearInterval(__resumePollTimer);
+        __resumePollTimer = null;
+      }
+    } catch {}
+  }, stepMs);
+}
+
+function stopResumePoll() {
+  try { if (__resumePollTimer) clearInterval(__resumePollTimer); } catch {}
+  __resumePollTimer = null;
+}
+
+async function tryResumeCheckoutUI() {
+  const kind = getPendingCheckoutKind();
+  if (!kind) return;
+  if (!isMobileLike()) return;
+  if (!isPendingFresh()) {
+    clearPendingCheckoutKind();
+    return;
+  }
+
+  if (__resumeInProgress) return;
+  __resumeInProgress = true;
+
+  try {
+    const hydrated = await tryHydrateWalletAddressFromProvider();
+
+    const hasProvider = !!(
+      wallet?.providerRaw?.request ||
+      wallet?.browserProvider?.provider?.request ||
+      window.ethereum?.request
+    );
+
+    const hasWallet = !!(hydrated || wallet?.address);
+
+    const m = document.getElementById("access-modal");
+    if (m && m.getAttribute("aria-hidden") === "true") {
+      openAccessModal();
+    }
+
+    if (!hasProvider || !hasWallet) {
+      accessSetStatus("Wallet connected. Please return to your wallet app and approve the payment request.");
+      renderContinueCheckoutButton(kind);
+      return;
+    }
+
+    // Auto-resume tx step after returning from wallet connect
+    if (!__accessFlowRunning) {
+      accessSetStatus("Finishing checkout… please confirm in wallet.");
+      removeContinueCheckoutButton();
+      await accessBuyFlow(kind, { skipConnectModal: true });
+    }
+  } finally {
+    __resumeInProgress = false;
   }
 }
 
@@ -5781,6 +5940,10 @@ function closeAccessModal() {
   if (!m) return;
   m.classList.remove("is-open");
   m.setAttribute("aria-hidden", "true");
+
+  clearPendingCheckoutKind();
+  removeContinueCheckoutButton();
+  stopResumePoll();
 }
 
 // =========================
@@ -5839,13 +6002,17 @@ async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
   return false;
 }
 
-async function accessBuyFlow(kind) {
+async function accessBuyFlow(kind, { skipConnectModal = false } = {}) {
   if (__accessFlowRunning) return;
 
   __accessFlowRunning = true;
   accessSetBusy(true);
 
   try {
+    setPendingCheckoutKind(kind);
+    removeContinueCheckoutButton();
+    if (isMobileLike()) startResumePoll(12000, 400);
+
     const modalEl = document.getElementById("access-modal");
     const wasOpen = !!(modalEl && (
       modalEl.classList.contains("is-open") ||
@@ -5859,15 +6026,21 @@ async function accessBuyFlow(kind) {
       return;
     }
 
-    // 1) connect flow
-    const connected = await cxConnectWallet();
+    const connected = skipConnectModal
+      ? await cxConnectWallet({ silent: true })
+      : await cxConnectWallet();
+
     if (!connected) {
       if (wasOpen) openAccessModal();
-      accessSetStatus("Wallet connection was not completed. Try again.");
+      accessSetStatus(
+        isMobileLike()
+          ? "Connection approved. Please return to your wallet app to approve payment."
+          : "Wallet connection was not completed. Try again."
+      );
+      renderContinueCheckoutButton(kind);
       return;
     }
 
-    // 2) resolve provider + from (mobile-safe, short retries)
     let provider =
       (wallet?.providerRaw?.request && wallet.providerRaw) ||
       (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
@@ -5891,7 +6064,6 @@ async function accessBuyFlow(kind) {
       from = String(wallet?.address || "").trim();
     }
 
-    // one short stabilization wait (mobile return timing)
     if ((!provider?.request || !from) && isMobileLike()) {
       await new Promise(r => setTimeout(r, 700));
       await cxConnectWallet({ silent: true }).catch(() => {});
@@ -5904,11 +6076,12 @@ async function accessBuyFlow(kind) {
 
     if (!provider?.request || !from) {
       if (wasOpen) openAccessModal();
-      accessSetStatus("Wallet connected. Tap Buy again to continue.");
+      accessSetStatus("Wallet connected. Please return to your wallet app and approve the payment request.");
+      renderContinueCheckoutButton(kind);
       return;
     }
 
-    // 3) Ensure BSC mainnet
+    // Ensure BSC mainnet
     const TARGET_CHAIN = "0x38";
     try {
       const chainId = await provider.request({ method: "eth_chainId" });
@@ -5932,13 +6105,13 @@ async function accessBuyFlow(kind) {
         });
       } else if (err && err.code === 4001) {
         accessSetStatus("Network switch was canceled.");
+        renderContinueCheckoutButton(kind);
         return;
       } else {
         throw err;
       }
     }
 
-    // 4) BNB flow
     if (kind === "bnb") {
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
       if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
@@ -5957,13 +6130,13 @@ async function accessBuyFlow(kind) {
 
       if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
         accessSetStatus("Couldn't fetch live BNB quote. Try again.");
+        renderContinueCheckoutButton(kind);
         return;
       }
 
       const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
-
       const baseWei = BigInt(PRICE_WEI);
-      const valueWei = (baseWei * 101n) / 100n; // +1% price buffer
+      const valueWei = (baseWei * 101n) / 100n; // +1%
 
       const txForEstimate = {
         from,
@@ -5992,6 +6165,7 @@ async function accessBuyFlow(kind) {
         ...(gasHex ? { gas: gasHex } : {})
       };
 
+      accessSetStatus("Open wallet app to approve transaction…");
       const txHash = await provider.request({
         method: "eth_sendTransaction",
         params: [txParams],
@@ -6001,6 +6175,10 @@ async function accessBuyFlow(kind) {
 
       const ok = await accessWaitForConfirm(provider, txHash);
       if (ok) {
+        clearPendingCheckoutKind();
+        removeContinueCheckoutButton();
+        stopResumePoll();
+
         accessSetStatus("Confirmed ✅");
         setTimeout(() => {
           closeAccessModal();
@@ -6016,7 +6194,6 @@ async function accessBuyFlow(kind) {
       return;
     }
 
-    // 5) USDT flow
     if (kind === "usdt") {
       const USDT = ACCESS_USDT;
       const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
@@ -6048,17 +6225,21 @@ async function accessBuyFlow(kind) {
       const decimals = Number(await usdtContract.decimals());
       const amount = ethers.parseUnits(String(usdPrice), decimals);
 
-      accessSetStatus("Approve USDT…");
+      accessSetStatus("Approve USDT in wallet…");
       const tx1 = await usdtContract.approve(PASS_CONTRACT, amount);
       await tx1.wait();
 
-      accessSetStatus("Buying pass…");
+      accessSetStatus("Confirm purchase in wallet…");
       const tx2 = await sale.buyWithUSDT();
 
       accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
       const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
       if (ok) {
+        clearPendingCheckoutKind();
+        removeContinueCheckoutButton();
+        stopResumePoll();
+
         accessSetStatus("Confirmed ✅");
         setTimeout(() => {
           closeAccessModal();
@@ -6078,7 +6259,14 @@ async function accessBuyFlow(kind) {
     accessSetStatus("Unsupported payment method.");
   } catch (e) {
     console.error("accessBuyFlow error:", e);
-    accessSetStatus(`Checkout failed: ${String(e?.message || e)}`);
+    accessSetStatus(
+      isMobileLike()
+        ? "Checkout paused. Please open your wallet app and approve the payment request, then tap Continue checkout."
+        : `Checkout failed: ${String(e?.message || e)}`
+    );
+
+    const kind = getPendingCheckoutKind();
+    if (kind) renderContinueCheckoutButton(kind);
   } finally {
     accessSetBusy(false);
     __accessFlowRunning = false;
@@ -6120,7 +6308,36 @@ function bindAccessModal() {
       if (e.key === "Escape") closeAccessModal();
     });
   }
+
+  // mobile return hooks
+  if (!window.__accessResumeBound) {
+    window.__accessResumeBound = true;
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        setTimeout(() => {
+          tryResumeCheckoutUI();
+          startResumePoll(12000, 400);
+        }, 250);
+      }
+    });
+
+    window.addEventListener("focus", () => {
+      setTimeout(() => {
+        tryResumeCheckoutUI();
+        startResumePoll(12000, 400);
+      }, 250);
+    });
+
+    window.addEventListener("pageshow", () => {
+      setTimeout(() => {
+        tryResumeCheckoutUI();
+        startResumePoll(12000, 400);
+      }, 250);
+    });
+  }
 }
+
 
 
 // Expose for console/tests
