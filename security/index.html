@@ -5841,6 +5841,21 @@ function removeContinueCheckoutButton() {
   if (n) n.remove();
 }
 
+    function getActiveCheckoutProvider() {
+  // Keep desktop behavior intact, add stronger mobile fallbacks.
+  const p1 = (wallet?.providerRaw?.request && wallet.providerRaw) || null;
+  if (p1) return p1;
+
+  const p2 = (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) || null;
+  if (p2) return p2;
+
+  const p3 = (window?.ethereum?.request && window.ethereum) || null;
+  if (p3) return p3;
+
+  return null;
+}
+
+    
 function renderContinueCheckoutButton(kind) {
   const st = document.getElementById("access-status");
   if (!st || !kind) return;
@@ -5857,92 +5872,79 @@ function renderContinueCheckoutButton(kind) {
   btn.textContent = "Continue checkout";
   btn.style.width = "100%";
 
- btn.addEventListener("click", async () => {
-  const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-    accessSetStatus("🔵 Button clicked...");
-    if (!isMobile) await new Promise(r => setTimeout(r, 500));
-    
-    btn.disabled = true;
-    
-    try {
-      accessSetStatus("🔍 Step 1: Getting provider...");
-      if (!isMobile) await new Promise(r => setTimeout(r, 500));
-      
-      let provider =
-        (wallet?.providerRaw?.request && wallet.providerRaw) ||
-        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
-        window.ethereum;
+  btn.addEventListener("click", async () => {
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
 
+    // Prevent double click / duplicate tx popups
+    if (btn.disabled) return;
+    btn.disabled = true;
+
+    try {
+      accessSetStatus("Opening wallet app...");
+
+      // 1) Provider
+      let provider = getActiveCheckoutProvider();
       if (!provider?.request) {
-        accessSetStatus("❌ No provider found!");
-        if (!isMobile) await new Promise(r => setTimeout(r, 2000));
+        accessSetStatus("❌ No provider found");
         btn.disabled = false;
         return;
       }
 
-      accessSetStatus("✅ Provider OK. Getting address...");
-     if (!isMobile) await new Promise(r => setTimeout(r, 500));
-      
+      // 2) Address (mobile: force immediate request to preserve user gesture)
       let from = String(wallet?.address || "").trim();
-      
-     if (!from) {
-  accessSetStatus("🔍 Requesting accounts...");
-  if (!isMobile) await new Promise(r => setTimeout(r, 500));
 
-  try {
-    let accs = [];
-    if (isMobile) {
-      accs = await provider.request({ method: "eth_accounts" });
-      if (!accs?.length) {
-        accs = await provider.request({ method: "eth_requestAccounts" });
+      try {
+        if (isMobile) {
+          // IMPORTANT: on mobile, do this immediately after click
+          const accs = await provider.request({ method: "eth_requestAccounts" });
+          const a = safeGetAddress(accs?.[0] || "");
+          if (a) {
+            from = a;
+            wallet.address = a;
+            if (!wallet.providerRaw) wallet.providerRaw = provider;
+            try {
+              attachProviderListeners(wallet.providerRaw);
+            } catch {}
+            renderWalletLabels();
+          }
+        } else if (!from) {
+          const accs = await provider.request({ method: "eth_requestAccounts" });
+          const a = safeGetAddress(accs?.[0] || "");
+          if (a) {
+            from = a;
+            wallet.address = a;
+            if (!wallet.providerRaw) wallet.providerRaw = provider;
+            try {
+              attachProviderListeners(wallet.providerRaw);
+            } catch {}
+            renderWalletLabels();
+          }
+        }
+      } catch (e) {
+        accessSetStatus("❌ Wallet authorization failed");
+        btn.disabled = false;
+        return;
       }
-    } else {
-      accs = await provider.request({ method: "eth_requestAccounts" });
-    }
-
-    from = safeGetAddress(accs?.[0] || "");
-    if (from) {
-      wallet.address = from;
-      renderWalletLabels();
-    }
-  } catch (e) {
-    accessSetStatus("❌ Failed to get address: " + String(e?.message || e).substring(0, 50));
-    if (!isMobile) await new Promise(r => setTimeout(r, 3000));
-    btn.disabled = false;
-    return;
-  }
-}
-
 
       if (!from) {
-        accessSetStatus("❌ No wallet address!");
-        if (!isMobile) await new Promise(r => setTimeout(r, 2000));
+        accessSetStatus("❌ No wallet address");
         btn.disabled = false;
         return;
       }
 
-      accessSetStatus("✅ Address OK: " + from.substring(0, 10) + "...");
-     if (!isMobile) await new Promise(r => setTimeout(r, 500));
-
-      accessSetStatus("🔍 Checking network...");
-     if (!isMobile) await new Promise(r => setTimeout(r, 500));
-
+      // 3) Network
       const TARGET_CHAIN = "0x38";
       try {
         const chainId = await provider.request({ method: "eth_chainId" });
-        
         if (chainId !== TARGET_CHAIN) {
-          accessSetStatus("🔄 Switching to BSC...");
+          accessSetStatus("Switching network...");
           await provider.request({
             method: "wallet_switchEthereumChain",
             params: [{ chainId: TARGET_CHAIN }],
           });
-          accessSetStatus("✅ Switched to BSC");
-          if (!isMobile) await new Promise(r => setTimeout(r, 500));
         }
       } catch (err) {
-        if (err && err.code === 4902) {
-          accessSetStatus("🔧 Adding BSC network...");
+        if (err && (err.code === 4902 || String(err?.message || "").includes("4902"))) {
           await provider.request({
             method: "wallet_addEthereumChain",
             params: [{
@@ -5953,24 +5955,33 @@ function renderContinueCheckoutButton(kind) {
               blockExplorerUrls: ["https://bscscan.com/"],
             }],
           });
+        } else if (err && err.code === 4001) {
+          accessSetStatus("Network switch canceled");
+          btn.disabled = false;
+          return;
+        } else {
+          throw err;
         }
       }
 
+      // 4) BNB flow
       if (kind === "bnb") {
-        accessSetStatus("🔍 Preparing BNB transaction...");
-        if (!isMobile) await new Promise(r => setTimeout(r, 500));
-        
         const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
         let PRICE_WEI = window.__ACCESS_BNB_WEI;
 
+        // CRITICAL mobile fix:
+        // Do NOT run quote fetch inside continue on mobile (breaks deep-link flow).
         if (!PRICE_WEI) {
-          accessSetStatus("🔍 Getting BNB price...");
+          if (isMobile) {
+            accessSetStatus("Price expired. Tap BNB again.");
+            btn.disabled = false;
+            return;
+          }
           try {
             PRICE_WEI = await accessQuoteBNBWeiOnchain();
             window.__ACCESS_BNB_WEI = PRICE_WEI;
           } catch (e) {
-            accessSetStatus("❌ Price fetch failed: " + String(e?.message || e).substring(0, 40));
-            if (!isMobile) await new Promise(r => setTimeout(r, 3000));
+            accessSetStatus("❌ Price fetch failed");
             btn.disabled = false;
             return;
           }
@@ -5978,58 +5989,91 @@ function renderContinueCheckoutButton(kind) {
 
         if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
           accessSetStatus("❌ Invalid BNB price");
-          if (!isMobile) await new Promise(r => setTimeout(r, 2000));
           btn.disabled = false;
           return;
         }
 
         const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
         const baseWei = BigInt(PRICE_WEI);
-        const valueWei = (baseWei * 101n) / 100n;
+        const valueWei = (baseWei * 101n) / 100n; // +1% buffer
 
-        const txParams = {
+        const txForEstimate = {
           from,
           to: PASS_CONTRACT,
           value: "0x" + valueWei.toString(16),
           data: BUY_WITH_BNB_SELECTOR
         };
 
-        accessSetStatus(isMobile ? "📱 Opening wallet app now..." : "📱 Opening wallet app...");
-if (!isMobile) await new Promise(r => setTimeout(r, 500));
+        let gasHex = null;
+        try {
+          const estGas = await provider.request({
+            method: "eth_estimateGas",
+            params: [txForEstimate]
+          });
+          const gasBuffered = (BigInt(estGas) * 120n) / 100n;
+          gasHex = "0x" + gasBuffered.toString(16);
+        } catch {}
 
-const txHash = await provider.request({
-  method: "eth_sendTransaction",
-  params: [txParams],
-});
+        const txParams = {
+          from,
+          to: PASS_CONTRACT,
+          value: "0x" + valueWei.toString(16),
+          data: BUY_WITH_BNB_SELECTOR,
+          ...(gasHex ? { gas: gasHex } : {})
+        };
 
-        accessSetStatus("✅ Transaction sent! Hash: " + txHash.substring(0, 10) + "...");
-        
-        const ok = await accessWaitForConfirm(provider, txHash);
-        
+        accessSetStatus("📱 Opening wallet app...");
+        // IMPORTANT: no extra delays before send
+        const txHash = await provider.request({
+          method: "eth_sendTransaction",
+          params: [txParams],
+        });
+
+        // immediately stop resume artifacts (prevents duplicate prompting)
         clearPendingCheckoutKind();
         setResumePaused(false);
         removeContinueCheckoutButton();
         stopResumePoll();
 
+        accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
+        const ok = await accessWaitForConfirm(provider, txHash);
+
         if (ok) {
-          accessSetStatus("🎉 Confirmed!");
+          accessSetStatus("Confirmed ✅");
           setTimeout(() => {
             closeAccessModal();
             accessSetStatus("");
           }, 900);
         } else {
-          accessSetStatus("⏳ Pending on-chain...");
+          accessSetStatus("Pending on-chain…");
         }
-
-      } else if (kind === "usdt") {
-        accessSetStatus("🔍 USDT flow not tested in debug mode");
-        btn.disabled = false;
+        return;
       }
 
+      // 5) USDT (unchanged behavior intention)
+      if (kind === "usdt") {
+        accessSetStatus("USDT flow not tested in debug mode");
+        btn.disabled = false;
+        return;
+      }
+
+      accessSetStatus("Unsupported payment method");
+      btn.disabled = false;
     } catch (e) {
       const msg = String(e?.message || e || "");
-      accessSetStatus("❌ ERROR: " + msg.substring(0, 80));
-      if (!isMobile) await new Promise(r => setTimeout(r, 4000));
+      const code = Number(e?.code);
+
+      const isUserRejected =
+        code === 4001 ||
+        /user rejected|rejected|denied|cancel/i.test(msg);
+
+      if (isUserRejected) {
+        setResumePaused(true);
+        accessSetStatus("Payment request canceled. Tap Continue checkout again.");
+      } else {
+        accessSetStatus("❌ ERROR: " + msg.substring(0, 120));
+      }
+
       btn.disabled = false;
     }
   });
@@ -6037,6 +6081,7 @@ const txHash = await provider.request({
   wrap.appendChild(btn);
   st.parentNode?.insertBefore(wrap, st.nextSibling);
 }
+
 function startResumePoll(maxMs = 12000, stepMs = 400) {
   try { if (__resumePollTimer) clearInterval(__resumePollTimer); } catch {}
   const started = Date.now();
