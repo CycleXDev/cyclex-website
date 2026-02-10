@@ -5886,7 +5886,7 @@ function removeContinueCheckoutButton() {
 
     
 function renderContinueCheckoutButton(kind) {
-  if (!isMobileLike()) return;
+  if (isMobileLike()) return;
   const st = document.getElementById("access-status");
   if (!st || !kind) return;
   if (document.getElementById("btn-continue-checkout")) return;
@@ -6028,6 +6028,11 @@ if (!__accessFlowRunning) {
 
 function openAccessModal() {
   accessSetStatus("");
+  if (!isMobileLike()) {
+  __mobileAccessReadyToPay = false;
+  __mobileAccessReadyKind = "";
+}
+
   const m = document.getElementById("access-modal");
   if (!m) return;
 
@@ -6129,16 +6134,17 @@ __accessFlowRunning = true;
 
   try {
     if (isMobileLike()) {
-
-  setPendingCheckoutKind(kind);
+  clearPendingCheckoutKind();
+  setResumePaused(false);
   removeContinueCheckoutButton();
-  startResumePoll(12000, 400);
+  stopResumePoll();
 } else {
   clearPendingCheckoutKind();
   setResumePaused(false);
   removeContinueCheckoutButton();
   stopResumePoll();
 }
+
 
 
     const modalEl = document.getElementById("access-modal");
