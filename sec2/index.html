@@ -6909,7 +6909,7 @@ const p = new E.JsonRpcProvider(url, n, { staticNetwork: n });
       return { ok: false, url: "", err: last || new Error("eth_getCode failed"), code: "0x" };
     }
 
-   function getReadProvider(net) {
+  function getReadProvider(net) {
   const n = String(net || "").trim().toLowerCase();
   const normNet =
     (n === "bsc" || n === "bnb" || n === "56") ? "bsc" :
@@ -6917,25 +6917,42 @@ const p = new E.JsonRpcProvider(url, n, { staticNetwork: n });
     n;
 
   const chain = CHAINS?.[normNet];
+  const chainId = chain?.chainId ?? (normNet === "bsc" ? 56 : normNet === "eth" ? 1 : undefined);
+
   const custom = ($("#rpc-custom")?.value || "").trim();
-  const bestSaved = getSavedBestRpc(normNet);
-  const privSaved = getSavedPrivateRpc(normNet);
-  const url = custom || privSaved || bestSaved || (chain?.publicRpcs?.[0] || "");
-  if (!url) return null;
+  const bestSaved = (typeof getSavedBestRpc === "function" ? (getSavedBestRpc(normNet) || "").trim() : "");
+  const privSaved = (typeof getSavedPrivateRpc === "function" ? (getSavedPrivateRpc(normNet) || "").trim() : "");
+  const publics = Array.isArray(chain?.publicRpcs) ? chain.publicRpcs.filter(Boolean) : [];
 
-  // chainId fallback כדי שלא ייפול אם CHAINS[normNet] חסר
-  const chainId =
-    chain?.chainId ??
-    (normNet === "bsc" ? 56 : normNet === "eth" ? 1 : undefined);
+  // סינון RPC שבור/לא רצוי
+  const isBadRpc = (u) => {
+    const s = String(u || "").toLowerCase();
+    return !s ||
+      s.includes("meowrpc.com") ||   // זה זה ששובר אצלך
+      s.includes("localhost") ||
+      s.includes("127.0.0.1");
+  };
 
-  try { return new E.JsonRpcProvider(url, chainId); }
-  catch { return null; }
+  const candidates = [custom, privSaved, bestSaved, ...publics]
+    .map(x => String(x || "").trim())
+    .filter((v, i, a) => v && a.indexOf(v) === i && !isBadRpc(v));
+
+  for (const url of candidates) {
+    try {
+      // staticNetwork מונע detectNetwork שעלול ליפול בחלק מה־RPCים
+      const p = new E.JsonRpcProvider(url, chainId, { staticNetwork: true });
+      return p;
+    } catch {}
+  }
+
+  return null;
 }
 
 // exports
 window.CX = window.CX || {};
 window.CX.getReadProvider = getReadProvider;
-window.getReadProvider = getReadProvider; // חשוב ל-QuickScan
+window.getReadProvider = getReadProvider;
+
 
 
     function netFromSelect(selId) {
