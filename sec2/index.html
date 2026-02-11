@@ -7544,61 +7544,7 @@ if (!pool || pool === ZERO) {
     const base = `Quick Scan (${rep.chainName || rep.net})\nToken: ${qsShortAddr(rep.token)}\nScore: ${rep.score}/100 (${rep.overallText})\n`;
     return `${base}${rep.shareLink || ""}`.trim();
   }
-  function qsRpcList(net){
-  try {
-    const arr = Array.isArray(CHAINS?.[net]?.publicRpcs) ? CHAINS[net].publicRpcs : [];
-    // remove bad/blocked endpoints + dedup
-    const out = [];
-    const seen = new Set();
-    for (const u of arr) {
-      const s = String(u || "").trim();
-      if (!s) continue;
-      if (/meowrpc/i.test(s)) continue; // hard block
-      const k = s.toLowerCase();
-      if (seen.has(k)) continue;
-      seen.add(k);
-      out.push(s);
-    }
-    return out;
-  } catch { return []; }
-}
-
-async function qsPickHealthyProvider(net){
-  const urls = qsRpcList(net);
-  const chainId = Number(CHAINS?.[net]?.chainId || 0);
-  for (const url of urls) {
-    try {
-      const p = new E.JsonRpcProvider(url, chainId || undefined, { staticNetwork: !!chainId });
-      // health check: both network + block
-      await Promise.race([
-        p.getBlockNumber(),
-        new Promise((_, rej)=>setTimeout(()=>rej(new Error("timeout")), 4500))
-      ]);
-      return p;
-    } catch {}
-  }
-  return null;
-}
-
-async function qsGetReadProviderSafe(net){
-  // 1) try project provider if exists
-  try {
-    if (typeof getReadProvider === "function") {
-      const p = getReadProvider(net);
-      if (p && typeof p.getBlockNumber === "function") {
-        await Promise.race([
-          p.getBlockNumber(),
-          new Promise((_, rej)=>setTimeout(()=>rej(new Error("timeout")), 3500))
-        ]);
-        return p;
-      }
-    }
-  } catch {}
-
-  // 2) fallback local healthy provider
-  return await qsPickHealthyProvider(net);
-}
-
+ 
 
   async function runQuickScan(){
     const st = $("#qs-status");
