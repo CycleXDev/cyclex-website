@@ -6896,50 +6896,20 @@ const p = new E.JsonRpcProvider(url, n, { staticNetwork: n });
       return { ok: false, url: "", err: last || new Error("eth_getCode failed"), code: "0x" };
     }
 
-  function getReadProvider(net) {
-  const n = String(net || "").trim().toLowerCase();
-  const normNet =
-    (n === "bsc" || n === "bnb" || n === "56") ? "bsc" :
-    (n === "eth" || n === "ethereum" || n === "1") ? "eth" :
-    n;
-
-  const chain = CHAINS?.[normNet];
-  const chainId = chain?.chainId ?? (normNet === "bsc" ? 56 : normNet === "eth" ? 1 : undefined);
-
+ function getReadProvider(net) {
+  const chain = CHAINS?.[net];
   const custom = ($("#rpc-custom")?.value || "").trim();
-  const bestSaved = (typeof getSavedBestRpc === "function" ? (getSavedBestRpc(normNet) || "").trim() : "");
-  const privSaved = (typeof getSavedPrivateRpc === "function" ? (getSavedPrivateRpc(normNet) || "").trim() : "");
-  const publics = Array.isArray(chain?.publicRpcs) ? chain.publicRpcs.filter(Boolean) : [];
-
-  // סינון RPC שבור/לא רצוי
-  const isBadRpc = (u) => {
-    const s = String(u || "").toLowerCase();
-    return !s ||
-      s.includes("meowrpc.com") ||   // זה זה ששובר אצלך
-      s.includes("localhost") ||
-      s.includes("127.0.0.1");
-  };
-
-  const candidates = [custom, privSaved, bestSaved, ...publics]
-    .map(x => String(x || "").trim())
-    .filter((v, i, a) => v && a.indexOf(v) === i && !isBadRpc(v));
-
-  for (const url of candidates) {
-    try {
-      // staticNetwork מונע detectNetwork שעלול ליפול בחלק מה־RPCים
-      const p = new E.JsonRpcProvider(url, chainId, { staticNetwork: true });
-      return p;
-    } catch {}
-  }
-
-  return null;
+  const bestSaved = (typeof getSavedBestRpc === "function") ? getSavedBestRpc(net) : "";
+  const privSaved = (typeof getSavedPrivateRpc === "function") ? getSavedPrivateRpc(net) : "";
+  const url = custom || privSaved || bestSaved || (chain?.publicRpcs?.[0] || "");
+  if (!url || typeof E === "undefined" || !E?.JsonRpcProvider) return null;
+  try { return new E.JsonRpcProvider(url, chain.chainId); } catch { return null; }
 }
 
-// exports
 window.CX = window.CX || {};
 window.CX.getReadProvider = getReadProvider;
-window.getReadProvider = getReadProvider;
 
+window.getReadProvider = getReadProvider;
 
 
     function netFromSelect(selId) {
@@ -7273,7 +7243,13 @@ function qsUiExplorerKeyFor(net){
   }
 
   async function tryReadOwner(net, token){
-    const read = (typeof getReadProvider === "function") ? getReadProvider(net) : null;
+    const _getRP =
+  (typeof getReadProvider === "function" && getReadProvider) ||
+  (typeof window.getReadProvider === "function" && window.getReadProvider) ||
+  (typeof window.CX?.getReadProvider === "function" && window.CX.getReadProvider) ||
+  null;
+const read = _getRP ? _getRP(net) : null;
+
     if (!read) return "";
     try{
       const c = new E.Contract(token, OWNER_ABI, read);
@@ -7283,7 +7259,13 @@ function qsUiExplorerKeyFor(net){
   }
 
   async function tryReadPaused(net, token){
-    const read = (typeof getReadProvider === "function") ? getReadProvider(net) : null;
+    const _getRP =
+  (typeof getReadProvider === "function" && getReadProvider) ||
+  (typeof window.getReadProvider === "function" && window.getReadProvider) ||
+  (typeof window.CX?.getReadProvider === "function" && window.CX.getReadProvider) ||
+  null;
+const read = _getRP ? _getRP(net) : null;
+
     if (!read) return null;
     try{
       const c = new E.Contract(token, PAUSABLE_ABI, read);
@@ -7293,7 +7275,13 @@ function qsUiExplorerKeyFor(net){
   }
 
   async function tryEip1967Impl(net, token){
-    const read = (typeof getReadProvider === "function") ? getReadProvider(net) : null;
+    const _getRP =
+  (typeof getReadProvider === "function" && getReadProvider) ||
+  (typeof window.getReadProvider === "function" && window.getReadProvider) ||
+  (typeof window.CX?.getReadProvider === "function" && window.CX.getReadProvider) ||
+  null;
+const read = _getRP ? _getRP(net) : null;
+
     if (!read) return "";
     try{
       const raw = await read.getStorage(token, EIP1967_IMPL_SLOT);
@@ -7589,10 +7577,16 @@ if (!pool || pool === ZERO) {
       setStatus(st, "bad", "Ethers not loaded.");
       return;
     }
-   if (typeof getReadProvider !== "function") {
-      setStatus(st, "bad", "RPC provider missing (getReadProvider not found).");
-      return;
-    }
+  const getRP =
+  (typeof getReadProvider === "function" && getReadProvider) ||
+  (typeof window.getReadProvider === "function" && window.getReadProvider) ||
+  (typeof window.CX?.getReadProvider === "function" && window.CX.getReadProvider) ||
+  null;
+
+if (!getRP) {
+  setStatus(st, "bad", "RPC provider missing (getReadProvider not found).");
+  return;
+}
 
     setStatus(st, "info", "Scanning…");
 
@@ -7608,7 +7602,7 @@ if (!pool || pool === ZERO) {
 }
 
     const cfg = QS_NET?.[net];
-    const read = getReadProvider(net);
+    const read = getRP(net);
     if (!cfg || !read) {
       setStatus(st, "bad", "No network config / RPC available.");
       return;
