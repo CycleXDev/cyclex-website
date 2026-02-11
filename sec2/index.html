@@ -7544,6 +7544,61 @@ if (!pool || pool === ZERO) {
     const base = `Quick Scan (${rep.chainName || rep.net})\nToken: ${qsShortAddr(rep.token)}\nScore: ${rep.score}/100 (${rep.overallText})\n`;
     return `${base}${rep.shareLink || ""}`.trim();
   }
+  function qsRpcList(net){
+  try {
+    const arr = Array.isArray(CHAINS?.[net]?.publicRpcs) ? CHAINS[net].publicRpcs : [];
+    // remove bad/blocked endpoints + dedup
+    const out = [];
+    const seen = new Set();
+    for (const u of arr) {
+      const s = String(u || "").trim();
+      if (!s) continue;
+      if (/meowrpc/i.test(s)) continue; // hard block
+      const k = s.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(s);
+    }
+    return out;
+  } catch { return []; }
+}
+
+async function qsPickHealthyProvider(net){
+  const urls = qsRpcList(net);
+  const chainId = Number(CHAINS?.[net]?.chainId || 0);
+  for (const url of urls) {
+    try {
+      const p = new E.JsonRpcProvider(url, chainId || undefined, { staticNetwork: !!chainId });
+      // health check: both network + block
+      await Promise.race([
+        p.getBlockNumber(),
+        new Promise((_, rej)=>setTimeout(()=>rej(new Error("timeout")), 4500))
+      ]);
+      return p;
+    } catch {}
+  }
+  return null;
+}
+
+async function qsGetReadProviderSafe(net){
+  // 1) try project provider if exists
+  try {
+    if (typeof getReadProvider === "function") {
+      const p = getReadProvider(net);
+      if (p && typeof p.getBlockNumber === "function") {
+        await Promise.race([
+          p.getBlockNumber(),
+          new Promise((_, rej)=>setTimeout(()=>rej(new Error("timeout")), 3500))
+        ]);
+        return p;
+      }
+    }
+  } catch {}
+
+  // 2) fallback local healthy provider
+  return await qsPickHealthyProvider(net);
+}
+
 
   async function runQuickScan(){
     const st = $("#qs-status");
@@ -7569,30 +7624,13 @@ if (!pool || pool === ZERO) {
       setStatus(st, "bad", "Ethers not loaded.");
       return;
     }
-    if (typeof getReadProvider !== "function") {
-      setStatus(st, "bad", "RPC provider missing (getReadProvider not found).");
-      return;
-    }
+   const cfg = QS_NET?.[net];
+const read = await qsGetReadProviderSafe(net);
+if (!cfg || !read) {
+  setStatus(st, "bad", "No healthy RPC available right now.");
+  return;
+}
 
-    setStatus(st, "info", "Scanning…");
-
-    const cache = loadQsCache();
-    const ckey = qsCacheKey(net, token, requireLiq, useApis);
-    const cached = cache?.[ckey];
-
-    // ✅ Render is SAFE now (no TDZ vars)
-    if (cached?.rep && cached?.ts && (qsNowTs() - cached.ts) < 600) {
-      setStatus(st, "ok", "Loaded cached result (≤10 min).");
-      render(cached.rep);
-      return;
-    }
-
-    const cfg = QS_NET?.[net];
-    const read = getReadProvider(net);
-    if (!cfg || !read) {
-      setStatus(st, "bad", "No network config / RPC available.");
-      return;
-    }
 
     const rep = {
       ts: qsNowTs(),
@@ -7778,8 +7816,9 @@ try {
 } catch {}
 
     function render(rep){
-      const sym = rep.meta?.symbol || "Token";
-      const nm = rep.meta?.name ? ` — ${rep.meta.name}` : "";
+      const hasMeta = !!(rep.meta?.symbol || rep.meta?.name);
+const sym = rep.meta?.symbol || (hasMeta ? "Token" : "Token (metadata unavailable)");
+const nm = rep.meta?.name ? ` — ${rep.meta.name}` : "";
 
       // ✅ compute supply inside render (no TDZ, safe for cached rep)
       let supplyTxt = "—";
@@ -7802,7 +7841,7 @@ try {
           Token: <span class="mono">${qsEscapeHtml(rep.token)}</span>
         </div>
         <div class="small" style="margin-top:8px;">
-          Supply: <span class="mono">${qsEscapeHtml(supplyTxt)}</span>
+          Supply: <span class="mono">${hasMeta ? qsEscapeHtml(supplyTxt) : "Unknown"}</span>
         </div>
         <div class="small" style="margin-top:8px;">
           Explorer: <a href="${qsEscapeHtml(rep.explorer)}" target="_blank" rel="noopener">open</a>
