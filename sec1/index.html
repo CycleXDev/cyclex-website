@@ -6928,6 +6928,19 @@ window.CX.getReadProvider = getReadProvider;
 
 window.getReadProvider = getReadProvider;
 
+window.CX.ensureModule = async function ensureModule(name) {
+  const map = {
+    quickscan: "/js/quickscan.js",
+    dna: "/js/dna.js",
+    liq: "/js/liq.js"
+  };
+
+  const src = map[name];
+  if (!src) throw new Error("Unknown module: " + name);
+
+  await window.CX.loadScriptOnce(name, src);
+  return true;
+};
 
 
     function netFromSelect(selId) {
