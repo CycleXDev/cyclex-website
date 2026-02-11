@@ -7624,12 +7624,30 @@ async function qsGetReadProviderSafe(net){
       setStatus(st, "bad", "Ethers not loaded.");
       return;
     }
-   const cfg = QS_NET?.[net];
-const read = await qsGetReadProviderSafe(net);
-if (!cfg || !read) {
-  setStatus(st, "bad", "No healthy RPC available right now.");
-  return;
-}
+   if (typeof getReadProvider !== "function") {
+      setStatus(st, "bad", "RPC provider missing (getReadProvider not found).");
+      return;
+    }
+
+    setStatus(st, "info", "Scanning…");
+
+    const cache = loadQsCache();
+    const ckey = qsCacheKey(net, token, requireLiq, useApis);
+    const cached = cache?.[ckey];
+
+    // ✅ Render is SAFE now (no TDZ vars)
+    if (cached?.rep && cached?.ts && (qsNowTs() - cached.ts) < 600) {
+      setStatus(st, "ok", "Loaded cached result (≤10 min).");
+      render(cached.rep);
+      return;
+    }
+
+    const cfg = QS_NET?.[net];
+    const read = getReadProvider(net);
+    if (!cfg || !read) {
+      setStatus(st, "bad", "No network config / RPC available.");
+      return;
+    }
 
 
     const rep = {
@@ -7816,10 +7834,8 @@ try {
 } catch {}
 
     function render(rep){
-      const hasMeta = !!(rep.meta?.symbol || rep.meta?.name);
-const sym = rep.meta?.symbol || (hasMeta ? "Token" : "Token (metadata unavailable)");
+      const sym = rep.meta?.symbol || "Token";
 const nm = rep.meta?.name ? ` — ${rep.meta.name}` : "";
-
       // ✅ compute supply inside render (no TDZ, safe for cached rep)
       let supplyTxt = "—";
       try {
@@ -7841,7 +7857,7 @@ const nm = rep.meta?.name ? ` — ${rep.meta.name}` : "";
           Token: <span class="mono">${qsEscapeHtml(rep.token)}</span>
         </div>
         <div class="small" style="margin-top:8px;">
-          Supply: <span class="mono">${hasMeta ? qsEscapeHtml(supplyTxt) : "Unknown"}</span>
+          Supply: <span class="mono">${qsEscapeHtml(supplyTxt)}</span>
         </div>
         <div class="small" style="margin-top:8px;">
           Explorer: <a href="${qsEscapeHtml(rep.explorer)}" target="_blank" rel="noopener">open</a>
