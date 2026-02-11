@@ -6909,18 +6909,33 @@ const p = new E.JsonRpcProvider(url, n, { staticNetwork: n });
       return { ok: false, url: "", err: last || new Error("eth_getCode failed"), code: "0x" };
     }
 
-    function getReadProvider(net) {
-      const chain = CHAINS[net];
-      const custom = ($("#rpc-custom")?.value || "").trim();
-      const bestSaved = getSavedBestRpc(net);
-      const privSaved = getSavedPrivateRpc(net);
-      const url = custom || privSaved || bestSaved || (chain?.publicRpcs?.[0] || "");
-      if (!url) return null;
-      try { return new E.JsonRpcProvider(url, chain.chainId); } catch { return null; }
-    }
-    // --- Debug exports (safe) ---
+   function getReadProvider(net) {
+  const n = String(net || "").trim().toLowerCase();
+  const normNet =
+    (n === "bsc" || n === "bnb" || n === "56") ? "bsc" :
+    (n === "eth" || n === "ethereum" || n === "1") ? "eth" :
+    n;
+
+  const chain = CHAINS?.[normNet];
+  const custom = ($("#rpc-custom")?.value || "").trim();
+  const bestSaved = getSavedBestRpc(normNet);
+  const privSaved = getSavedPrivateRpc(normNet);
+  const url = custom || privSaved || bestSaved || (chain?.publicRpcs?.[0] || "");
+  if (!url) return null;
+
+  // chainId fallback כדי שלא ייפול אם CHAINS[normNet] חסר
+  const chainId =
+    chain?.chainId ??
+    (normNet === "bsc" ? 56 : normNet === "eth" ? 1 : undefined);
+
+  try { return new E.JsonRpcProvider(url, chainId); }
+  catch { return null; }
+}
+
+// exports
 window.CX = window.CX || {};
 window.CX.getReadProvider = getReadProvider;
+window.getReadProvider = getReadProvider; // חשוב ל-QuickScan
 
 
     function netFromSelect(selId) {
