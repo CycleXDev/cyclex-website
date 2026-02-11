@@ -7582,26 +7582,11 @@ if (!pool || pool === ZERO) {
     const cached = cache?.[ckey];
 
     // ✅ Render is SAFE now (no TDZ vars)
-    if (cached?.rep && cached?.ts && (qsNowTs() - cached.ts) < 600) {
-  // keep short status message
+  if (cached?.rep && cached?.ts && (qsNowTs() - cached.ts) < 600) {
   setStatus(st, "ok", "Loaded cached result (≤10 min).");
-
-  // harden cached rep shape (in case old cache saved partial data)
-  const repCached = cached.rep || {};
-  if (!repCached.meta) repCached.meta = {};
-  if (!Array.isArray(repCached.mini)) repCached.mini = [];
-  if (!repCached.liq) repCached.liq = { any:false, hint:"none", rows:[] };
-
-  // ensure output card is visible
-  if (out) {
-    out.style.display = "block";
-    out.classList.remove("hidden");
-  }
-
-  render(repCached);
+  render(cached.rep);
   return;
 }
-
 
     const cfg = QS_NET?.[net];
     const read = getReadProvider(net);
@@ -7794,11 +7779,10 @@ try {
   }
 } catch {}
 
-      function render(rep){
-  rep = rep || {};
-  rep.meta = rep.meta || {};
-  const sym = rep.meta.symbol || rep.symbol || "Token";
-  const nm = (rep.meta.name || rep.name) ? ` — ${rep.meta.name || rep.name}` : "";
+  function render(rep){
+  const sym = rep.meta?.symbol || "Token";
+  const nm = rep.meta?.name ? ` — ${rep.meta.name}` : "";
+
 
       // ✅ compute supply inside render (no TDZ, safe for cached rep)
       let supplyTxt = "—";
