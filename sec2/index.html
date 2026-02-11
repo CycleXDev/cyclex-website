@@ -7545,56 +7545,6 @@ if (!pool || pool === ZERO) {
     return `${base}${rep.shareLink || ""}`.trim();
   }
  
-// =========================
-// Global read provider bridge (required by QuickScan/DNA/Liquidity)
-// =========================
-(function () {
-  "use strict";
-
-  // אם כבר קיים - לא נוגעים
-  if (typeof window.getReadProvider === "function") return;
-
-  // עוזר קטן ליצירת provider
-  function mkProvider(url){
-    try {
-      if (!url || typeof E === "undefined" || !E?.JsonRpcProvider) return null;
-      return new E.JsonRpcProvider(url, undefined, { staticNetwork: false });
-    } catch { return null; }
-  }
-
-  // אפשרות 1: להשתמש בפונקציה קיימת אצלך אם יש
-  if (typeof window.withRpcFallback === "function") {
-    window.getReadProvider = function(net){
-      try {
-        const p = window.withRpcFallback(net);
-        if (p) return p;
-      } catch {}
-      return null;
-    };
-    return;
-  }
-
-  // אפשרות 2: fallback ישיר מתוך הגדרות קיימות
-  // תומך ב-CHAINS אם קיים אצלך
-  window.getReadProvider = function(net){
-    try {
-      const c = (window.CHAINS && window.CHAINS[net]) ? window.CHAINS[net] : null;
-      if (!c) return null;
-
-      // נסיון לפי שמות נפוצים
-      const urls = [
-        c.rpcUrl, c.rpc, c.rpc1, c.rpc2,
-        c.publicRpc, c.publicRpcUrl
-      ].filter(Boolean);
-
-      for (const u of urls) {
-        const p = mkProvider(u);
-        if (p) return p;
-      }
-    } catch {}
-    return null;
-  };
-})();
 
   async function runQuickScan(){
     const st = $("#qs-status");
@@ -9448,7 +9398,7 @@ async function dnaScan() {
     try {
       const scoreNow = Number(($("#dna-score")?.textContent || "0").trim());
       const u = new URL("/api/saveScore", DNA_API_BASE);
-      const resp = await fetch(req.url, init);
+      const resp = await fetch(u.toString(), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ net, score: scoreNow })
