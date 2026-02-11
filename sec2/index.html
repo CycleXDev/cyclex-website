@@ -3426,7 +3426,7 @@ wui-dialog,
     </div>
     
 <!-- DNA Export Buttons (NEW) -->
-<div id="dna-export-section" class="hidden" style="margin-top:12px;display:flex;gap:8px;">
+<div id="dna-export-section" class="hidden" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
   <button id="dna-export-csv" class="chip chip-primary">
     📥 Export CSV
   </button>
@@ -8433,6 +8433,7 @@ function dnaClearOutputs() {
 
   clearStatus?.($("#dna-status"));
   clearStatus?.($("#ap-status"));
+  window.__dnaLastRows = [];
 }
 
 function dnaRiskLevelFromScore(score) {
@@ -9567,6 +9568,16 @@ async function dnaRevokeAll() {
   await dnaScan();
 }
 window.dnaRevokeAll = dnaRevokeAll;
+    
+    function dnaUpdateExportVisibility() {
+  const sec = $("#dna-export-section");
+  if (!sec) return;
+
+  // visible only with full access
+  if (dnaFullAccess) sec.classList.remove("hidden");
+  else sec.classList.add("hidden");
+}
+
 
 function dnaSeedCommon() {
   const net = dnaNet();
@@ -9646,6 +9657,8 @@ function dnaSetEligMsg(text, state = "info") {
 
 function dnaLockApprovalsUI(msgKey) {
   dnaFullAccess = false;
+  window.__dnaLastRows = [];
+
 
   $("#dna-approvals-locked")?.classList.remove("hidden");
   $("#dna-approvals-content")?.classList.add("hidden");
@@ -9653,6 +9666,7 @@ function dnaLockApprovalsUI(msgKey) {
   $("#dna-full-access")?.classList.remove("hidden");
   $("#dna-revoke-all")?.classList.add("hidden");
   dnaClearApprovalsTable();
+  dnaUpdateExportVisibility();
 
   if (msgKey) {
     if (msgKey === "checking") {
@@ -9698,6 +9712,7 @@ function dnaUnlockApprovalsUI() {
 
   $("#dna-full-access")?.classList.add("hidden");
   $("#dna-revoke-all")?.classList.remove("hidden");
+  dnaUpdateExportVisibility();
 }
 
 async function dnaCheckCycxEligibility_BSC() {
@@ -9792,6 +9807,8 @@ function initWalletSecurityDNAUi() {
   dnaSetWalletBadges();
   initDnaCycxGate();
   initDnaExport(); // ✅ NEW: Initialize export buttons
+  dnaUpdateExportVisibility();
+
 
   $("#dna-run")?.addEventListener("click", dnaScan);
   $("#dna-reset")?.addEventListener("click", dnaClearOutputs);
