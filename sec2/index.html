@@ -9192,10 +9192,22 @@ function dnaEscAttr(str) {
 }
 
 function initDnaExport() {
-  $("#dna-export-csv")?.addEventListener("click", dnaExportCSV);
-  $("#dna-export-json")?.addEventListener("click", dnaExportJSON);
-  console.log("[DNA] Export functionality initialized");
+  const csvBtn = $("#dna-export-csv");
+  const jsonBtn = $("#dna-export-json");
+
+  if (csvBtn && !csvBtn.__dnaBound) {
+    csvBtn.addEventListener("click", dnaExportCSV);
+    csvBtn.__dnaBound = true;
+  }
+
+  if (jsonBtn && !jsonBtn.__dnaBound) {
+    jsonBtn.addEventListener("click", dnaExportJSON);
+    jsonBtn.__dnaBound = true;
+  }
+
+  console.log("[DNA] Export functionality initialized (Full Access required)");
 }
+
 
 // =========================
 // Copy functionality
