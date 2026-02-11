@@ -8745,28 +8745,28 @@ async function dnaFetchWalletTxs(net, address) {
 function dnaAnalyzeRelations(net, wallet, txs) {
   const tagged = DNA_TAGGED_ENTITIES[net] || {};
   const relations = {};
-  
+  const walletNorm = normAddr(wallet || "");
+
   for (const tx of txs) {
     const from = normAddr(tx.from || "");
     const to = normAddr(tx.to || "");
     const ts = Number(tx.timeStamp || 0) * 1000;
-    
+
     if (!from || !to || ts === 0) continue;
-    
+
     let entityAddr = null;
     let direction = null;
-    
-    if (from === wallet && tagged[to]) {
+
+    if (from === walletNorm && tagged[to]) {
       entityAddr = to;
       direction = "outgoing";
-    }
-    else if (to === wallet && tagged[from]) {
+    } else if (to === walletNorm && tagged[from]) {
       entityAddr = from;
       direction = "incoming";
     }
-    
+
     if (!entityAddr) continue;
-    
+
     if (!relations[entityAddr]) {
       relations[entityAddr] = {
         entity: tagged[entityAddr],
@@ -8778,12 +8778,12 @@ function dnaAnalyzeRelations(net, wallet, txs) {
         lastSeen: ts
       };
     }
-    
+
     const r = relations[entityAddr];
     r[direction]++;
     r.firstSeen = Math.min(r.firstSeen, ts);
     r.lastSeen = Math.max(r.lastSeen, ts);
-    
+
     r.txs.push({
       hash: tx.hash,
       direction,
@@ -8793,9 +8793,10 @@ function dnaAnalyzeRelations(net, wallet, txs) {
       color: direction === "incoming" ? "green" : "red"
     });
   }
-  
+
   return Object.values(relations);
 }
+
 
 function dnaRelationRiskScore(rel) {
   const totalTx = rel.incoming + rel.outgoing;
@@ -9033,10 +9034,13 @@ function dnaRenderTable(rows) {
 
 function dnaBindTimelineViewer(rows) {
   const table = document.getElementById("ap-table");
-  if (!table || table.__timelineBound) return;
-  table.__timelineBound = true;
+  if (!table) return;
 
-  table.addEventListener("click", (e) => {
+  if (table.__timelineHandler) {
+    table.removeEventListener("click", table.__timelineHandler);
+  }
+
+  const handler = (e) => {
     const btn = e.target.closest?.("[data-timeline-idx]");
     if (!btn) return;
 
@@ -9045,10 +9049,16 @@ function dnaBindTimelineViewer(rows) {
     if (!row || !row.__timeline) return;
 
     dnaShowTimelineModal(row);
-  });
+  };
+
+  table.__timelineHandler = handler;
+  table.addEventListener("click", handler);
 }
 
+
 function dnaShowTimelineModal(row) {
+  document.getElementById("dna-timeline-modal")?.remove();
+
   const timeline = row.__timeline || [];
   const entity = row.symbol || "Entity";
 
@@ -9060,10 +9070,12 @@ function dnaShowTimelineModal(row) {
     </div>
   `).join("");
 
+  const safeEntity = window.escapeHtml ? window.escapeHtml(entity) : entity;
+
   const modalHtml = `
     <div id="dna-timeline-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
       <div style="background:white;padding:24px;border-radius:12px;max-width:500px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.3);">
-        <h3 style="margin-top:0;">Transaction Timeline: ${entity}</h3>
+        <h3 style="margin-top:0;">Transaction Timeline: ${safeEntity}</h3>
         <div style="margin:16px 0;">${timelineHtml}</div>
         <button id="dna-close-timeline" class="chip chip-primary" style="width:100%;">Close</button>
       </div>
@@ -9071,17 +9083,18 @@ function dnaShowTimelineModal(row) {
   `;
 
   document.body.insertAdjacentHTML("beforeend", modalHtml);
-  
-  document.getElementById("dna-close-timeline").addEventListener("click", () => {
+
+  document.getElementById("dna-close-timeline")?.addEventListener("click", () => {
     document.getElementById("dna-timeline-modal")?.remove();
   });
-  
-  document.getElementById("dna-timeline-modal").addEventListener("click", (e) => {
+
+  document.getElementById("dna-timeline-modal")?.addEventListener("click", (e) => {
     if (e.target.id === "dna-timeline-modal") {
       document.getElementById("dna-timeline-modal")?.remove();
     }
   });
 }
+
 
 // =========================
 // EXPORT FUNCTIONALITY (NEW)
@@ -9093,41 +9106,34 @@ async function dnaExportCSV() {
     return;
   }
 
-  const table = document.getElementById("ap-table");
-  if (!table) return;
-
-  const rows = Array.from(table.querySelectorAll(".trow.ap-main"));
-  if (rows.length === 0) {
+  const rows = Array.isArray(window.__dnaLastRows) ? window.__dnaLastRows : [];
+  if (!rows.length) {
     setStatus($("#dna-status"), "warn", "No data to export. Run a scan first.");
     return;
   }
 
+  const esc = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   let csv = "Token,Spender,Symbol,Allowance,Verified,Risk,Flags,Type,Last Updated\n";
 
-  rows.forEach(row => {
-    const cells = Array.from(row.querySelectorAll(".cell"));
-    if (cells.length < 7) return;
-
-    const token = cells[0]?.querySelector(".addr-short")?.textContent || "—";
-    const spender = cells[1]?.querySelector(".addr-short")?.textContent || "—";
-    const symbol = cells[0]?.textContent?.includes("Relationship") ? cells[0].textContent.split("Relationship")[0].trim() : "—";
-    const allowance = cells[2]?.textContent?.trim() || "—";
-    const verified = cells[3]?.textContent?.trim() || "—";
-    const risk = cells[5]?.textContent?.trim() || "—";
-    const isRelation = row.classList.contains("dna-relation-row") ? "Relationship" : "Approval";
-    const flags = row.nextElementSibling?.querySelector(".ap-flags-cell .mono")?.textContent?.trim() || "—";
-    const lastUpdated = cells[4]?.textContent?.trim() || "—";
-
-    const escapeCSV = (str) => `"${String(str).replace(/"/g, '""')}"`;
-
-    csv += `${escapeCSV(token)},${escapeCSV(spender)},${escapeCSV(symbol)},${escapeCSV(allowance)},${escapeCSV(verified)},${escapeCSV(risk)},${escapeCSV(flags)},${escapeCSV(isRelation)},${escapeCSV(lastUpdated)}\n`;
-  });
+  for (const r of rows) {
+    csv += [
+      esc(r.token || "—"),
+      esc(r.spender || "—"),
+      esc(r.symbol || "—"),
+      esc(r.allowanceStr || "—"),
+      esc(r.verified || "—"),
+      esc(r.risk || "—"),
+      esc(r.flags || "—"),
+      esc(r.__dnaRelation ? "Relationship" : "Approval"),
+      esc(r.lastUpdated || "—")
+    ].join(",") + "\n";
+  }
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `DNA-Scan-${dnaNet()}-${new Date().toISOString().slice(0,10)}.csv`;
+  link.download = `DNA-Scan-${dnaNet()}-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 
@@ -9135,17 +9141,15 @@ async function dnaExportCSV() {
   gtagEvent?.("sec_dna_export", { format: "csv", net: dnaNet() });
 }
 
+
 async function dnaExportJSON() {
   if (!dnaFullAccess) {
     setStatus($("#dna-status"), "warn", "Export requires full access. Hold PASS or CYCX to unlock.");
     return;
   }
 
-  const table = document.getElementById("ap-table");
-  if (!table) return;
-
-  const rows = Array.from(table.querySelectorAll(".trow.ap-main"));
-  if (rows.length === 0) {
+  const rows = Array.isArray(window.__dnaLastRows) ? window.__dnaLastRows : [];
+  if (!rows.length) {
     setStatus($("#dna-status"), "warn", "No data to export. Run a scan first.");
     return;
   }
@@ -9156,39 +9160,35 @@ async function dnaExportJSON() {
     wallet: dnaInputAddress(),
     score: Number(($("#dna-score")?.textContent || "0").trim()),
     risk: ($("#dna-risk")?.textContent || "—").trim(),
-    items: []
+    items: rows.map(r => ({
+      token: r.token || "—",
+      spender: r.spender || "—",
+      symbol: r.symbol || "—",
+      allowance: r.allowanceStr || "—",
+      verified: r.verified || "—",
+      lastUpdated: r.lastUpdated || "—",
+      risk: r.risk || "—",
+      type: r.__dnaRelation ? "relationship" : "approval",
+      flags: r.flags || "—",
+      entityType: r.__entityType || null,
+      entityTags: r.__entityTags || [],
+      timeline: r.__timeline || []
+    }))
   };
-
-  rows.forEach(row => {
-    const cells = Array.from(row.querySelectorAll(".cell"));
-    if (cells.length < 7) return;
-
-    const item = {
-      token: cells[0]?.querySelector("[data-copy]")?.getAttribute("data-copy") || cells[0]?.textContent?.trim() || "—",
-      spender: cells[1]?.querySelector("[data-copy]")?.getAttribute("data-copy") || cells[1]?.textContent?.trim() || "—",
-      allowance: cells[2]?.textContent?.trim() || "—",
-      verified: cells[3]?.textContent?.trim() || "—",
-      lastUpdated: cells[4]?.textContent?.trim() || "—",
-      risk: cells[5]?.textContent?.trim() || "—",
-      type: row.classList.contains("dna-relation-row") ? "relationship" : "approval",
-      flags: row.nextElementSibling?.querySelector(".ap-flags-cell .mono")?.textContent?.trim() || "—"
-    };
-
-    exportData.items.push(item);
-  });
 
   const json = JSON.stringify(exportData, null, 2);
   const blob = new Blob([json], { type: "application/json;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `DNA-Scan-${dnaNet()}-${new Date().toISOString().slice(0,10)}.json`;
+  link.download = `DNA-Scan-${dnaNet()}-${new Date().toISOString().slice(0, 10)}.json`;
   link.click();
   URL.revokeObjectURL(url);
 
   setStatus($("#dna-status"), "ok", "Exported to JSON successfully.");
   gtagEvent?.("sec_dna_export", { format: "json", net: dnaNet() });
 }
+
 
 function dnaEscAttr(str) {
   return String(str || "")
@@ -9315,6 +9315,7 @@ async function dnaScan() {
 
     // STEP 3: Merge approvals + relationships
     const allRows = [...rows, ...relationshipRows];
+    window.__dnaLastRows = allRows;
     
     dnaRenderTable(allRows);
 
