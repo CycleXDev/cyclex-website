@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3056,6 +3055,41 @@ wui-dialog,
     content-visibility: auto;
     contain-intrinsic-size: 500px;
   }
+  /* ===== FIX: stop cross-button glow/bleed in hero actions ===== */
+.hero-actions .btn {
+  isolation: isolate;
+  will-change: auto;
+}
+
+/* disable moving shine layers on hero buttons */
+.hero-actions .btn::before,
+.hero-actions .btn::after {
+  transform: none !important;
+  filter: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+/* no cross-effect on non-hover siblings */
+.hero-actions .btn:not(:hover) {
+  transform: none !important;
+  filter: none !important;
+}
+
+/* kill white inset/glass bleed on ghost/secondary in hero row */
+.hero-actions .btn-ghost,
+.hero-actions .btn-secondary {
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* keep only subtle hover without lateral movement */
+.hero-actions .btn:hover {
+  transform: translateY(-1px) !important; /* optional: או none */
+  filter: none !important;
+}
+
 </style>
    
    
