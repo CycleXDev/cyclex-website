@@ -6066,6 +6066,46 @@ function closeAccessModal() {
 const ACCESS_USD_PRICE = 9;
 const ACCESS_USDT = "0x55d398326f99059fF775485246999027B3197955";
 const ACCESS_SALE_OR_RECEIVER = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
+    
+// =========================
+// X (Twitter) Conversion Tracking
+// =========================
+const X_PIXEL_ID = "tw-r4v6v";                 
+const X_EVENT_PURCHASE_ID = "tw-r4v6v-r4v6w";  
+const X_EVENT_ADD_TO_CART_ID = "tw-r4v6v-r4v6z"; 
+
+// fire-and-forget helper
+function trackXEvent(eventId, data = {}) {
+  try {
+    if (typeof window.twq !== "function") {
+      console.warn("[X Pixel] twq not available");
+      return;
+    }
+    window.twq("event", eventId, data);
+    console.log("[X Pixel] event sent:", eventId, data);
+  } catch (e) {
+    console.warn("[X Pixel] failed:", e);
+  }
+}
+
+// Purchase helper
+function trackXPurchase({
+  value = ACCESS_USD_PRICE,
+  currency = "USD",
+  payment_method = "unknown",
+  tx_hash = "",
+} = {}) {
+  trackXEvent(X_EVENT_PURCHASE_ID, {
+    value: Number(value),
+    currency,
+    contents: [
+      { content_id: "cyclex_access_pass", content_type: "product", quantity: 1 }
+    ],
+    content_name: "CycleX Access Pass",
+    conversion_id: tx_hash || `access_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+    payment_method
+  });
+}
 
 const ACCESS_READ_RPCS = [
   "https://bsc-rpc.publicnode.com",
@@ -6354,10 +6394,19 @@ accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
 
 const ok = await accessWaitForConfirm(provider, txHash);
 if (ok) {
+  // Track Purchase only on confirmed success
+  trackXPurchase({
+    value: ACCESS_USD_PRICE,
+    currency: "USD",
+    payment_method: "bnb",
+    tx_hash: txHash || ""
+  });
+
   clearPendingCheckoutKind();
   __mobileAccessReadyToPay = false;
   __mobileAccessReadyKind = "";
   accessSetStatus("Confirmed ✅");
+
   setTimeout(() => {
     closeAccessModal();
     accessSetStatus("");
@@ -6410,8 +6459,17 @@ return;
       const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
 
       if (ok) {
-        clearPendingCheckoutKind();
-        setResumePaused(false);
+  // Track Purchase only on confirmed success
+  trackXPurchase({
+    value: ACCESS_USD_PRICE,
+    currency: "USD",
+    payment_method: "usdt",
+    tx_hash: (tx2 && tx2.hash) ? tx2.hash : ""
+  });
+
+  clearPendingCheckoutKind();
+  setResumePaused(false);
+
         removeContinueCheckoutButton();
         stopResumePoll();
         __mobileAccessReadyToPay = false;
