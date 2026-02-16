@@ -4701,11 +4701,14 @@ if (!getRP) {
     const cached = cache?.[ckey];
 
     // ✅ Render is SAFE now (no TDZ vars)
-  if (cached?.rep && cached?.ts && (qsNowTs() - cached.ts) < 600) {
-  setStatus(st, "ok", "Loaded cached result (≤10 min).");
-  render(cached.rep);
-  return;
+ if (cached?.rep && cached?.ts && (qsNowTs() - cached.ts) < 600) {
+  if (qsLower(cached.rep.token) === qsLower(token) && cached.rep.net === net) {
+    setStatus(st, "ok", "Loaded cached result (≤10 min).");
+    render(cached.rep);
+    return;
+  }
 }
+
 
     const cfg = QS_NET?.[net];
     const read = getRP(net);
