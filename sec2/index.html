@@ -7665,22 +7665,80 @@ if (!getRP) {
       return;
     }
 
-    // 2) ERC-20 basics
-    let name = "", symbol = "", decimals = 18, totalSupply = 0n;
+  // 2) ERC-20 basics (robust: ETH/BSC, string/bytes32 tolerant)
+let name = "", symbol = "", decimals = 18, totalSupply = 0n;
+
+try {
+  const c = new E.Contract(token, ERC20_MIN_ABI, read);
+
+  // name()
+  try {
+    const n = await c.name();
+    if (n != null) name = String(n).trim();
+  } catch {}
+
+  // symbol()
+  try {
+    const s = await c.symbol();
+    if (s != null) symbol = String(s).trim();
+  } catch {}
+
+  // decimals()
+  try {
+    const d = await c.decimals();
+    const dn = Number(d);
+    if (Number.isFinite(dn) && dn >= 0 && dn <= 255) decimals = dn;
+  } catch {}
+
+  // totalSupply()
+  try {
+    const ts = await c.totalSupply();
     try {
-      const c = new E.Contract(token, ERC20_MIN_ABI, read);
-      const r = await Promise.all([
-        c.name().catch(()=> ""),
-        c.symbol().catch(()=> ""),
-        c.decimals().catch(()=> 18),
-        c.totalSupply().catch(()=> 0n)
+      totalSupply = (typeof ts === "bigint") ? ts : BigInt(String(ts));
+    } catch {
+      totalSupply = 0n;
+    }
+  } catch {}
+
+  // Fallback for old/non-standard tokens that return bytes32 for name/symbol
+  // only if still missing
+  if ((!name || !symbol) && E?.Interface && read?.call) {
+    try {
+      const iface = new E.Interface([
+        "function name() view returns (bytes32)",
+        "function symbol() view returns (bytes32)"
       ]);
-      name = String(r[0] || "");
-      symbol = String(r[1] || "");
-      decimals = Number(r[2] ?? 18);
-      totalSupply = BigInt(r[3] ?? 0n);
-      rep.meta = { name, symbol, decimals, totalSupply: totalSupply.toString() };
+
+      if (!name) {
+        try {
+          const data = iface.encodeFunctionData("name", []);
+          const ret = await read.call({ to: token, data });
+          const [b] = iface.decodeFunctionResult("name", ret);
+          const parsed = String(b || "").replace(/\u0000/g, "").trim();
+          if (parsed) name = parsed;
+        } catch {}
+      }
+
+      if (!symbol) {
+        try {
+          const data = iface.encodeFunctionData("symbol", []);
+          const ret = await read.call({ to: token, data });
+          const [b] = iface.decodeFunctionResult("symbol", ret);
+          const parsed = String(b || "").replace(/\u0000/g, "").trim();
+          if (parsed) symbol = parsed;
+        } catch {}
+      }
     } catch {}
+  }
+
+  rep.meta = {
+    name,
+    symbol,
+    decimals,
+    totalSupply: totalSupply.toString()
+  };
+} catch {}
+
 
     // 3) Liquidity rows (compact table)
     try {
