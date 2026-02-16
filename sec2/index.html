@@ -4843,6 +4843,28 @@ try {
     try {
       rep.liq = await qsLiqCheckBasic(net, token, read);
     } catch {}
+    // --- quick liquidity quality heuristic (no external price API) ---
+let liqQuality = "unknown"; // unknown | tiny | low | healthy
+try {
+  const rows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows : [];
+  const active = rows.filter(r => r?.ok);
+
+  // parse wrapped amount from note pattern: "... / X WETH" or "... / X WBNB"
+  let wrappedAmt = 0;
+  for (const r of active) {
+    const note = String(r?.note || "");
+    const m = note.match(/\/\s*([0-9.,]+)\s*(WETH|WBNB)/i);
+    if (m) {
+      const v = Number(String(m[1]).replace(/,/g, ""));
+      if (Number.isFinite(v)) wrappedAmt += v;
+    }
+  }
+
+  if (active.length <= 1 && wrappedAmt < 0.05) liqQuality = "tiny";
+  else if (wrappedAmt < 0.5) liqQuality = "low";
+  else liqQuality = "healthy";
+} catch {}
+
 
     // 4) Proxy
     let impl = await tryEip1967Impl(net, token);
@@ -4955,6 +4977,16 @@ if (verified === true) contractScore += 8;
 if (verified === false) contractScore -= 6;
 
 if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
+    if (liqQuality === "tiny") {
+  score -= 28;
+  if (score > 49) score = 49; // hard cap
+  rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
+} else if (liqQuality === "low") {
+  score -= 14;
+  if (score > 64) score = 64;
+  rep.redFlags.push("Low effective liquidity detected.");
+}
+
 
 contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
@@ -4983,7 +5015,6 @@ else if (mFlags.has("few_holders")) score -= 8;
 
 if (mFlags.has("holder_concentration_unknown")) score -= 8;
 
-// אם אין ודאות על holder concentration — לא לתת "Good"
 const confidenceLow = mFlags.has("holder_concentration_unknown");
 if (confidenceLow && score > 79) score = 79;
 
@@ -4998,7 +5029,36 @@ const criticalFlags = new Set([
 const hasCritical = (marketFlags || []).some(f => criticalFlags.has(f));
 if (hasCritical && score > 69) score = 69; // מקסימום Mixed/Caution, לא Good
 
+// =========================
+// HARD SAFETY GATES (anti-false-positive)
+// =========================
+const mFlags = new Set((marketFlags || []).map(String));
 
+// 1) Confidence low -> never "Good"
+const confidenceLow = mFlags.has("holder_concentration_unknown");
+if (confidenceLow && score > 69) score = 69;
+
+// 2) Holder data unknown -> cap to caution-ish
+if (mFlags.has("holder_concentration_unknown") && score > 64) score = 64;
+
+// 3) Thin-liquidity structure gate:
+// count only truly active rows (ok === true)
+const liqRows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows : [];
+const activeLiqRows = liqRows.filter(r => !!r?.ok);
+if (activeLiqRows.length <= 1 && score > 59) {
+  score = 59;
+  rep.redFlags.push("Only one active liquidity venue detected (thin market structure).");
+}
+
+// 4) If market flags include manipulation/very-low-liq -> hard cap
+if ((mFlags.has("possible_manipulated_move") || mFlags.has("very_low_liquidity_usd")) && score > 49) {
+  score = 49;
+}
+
+// keep in range
+score = qsClamp(score, 0, 100);
+
+    
 const overallText =
   score >= 85 ? "Good" :
   score >= 70 ? "Mixed signals" :
@@ -5007,16 +5067,7 @@ const overallText =
 
 rep.score = score;
 rep.overallText = overallText;
-
-// expose sub-scores in meta
-rep.meta = {
-  ...(rep.meta || {}),
-  contractScore,
-  marketScore,
-  confidence
-};
-
-
+    
     rep.mini = [
   { type: score >= 85 ? "ok" : score >= 70 ? "warn" : score >= 50 ? "warn" : "bad", title: "Overall", value: overallText },
   { type: rep.meta?.contractScore >= 85 ? "ok" : rep.meta?.contractScore >= 70 ? "warn" : "bad", title: "Contract Score", value: String(rep.meta?.contractScore ?? "—") },
@@ -5027,7 +5078,18 @@ rep.meta = {
   { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
   { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown },
   { type: holderConcType, title: "Holder Concentration", value: holderConcText },
-  { type: rep.liq?.any ? "ok" : "warn", title: "Liquidity", value: rep.liq?.any ? "V2/V3 pairs exist" : "No/Unknown" },
+  {
+  type:
+    !rep.liq?.any ? "warn" :
+    liqQuality === "tiny" ? "bad" :
+    liqQuality === "low" ? "warn" : "ok",
+  title: "Liquidity",
+  value:
+    !rep.liq?.any ? "No/Unknown" :
+    liqQuality === "tiny" ? "Very low (thin)" :
+    liqQuality === "low" ? "Low" : "Healthy"
+},
+
   { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
   { type: pauseDetected ? "warn" : "ok", title: "Pause", value: pauseText }
 ];
@@ -5043,9 +5105,12 @@ rep.meta = {
 }
 rep.meta = {
   ...(rep.meta || {}),
+  contractScore,
+  marketScore,
+  confidence,
   ownerBalance: ownerBal?.toString?.() || "0",
   ownerPct: ownerPct,
-  marketFlags: Array.from((marketFlags || []))
+  marketFlags: Array.from(marketFlags || [])
 };
 
 
