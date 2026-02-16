@@ -4565,7 +4565,7 @@ if (!pool || pool === ZERO) {
           let liq = 0n;
           try { liq = _qsToBI(await p.liquidity()); } catch {}
 
-          const ok = (b0 > 0n || b1 > 0n || liq > 0n);
+          const ok = (b0 > 0n && b1 > 0n);
           any = any || ok;
 
           const fb0 = _qsFmtUnits(b0, m0.decimals, 2);
@@ -4909,19 +4909,28 @@ try {
     const owner = await tryReadOwner(net, token);
     const ownerIsRenounced = owner && DEAD_ADDRESSES.has(qsLower(owner));
     const ownerShown = owner ? qsShortAddr(owner) : "No/Unknown";
-    // 5.5) Holder concentration (owner wallet share)
+   // 5.5) Holder concentration (owner wallet share)
 let ownerBal = 0n;
 let ownerPct = null;
 let holderConcText = "No/Unknown";
 let holderConcType = "warn";
 
+// normalize total supply from rep.meta (string -> bigint)
+let totalSupplyBI = 0n;
+try {
+  totalSupplyBI = BigInt(rep?.meta?.totalSupply || "0");
+} catch {
+  totalSupplyBI = 0n;
+}
+
 if (owner && !ownerIsRenounced) {
   try{
     const bc = new E.Contract(token, ERC20_BALANCE_ABI, read);
     ownerBal = BigInt(await bc.balanceOf(owner).catch(()=> 0n));
-    ownerPct = qsPctFromBig(ownerBal, totalSupply);
+    ownerPct = qsPctFromBig(ownerBal, totalSupplyBI);
   } catch {}
 }
+
 
 if (ownerPct === null) {
   holderConcText = owner ? "No/Unknown" : "No owner";
@@ -5013,6 +5022,10 @@ if (verified === true) contractScore += 8;
 if (verified === false) contractScore -= 6;
 
 if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
+
+// liquidity quality penalty INSIDE contract score
+if (liqQuality === "tiny") contractScore -= 18;
+else if (liqQuality === "low") contractScore -= 8;
 
 contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
