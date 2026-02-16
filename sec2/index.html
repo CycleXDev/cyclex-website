@@ -7022,6 +7022,10 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
     "function decimals() view returns (uint8)",
     "function totalSupply() view returns (uint256)"
   ];
+  const ERC20_BALANCE_ABI = [
+  "function balanceOf(address) view returns (uint256)"
+];
+
   const OWNER_ABI = ["function owner() view returns (address)"];
   const PAUSABLE_ABI = ["function paused() view returns (bool)"];
 
@@ -7125,6 +7129,16 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
       return qsFmtNum(v, digits);
     } catch { return "—"; }
   }
+  function qsPctFromBig(part, total){
+  try{
+    const p = BigInt(part || 0n);
+    const t = BigInt(total || 0n);
+    if (t <= 0n) return null;
+    const bp = Number((p * 10000n) / t); // basis points
+    return bp / 100; // percent
+  } catch { return null; }
+}
+
 
   function loadQsCache(){
     try { return JSON.parse(localStorage.getItem(QS_LS_CACHE) || "{}"); } catch { return {}; }
@@ -7681,6 +7695,31 @@ if (!getRP) {
     const owner = await tryReadOwner(net, token);
     const ownerIsRenounced = owner && DEAD_ADDRESSES.has(qsLower(owner));
     const ownerShown = owner ? qsShortAddr(owner) : "No/Unknown";
+    // 5.5) Holder concentration (owner wallet share)
+let ownerBal = 0n;
+let ownerPct = null;
+let holderConcText = "No/Unknown";
+let holderConcType = "warn";
+
+if (owner && !ownerIsRenounced) {
+  try{
+    const bc = new E.Contract(token, ERC20_BALANCE_ABI, read);
+    ownerBal = BigInt(await bc.balanceOf(owner).catch(()=> 0n));
+    ownerPct = qsPctFromBig(ownerBal, totalSupply);
+  } catch {}
+}
+
+if (ownerPct === null) {
+  holderConcText = owner ? "No/Unknown" : "No owner";
+  holderConcType = "warn";
+} else {
+  holderConcText = `${qsFmtNum(ownerPct, 2)}% (owner wallet)`;
+
+  if (ownerPct >= 35) holderConcType = "bad";
+  else if (ownerPct >= 20) holderConcType = "warn";
+  else holderConcType = "ok";
+}
+
 
     // 6) Pause (INFO)
     const pausedState = await tryReadPaused(net, token);
@@ -7746,6 +7785,14 @@ if (useApis) {
     if (!owner) score += 0;
     else if (ownerIsRenounced) score += 5;
     else score -= 6;
+    // Holder concentration penalty (owner wallet share)
+if (ownerPct !== null) {
+  if (ownerPct >= 50) score -= 20;
+  else if (ownerPct >= 35) score -= 14;
+  else if (ownerPct >= 20) score -= 8;
+  else if (ownerPct >= 10) score -= 3;
+}
+
 
     if (verified === true) score += 8;
     if (verified === false) score -= 6;
@@ -7768,6 +7815,7 @@ if (useApis) {
       { type: verified === true ? "ok" : "warn", title: "Verified", value: verified === true ? "Yes" : "No/Unknown" },
       { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
       { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown },
+      { type: holderConcType, title: "Holder Concentration", value: holderConcText },
       { type: rep.liq?.any ? "ok" : "warn", title: "Liquidity", value: rep.liq?.any ? "V2/V3 pairs exist" : "No/Unknown" },
       { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
       { type: pauseDetected ? "warn" : "ok", title: "Pause", value: pauseText }
@@ -7776,6 +7824,16 @@ if (useApis) {
     if (mintDetected) rep.redFlags.push("Mint surface detected (supply risk).");
     if (isProxy) rep.redFlags.push("Proxy detected (upgrade risk).");
     if (!rep.liq?.any) rep.redFlags.push("No clear DEX liquidity signal detected.");
+    if (ownerPct !== null && ownerPct >= 35) {
+  rep.redFlags.push(`Owner wallet concentration is high (${qsFmtNum(ownerPct, 2)}%).`);
+} else if (ownerPct !== null && ownerPct >= 20) {
+  rep.redFlags.push(`Owner wallet concentration is elevated (${qsFmtNum(ownerPct, 2)}%).`);
+}
+rep.meta = {
+  ...(rep.meta || {}),
+  ownerBalance: ownerBal?.toString?.() || "0",
+  ownerPct: ownerPct
+};
 
     rep.json = safeJson(rep);
 
