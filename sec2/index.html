@@ -5045,12 +5045,23 @@ const overallText =
 
 rep.score = score;
 rep.overallText = overallText;
+
+    rep.meta = {
+  ...(rep.meta || {}),
+  contractScore,
+  marketScore,
+  confidence,
+  ownerBalance: ownerBal?.toString?.() || "0",
+  ownerPct: ownerPct,
+  marketFlags: Array.from(marketFlags || [])
+};
+
     
     rep.mini = [
   { type: score >= 85 ? "ok" : score >= 70 ? "warn" : score >= 50 ? "warn" : "bad", title: "Overall", value: overallText },
-  { type: rep.meta?.contractScore >= 85 ? "ok" : rep.meta?.contractScore >= 70 ? "warn" : "bad", title: "Contract Score", value: String(rep.meta?.contractScore ?? "—") },
-  { type: rep.meta?.marketScore >= 85 ? "ok" : rep.meta?.marketScore >= 70 ? "warn" : "bad", title: "Market Score", value: String(rep.meta?.marketScore ?? "—") },
-  { type: rep.meta?.confidence === "high" ? "ok" : rep.meta?.confidence === "medium" ? "warn" : "warn", title: "Confidence", value: rep.meta?.confidence || "low" },
+ { type: contractScore >= 85 ? "ok" : contractScore >= 70 ? "warn" : "bad", title: "Contract Score", value: String(contractScore) },
+{ type: marketScore >= 85 ? "ok" : marketScore >= 70 ? "warn" : "bad", title: "Market Score", value: String(marketScore) },
+{ type: confidence === "high" ? "ok" : confidence === "medium" ? "warn" : "warn", title: "Confidence", value: confidence || "low" },
 
   { type: verified === true ? "ok" : "warn", title: "Verified", value: verified === true ? "Yes" : "No/Unknown" },
   { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
@@ -5081,16 +5092,6 @@ rep.overallText = overallText;
 } else if (ownerPct !== null && ownerPct >= 20) {
   rep.redFlags.push(`Owner wallet concentration is elevated (${qsFmtNum(ownerPct, 2)}%).`);
 }
-rep.meta = {
-  ...(rep.meta || {}),
-  contractScore,
-  marketScore,
-  confidence,
-  ownerBalance: ownerBal?.toString?.() || "0",
-  ownerPct: ownerPct,
-  marketFlags: Array.from(marketFlags || [])
-};
-
 
     // market-derived red flags
 for (const f of (marketFlags || [])) {
