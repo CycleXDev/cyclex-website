@@ -4057,6 +4057,12 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
       addressUrl: (a)=> `https://etherscan.io/address/${a}`
     }
   };
+  // Minimum effective liquidity thresholds (rough heuristic)
+const QS_LIQ_FLOOR = {
+  bsc: { wrappedTiny: 0.03, wrappedLow: 0.30, usdtTiny: 80,  usdtLow: 800 },
+  eth: { wrappedTiny: 0.015, wrappedLow: 0.15, usdtTiny: 120, usdtLow: 1200 }
+};
+
 
   // -------------------------
   // Tiny safe helpers (local)
@@ -4844,26 +4850,55 @@ try {
       rep.liq = await qsLiqCheckBasic(net, token, read);
     } catch {}
     // --- quick liquidity quality heuristic (no external price API) ---
+// --- effective liquidity quality heuristic (wrapped + USDT floors) ---
 let liqQuality = "unknown"; // unknown | tiny | low | healthy
+let liqStats = { wrapped: 0, usdt: 0, active: 0 };
+
 try {
   const rows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows : [];
   const active = rows.filter(r => r?.ok);
+  liqStats.active = active.length;
 
-  // parse wrapped amount from note pattern: "... / X WETH" or "... / X WBNB"
   let wrappedAmt = 0;
+  let usdtAmt = 0;
+
   for (const r of active) {
     const note = String(r?.note || "");
-    const m = note.match(/\/\s*([0-9.,]+)\s*(WETH|WBNB)/i);
-    if (m) {
-      const v = Number(String(m[1]).replace(/,/g, ""));
+
+    // supports: "... / X WETH" or "... / X WBNB"
+    const mw = note.match(/\/\s*([0-9.,]+)\s*(WETH|WBNB)/i);
+    if (mw) {
+      const v = Number(String(mw[1]).replace(/,/g, ""));
       if (Number.isFinite(v)) wrappedAmt += v;
+    }
+
+    // supports: "... / X USDT"
+    const mu = note.match(/\/\s*([0-9.,]+)\s*USDT/i);
+    if (mu) {
+      const v = Number(String(mu[1]).replace(/,/g, ""));
+      if (Number.isFinite(v)) usdtAmt += v;
     }
   }
 
-  if (active.length <= 1 && wrappedAmt < 0.05) liqQuality = "tiny";
-  else if (wrappedAmt < 0.5) liqQuality = "low";
+  liqStats.wrapped = wrappedAmt;
+  liqStats.usdt = usdtAmt;
+
+  const floor = QS_LIQ_FLOOR[net] || QS_LIQ_FLOOR.bsc;
+
+  const isTiny =
+    active.length <= 1 ||
+    (wrappedAmt <= floor.wrappedTiny && usdtAmt <= floor.usdtTiny);
+
+  const isLow =
+    !isTiny &&
+    (wrappedAmt <= floor.wrappedLow || usdtAmt <= floor.usdtLow);
+
+  if (isTiny) liqQuality = "tiny";
+  else if (isLow) liqQuality = "low";
   else liqQuality = "healthy";
+
 } catch {}
+
 
 
     // 4) Proxy
@@ -5006,15 +5041,17 @@ else if (mFlags.has("few_holders")) score -= 8;
 if (mFlags.has("holder_concentration_unknown")) score -= 8;
 
 // quick liquidity quality penalties (MOVED HERE - after score exists)
+// effective liquidity penalties + hard caps
 if (liqQuality === "tiny") {
-  score -= 28;
-  if (score > 49) score = 49; // hard cap
+  score -= 35;
+  if (score > 49) score = 49; // never above High-risk/Caution border
   rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
 } else if (liqQuality === "low") {
-  score -= 14;
-  if (score > 64) score = 64;
+  score -= 18;
+  if (score > 64) score = 64; // cannot be Good/Mixed-high
   rep.redFlags.push("Low effective liquidity detected.");
 }
+
 
 // hard caps
 const hasCritical =
@@ -5067,7 +5104,7 @@ rep.overallText = overallText;
   { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
   { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown },
   { type: holderConcType, title: "Holder Concentration", value: holderConcText },
-  {
+ {
   type:
     !rep.liq?.any ? "warn" :
     liqQuality === "tiny" ? "bad" :
@@ -5075,9 +5112,13 @@ rep.overallText = overallText;
   title: "Liquidity",
   value:
     !rep.liq?.any ? "No/Unknown" :
-    liqQuality === "tiny" ? "Very low (thin)" :
-    liqQuality === "low" ? "Low" : "Healthy"
+    liqQuality === "tiny"
+      ? `Very low (thin) • ${qsFmtNum(liqStats.wrapped, 6)} ${net === "eth" ? "WETH" : "WBNB"} / ${qsFmtNum(liqStats.usdt, 2)} USDT`
+      : liqQuality === "low"
+      ? `Low • ${qsFmtNum(liqStats.wrapped, 6)} ${net === "eth" ? "WETH" : "WBNB"} / ${qsFmtNum(liqStats.usdt, 2)} USDT`
+      : "Healthy"
 },
+
 
   { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
   { type: pauseDetected ? "warn" : "ok", title: "Pause", value: pauseText }
