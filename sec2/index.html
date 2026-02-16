@@ -5018,9 +5018,18 @@ contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
 // market leg
 const market = qsComputeMarketRisk(rep);
-const marketScore = market.marketScore;
-const marketFlags = market.flags || [];
+let marketScore = Number(market.marketScore ?? 100);
+const marketFlags = Array.isArray(market.flags) ? market.flags : [];
 const confidence = market.confidence || "low";
+
+// force market score to respect on-chain thin liquidity too
+if (liqQuality === "tiny") {
+  marketScore = Math.min(marketScore, 35);
+} else if (liqQuality === "low") {
+  marketScore = Math.min(marketScore, 60);
+}
+marketScore = qsClamp(Math.round(marketScore), 0, 100);
+
 
 // base blend
 let score = Math.round(contractScore * 0.55 + marketScore * 0.45);
