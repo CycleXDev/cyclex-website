@@ -6716,11 +6716,12 @@ window.accessQuoteBNBWeiOnchain = accessQuoteBNBWeiOnchain;
         addressUrl: (a) => `https://etherscan.io/address/${a}`,
         txUrl: (h) => `https://etherscan.io/tx/${h}`,
         publicRpcs: [
-          "https://cloudflare-eth.com",
-          "https://rpc.ankr.com/eth",
-          "https://ethereum.publicnode.com",
-          "https://eth.llamarpc.com"
-        ]
+  "https://ethereum-rpc.publicnode.com",
+  "https://rpc.ankr.com/eth",
+  "https://eth.llamarpc.com",
+  "https://1rpc.io/eth"
+]
+
       }
     };
 
@@ -6896,15 +6897,41 @@ const p = new E.JsonRpcProvider(url, n, { staticNetwork: n });
       return { ok: false, url: "", err: last || new Error("eth_getCode failed"), code: "0x" };
     }
 
- function getReadProvider(net) {
+function getReadProvider(net) {
   const chain = CHAINS?.[net];
+  if (!chain || typeof E === "undefined" || !E?.JsonRpcProvider) return null;
+
   const custom = ($("#rpc-custom")?.value || "").trim();
-  const bestSaved = (typeof getSavedBestRpc === "function") ? getSavedBestRpc(net) : "";
-  const privSaved = (typeof getSavedPrivateRpc === "function") ? getSavedPrivateRpc(net) : "";
-  const url = custom || privSaved || bestSaved || (chain?.publicRpcs?.[0] || "");
-  if (!url || typeof E === "undefined" || !E?.JsonRpcProvider) return null;
-  try { return new E.JsonRpcProvider(url, chain.chainId); } catch { return null; }
+  const bestSaved = (typeof getSavedBestRpc === "function") ? (getSavedBestRpc(net) || "").trim() : "";
+  const privSaved = (typeof getSavedPrivateRpc === "function") ? (getSavedPrivateRpc(net) || "").trim() : "";
+
+  // priority:
+  // 1) custom (input)
+  // 2) private saved
+  // 3) best saved
+  // 4) first public fallback
+  const candidates = [];
+  if (custom) candidates.push(custom);
+  if (privSaved) candidates.push(privSaved);
+  if (bestSaved) candidates.push(bestSaved);
+
+  const list = Array.isArray(chain.publicRpcs) ? chain.publicRpcs : [];
+  for (const u of list) {
+    if (u && !candidates.includes(u)) candidates.push(u);
+  }
+
+  const first = candidates[0] || "";
+  if (!first) return null;
+
+  try {
+    const p = new E.JsonRpcProvider(first, chain.chainId);
+    p.__cxCandidates = candidates;
+    return p;
+  } catch {
+    return null;
+  }
 }
+
 
 window.CX = window.CX || {};
 window.CX.getReadProvider = getReadProvider;
@@ -7565,6 +7592,26 @@ if (!pool || pool === ZERO) {
     const base = `Quick Scan (${rep.chainName || rep.net})\nToken: ${qsShortAddr(rep.token)}\nScore: ${rep.score}/100 (${rep.overallText})\n`;
     return `${base}${rep.shareLink || ""}`.trim();
   }
+  async function cxReadWithFallback(net, runner) {
+  const base = getReadProvider(net);
+  if (!base) throw new Error("No read provider");
+
+  const chain = CHAINS?.[net];
+  const candidates = base.__cxCandidates || [base?._getConnection?.()?.url].filter(Boolean);
+
+  let lastErr;
+  for (const url of candidates) {
+    try {
+      const p = new E.JsonRpcProvider(url, chain.chainId);
+      const out = await runner(p);
+      return out;
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error("All RPC candidates failed");
+}
+
  
 
   async function runQuickScan(){
@@ -7665,78 +7712,82 @@ if (!getRP) {
       return;
     }
 
-  // 2) ERC-20 basics (robust: ETH/BSC, string/bytes32 tolerant)
-let name = "", symbol = "", decimals = 18, totalSupply = 0n;
-
+ // 2) ERC-20 basics (robust: ETH/BSC, string/bytes32 tolerant)
 try {
-  const c = new E.Contract(token, ERC20_MIN_ABI, read);
+  const meta = await cxReadWithFallback(net, async (read) => {
+    let name = "", symbol = "", decimals = 18, totalSupply = 0n;
 
-  // name()
-  try {
-    const n = await c.name();
-    if (n != null) name = String(n).trim();
-  } catch {}
+    const c = new E.Contract(token, ERC20_MIN_ABI, read);
 
-  // symbol()
-  try {
-    const s = await c.symbol();
-    if (s != null) symbol = String(s).trim();
-  } catch {}
-
-  // decimals()
-  try {
-    const d = await c.decimals();
-    const dn = Number(d);
-    if (Number.isFinite(dn) && dn >= 0 && dn <= 255) decimals = dn;
-  } catch {}
-
-  // totalSupply()
-  try {
-    const ts = await c.totalSupply();
+    // name()
     try {
-      totalSupply = (typeof ts === "bigint") ? ts : BigInt(String(ts));
-    } catch {
-      totalSupply = 0n;
-    }
-  } catch {}
+      const n = await c.name();
+      if (n != null) name = String(n).trim();
+    } catch {}
 
-  // Fallback for old/non-standard tokens that return bytes32 for name/symbol
-  // only if still missing
-  if ((!name || !symbol) && E?.Interface && read?.call) {
+    // symbol()
     try {
-      const iface = new E.Interface([
-        "function name() view returns (bytes32)",
-        "function symbol() view returns (bytes32)"
-      ]);
+      const s = await c.symbol();
+      if (s != null) symbol = String(s).trim();
+    } catch {}
 
-      if (!name) {
-        try {
-          const data = iface.encodeFunctionData("name", []);
-          const ret = await read.call({ to: token, data });
-          const [b] = iface.decodeFunctionResult("name", ret);
-          const parsed = String(b || "").replace(/\u0000/g, "").trim();
-          if (parsed) name = parsed;
-        } catch {}
-      }
+    // decimals()
+    try {
+      const d = await c.decimals();
+      const dn = Number(d);
+      if (Number.isFinite(dn) && dn >= 0 && dn <= 255) decimals = dn;
+    } catch {}
 
-      if (!symbol) {
-        try {
-          const data = iface.encodeFunctionData("symbol", []);
-          const ret = await read.call({ to: token, data });
-          const [b] = iface.decodeFunctionResult("symbol", ret);
-          const parsed = String(b || "").replace(/\u0000/g, "").trim();
-          if (parsed) symbol = parsed;
-        } catch {}
+    // totalSupply()
+    try {
+      const ts = await c.totalSupply();
+      try {
+        totalSupply = (typeof ts === "bigint") ? ts : BigInt(String(ts));
+      } catch {
+        totalSupply = 0n;
       }
     } catch {}
-  }
 
-  rep.meta = {
-    name,
-    symbol,
-    decimals,
-    totalSupply: totalSupply.toString()
-  };
+    // Fallback for old/non-standard tokens that return bytes32 for name/symbol
+    // only if still missing
+    if ((!name || !symbol) && E?.Interface && read?.call) {
+      try {
+        const iface = new E.Interface([
+          "function name() view returns (bytes32)",
+          "function symbol() view returns (bytes32)"
+        ]);
+
+        if (!name) {
+          try {
+            const data = iface.encodeFunctionData("name", []);
+            const ret = await read.call({ to: token, data });
+            const [b] = iface.decodeFunctionResult("name", ret);
+            const parsed = String(b || "").replace(/\u0000/g, "").trim();
+            if (parsed) name = parsed;
+          } catch {}
+        }
+
+        if (!symbol) {
+          try {
+            const data = iface.encodeFunctionData("symbol", []);
+            const ret = await read.call({ to: token, data });
+            const [b] = iface.decodeFunctionResult("symbol", ret);
+            const parsed = String(b || "").replace(/\u0000/g, "").trim();
+            if (parsed) symbol = parsed;
+          } catch {}
+        }
+      } catch {}
+    }
+
+    return {
+      name,
+      symbol,
+      decimals,
+      totalSupply: totalSupply.toString()
+    };
+  });
+
+  rep.meta = meta;
 } catch {}
 
 
