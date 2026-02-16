@@ -4951,6 +4951,7 @@ if (useApis) {
 }
 
    // Score model (hardened: Contract + Market + Gates)
+// Score model (hardened: Contract + Market + Gates)
 let contractScore = 75;
 
 if (rep.liq?.any) contractScore += 10;
@@ -4977,7 +4978,35 @@ if (verified === true) contractScore += 8;
 if (verified === false) contractScore -= 6;
 
 if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
-    if (liqQuality === "tiny") {
+
+contractScore = qsClamp(Math.round(contractScore), 0, 100);
+
+// market leg
+const market = qsComputeMarketRisk(rep);
+const marketScore = market.marketScore;
+const marketFlags = market.flags || [];
+const confidence = market.confidence || "low";
+
+// base blend
+let score = Math.round(contractScore * 0.55 + marketScore * 0.45);
+
+// existing gates util
+score = qsApplyScoreGates(score, rep, marketFlags);
+
+// one normalized flags set (DECLARE ONCE)
+const mFlags = new Set((marketFlags || []).map(s => String(s).toLowerCase()));
+
+// market penalties
+if (mFlags.has("possible_manipulated_move")) score -= 22;
+if (mFlags.has("extreme_short_term_volatility")) score -= 14;
+if (mFlags.has("very_low_liquidity_usd")) score -= 22;
+else if (mFlags.has("low_liquidity_usd")) score -= 10;
+if (mFlags.has("very_few_holders")) score -= 18;
+else if (mFlags.has("few_holders")) score -= 8;
+if (mFlags.has("holder_concentration_unknown")) score -= 8;
+
+// quick liquidity quality penalties (MOVED HERE - after score exists)
+if (liqQuality === "tiny") {
   score -= 28;
   if (score > 49) score = 49; // hard cap
   rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
@@ -4987,62 +5016,17 @@ if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
   rep.redFlags.push("Low effective liquidity detected.");
 }
 
+// hard caps
+const hasCritical =
+  mFlags.has("possible_manipulated_move") ||
+  mFlags.has("very_low_liquidity_usd") ||
+  mFlags.has("very_few_holders");
+if (hasCritical && score > 69) score = 69;
 
-contractScore = qsClamp(Math.round(contractScore), 0, 100);
-
-// NEW: market risk leg
-const market = qsComputeMarketRisk(rep);
-const marketScore = market.marketScore;
-const marketFlags = market.flags || [];
-const confidence = market.confidence || "low";
-
-// Weighted blend
-let score = Math.round(contractScore * 0.55 + marketScore * 0.45);
-
-// Hard safety caps
-score = qsApplyScoreGates(score, rep, marketFlags);
-// ---- Risk gates from market/quality signals (hard penalties) ----
-const mFlags = new Set((marketFlags || []).map(String));
-
-if (mFlags.has("possible_manipulated_move")) score -= 22;
-if (mFlags.has("extreme_short_term_volatility")) score -= 14;
-
-if (mFlags.has("very_low_liquidity_usd")) score -= 22;
-else if (mFlags.has("low_liquidity_usd")) score -= 10;
-
-if (mFlags.has("very_few_holders")) score -= 18;
-else if (mFlags.has("few_holders")) score -= 8;
-
-if (mFlags.has("holder_concentration_unknown")) score -= 8;
-
-const confidenceLow = mFlags.has("holder_concentration_unknown");
-if (confidenceLow && score > 79) score = 79;
-
-score = qsClamp(score, 0, 100);
-
-const criticalFlags = new Set([
-  "possible_manipulated_move",
-  "very_low_liquidity_usd",
-  "very_few_holders"
-]);
-
-const hasCritical = (marketFlags || []).some(f => criticalFlags.has(f));
-if (hasCritical && score > 69) score = 69; // מקסימום Mixed/Caution, לא Good
-
-// =========================
-// HARD SAFETY GATES (anti-false-positive)
-// =========================
-const mFlags = new Set((marketFlags || []).map(String));
-
-// 1) Confidence low -> never "Good"
-const confidenceLow = mFlags.has("holder_concentration_unknown");
-if (confidenceLow && score > 69) score = 69;
-
-// 2) Holder data unknown -> cap to caution-ish
+// confidence/coverage caps
 if (mFlags.has("holder_concentration_unknown") && score > 64) score = 64;
 
-// 3) Thin-liquidity structure gate:
-// count only truly active rows (ok === true)
+// thin-liquidity structure cap (active pools/pairs)
 const liqRows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows : [];
 const activeLiqRows = liqRows.filter(r => !!r?.ok);
 if (activeLiqRows.length <= 1 && score > 59) {
@@ -5050,14 +5034,8 @@ if (activeLiqRows.length <= 1 && score > 59) {
   rep.redFlags.push("Only one active liquidity venue detected (thin market structure).");
 }
 
-// 4) If market flags include manipulation/very-low-liq -> hard cap
-if ((mFlags.has("possible_manipulated_move") || mFlags.has("very_low_liquidity_usd")) && score > 49) {
-  score = 49;
-}
-
-// keep in range
+// final clamp
 score = qsClamp(score, 0, 100);
-
     
 const overallText =
   score >= 85 ? "Good" :
