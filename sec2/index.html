@@ -4119,6 +4119,99 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
 }
 
 
+  // -------------------------
+// Market risk helpers (Quick Scan hardening)
+// -------------------------
+function qsToNum(v, d = 0){
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+}
+
+function qsComputeMarketRisk(rep){
+  // We only use data we already have in QuickScan to avoid breaking dependencies.
+  // If external metrics are missing, we set lower confidence instead of assuming "safe".
+  const m = {
+    // currently available
+    hasLiquidity: !!rep?.liq?.any,
+    ownerPct: (typeof rep?.meta?.ownerPct === "number") ? rep.meta.ownerPct : null,
+
+    // optional future hooks (if you later inject them)
+    holders: qsToNum(rep?.meta?.holders, NaN),
+    liquidityUsd: qsToNum(rep?.meta?.liquidityUsd, NaN),
+    volume1hUsd: qsToNum(rep?.meta?.volume1hUsd, NaN),
+    trades1h: qsToNum(rep?.meta?.trades1h, NaN),
+    priceChange1hPct: qsToNum(rep?.meta?.priceChange1hPct, NaN)
+  };
+
+  let marketScore = 100;
+  const flags = [];
+  let confidence = "low";
+
+  // Base from what we definitely know
+  if (!m.hasLiquidity) {
+    marketScore -= 28;
+    flags.push("no_clear_liquidity_signal");
+  }
+
+  if (m.ownerPct !== null) {
+    confidence = "medium";
+    if (m.ownerPct >= 50) { marketScore -= 22; flags.push("extreme_owner_concentration"); }
+    else if (m.ownerPct >= 35) { marketScore -= 16; flags.push("high_owner_concentration"); }
+    else if (m.ownerPct >= 20) { marketScore -= 10; flags.push("elevated_owner_concentration"); }
+  } else {
+    flags.push("holder_concentration_unknown");
+  }
+
+  // Optional extra penalties only if data exists
+  if (Number.isFinite(m.liquidityUsd)) {
+    confidence = "high";
+    if (m.liquidityUsd < 10000) { marketScore -= 18; flags.push("very_low_liquidity_usd"); }
+    else if (m.liquidityUsd < 50000) { marketScore -= 10; flags.push("low_liquidity_usd"); }
+  }
+
+  if (Number.isFinite(m.holders)) {
+    confidence = "high";
+    if (m.holders < 50) { marketScore -= 14; flags.push("very_few_holders"); }
+    else if (m.holders < 200) { marketScore -= 8; flags.push("few_holders"); }
+  }
+
+  if (Number.isFinite(m.priceChange1hPct) && Number.isFinite(m.trades1h)) {
+    confidence = "high";
+    if (Math.abs(m.priceChange1hPct) > 250 && m.trades1h < 30) {
+      marketScore -= 16;
+      flags.push("possible_manipulated_move");
+    } else if (Math.abs(m.priceChange1hPct) > 120) {
+      marketScore -= 9;
+      flags.push("extreme_short_term_volatility");
+    }
+  }
+
+  marketScore = qsClamp(Math.round(marketScore), 0, 100);
+  return { marketScore, flags, confidence };
+}
+
+function qsApplyScoreGates(finalScore, rep, marketFlags){
+  let maxScore = 100;
+
+  // Hard caps from known signals (safe defaults)
+  if (!rep?.liq?.any) maxScore = Math.min(maxScore, 74);
+
+  const ownerPct = (typeof rep?.meta?.ownerPct === "number") ? rep.meta.ownerPct : null;
+  if (ownerPct !== null) {
+    if (ownerPct > 70) maxScore = Math.min(maxScore, 69);
+    else if (ownerPct >= 50) maxScore = Math.min(maxScore, 74);
+    else if (ownerPct >= 35) maxScore = Math.min(maxScore, 79);
+  }
+
+  if ((marketFlags || []).includes("possible_manipulated_move")) {
+    maxScore = Math.min(maxScore, 64);
+  }
+
+  return Math.min(finalScore, maxScore);
+}
+
+
+
   function loadQsCache(){
     try { return JSON.parse(localStorage.getItem(QS_LS_CACHE) || "{}"); } catch { return {}; }
   }
@@ -4832,55 +4925,82 @@ if (useApis) {
   }
 }
 
-    // Score model
-    let score = 75;
+   // Score model (hardened: Contract + Market + Gates)
+let contractScore = 75;
 
-    if (rep.liq?.any) score += 10;
-    else score -= (requireLiq ? 30 : 20);
+if (rep.liq?.any) contractScore += 10;
+else contractScore -= (requireLiq ? 30 : 20);
 
-    if (mintDetected) score -= 22;
+if (mintDetected) contractScore -= 22;
 
-    if (isProxy) score -= 12;
-    else score += 3;
+if (isProxy) contractScore -= 12;
+else contractScore += 3;
 
-    if (!owner) score += 0;
-    else if (ownerIsRenounced) score += 5;
-    else score -= 6;
-    // Holder concentration penalty (owner wallet share)
+if (!owner) contractScore += 0;
+else if (ownerIsRenounced) contractScore += 5;
+else contractScore -= 6;
+
+// Holder concentration penalty (owner wallet share)
 if (ownerPct !== null) {
-  if (ownerPct >= 50) score -= 20;
-  else if (ownerPct >= 35) score -= 14;
-  else if (ownerPct >= 20) score -= 8;
-  else if (ownerPct >= 10) score -= 3;
+  if (ownerPct >= 50) contractScore -= 20;
+  else if (ownerPct >= 35) contractScore -= 14;
+  else if (ownerPct >= 20) contractScore -= 8;
+  else if (ownerPct >= 10) contractScore -= 3;
 }
 
+if (verified === true) contractScore += 8;
+if (verified === false) contractScore -= 6;
 
-    if (verified === true) score += 8;
-    if (verified === false) score -= 6;
+if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
 
-    if (!rep?.meta?.symbol && !rep?.meta?.name) score -= 5;
+contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
-    score = qsClamp(score, 0, 100);
+// NEW: market risk leg
+const market = qsComputeMarketRisk(rep);
+const marketScore = market.marketScore;
+const marketFlags = market.flags || [];
+const confidence = market.confidence || "low";
 
-    const overallText =
-      score >= 85 ? "Good" :
-      score >= 70 ? "Mixed signals" :
-      score >= 50 ? "Caution" :
-      "High risk";
+// Weighted blend
+let score = Math.round(contractScore * 0.55 + marketScore * 0.45);
 
-    rep.score = score;
-    rep.overallText = overallText;
+// Hard safety caps
+score = qsApplyScoreGates(score, rep, marketFlags);
+score = qsClamp(score, 0, 100);
+
+const overallText =
+  score >= 85 ? "Good" :
+  score >= 70 ? "Mixed signals" :
+  score >= 50 ? "Caution" :
+  "High risk";
+
+rep.score = score;
+rep.overallText = overallText;
+
+// expose sub-scores in meta
+rep.meta = {
+  ...(rep.meta || {}),
+  contractScore,
+  marketScore,
+  confidence
+};
+
 
     rep.mini = [
-      { type: score >= 85 ? "ok" : score >= 70 ? "warn" : score >= 50 ? "warn" : "bad", title: "Overall", value: overallText },
-      { type: verified === true ? "ok" : "warn", title: "Verified", value: verified === true ? "Yes" : "No/Unknown" },
-      { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
-      { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown },
-      { type: holderConcType, title: "Holder Concentration", value: holderConcText },
-      { type: rep.liq?.any ? "ok" : "warn", title: "Liquidity", value: rep.liq?.any ? "V2/V3 pairs exist" : "No/Unknown" },
-      { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
-      { type: pauseDetected ? "warn" : "ok", title: "Pause", value: pauseText }
-    ];
+  { type: score >= 85 ? "ok" : score >= 70 ? "warn" : score >= 50 ? "warn" : "bad", title: "Overall", value: overallText },
+  { type: rep.meta?.contractScore >= 85 ? "ok" : rep.meta?.contractScore >= 70 ? "warn" : "bad", title: "Contract Score", value: String(rep.meta?.contractScore ?? "—") },
+  { type: rep.meta?.marketScore >= 85 ? "ok" : rep.meta?.marketScore >= 70 ? "warn" : "bad", title: "Market Score", value: String(rep.meta?.marketScore ?? "—") },
+  { type: rep.meta?.confidence === "high" ? "ok" : rep.meta?.confidence === "medium" ? "warn" : "warn", title: "Confidence", value: rep.meta?.confidence || "low" },
+
+  { type: verified === true ? "ok" : "warn", title: "Verified", value: verified === true ? "Yes" : "No/Unknown" },
+  { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
+  { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown },
+  { type: holderConcType, title: "Holder Concentration", value: holderConcText },
+  { type: rep.liq?.any ? "ok" : "warn", title: "Liquidity", value: rep.liq?.any ? "V2/V3 pairs exist" : "No/Unknown" },
+  { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
+  { type: pauseDetected ? "warn" : "ok", title: "Pause", value: pauseText }
+];
+
 
     if (mintDetected) rep.redFlags.push("Mint surface detected (supply risk).");
     if (isProxy) rep.redFlags.push("Proxy detected (upgrade risk).");
@@ -4893,8 +5013,24 @@ if (ownerPct !== null) {
 rep.meta = {
   ...(rep.meta || {}),
   ownerBalance: ownerBal?.toString?.() || "0",
-  ownerPct: ownerPct
+  ownerPct: ownerPct,
+  contractScore: rep.meta?.contractScore,
+  marketScore: rep.meta?.marketScore,
+  confidence: rep.meta?.confidence
 };
+
+    // market-derived red flags
+for (const f of (marketFlags || [])) {
+  if (f === "possible_manipulated_move") rep.redFlags.push("Price action suggests possible manipulation (high move / thin trading).");
+  else if (f === "very_low_liquidity_usd") rep.redFlags.push("Very low liquidity (USD) increases slippage/manipulation risk.");
+  else if (f === "low_liquidity_usd") rep.redFlags.push("Low liquidity (USD) detected.");
+  else if (f === "very_few_holders") rep.redFlags.push("Very few holders detected.");
+  else if (f === "few_holders") rep.redFlags.push("Few holders detected.");
+  else if (f === "extreme_short_term_volatility") rep.redFlags.push("Extreme short-term volatility detected.");
+  else if (f === "holder_concentration_unknown") rep.redFlags.push("Holder concentration data is incomplete (confidence reduced).");
+  else if (f === "no_clear_liquidity_signal") rep.redFlags.push("No clear liquidity signal detected.");
+}
+
 
     rep.json = safeJson(rep);
 
