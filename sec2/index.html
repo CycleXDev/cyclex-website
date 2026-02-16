@@ -5062,16 +5062,17 @@ if (mFlags.has("very_few_holders")) score -= 18;
 else if (mFlags.has("few_holders")) score -= 8;
 if (mFlags.has("holder_concentration_unknown")) score -= 8;
 
-// quick liquidity quality penalties (MOVED HERE - after score exists)
-// effective liquidity penalties + hard caps
+// effective liquidity hard caps (no extra subtraction here; already reflected in marketScore cap)
 if (liqQuality === "tiny") {
-  score -= 35;
-  if (score > 49) score = 49; // never above High-risk/Caution border
-  rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
+  if (score > 49) score = 49;
+  if (!rep.redFlags.includes("Very low effective liquidity (thin market, high manipulation risk).")) {
+    rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
+  }
 } else if (liqQuality === "low") {
-  score -= 18;
-  if (score > 64) score = 64; // cannot be Good/Mixed-high
-  rep.redFlags.push("Low effective liquidity detected.");
+  if (score > 64) score = 64;
+  if (!rep.redFlags.includes("Low effective liquidity detected.")) {
+    rep.redFlags.push("Low effective liquidity detected.");
+  }
 }
 
 
@@ -5110,6 +5111,7 @@ rep.overallText = overallText;
   contractScore,
   marketScore,
   confidence,
+  liqQuality,
   ownerBalance: ownerBal?.toString?.() || "0",
   ownerPct: ownerPct,
   marketFlags: Array.from(marketFlags || [])
@@ -5126,7 +5128,7 @@ rep.overallText = overallText;
   { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
   { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown },
   { type: holderConcType, title: "Holder Concentration", value: holderConcText },
- {
+{
   type:
     !rep.liq?.any ? "warn" :
     liqQuality === "tiny" ? "bad" :
@@ -5134,12 +5136,10 @@ rep.overallText = overallText;
   title: "Liquidity",
   value:
     !rep.liq?.any ? "No/Unknown" :
-    liqQuality === "tiny"
-      ? `Very low (thin) • ${qsFmtNum(liqStats.wrapped, 6)} ${net === "eth" ? "WETH" : "WBNB"} / ${qsFmtNum(liqStats.usdt, 2)} USDT`
-      : liqQuality === "low"
-      ? `Low • ${qsFmtNum(liqStats.wrapped, 6)} ${net === "eth" ? "WETH" : "WBNB"} / ${qsFmtNum(liqStats.usdt, 2)} USDT`
-      : "Healthy"
+    liqQuality === "tiny" ? "Very low (thin)" :
+    liqQuality === "low" ? "Low" : "Healthy"
 },
+
 
 
   { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
@@ -5165,7 +5165,10 @@ for (const f of (marketFlags || [])) {
   else if (f === "few_holders") rep.redFlags.push("Few holders detected.");
   else if (f === "extreme_short_term_volatility") rep.redFlags.push("Extreme short-term volatility detected.");
   else if (f === "holder_concentration_unknown") rep.redFlags.push("Holder concentration data is incomplete (confidence reduced).");
-  else if (f === "no_clear_liquidity_signal") rep.redFlags.push("No clear liquidity signal detected.");
+    else if (f === "no_clear_liquidity_signal" && !rep.redFlags.includes("No clear DEX liquidity signal detected.")) {
+    rep.redFlags.push("No clear liquidity signal detected.");
+  }
+
 }
 
 
