@@ -4969,7 +4969,35 @@ let score = Math.round(contractScore * 0.55 + marketScore * 0.45);
 
 // Hard safety caps
 score = qsApplyScoreGates(score, rep, marketFlags);
+// ---- Risk gates from market/quality signals (hard penalties) ----
+const mFlags = new Set((marketFlags || []).map(String));
+
+if (mFlags.has("possible_manipulated_move")) score -= 22;
+if (mFlags.has("extreme_short_term_volatility")) score -= 14;
+
+if (mFlags.has("very_low_liquidity_usd")) score -= 22;
+else if (mFlags.has("low_liquidity_usd")) score -= 10;
+
+if (mFlags.has("very_few_holders")) score -= 18;
+else if (mFlags.has("few_holders")) score -= 8;
+
+if (mFlags.has("holder_concentration_unknown")) score -= 8;
+
+// אם אין ודאות על holder concentration — לא לתת "Good"
+const confidenceLow = mFlags.has("holder_concentration_unknown");
+if (confidenceLow && score > 79) score = 79;
+
 score = qsClamp(score, 0, 100);
+
+const criticalFlags = new Set([
+  "possible_manipulated_move",
+  "very_low_liquidity_usd",
+  "very_few_holders"
+]);
+
+const hasCritical = (marketFlags || []).some(f => criticalFlags.has(f));
+if (hasCritical && score > 69) score = 69; // מקסימום Mixed/Caution, לא Good
+
 
 const overallText =
   score >= 85 ? "Good" :
@@ -5017,10 +5045,9 @@ rep.meta = {
   ...(rep.meta || {}),
   ownerBalance: ownerBal?.toString?.() || "0",
   ownerPct: ownerPct,
-  contractScore: rep.meta?.contractScore,
-  marketScore: rep.meta?.marketScore,
-  confidence: rep.meta?.confidence
+  marketFlags: Array.from((marketFlags || []))
 };
+
 
     // market-derived red flags
 for (const f of (marketFlags || [])) {
