@@ -5621,7 +5621,8 @@ window.qsRiskChip = window.qsRiskChip || function(type, text){
   return `<div class="risk ${cls}"><span class="dot"></span><span>${esc(text)}</span></div>`;
 };
 // =========================
-// Liquidity Scan panel (Multi-DEX Sources) — STABLE DROP-IN (v2)
+// Liquidity Scan panel (Multi-DEX Sources) — STABLE DROP-IN (v3, QS-aligned)
+// Full replacement block
 // =========================
 
 const DEX_SOURCES = {
@@ -5630,11 +5631,7 @@ const DEX_SOURCES = {
     { id: "apeswap", label: "ApeSwap",      v2Factory: "0x0841BD0B734E4F5853f0dD8d7Ea041c241fb0Da6", v3Type: null,     v3Factory: null },
     { id: "biswap",  label: "BiSwap",       v2Factory: "0x858E3312ed3A876947EA49d572A7C42DE08af7EE", v3Type: null,     v3Factory: null },
     { id: "bakery",  label: "BakerySwap",   v2Factory: "0x01bF7C66c6BD861915CdaaE475042d3c4BaE16A7", v3Type: null,     v3Factory: null },
-
-    // Sushi on BSC (V2). If V3 fails we do not break scan.
     { id: "sushi",   label: "SushiSwap",    v2Factory: "0xc35DADB65012eC5796536bD9864eD8773aBc74C4", v3Type: "univ3",  v3Factory: "0x126555dd55a39328F69400d6aE4F782Bd4C34ABb" },
-
-    // THENA Algebra V3
     { id: "thena",   label: "THENA V3 (Algebra)", v2Factory: null, v3Type: "algebra", v3Factory: "0x306F06C147f064A010530292A1EB6737c3e378e4" }
   ],
 
@@ -5648,7 +5645,7 @@ const DEX_SOURCES = {
   ]
 };
 
-// ---- required ABIs (if not already defined globally) ----
+// ---- required ABIs (safe fallback) ----
 const ALG_FACTORY_ABI = window.ALG_FACTORY_ABI || [
   "function poolByPair(address tokenA, address tokenB) view returns (address pool)"
 ];
@@ -5674,6 +5671,11 @@ const V3_POOL_ABI_SAFE = (typeof V3_POOL_ABI !== "undefined" && V3_POOL_ABI) || 
   "function token1() view returns (address)",
   "function liquidity() view returns (uint128)",
   "function slot0() view returns (uint160,int24,uint16,uint16,uint16,uint8,bool)"
+];
+const ERC20_META_BAL_ABI_SAFE = (typeof QS_ERC20_META_ABI !== "undefined" && QS_ERC20_META_ABI) || [
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint256)"
 ];
 
 const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
@@ -5734,17 +5736,16 @@ function liqGetSources(net){
 }
 
 function liqBuildTargets(net, chain){
-  // hard fallback constants (do NOT rely only on CHAINS object)
   const FALLBACK = {
     bsc: {
-      wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
-      usdt:    "0x55d398326f99059fF775485246999027B3197955", // USDT
+      wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+      usdt:    "0x55d398326f99059fF775485246999027B3197955",
       usdc:    "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
       busd:    "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
       fdusd:   "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409"
     },
     eth: {
-      wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
+      wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
       usdt:    "0xdAC17F958D2ee523a2206206994597C13D831ec7",
       usdc:    "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
     }
@@ -5770,9 +5771,39 @@ function liqBuildTargets(net, chain){
   return t.filter(x => !!x.other);
 }
 
-
 function liqSafeBig(v){
   try { return BigInt(v ?? 0); } catch { return 0n; }
+}
+function liqFmtNum(n, d=4){
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "0";
+  return x.toLocaleString(undefined, { maximumFractionDigits: d });
+}
+function liqFmtUnits(raw, decimals=18, d=4){
+  try { return liqFmtNum(Number(E.formatUnits(BigInt(raw || 0), decimals)), d); } catch { return "0"; }
+}
+function liqShort(a){
+  try { return shortAddr(a); } catch {}
+  const s = String(a || "");
+  return s.length > 12 ? `${s.slice(0,6)}…${s.slice(-4)}` : s || "—";
+}
+async function liqReadErc20Meta(addr, read){
+  try{
+    const c = new E.Contract(addr, ERC20_META_BAL_ABI_SAFE, read);
+    const [symbolRaw, decRaw] = await Promise.all([
+      c.symbol().catch(()=> ""),
+      c.decimals().catch(()=> 18)
+    ]);
+    return {
+      symbol: String(symbolRaw || liqShort(addr)),
+      decimals: Number(decRaw ?? 18)
+    };
+  } catch {
+    return { symbol: liqShort(addr), decimals: 18 };
+  }
+}
+function liqExplorer(chain, addr){
+  try { return chain?.addressUrl ? chain.addressUrl(addr) : "#"; } catch { return "#"; }
 }
 
 async function runLiqScan(){
@@ -5795,7 +5826,13 @@ async function runLiqScan(){
   setStatus(st, "info", "Scanning liquidity…");
 
   const chain = CHAINS?.[net];
-  const read = getReadProvider?.(net);
+  const getRP =
+    (typeof getReadProvider === "function" && getReadProvider) ||
+    (typeof window.getReadProvider === "function" && window.getReadProvider) ||
+    (typeof window.CX?.getReadProvider === "function" && window.CX.getReadProvider) ||
+    null;
+  const read = getRP ? getRP(net) : null;
+
   if (!chain || !read) {
     setStatus(st, "bad", "No network config / RPC available.");
     return;
@@ -5803,11 +5840,6 @@ async function runLiqScan(){
 
   const sources = liqGetSources(net);
   const targets = liqBuildTargets(net, chain);
-  console.log("[LIQ DEBUG] net:", net);
-console.log("[LIQ DEBUG] token:", token);
-console.log("[LIQ DEBUG] targets:", targets);
-console.log("[LIQ DEBUG] sources:", sources);
-
 
   const res = {
     net, token,
@@ -5816,170 +5848,287 @@ console.log("[LIQ DEBUG] sources:", sources);
     v2: [],
     v3: [],
     unknown: [],
-    ts: nowTs ? nowTs() : Math.floor(Date.now()/1000)
+    ts: (typeof nowTs === "function") ? nowTs() : Math.floor(Date.now()/1000),
+    fromQs: false
   };
 
-  const CALL_TIMEOUT_MS = 7000;
-  const V3_CONCURRENCY  = 3;
-  const v3Fees = [100, 500, 2500, 3000, 10000];
+  // =========================================================
+  // Primary path: use EXACT same liquidity engine as QuickScan
+  // =========================================================
+  try {
+    const qsFn =
+      window.CX?.modules?.qs?.qsLiqCheckBasic ||
+      window.qsLiqCheckBasic ||
+      (typeof qsLiqCheckBasic === "function" ? qsLiqCheckBasic : null);
 
-  const pushUnknown = (s, kind, detail, link) => {
-    res.unknown.push({
-      source: s.label || s.id || "Source",
-      kind,
-      detail,
-      link: link || ""
-    });
-  };
+    if (typeof qsFn === "function") {
+      const liq = await qsFn(net, token, read);
+      const rows = Array.isArray(liq?.rows) ? liq.rows : [];
+      if (rows.length) {
+        res.fromQs = true;
 
-  for (const s of sources) {
-    if (s.v3Type === "registry") {
-      pushUnknown(s, "Registry", "Not checked (registry model not supported in this scanner yet).", s.infoUrl || "");
-      continue;
-    }
+        for (const r of rows) {
+          const typeTxt = String(r?.type || "");
+          const upper = typeTxt.toUpperCase();
 
-    // ---------- V2 ----------
-    if (s.v2Factory) {
-      const fAddr = liqNormAddr(s.v2Factory);
-      if (!fAddr) {
-        pushUnknown(s, "V2", "Invalid V2 factory address.", "");
-      } else {
-        try {
-          const f = new E.Contract(fAddr, V2_FACTORY_ABI_SAFE, read);
-
-          const pairAddrs = await Promise.all(
-            targets.map(p =>
-              liqWithTimeout(
-                f.getPair(token, p.other).catch(()=>ZERO_ADDR),
-                CALL_TIMEOUT_MS,
-                "v2.getPair"
-              )
-            )
-          );
-
-          for (let i = 0; i < targets.length; i++) {
-            const p = targets[i];
-            const pair = liqNormAddr(pairAddrs[i]);
-            if (!pair || liqLower(pair) === liqLower(ZERO_ADDR)) continue;
-
-            const pairC = new E.Contract(pair, V2_PAIR_ABI_SAFE, read);
-            const [t0, t1, r] = await Promise.all([
-              liqWithTimeout(pairC.token0().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v2.token0"),
-              liqWithTimeout(pairC.token1().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v2.token1"),
-              liqWithTimeout(pairC.getReserves().catch(()=>[0n,0n,0n]), CALL_TIMEOUT_MS, "v2.reserves")
-            ]);
-
+          if (upper.includes("V2")) {
             res.v2.push({
-              source: s.label,
-              pair,
-              token0: liqNormAddr(t0) || String(t0 || ""),
-              token1: liqNormAddr(t1) || String(t1 || ""),
-              reserve0: String(r?.[0] ?? 0),
-              reserve1: String(r?.[1] ?? 0),
-              otherLabel: p.label,
-              other: p.other
+              source: (typeTxt.split("•")[1] || "").trim() || "V2",
+              pair: r.addr || "",
+              token0: r.token0 || "",
+              token1: r.token1 || "",
+              reserve0: String(r.raw0 ?? "0"),
+              reserve1: String(r.raw1 ?? "0"),
+              otherLabel: r.target || "Target",
+              other: "",
+              symbol0: r.symbol0 || "",
+              symbol1: r.symbol1 || "",
+              decimals0: Number(r.decimals0 ?? 18),
+              decimals1: Number(r.decimals1 ?? 18)
             });
-          }
-        } catch {
-          pushUnknown(s, "V2", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl ? chain.addressUrl(fAddr) : "");
-        }
-      }
-    }
-
-    // ---------- V3 (Uniswap-style) ----------
-    if (s.v3Type === "univ3") {
-      const vfAddr = liqNormAddr(s.v3Factory);
-      if (!vfAddr) {
-        pushUnknown(s, "V3", "Invalid/empty V3 factory address.", "");
-      } else {
-        try {
-          const vf = new E.Contract(vfAddr, V3_FACTORY_ABI_SAFE, read);
-          const tasks = [];
-          for (const p of targets) for (const fee of v3Fees) tasks.push({ p, fee });
-
-          const pools = await liqPoolMap(tasks, V3_CONCURRENCY, async ({p, fee}) => {
-            const pool = await liqWithTimeout(
-              vf.getPool(token, p.other, fee).catch(()=>ZERO_ADDR),
-              CALL_TIMEOUT_MS,
-              "v3.getPool"
-            );
-            return { p, fee, pool: liqNormAddr(pool) || String(pool || "") };
-          });
-
-          for (const x of pools) {
-            if (!x.pool || liqLower(x.pool) === liqLower(ZERO_ADDR)) continue;
-
-            const vp = new E.Contract(x.pool, V3_POOL_ABI_SAFE, read);
-            const [t0, t1, liq, slot0] = await Promise.all([
-              liqWithTimeout(vp.token0().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v3.token0"),
-              liqWithTimeout(vp.token1().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v3.token1"),
-              liqWithTimeout(vp.liquidity().catch(()=>0n), CALL_TIMEOUT_MS, "v3.liquidity"),
-              liqWithTimeout(vp.slot0().catch(()=>null), CALL_TIMEOUT_MS, "v3.slot0")
-            ]);
+          } else if (upper.includes("V3")) {
+            const feeMatch = typeTxt.match(/V3\s*([0-9]+)/i);
+            const b0 = liqSafeBig(r.raw0);
+            const b1 = liqSafeBig(r.raw1);
+            const pseudoLiq = (b0 > 0n && b1 > 0n) ? 1n : 0n;
 
             res.v3.push({
-              source: s.label,
-              fee: x.fee,
-              otherLabel: x.p.label,
-              other: x.p.other,
-              pool: x.pool,
-              token0: liqNormAddr(t0) || String(t0 || ""),
-              token1: liqNormAddr(t1) || String(t1 || ""),
-              liquidity: String(liq ?? 0),
-              tick: slot0 ? String(slot0[1]) : "—"
+              source: (typeTxt.split("•")[1] || "").trim() || "V3",
+              fee: feeMatch ? Number(feeMatch[1]) : "—",
+              otherLabel: r.target || "Target",
+              other: "",
+              pool: r.addr || "",
+              token0: r.token0 || "",
+              token1: r.token1 || "",
+              liquidity: String(pseudoLiq),
+              tick: "—",
+              bal0: String(r.raw0 ?? "0"),
+              bal1: String(r.raw1 ?? "0"),
+              symbol0: r.symbol0 || "",
+              symbol1: r.symbol1 || "",
+              decimals0: Number(r.decimals0 ?? 18),
+              decimals1: Number(r.decimals1 ?? 18)
             });
           }
-        } catch {
-          pushUnknown(s, "V3", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl ? chain.addressUrl(vfAddr) : "");
         }
       }
     }
+  } catch (e) {
+    console.warn("[LIQ] QuickScan bridge failed, fallback to native:", e);
+  }
 
-    // ---------- V3 (Algebra style) ----------
-    if (s.v3Type === "algebra") {
-      const afAddr = liqNormAddr(s.v3Factory);
-      if (!afAddr) {
-        pushUnknown(s, "V3", "Invalid/empty Algebra factory address.", "");
-      } else {
-        try {
-          const af = new E.Contract(afAddr, ALG_FACTORY_ABI, read);
+  // =========================================================
+  // Fallback native path (only if QS bridge gave no rows)
+  // =========================================================
+  if (!res.fromQs) {
+    const CALL_TIMEOUT_MS = 7000;
+    const V3_CONCURRENCY  = 3;
+    const v3Fees = [100, 500, 2500, 3000, 10000];
 
-          const poolAddrs = await Promise.all(
-            targets.map(p =>
-              liqWithTimeout(
-                af.poolByPair(token, p.other).catch(()=>ZERO_ADDR),
-                CALL_TIMEOUT_MS,
-                "alg.poolByPair"
+    const pushUnknown = (s, kind, detail, link) => {
+      res.unknown.push({
+        source: s.label || s.id || "Source",
+        kind,
+        detail,
+        link: link || ""
+      });
+    };
+
+    for (const s of sources) {
+      if (s.v3Type === "registry") {
+        pushUnknown(s, "Registry", "Not checked (registry model not supported in this scanner yet).", s.infoUrl || "");
+        continue;
+      }
+
+      // ---------- V2 ----------
+      if (s.v2Factory) {
+        const fAddr = liqNormAddr(s.v2Factory);
+        if (!fAddr) {
+          pushUnknown(s, "V2", "Invalid V2 factory address.", "");
+        } else {
+          try {
+            const f = new E.Contract(fAddr, V2_FACTORY_ABI_SAFE, read);
+
+            const pairAddrs = await Promise.all(
+              targets.map(p =>
+                liqWithTimeout(
+                  f.getPair(token, p.other).catch(()=>ZERO_ADDR),
+                  CALL_TIMEOUT_MS,
+                  "v2.getPair"
+                )
               )
-            )
-          );
+            );
 
-          for (let i = 0; i < targets.length; i++) {
-            const p = targets[i];
-            const pool = liqNormAddr(poolAddrs[i]);
-            if (!pool || liqLower(pool) === liqLower(ZERO_ADDR)) continue;
+            for (let i = 0; i < targets.length; i++) {
+              const p = targets[i];
+              const pair = liqNormAddr(pairAddrs[i]);
+              if (!pair || liqLower(pair) === liqLower(ZERO_ADDR)) continue;
 
-            const ap = new E.Contract(pool, ALG_POOL_ABI, read);
-            const [t0, t1, liq] = await Promise.all([
-              liqWithTimeout(ap.token0().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "alg.token0"),
-              liqWithTimeout(ap.token1().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "alg.token1"),
-              liqWithTimeout(ap.liquidity().catch(()=>0n), CALL_TIMEOUT_MS, "alg.liquidity")
-            ]);
+              const pairC = new E.Contract(pair, V2_PAIR_ABI_SAFE, read);
+              const [t0, t1, r] = await Promise.all([
+                liqWithTimeout(pairC.token0().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v2.token0"),
+                liqWithTimeout(pairC.token1().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v2.token1"),
+                liqWithTimeout(pairC.getReserves().catch(()=>[0n,0n,0n]), CALL_TIMEOUT_MS, "v2.reserves")
+              ]);
 
-            res.v3.push({
-              source: s.label,
-              fee: "—",
-              otherLabel: p.label,
-              other: p.other,
-              pool,
-              token0: liqNormAddr(t0) || String(t0 || ""),
-              token1: liqNormAddr(t1) || String(t1 || ""),
-              liquidity: String(liq ?? 0),
-              tick: "—"
-            });
+              const meta0 = await liqReadErc20Meta(t0, read);
+              const meta1 = await liqReadErc20Meta(t1, read);
+
+              res.v2.push({
+                source: s.label,
+                pair,
+                token0: liqNormAddr(t0) || String(t0 || ""),
+                token1: liqNormAddr(t1) || String(t1 || ""),
+                reserve0: String(r?.[0] ?? 0),
+                reserve1: String(r?.[1] ?? 0),
+                otherLabel: p.label,
+                other: p.other,
+                symbol0: meta0.symbol,
+                symbol1: meta1.symbol,
+                decimals0: meta0.decimals,
+                decimals1: meta1.decimals
+              });
+            }
+          } catch {
+            pushUnknown(s, "V2", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl ? chain.addressUrl(fAddr) : "");
           }
-        } catch {
-          pushUnknown(s, "V3", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl ? chain.addressUrl(afAddr) : "");
+        }
+      }
+
+      // ---------- V3 (Uniswap-style) ----------
+      if (s.v3Type === "univ3") {
+        const vfAddr = liqNormAddr(s.v3Factory);
+        if (!vfAddr) {
+          pushUnknown(s, "V3", "Invalid/empty V3 factory address.", "");
+        } else {
+          try {
+            const vf = new E.Contract(vfAddr, V3_FACTORY_ABI_SAFE, read);
+            const tasks = [];
+            for (const p of targets) for (const fee of v3Fees) tasks.push({ p, fee });
+
+            const pools = await liqPoolMap(tasks, V3_CONCURRENCY, async ({p, fee}) => {
+              const pool = await liqWithTimeout(
+                vf.getPool(token, p.other, fee).catch(()=>ZERO_ADDR),
+                CALL_TIMEOUT_MS,
+                "v3.getPool"
+              );
+              return { p, fee, pool: liqNormAddr(pool) || String(pool || "") };
+            });
+
+            for (const x of pools) {
+              if (!x.pool || liqLower(x.pool) === liqLower(ZERO_ADDR)) continue;
+
+              const vp = new E.Contract(x.pool, V3_POOL_ABI_SAFE, read);
+              const [t0, t1, liq, slot0] = await Promise.all([
+                liqWithTimeout(vp.token0().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v3.token0"),
+                liqWithTimeout(vp.token1().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v3.token1"),
+                liqWithTimeout(vp.liquidity().catch(()=>0n), CALL_TIMEOUT_MS, "v3.liquidity"),
+                liqWithTimeout(vp.slot0().catch(()=>null), CALL_TIMEOUT_MS, "v3.slot0")
+              ]);
+
+              // for display parity with QS: read token balances in pool
+              let b0 = 0n, b1 = 0n;
+              try {
+                const c0 = new E.Contract(t0, ERC20_META_BAL_ABI_SAFE, read);
+                const c1 = new E.Contract(t1, ERC20_META_BAL_ABI_SAFE, read);
+                [b0, b1] = await Promise.all([
+                  c0.balanceOf(x.pool).catch(()=>0n),
+                  c1.balanceOf(x.pool).catch(()=>0n)
+                ]);
+              } catch {}
+
+              const meta0 = await liqReadErc20Meta(t0, read);
+              const meta1 = await liqReadErc20Meta(t1, read);
+
+              res.v3.push({
+                source: s.label,
+                fee: x.fee,
+                otherLabel: x.p.label,
+                other: x.p.other,
+                pool: x.pool,
+                token0: liqNormAddr(t0) || String(t0 || ""),
+                token1: liqNormAddr(t1) || String(t1 || ""),
+                liquidity: String(liq ?? 0),
+                tick: slot0 ? String(slot0[1]) : "—",
+                bal0: String(b0 ?? 0),
+                bal1: String(b1 ?? 0),
+                symbol0: meta0.symbol,
+                symbol1: meta1.symbol,
+                decimals0: meta0.decimals,
+                decimals1: meta1.decimals
+              });
+            }
+          } catch {
+            pushUnknown(s, "V3", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl ? chain.addressUrl(vfAddr) : "");
+          }
+        }
+      }
+
+      // ---------- V3 (Algebra style) ----------
+      if (s.v3Type === "algebra") {
+        const afAddr = liqNormAddr(s.v3Factory);
+        if (!afAddr) {
+          pushUnknown(s, "V3", "Invalid/empty Algebra factory address.", "");
+        } else {
+          try {
+            const af = new E.Contract(afAddr, ALG_FACTORY_ABI, read);
+
+            const poolAddrs = await Promise.all(
+              targets.map(p =>
+                liqWithTimeout(
+                  af.poolByPair(token, p.other).catch(()=>ZERO_ADDR),
+                  CALL_TIMEOUT_MS,
+                  "alg.poolByPair"
+                )
+              )
+            );
+
+            for (let i = 0; i < targets.length; i++) {
+              const p = targets[i];
+              const pool = liqNormAddr(poolAddrs[i]);
+              if (!pool || liqLower(pool) === liqLower(ZERO_ADDR)) continue;
+
+              const ap = new E.Contract(pool, ALG_POOL_ABI, read);
+              const [t0, t1, liq] = await Promise.all([
+                liqWithTimeout(ap.token0().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "alg.token0"),
+                liqWithTimeout(ap.token1().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "alg.token1"),
+                liqWithTimeout(ap.liquidity().catch(()=>0n), CALL_TIMEOUT_MS, "alg.liquidity")
+              ]);
+
+              let b0 = 0n, b1 = 0n;
+              try {
+                const c0 = new E.Contract(t0, ERC20_META_BAL_ABI_SAFE, read);
+                const c1 = new E.Contract(t1, ERC20_META_BAL_ABI_SAFE, read);
+                [b0, b1] = await Promise.all([
+                  c0.balanceOf(pool).catch(()=>0n),
+                  c1.balanceOf(pool).catch(()=>0n)
+                ]);
+              } catch {}
+
+              const meta0 = await liqReadErc20Meta(t0, read);
+              const meta1 = await liqReadErc20Meta(t1, read);
+
+              res.v3.push({
+                source: s.label,
+                fee: "—",
+                otherLabel: p.label,
+                other: p.other,
+                pool,
+                token0: liqNormAddr(t0) || String(t0 || ""),
+                token1: liqNormAddr(t1) || String(t1 || ""),
+                liquidity: String(liq ?? 0),
+                tick: "—",
+                bal0: String(b0 ?? 0),
+                bal1: String(b1 ?? 0),
+                symbol0: meta0.symbol,
+                symbol1: meta1.symbol,
+                decimals0: meta0.decimals,
+                decimals1: meta1.decimals
+              });
+            }
+          } catch {
+            pushUnknown(s, "V3", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl ? chain.addressUrl(afAddr) : "");
+          }
         }
       }
     }
@@ -5987,7 +6136,12 @@ console.log("[LIQ DEBUG] sources:", sources);
 
   // ---- derive active counts ----
   const activeV2 = res.v2.filter(v => liqSafeBig(v.reserve0) > 0n || liqSafeBig(v.reserve1) > 0n).length;
-  const activeV3 = res.v3.filter(v => liqSafeBig(v.liquidity) > 0n).length;
+  const activeV3 = res.v3.filter(v => {
+    if (liqSafeBig(v.liquidity) > 0n) return true;
+    const b0 = liqSafeBig(v.bal0);
+    const b1 = liqSafeBig(v.bal1);
+    return (b0 > 0n && b1 > 0n);
+  }).length;
 
   // ---- chips ----
   const chips = [];
@@ -5997,7 +6151,7 @@ console.log("[LIQ DEBUG] sources:", sources);
   if (res.v3.length) chips.push(qsRiskChip(activeV3 ? "ok" : "warn", `V3 pools: ${res.v3.length} (active: ${activeV3})`));
   else chips.push(qsRiskChip("warn", "No V3 pools found (targets + fee tiers)."));
 
-  if (res.unknown.length) chips.push(qsRiskChip("warn", `Unknown / not checked: ${res.unknown.length}`));
+  if (res.unknown.length && !res.fromQs) chips.push(qsRiskChip("warn", `Unknown / not checked: ${res.unknown.length}`));
   risk.innerHTML = chips.join("");
 
   // ---- table ----
@@ -6019,33 +6173,65 @@ console.log("[LIQ DEBUG] sources:", sources);
   });
 
   for (const v of v2Sorted) {
-    const hasRes = (liqSafeBig(v.reserve0) > 0n || liqSafeBig(v.reserve1) > 0n);
+    const r0 = liqSafeBig(v.reserve0);
+    const r1 = liqSafeBig(v.reserve1);
+    const hasRes = (r0 > 0n || r1 > 0n);
+
+    const sym0 = v.symbol0 || liqShort(v.token0);
+    const sym1 = v.symbol1 || liqShort(v.token1);
+    const dec0 = Number(v.decimals0 ?? 18);
+    const dec1 = Number(v.decimals1 ?? 18);
+
+    const reserveText = hasRes
+      ? `${liqFmtUnits(r0, dec0, 4)} ${sym0} / ${liqFmtUnits(r1, dec1, 4)} ${sym1}`
+      : "0 / 0";
+
     rows.push(`
       <div class="trow ${hasRes ? "highlight" : ""}">
-        <div class="cell mono">${shortAddr(v.pair)}</div>
+        <div class="cell mono">${liqShort(v.pair)}</div>
         <div class="cell">V2</div>
-        <div class="cell">${escapeHtml(v.source)} • ${escapeHtml(v.otherLabel)} • Reserves: ${hasRes ? "✅" : "—"}</div>
-        <div class="cell"><a href="${chain.addressUrl(v.pair)}" target="_blank" rel="noopener">Explorer</a></div>
+        <div class="cell">${escapeHtml(v.source)} • ${escapeHtml(v.otherLabel)} • Reserves: ${hasRes ? "✅" : "—"} • ${escapeHtml(reserveText)}</div>
+        <div class="cell"><a href="${liqExplorer(chain, v.pair)}" target="_blank" rel="noopener">Explorer</a></div>
       </div>
     `);
   }
 
   // V3 rows (active first)
   const v3Sorted = [...res.v3].sort((a,b)=>{
-    const ao = liqSafeBig(a.liquidity)>0n ? 1 : 0;
-    const bo = liqSafeBig(b.liquidity)>0n ? 1 : 0;
+    const ao = (() => {
+      if (liqSafeBig(a.liquidity) > 0n) return 1;
+      return (liqSafeBig(a.bal0)>0n && liqSafeBig(a.bal1)>0n) ? 1 : 0;
+    })();
+    const bo = (() => {
+      if (liqSafeBig(b.liquidity) > 0n) return 1;
+      return (liqSafeBig(b.bal0)>0n && liqSafeBig(b.bal1)>0n) ? 1 : 0;
+    })();
     return bo - ao;
   });
 
   for (const v of v3Sorted) {
-    const liqOk = liqSafeBig(v.liquidity) > 0n;
+    const lq = liqSafeBig(v.liquidity);
+    const b0 = liqSafeBig(v.bal0);
+    const b1 = liqSafeBig(v.bal1);
+
+    const liqOk = lq > 0n || (b0 > 0n && b1 > 0n);
     const feeTxt = (v.fee === "—") ? "Fee: —" : `Fee: ${v.fee}`;
+
+    const sym0 = v.symbol0 || liqShort(v.token0);
+    const sym1 = v.symbol1 || liqShort(v.token1);
+    const dec0 = Number(v.decimals0 ?? 18);
+    const dec1 = Number(v.decimals1 ?? 18);
+
+    const balText = (b0 > 0n || b1 > 0n)
+      ? `Balances: ${liqFmtUnits(b0, dec0, 4)} ${sym0} / ${liqFmtUnits(b1, dec1, 4)} ${sym1}`
+      : `Liquidity(): ${String(lq)}`;
+
     rows.push(`
       <div class="trow ${liqOk ? "highlight" : ""}">
-        <div class="cell mono">${shortAddr(v.pool)}</div>
+        <div class="cell mono">${liqShort(v.pool)}</div>
         <div class="cell">V3</div>
-        <div class="cell">${escapeHtml(v.source)} • ${escapeHtml(v.otherLabel)} • ${feeTxt} • Liquidity: ${liqOk ? "✅" : "—"}${v.tick ? ` • Tick: ${escapeHtml(v.tick)}` : ""}</div>
-        <div class="cell"><a href="${chain.addressUrl(v.pool)}" target="_blank" rel="noopener">Explorer</a></div>
+        <div class="cell">${escapeHtml(v.source)} • ${escapeHtml(v.otherLabel)} • ${feeTxt} • ${liqOk ? "✅" : "—"} • ${escapeHtml(balText)}${v.tick && v.tick !== "—" ? ` • Tick: ${escapeHtml(v.tick)}` : ""}</div>
+        <div class="cell"><a href="${liqExplorer(chain, v.pool)}" target="_blank" rel="noopener">Explorer</a></div>
       </div>
     `);
   }
@@ -6083,12 +6269,20 @@ console.log("[LIQ DEBUG] sources:", sources);
     Token: <span class="mono">${token}</span><br>
     Sources: ${escapeHtml(res.sources.join(", "))}<br>
     Targets: ${escapeHtml(res.targets.join(", "))}<br>
+    Engine: ${res.fromQs ? "QuickScan-aligned" : "Native fallback"}<br>
     Share: <span class="mono">${liqBuildShareLink(net, token)}</span>
   `;
   out.style.display = "block";
 
   setStatus(st, (activeV2 || activeV3) ? "ok" : "warn", "Done.");
-  gtagEvent?.("sec_liq_run", { net, sources: sources.length, unknown: res.unknown.length, activeV2, activeV3 });
+  gtagEvent?.("sec_liq_run", {
+    net,
+    sources: sources.length,
+    unknown: res.unknown.length,
+    activeV2,
+    activeV3,
+    fromQs: res.fromQs ? 1 : 0
+  });
 }
 
 function initLiqUi(){
@@ -6099,7 +6293,7 @@ function initLiqUi(){
     const el = $("#liq-dex-note");
     if (el) {
       el.textContent =
-        `Sources: ${src.join(", ")} (Targets: ${targets.join("+")} • V3 fee tiers • Algebra supported • Registry DEXes shown as not checked)`;
+        `Sources: ${src.join(", ")} (Targets: ${targets.join("+")} • V3 fee tiers • Algebra supported • Registry DEXes shown as not checked • QS-aligned engine)`;
     }
   };
 
@@ -6124,7 +6318,7 @@ function initLiqUi(){
     const nToken = liqNormAddr(token);
     const link = liqBuildShareLink(net, nToken);
     const u = new URL("https://twitter.com/intent/tweet");
-    u.searchParams.set("text", `Liquidity scan (${CHAINS?.[net]?.name || net})\nToken: ${shortAddr(nToken)}\n${link}`);
+    u.searchParams.set("text", `Liquidity scan (${CHAINS?.[net]?.name || net})\nToken: ${liqShort(nToken)}\n${link}`);
     window.open(u.toString(), "_blank", "noopener,noreferrer");
   });
 }
@@ -6139,7 +6333,6 @@ window.escapeHtml = window.escapeHtml || function (s) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 };
-
 
 // =========================
 // Wallet Security DNA — WITH RELATIONSHIP ENGINE v2.0
