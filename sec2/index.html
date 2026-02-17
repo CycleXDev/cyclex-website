@@ -4175,9 +4175,9 @@ function qsComputeMarketRisk(rep){
 
   // Base from what we definitely know
   if (!m.hasLiquidity) {
-    marketScore -= 28;
-    flags.push("no_clear_liquidity_signal");
-  }
+  marketScore -= 38;
+  flags.push("no_clear_liquidity_signal");
+}
 
   if (m.ownerPct !== null) {
     confidence = "medium";
@@ -5094,8 +5094,12 @@ if (useApis) {
 // Score model (hardened: Contract + Market + Gates)
 let contractScore = 75;
 
-if (rep.liq?.any) contractScore += 10;
-else contractScore -= (requireLiq ? 24 : 14);
+if (rep.liq?.any) {
+  contractScore += 10;
+} else {
+  // stronger direct penalty for no detectable liquidity
+  contractScore -= (requireLiq ? 30 : 20);
+}
 if (mintDetected) contractScore -= 22;
 
 if (isProxy) contractScore -= 12;
@@ -5252,6 +5256,12 @@ const hasSeriousMarketFlag =
   mFlags.has("very_few_holders");
 
 if (lowConf && hasSeriousMarketFlag && score > 79) score = 79;
+
+// hard cap: token is valid but no liquidity signal
+if (hasCode && !rep?.liq?.any && score > 54) {
+  score = 54;
+}
+
 
 // final clamp
 score = qsClamp(score, 0, 100);
