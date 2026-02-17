@@ -5098,8 +5098,10 @@ if (verified === false) contractScore -= 6;
 if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
 
 // liquidity quality penalty INSIDE contract score
-if (liqQuality === "tiny") contractScore -= 18;
-else if (liqQuality === "low") contractScore -= 8;
+//if (liqQuality === "tiny") contractScore -= 18;
+//else if (liqQuality === "low") contractScore -= 8;
+    // liquidity penalty handled later (coverage-aware); keep contract leg cleaner
+
 
 contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
@@ -5121,7 +5123,7 @@ marketScore = qsClamp(Math.round(marketScore), 0, 100);
 
 
 // base blend
-let score = Math.round(contractScore * 0.55 + marketScore * 0.45);
+let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
 
 // existing gates util
 score = qsApplyScoreGates(score, rep, marketFlags);
@@ -5171,7 +5173,10 @@ const hasCritical =
 if (hasCritical && score > 69) score = 69;
 
 // confidence/coverage cap
-if (mFlags.has("holder_concentration_unknown") && score > 64) score = 64;
+if (mFlags.has("holder_concentration_unknown") && rep.meta?.liqCoverageLow && score > 64) {
+  score = 64;
+}
+
 
 // final clamp
 score = qsClamp(score, 0, 100);
@@ -5235,7 +5240,7 @@ rep.meta = {
 
 
   { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
-  { type: pauseDetected ? "warn" : "ok", title: "Pause", value: pauseText }
+  { type: "ok", title: "Pause", value: pauseText }
 ];
 
 
