@@ -4039,24 +4039,51 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
   ]);
 
   // QuickScan DEX targets (single “main” DEX for the compact table)
-  const QS_NET = {
-    bsc: {
-      name: "BSC (BNB Chain)",
-      wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
-      usdt:    "0x55d398326f99059fF775485246999027B3197955", // USDT (BSC)
-      v2Factory: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73", // Pancake V2
-      v3Factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865", // Pancake V3
-      addressUrl: (a)=> `https://bscscan.com/address/${a}`
-    },
-    eth: {
-      name: "Ethereum",
-      wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
-      usdt:    "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT (ETH)
-      v2Factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", // Uniswap V2
-      v3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984", // Uniswap V3
-      addressUrl: (a)=> `https://etherscan.io/address/${a}`
-    }
-  };
+ const QS_NET = {
+  bsc: {
+    name: "BSC (BNB Chain)",
+    wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
+    usdt:    "0x55d398326f99059fF775485246999027B3197955", // USDT (BSC)
+
+    // backward-compat (existing code may still read these)
+    v2Factory: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73", // Pancake V2
+    v3Factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865", // Pancake V3
+
+    // new multi-DEX lists
+    v2Factories: [
+      { name: "Pancake V2", addr: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73" },
+      { name: "Biswap V2",  addr: "0x858E3312ed3A876947EA49d572A7C42DE08af7EE" },
+      { name: "ApeSwap V2", addr: "0x0841BD0B734E4F5853f0D4dDDA0cD8fA1b7Ff814" }
+    ],
+    v3Factories: [
+      { name: "Pancake V3", addr: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865" }
+    ],
+
+    addressUrl: (a)=> `https://bscscan.com/address/${a}`
+  },
+
+  eth: {
+    name: "Ethereum",
+    wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
+    usdt:    "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT (ETH)
+
+    // backward-compat (existing code may still read these)
+    v2Factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", // Uniswap V2
+    v3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984", // Uniswap V3
+
+    // new multi-DEX lists
+    v2Factories: [
+      { name: "Uniswap V2", addr: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f" },
+      { name: "Sushi V2",   addr: "0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac" }
+    ],
+    v3Factories: [
+      { name: "Uniswap V3", addr: "0x1F98431c8aD98523631AE4a59f267346ea31F984" }
+    ],
+
+    addressUrl: (a)=> `https://etherscan.io/address/${a}`
+  }
+};
+
   // Minimum effective liquidity thresholds (rough heuristic)
 const QS_LIQ_FLOOR = {
   bsc: { wrappedTiny: 0.03, wrappedLow: 0.30, usdtTiny: 80,  usdtLow: 800 },
@@ -4479,105 +4506,126 @@ const read = _getRP ? _getRP(net) : null;
       { label: "USDT", addr: cfg.usdt }
     ];
 
-    // ---------- V2 ----------
+       // ---------- V2 (multi-factory, backward compatible) ----------
     try {
-      const fac = new E.Contract(cfg.v2Factory, QS_V2_FACTORY_ABI, provider);
-      for (const t of targets) {
-        const pair = await fac.getPair(token, t.addr).catch(()=> ZERO);
-if (!pair || pair === ZERO) {
-  rows.push({
-    type: "V2",
-    target: t.label,
-    addr: "—",
-    ok: false,
-    note: "pair not found"
-  });
-  continue;
-}
+      const v2Factories = Array.isArray(cfg.v2Factories) && cfg.v2Factories.length
+        ? cfg.v2Factories
+        : (cfg.v2Factory ? [{ name: "V2", addr: cfg.v2Factory }] : []);
 
+      for (const vf of v2Factories) {
+        let fac;
+        try {
+          fac = new E.Contract(vf.addr, QS_V2_FACTORY_ABI, provider);
+        } catch {
+          continue;
+        }
 
-        const p = new E.Contract(pair, QS_V2_PAIR_ABI, provider);
+        for (const t of targets) {
+          const pair = await fac.getPair(token, t.addr).catch(()=> ZERO);
 
-        let token0 = token, token1 = t.addr;
-        try { token0 = await p.token0(); } catch {}
-        try { token1 = await p.token1(); } catch {}
+          if (!pair || pair === ZERO) {
+            rows.push({
+              type: `V2${vf?.name ? " • " + vf.name : ""}`,
+              target: t.label,
+              addr: "—",
+              ok: false,
+              note: "pair not found"
+            });
+            continue;
+          }
 
-        const [r0Raw, r1Raw] = await p.getReserves().catch(()=> [0n,0n,0n]);
-        const r0 = _qsToBI(r0Raw), r1 = _qsToBI(r1Raw);
-
-        const m0 = await _qsGetErc20Meta(token0, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token0)}));
-        const m1 = await _qsGetErc20Meta(token1, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token1)}));
-
-        const ok = (r0 > 0n || r1 > 0n);
-        any = any || ok;
-
-        const a0 = _qsFmtUnits(r0, m0.decimals, 2);
-        const a1 = _qsFmtUnits(r1, m1.decimals, 2);
-
-        rows.push({
-          type: "V2",
-          target: t.label,
-          addr: pair,
-          ok,
-          note: ok ? `reserves: ${a0} ${m0.symbol} / ${a1} ${m1.symbol}` : "reserves: 0"
-        });
-      }
-    } catch {
-      // ignore (don’t spam rows)
-    }
-
-    // ---------- V3 ----------
-    try {
-      const fac3 = new E.Contract(cfg.v3Factory, QS_V3_FACTORY_ABI, provider);
-      const feeTiers = [500, 3000, 10000];
-
-      for (const t of targets) {
-        for (const fee of feeTiers) {
-          const pool = await fac3.getPool(token, t.addr, fee).catch(()=> ZERO);
-if (!pool || pool === ZERO) {
-  rows.push({
-    type: `V3 ${fee}`,
-    target: t.label,
-    addr: "—",
-    ok: false,
-    note: "pool not found"
-  });
-  continue;
-}
-
-
-          const p = new E.Contract(pool, QS_V3_POOL_ABI, provider);
+          const p = new E.Contract(pair, QS_V2_PAIR_ABI, provider);
 
           let token0 = token, token1 = t.addr;
           try { token0 = await p.token0(); } catch {}
           try { token1 = await p.token1(); } catch {}
 
+          const [r0Raw, r1Raw] = await p.getReserves().catch(()=> [0n,0n,0n]);
+          const r0 = _qsToBI(r0Raw), r1 = _qsToBI(r1Raw);
+
           const m0 = await _qsGetErc20Meta(token0, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token0)}));
           const m1 = await _qsGetErc20Meta(token1, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token1)}));
 
-          const c0 = new E.Contract(token0, QS_ERC20_META_ABI, provider);
-          const c1 = new E.Contract(token1, QS_ERC20_META_ABI, provider);
-
-          let b0 = 0n, b1 = 0n;
-          try { b0 = _qsToBI(await c0.balanceOf(pool)); } catch {}
-          try { b1 = _qsToBI(await c1.balanceOf(pool)); } catch {}
-
-          let liq = 0n;
-          try { liq = _qsToBI(await p.liquidity()); } catch {}
-
-          const ok = (b0 > 0n && b1 > 0n);
+          const ok = (r0 > 0n || r1 > 0n);
           any = any || ok;
 
-          const fb0 = _qsFmtUnits(b0, m0.decimals, 2);
-          const fb1 = _qsFmtUnits(b1, m1.decimals, 2);
+          const a0 = _qsFmtUnits(r0, m0.decimals, 2);
+          const a1 = _qsFmtUnits(r1, m1.decimals, 2);
 
           rows.push({
-            type: `V3 ${fee}`,
+            type: `V2${vf?.name ? " • " + vf.name : ""}`,
             target: t.label,
-            addr: pool,
+            addr: pair,
             ok,
-            note: ok ? `balances: ${fb0} ${m0.symbol} / ${fb1} ${m1.symbol}` : "balances: 0"
+            note: ok ? `reserves: ${a0} ${m0.symbol} / ${a1} ${m1.symbol}` : "reserves: 0"
           });
+        }
+      }
+    } catch {
+      // ignore (don’t spam rows)
+    }
+
+    // ---------- V3 (multi-factory, backward compatible) ----------
+    try {
+      const v3Factories = Array.isArray(cfg.v3Factories) && cfg.v3Factories.length
+        ? cfg.v3Factories
+        : (cfg.v3Factory ? [{ name: "V3", addr: cfg.v3Factory }] : []);
+
+      const feeTiers = [500, 3000, 10000];
+
+      for (const vf of v3Factories) {
+        let fac3;
+        try {
+          fac3 = new E.Contract(vf.addr, QS_V3_FACTORY_ABI, provider);
+        } catch {
+          continue;
+        }
+
+        for (const t of targets) {
+          for (const fee of feeTiers) {
+            const pool = await fac3.getPool(token, t.addr, fee).catch(()=> ZERO);
+
+            if (!pool || pool === ZERO) {
+              rows.push({
+                type: `V3 ${fee}${vf?.name ? " • " + vf.name : ""}`,
+                target: t.label,
+                addr: "—",
+                ok: false,
+                note: "pool not found"
+              });
+              continue;
+            }
+
+            const p = new E.Contract(pool, QS_V3_POOL_ABI, provider);
+
+            let token0 = token, token1 = t.addr;
+            try { token0 = await p.token0(); } catch {}
+            try { token1 = await p.token1(); } catch {}
+
+            const m0 = await _qsGetErc20Meta(token0, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token0)}));
+            const m1 = await _qsGetErc20Meta(token1, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token1)}));
+
+            const c0 = new E.Contract(token0, QS_ERC20_META_ABI, provider);
+            const c1 = new E.Contract(token1, QS_ERC20_META_ABI, provider);
+
+            let b0 = 0n, b1 = 0n;
+            try { b0 = _qsToBI(await c0.balanceOf(pool)); } catch {}
+            try { b1 = _qsToBI(await c1.balanceOf(pool)); } catch {}
+
+            const ok = (b0 > 0n && b1 > 0n);
+            any = any || ok;
+
+            const fb0 = _qsFmtUnits(b0, m0.decimals, 2);
+            const fb1 = _qsFmtUnits(b1, m1.decimals, 2);
+
+            rows.push({
+              type: `V3 ${fee}${vf?.name ? " • " + vf.name : ""}`,
+              target: t.label,
+              addr: pool,
+              ok,
+              note: ok ? `balances: ${fb0} ${m0.symbol} / ${fb1} ${m1.symbol}` : "balances: 0"
+            });
+          }
         }
       }
     } catch {
@@ -4849,6 +4897,20 @@ try {
     try {
       rep.liq = await qsLiqCheckBasic(net, token, read);
     } catch {}
+
+    const totalRows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows.length : 0;
+const activeRows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows.filter(r => r?.ok).length : 0;
+
+// rough coverage confidence
+const liqCoverageLow = totalRows > 0 && activeRows === 0;
+const liqCoveragePartial = totalRows > 0 && activeRows <= 1;
+
+rep.meta = {
+  ...(rep.meta || {}),
+  liqCoverageLow,
+  liqCoveragePartial
+};
+
     // --- quick liquidity quality heuristic (no external price API) ---
 // --- effective liquidity quality heuristic (wrapped + USDT floors) ---
 let liqQuality = "unknown"; // unknown | tiny | low | healthy
@@ -5062,14 +5124,21 @@ if (mFlags.has("very_few_holders")) score -= 18;
 else if (mFlags.has("few_holders")) score -= 8;
 if (mFlags.has("holder_concentration_unknown")) score -= 8;
 
-// effective liquidity hard caps (no extra subtraction here; already reflected in marketScore cap)
+// effective liquidity caps with coverage-awareness
 if (liqQuality === "tiny") {
-  if (score > 49) score = 49;
-  if (!rep.redFlags.includes("Very low effective liquidity (thin market, high manipulation risk).")) {
-    rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
+  if (rep.meta?.liqCoverageLow) {
+    if (score > 69) score = 69;
+    if (!rep.redFlags.includes("Liquidity appears very low, but DEX coverage may be incomplete.")) {
+      rep.redFlags.push("Liquidity appears very low, but DEX coverage may be incomplete.");
+    }
+  } else {
+    if (score > 49) score = 49;
+    if (!rep.redFlags.includes("Very low effective liquidity (thin market, high manipulation risk).")) {
+      rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
+    }
   }
 } else if (liqQuality === "low") {
-  if (score > 64) score = 64;
+  if (!rep.meta?.liqCoverageLow && score > 64) score = 64;
   if (!rep.redFlags.includes("Low effective liquidity detected.")) {
     rep.redFlags.push("Low effective liquidity detected.");
   }
@@ -5106,16 +5175,19 @@ const overallText =
 rep.score = score;
 rep.overallText = overallText;
 
-    rep.meta = {
+ rep.meta = {
   ...(rep.meta || {}),
   contractScore,
   marketScore,
   confidence,
   liqQuality,
+  liqCoverageLow: !!rep.meta?.liqCoverageLow,
+  liqCoveragePartial: !!rep.meta?.liqCoveragePartial,
   ownerBalance: ownerBal?.toString?.() || "0",
   ownerPct: ownerPct,
   marketFlags: Array.from(marketFlags || [])
 };
+
 
     
     rep.mini = [
