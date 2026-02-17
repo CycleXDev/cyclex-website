@@ -5620,25 +5620,21 @@ window.qsRiskChip = window.qsRiskChip || function(type, text){
     .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   return `<div class="risk ${cls}"><span class="dot"></span><span>${esc(text)}</span></div>`;
 };
- // =========================
-// Liquidity Scan panel (Multi-DEX Sources) — FINAL DROP-IN
+// =========================
+// Liquidity Scan panel (Multi-DEX Sources) — STABLE DROP-IN (v2)
 // =========================
 
-/**
- * DEX_SOURCES:
- * - v2Factory: UniswapV2-style factory (getPair)
- * - v3Type:
- *    - "univ3"   => UniswapV3-style factory (getPool(tokenA, tokenB, fee))
- *    - "algebra" => Algebra-style factory (poolByPair(tokenA, tokenB))
- *    - "registry"=> not checked (Curve/Balancer style)
- */
 const DEX_SOURCES = {
   bsc: [
     { id: "pancake", label: "PancakeSwap", v2Factory: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73", v3Type: "univ3",  v3Factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865" },
     { id: "apeswap", label: "ApeSwap",      v2Factory: "0x0841BD0B734E4F5853f0dD8d7Ea041c241fb0Da6", v3Type: null,     v3Factory: null },
     { id: "biswap",  label: "BiSwap",       v2Factory: "0x858E3312ed3A876947EA49d572A7C42DE08af7EE", v3Type: null,     v3Factory: null },
     { id: "bakery",  label: "BakerySwap",   v2Factory: "0x01bF7C66c6BD861915CdaaE475042d3c4BaE16A7", v3Type: null,     v3Factory: null },
+
+    // Sushi on BSC (V2). If V3 fails we do not break scan.
     { id: "sushi",   label: "SushiSwap",    v2Factory: "0xc35DADB65012eC5796536bD9864eD8773aBc74C4", v3Type: "univ3",  v3Factory: "0x126555dd55a39328F69400d6aE4F782Bd4C34ABb" },
+
+    // THENA Algebra V3
     { id: "thena",   label: "THENA V3 (Algebra)", v2Factory: null, v3Type: "algebra", v3Factory: "0x306F06C147f064A010530292A1EB6737c3e378e4" }
   ],
 
@@ -5652,17 +5648,48 @@ const DEX_SOURCES = {
   ]
 };
 
-// --- Minimal ABIs (safe even if unused) ---
-const ALG_FACTORY_ABI = [
+// ---- required ABIs (if not already defined globally) ----
+const ALG_FACTORY_ABI = window.ALG_FACTORY_ABI || [
   "function poolByPair(address tokenA, address tokenB) view returns (address pool)"
 ];
-const ALG_POOL_ABI = [
+const ALG_POOL_ABI = window.ALG_POOL_ABI || [
   "function token0() view returns (address)",
   "function token1() view returns (address)",
   "function liquidity() view returns (uint128)"
 ];
 
-// ---- stability helpers ----
+const V2_FACTORY_ABI_SAFE = (typeof V2_FACTORY_ABI !== "undefined" && V2_FACTORY_ABI) || [
+  "function getPair(address,address) view returns (address)"
+];
+const V2_PAIR_ABI_SAFE = (typeof V2_PAIR_ABI !== "undefined" && V2_PAIR_ABI) || [
+  "function token0() view returns (address)",
+  "function token1() view returns (address)",
+  "function getReserves() view returns (uint112,uint112,uint32)"
+];
+const V3_FACTORY_ABI_SAFE = (typeof V3_FACTORY_ABI !== "undefined" && V3_FACTORY_ABI) || [
+  "function getPool(address,address,uint24) view returns (address)"
+];
+const V3_POOL_ABI_SAFE = (typeof V3_POOL_ABI !== "undefined" && V3_POOL_ABI) || [
+  "function token0() view returns (address)",
+  "function token1() view returns (address)",
+  "function liquidity() view returns (uint128)",
+  "function slot0() view returns (uint160,int24,uint16,uint16,uint16,uint8,bool)"
+];
+
+const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+
+// ---- helpers ----
+function liqNormAddr(a){
+  try { return normAddr(a); } catch {}
+  try { return E.getAddress(String(a || "").trim()); } catch {}
+  return "";
+}
+function liqIsAddr(a){
+  try { return isAddr(a); } catch {}
+  return !!liqNormAddr(a);
+}
+function liqLower(a){ return String(a || "").toLowerCase(); }
+
 function liqWithTimeout(promise, ms, label){
   let t;
   const timeout = new Promise((_, rej) => {
@@ -5695,7 +5722,6 @@ function liqBuildShareLink(net, token){
 
 function liqGetSources(net){
   const src = Array.isArray(DEX_SOURCES?.[net]) ? DEX_SOURCES[net] : [];
-  // Dedup by id/label to avoid duplicate checks
   const seen = new Set();
   const out = [];
   for (const s of src) {
@@ -5705,6 +5731,28 @@ function liqGetSources(net){
     out.push(s);
   }
   return out;
+}
+
+// Extra targets to reduce false negatives
+function liqBuildTargets(net, chain){
+  const t = [
+    { other: liqNormAddr(chain?.wrapped), label: "Wrapped" },
+    { other: liqNormAddr(chain?.usdt),    label: "USDT" }
+  ];
+
+  if (net === "bsc") {
+    t.push({ other: liqNormAddr("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"), label: "USDC" });
+    t.push({ other: liqNormAddr("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56"), label: "BUSD" });
+    t.push({ other: liqNormAddr("0xc5f0f7b66764f6ec8c8dff7ba683102295e16409"), label: "FDUSD" });
+  } else if (net === "eth") {
+    t.push({ other: liqNormAddr("0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), label: "USDC" });
+  }
+
+  return t.filter(x => !!x.other);
+}
+
+function liqSafeBig(v){
+  try { return BigInt(v ?? 0); } catch { return 0n; }
 }
 
 async function runLiqScan(){
@@ -5718,38 +5766,37 @@ async function runLiqScan(){
 
   const net = netFromSelect("#liq-net");
   const tokenRaw = ($("#liq-token")?.value || "").trim();
-  if (!isAddr(tokenRaw)) {
+  if (!liqIsAddr(tokenRaw)) {
     setStatus(st, "warn", "Please paste a valid token address.");
     return;
   }
-  const token = normAddr(tokenRaw);
+  const token = liqNormAddr(tokenRaw);
 
   setStatus(st, "info", "Scanning liquidity…");
-  const chain = CHAINS[net];
-  const read = getReadProvider(net);
-  if (!read) {
-    setStatus(st, "bad", "No RPC available.");
+
+  const chain = CHAINS?.[net];
+  const read = getReadProvider?.(net);
+  if (!chain || !read) {
+    setStatus(st, "bad", "No network config / RPC available.");
     return;
   }
 
   const sources = liqGetSources(net);
+  const targets = liqBuildTargets(net, chain);
+
   const res = {
     net, token,
     sources: sources.map(s => s.label),
+    targets: targets.map(t => t.label),
     v2: [],
     v3: [],
     unknown: [],
-    ts: nowTs()
+    ts: nowTs ? nowTs() : Math.floor(Date.now()/1000)
   };
 
-  // Config (safe defaults for public RPC)
-  const CALL_TIMEOUT_MS = 6500;   // prevents hanging
-  const V3_CONCURRENCY  = 3;      // avoid rate limit
-  const v2PairsToCheck = [
-    { other: chain.wrapped, label: "Wrapped" },
-    { other: chain.usdt,    label: "USDT" }
-  ];
-  const v3Fees = [500, 3000, 10000];
+  const CALL_TIMEOUT_MS = 7000;
+  const V3_CONCURRENCY  = 3;
+  const v3Fees = [100, 500, 2500, 3000, 10000];
 
   const pushUnknown = (s, kind, detail, link) => {
     res.unknown.push({
@@ -5761,85 +5808,86 @@ async function runLiqScan(){
   };
 
   for (const s of sources) {
-    // Registry DEXes => explicit not checked
     if (s.v3Type === "registry") {
       pushUnknown(s, "Registry", "Not checked (registry model not supported in this scanner yet).", s.infoUrl || "");
       continue;
     }
 
     // ---------- V2 ----------
-    if (s.v2Factory && isAddr(s.v2Factory)) {
-      try {
-        const f = new E.Contract(s.v2Factory, V2_FACTORY_ABI, read);
+    if (s.v2Factory) {
+      const fAddr = liqNormAddr(s.v2Factory);
+      if (!fAddr) {
+        pushUnknown(s, "V2", "Invalid V2 factory address.", "");
+      } else {
+        try {
+          const f = new E.Contract(fAddr, V2_FACTORY_ABI_SAFE, read);
 
-        // Only 2 getPair calls; add timeout
-        const pairAddrs = await Promise.all(
-          v2PairsToCheck.map(p =>
-            liqWithTimeout(f.getPair(token, p.other).catch(()=>ZERO), CALL_TIMEOUT_MS, "v2.getPair")
-          )
-        );
+          const pairAddrs = await Promise.all(
+            targets.map(p =>
+              liqWithTimeout(
+                f.getPair(token, p.other).catch(()=>ZERO_ADDR),
+                CALL_TIMEOUT_MS,
+                "v2.getPair"
+              )
+            )
+          );
 
-        for (let i = 0; i < v2PairsToCheck.length; i++) {
-          const p = v2PairsToCheck[i];
-          const pair = pairAddrs[i];
+          for (let i = 0; i < targets.length; i++) {
+            const p = targets[i];
+            const pair = liqNormAddr(pairAddrs[i]);
+            if (!pair || liqLower(pair) === liqLower(ZERO_ADDR)) continue;
 
-          if (pair && pair !== ZERO) {
-            const pairC = new E.Contract(pair, V2_PAIR_ABI, read);
+            const pairC = new E.Contract(pair, V2_PAIR_ABI_SAFE, read);
             const [t0, t1, r] = await Promise.all([
-              liqWithTimeout(pairC.token0().catch(()=>ZERO), CALL_TIMEOUT_MS, "v2.token0"),
-              liqWithTimeout(pairC.token1().catch(()=>ZERO), CALL_TIMEOUT_MS, "v2.token1"),
+              liqWithTimeout(pairC.token0().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v2.token0"),
+              liqWithTimeout(pairC.token1().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v2.token1"),
               liqWithTimeout(pairC.getReserves().catch(()=>[0n,0n,0n]), CALL_TIMEOUT_MS, "v2.reserves")
             ]);
 
             res.v2.push({
               source: s.label,
               pair,
-              token0: t0,
-              token1: t1,
-              reserve0: String(r[0]),
-              reserve1: String(r[1]),
+              token0: liqNormAddr(t0) || String(t0 || ""),
+              token1: liqNormAddr(t1) || String(t1 || ""),
+              reserve0: String(r?.[0] ?? 0),
+              reserve1: String(r?.[1] ?? 0),
               otherLabel: p.label,
               other: p.other
             });
           }
+        } catch {
+          pushUnknown(s, "V2", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl ? chain.addressUrl(fAddr) : "");
         }
-      } catch (e) {
-        pushUnknown(s, "V2", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl(s.v2Factory));
       }
-    } else if (s.v2Factory === null) {
-      // intentionally no V2
-    } else {
-      pushUnknown(s, "V2", "Not checked (no V2 factory configured).", "");
     }
 
-    // ---------- V3 UniswapV3 style ----------
+    // ---------- V3 (Uniswap-style) ----------
     if (s.v3Type === "univ3") {
-      if (s.v3Factory && isAddr(s.v3Factory)) {
+      const vfAddr = liqNormAddr(s.v3Factory);
+      if (!vfAddr) {
+        pushUnknown(s, "V3", "Invalid/empty V3 factory address.", "");
+      } else {
         try {
-          const vf = new E.Contract(s.v3Factory, V3_FACTORY_ABI, read);
-
-          // Build (pair x fee) tasks
+          const vf = new E.Contract(vfAddr, V3_FACTORY_ABI_SAFE, read);
           const tasks = [];
-          for (const p of v2PairsToCheck) {
-            for (const fee of v3Fees) tasks.push({ p, fee });
-          }
+          for (const p of targets) for (const fee of v3Fees) tasks.push({ p, fee });
 
           const pools = await liqPoolMap(tasks, V3_CONCURRENCY, async ({p, fee}) => {
             const pool = await liqWithTimeout(
-              vf.getPool(token, p.other, fee).catch(()=>ZERO),
+              vf.getPool(token, p.other, fee).catch(()=>ZERO_ADDR),
               CALL_TIMEOUT_MS,
               "v3.getPool"
             );
-            return { p, fee, pool };
+            return { p, fee, pool: liqNormAddr(pool) || String(pool || "") };
           });
 
           for (const x of pools) {
-            if (!x.pool || x.pool === ZERO) continue;
+            if (!x.pool || liqLower(x.pool) === liqLower(ZERO_ADDR)) continue;
 
-            const vp = new E.Contract(x.pool, V3_POOL_ABI, read);
+            const vp = new E.Contract(x.pool, V3_POOL_ABI_SAFE, read);
             const [t0, t1, liq, slot0] = await Promise.all([
-              liqWithTimeout(vp.token0().catch(()=>ZERO), CALL_TIMEOUT_MS, "v3.token0"),
-              liqWithTimeout(vp.token1().catch(()=>ZERO), CALL_TIMEOUT_MS, "v3.token1"),
+              liqWithTimeout(vp.token0().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v3.token0"),
+              liqWithTimeout(vp.token1().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "v3.token1"),
               liqWithTimeout(vp.liquidity().catch(()=>0n), CALL_TIMEOUT_MS, "v3.liquidity"),
               liqWithTimeout(vp.slot0().catch(()=>null), CALL_TIMEOUT_MS, "v3.slot0")
             ]);
@@ -5850,41 +5898,46 @@ async function runLiqScan(){
               otherLabel: x.p.label,
               other: x.p.other,
               pool: x.pool,
-              token0: t0,
-              token1: t1,
-              liquidity: String(liq),
+              token0: liqNormAddr(t0) || String(t0 || ""),
+              token1: liqNormAddr(t1) || String(t1 || ""),
+              liquidity: String(liq ?? 0),
               tick: slot0 ? String(slot0[1]) : "—"
             });
           }
-        } catch (e) {
-          pushUnknown(s, "V3", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl(s.v3Factory));
+        } catch {
+          pushUnknown(s, "V3", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl ? chain.addressUrl(vfAddr) : "");
         }
-      } else {
-        pushUnknown(s, "V3", "Not checked (no V3 factory configured).", "");
       }
     }
 
-    // ---------- V3 Algebra style (THENA) ----------
+    // ---------- V3 (Algebra style) ----------
     if (s.v3Type === "algebra") {
-      if (s.v3Factory && isAddr(s.v3Factory)) {
+      const afAddr = liqNormAddr(s.v3Factory);
+      if (!afAddr) {
+        pushUnknown(s, "V3", "Invalid/empty Algebra factory address.", "");
+      } else {
         try {
-          const af = new E.Contract(s.v3Factory, ALG_FACTORY_ABI, read);
+          const af = new E.Contract(afAddr, ALG_FACTORY_ABI, read);
 
           const poolAddrs = await Promise.all(
-            v2PairsToCheck.map(p =>
-              liqWithTimeout(af.poolByPair(token, p.other).catch(()=>ZERO), CALL_TIMEOUT_MS, "alg.poolByPair")
+            targets.map(p =>
+              liqWithTimeout(
+                af.poolByPair(token, p.other).catch(()=>ZERO_ADDR),
+                CALL_TIMEOUT_MS,
+                "alg.poolByPair"
+              )
             )
           );
 
-          for (let i = 0; i < v2PairsToCheck.length; i++) {
-            const p = v2PairsToCheck[i];
-            const pool = poolAddrs[i];
-            if (!pool || pool === ZERO) continue;
+          for (let i = 0; i < targets.length; i++) {
+            const p = targets[i];
+            const pool = liqNormAddr(poolAddrs[i]);
+            if (!pool || liqLower(pool) === liqLower(ZERO_ADDR)) continue;
 
             const ap = new E.Contract(pool, ALG_POOL_ABI, read);
             const [t0, t1, liq] = await Promise.all([
-              liqWithTimeout(ap.token0().catch(()=>ZERO), CALL_TIMEOUT_MS, "alg.token0"),
-              liqWithTimeout(ap.token1().catch(()=>ZERO), CALL_TIMEOUT_MS, "alg.token1"),
+              liqWithTimeout(ap.token0().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "alg.token0"),
+              liqWithTimeout(ap.token1().catch(()=>ZERO_ADDR), CALL_TIMEOUT_MS, "alg.token1"),
               liqWithTimeout(ap.liquidity().catch(()=>0n), CALL_TIMEOUT_MS, "alg.liquidity")
             ]);
 
@@ -5894,36 +5947,35 @@ async function runLiqScan(){
               otherLabel: p.label,
               other: p.other,
               pool,
-              token0: t0,
-              token1: t1,
-              liquidity: String(liq),
+              token0: liqNormAddr(t0) || String(t0 || ""),
+              token1: liqNormAddr(t1) || String(t1 || ""),
+              liquidity: String(liq ?? 0),
               tick: "—"
             });
           }
-        } catch (e) {
-          pushUnknown(s, "V3", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl(s.v3Factory));
+        } catch {
+          pushUnknown(s, "V3", "Checked but failed (RPC/ABI/timeout).", chain.addressUrl ? chain.addressUrl(afAddr) : "");
         }
-      } else {
-        pushUnknown(s, "V3", "Not checked (no Algebra factory configured).", "");
       }
     }
   }
 
-  // Render chips (avoid false green)
+  // ---- derive active counts ----
+  const activeV2 = res.v2.filter(v => liqSafeBig(v.reserve0) > 0n || liqSafeBig(v.reserve1) > 0n).length;
+  const activeV3 = res.v3.filter(v => liqSafeBig(v.liquidity) > 0n).length;
+
+  // ---- chips ----
   const chips = [];
-  const v2n = res.v2.length;
-  const v3n = res.v3.length;
-  const un = res.unknown.length;
+  if (res.v2.length) chips.push(qsRiskChip(activeV2 ? "ok" : "warn", `V2 pairs: ${res.v2.length} (active: ${activeV2})`));
+  else chips.push(qsRiskChip("warn", "No V2 pairs found (targets)."));
 
-  if (v2n) chips.push(qsRiskChip("ok", `V2 pairs found: ${v2n}`));
-  else chips.push(qsRiskChip("warn", "No V2 pairs found (wrapped/USDT)."));
+  if (res.v3.length) chips.push(qsRiskChip(activeV3 ? "ok" : "warn", `V3 pools: ${res.v3.length} (active: ${activeV3})`));
+  else chips.push(qsRiskChip("warn", "No V3 pools found (targets + fee tiers)."));
 
-  if (v3n) chips.push(qsRiskChip("ok", `V3 pools found: ${v3n}`));
-  else chips.push(qsRiskChip("warn", "No V3 pools found (wrapped/USDT, fee tiers)."));
-
-  if (un) chips.push(qsRiskChip("warn", `Unknown / not checked: ${un}`));
+  if (res.unknown.length) chips.push(qsRiskChip("warn", `Unknown / not checked: ${res.unknown.length}`));
   risk.innerHTML = chips.join("");
 
+  // ---- table ----
   const rows = [];
   rows.push(`
     <div class="trow head">
@@ -5934,22 +5986,34 @@ async function runLiqScan(){
     </div>
   `);
 
-  // V2 rows
-  for (const v of res.v2) {
-    const hasRes = (BigInt(v.reserve0) > 0n && BigInt(v.reserve1) > 0n);
+  // V2 rows (active first)
+  const v2Sorted = [...res.v2].sort((a,b)=>{
+    const ao = (liqSafeBig(a.reserve0)>0n || liqSafeBig(a.reserve1)>0n) ? 1 : 0;
+    const bo = (liqSafeBig(b.reserve0)>0n || liqSafeBig(b.reserve1)>0n) ? 1 : 0;
+    return bo - ao;
+  });
+
+  for (const v of v2Sorted) {
+    const hasRes = (liqSafeBig(v.reserve0) > 0n || liqSafeBig(v.reserve1) > 0n);
     rows.push(`
       <div class="trow ${hasRes ? "highlight" : ""}">
         <div class="cell mono">${shortAddr(v.pair)}</div>
         <div class="cell">V2</div>
-        <div class="cell">${escapeHtml(v.source)} • Reserves: ${hasRes ? "✅" : "—"} • ${escapeHtml(v.otherLabel)}</div>
+        <div class="cell">${escapeHtml(v.source)} • ${escapeHtml(v.otherLabel)} • Reserves: ${hasRes ? "✅" : "—"}</div>
         <div class="cell"><a href="${chain.addressUrl(v.pair)}" target="_blank" rel="noopener">Explorer</a></div>
       </div>
     `);
   }
 
-  // V3 rows
-  for (const v of res.v3) {
-    const liqOk = (() => { try { return BigInt(v.liquidity) > 0n; } catch { return false; } })();
+  // V3 rows (active first)
+  const v3Sorted = [...res.v3].sort((a,b)=>{
+    const ao = liqSafeBig(a.liquidity)>0n ? 1 : 0;
+    const bo = liqSafeBig(b.liquidity)>0n ? 1 : 0;
+    return bo - ao;
+  });
+
+  for (const v of v3Sorted) {
+    const liqOk = liqSafeBig(v.liquidity) > 0n;
     const feeTxt = (v.fee === "—") ? "Fee: —" : `Fee: ${v.fee}`;
     rows.push(`
       <div class="trow ${liqOk ? "highlight" : ""}">
@@ -5961,7 +6025,7 @@ async function runLiqScan(){
     `);
   }
 
-  // Unknown / Not checked rows
+  // Unknown rows
   for (const u of res.unknown) {
     const link = u.link ? `<a href="${u.link}" target="_blank" rel="noopener">Link</a>` : "—";
     rows.push(`
@@ -5974,28 +6038,46 @@ async function runLiqScan(){
     `);
   }
 
+  // Empty fallback
+  if (rows.length === 1) {
+    rows.push(`
+      <div class="trow">
+        <div class="cell mono">—</div>
+        <div class="cell">—</div>
+        <div class="cell">No pools/pairs detected</div>
+        <div class="cell">—</div>
+      </div>
+    `);
+  }
+
   wrap.innerHTML = `<div class="table">${rows.join("")}</div>`;
 
   out.innerHTML = `
-    <b>Multi-source liquidity scan</b> completed.<br>
+    <b>Multi-source liquidity scan completed.</b><br>
     Network: ${escapeHtml(chain.name)}<br>
     Token: <span class="mono">${token}</span><br>
     Sources: ${escapeHtml(res.sources.join(", "))}<br>
+    Targets: ${escapeHtml(res.targets.join(", "))}<br>
     Share: <span class="mono">${liqBuildShareLink(net, token)}</span>
   `;
   out.style.display = "block";
 
-  setStatus(st, (v2n || v3n) ? "ok" : "warn", "Done.");
-  gtagEvent("sec_liq_run", { net, sources: sources.length, unknown: un });
+  setStatus(st, (activeV2 || activeV3) ? "ok" : "warn", "Done.");
+  gtagEvent?.("sec_liq_run", { net, sources: sources.length, unknown: res.unknown.length, activeV2, activeV3 });
 }
 
 function initLiqUi(){
   const updateDexNote = () => {
     const net = netFromSelect("#liq-net");
     const src = liqGetSources(net).map(s => s.label);
+    const targets = liqBuildTargets(net, CHAINS?.[net]).map(t => t.label);
     const el = $("#liq-dex-note");
-    if (el) el.textContent = `Sources: ${src.join(", ")} (V2: wrapped+USDT • V3: wrapped+USDT + fee tiers • Algebra supported • Registry DEXes shown as not checked)`;
+    if (el) {
+      el.textContent =
+        `Sources: ${src.join(", ")} (Targets: ${targets.join("+")} • V3 fee tiers • Algebra supported • Registry DEXes shown as not checked)`;
+    }
   };
+
   $("#liq-net")?.addEventListener("change", updateDexNote);
   updateDexNote();
 
@@ -6004,8 +6086,8 @@ function initLiqUi(){
   $("#liq-copy-link")?.addEventListener("click", async () => {
     const net = netFromSelect("#liq-net");
     const token = ($("#liq-token")?.value || "").trim();
-    if (!isAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
-    const link = liqBuildShareLink(net, normAddr(token));
+    if (!liqIsAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
+    const link = liqBuildShareLink(net, liqNormAddr(token));
     const ok = await copyText(link);
     setStatus($("#liq-status"), ok ? "ok" : "warn", ok ? "Copied share link." : "Copy failed.");
   });
@@ -6013,10 +6095,11 @@ function initLiqUi(){
   $("#liq-share-x")?.addEventListener("click", () => {
     const net = netFromSelect("#liq-net");
     const token = ($("#liq-token")?.value || "").trim();
-    if (!isAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
-    const link = liqBuildShareLink(net, normAddr(token));
+    if (!liqIsAddr(token)) return setStatus($("#liq-status"), "warn", "Enter token address first.");
+    const nToken = liqNormAddr(token);
+    const link = liqBuildShareLink(net, nToken);
     const u = new URL("https://twitter.com/intent/tweet");
-    u.searchParams.set("text", `Liquidity scan (${CHAINS[net].name})\nToken: ${shortAddr(token)}\n${link}`);
+    u.searchParams.set("text", `Liquidity scan (${CHAINS?.[net]?.name || net})\nToken: ${shortAddr(nToken)}\n${link}`);
     window.open(u.toString(), "_blank", "noopener,noreferrer");
   });
 }
@@ -6031,6 +6114,7 @@ window.escapeHtml = window.escapeHtml || function (s) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 };
+
 
 // =========================
 // Wallet Security DNA — WITH RELATIONSHIP ENGINE v2.0
