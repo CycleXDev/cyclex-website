@@ -5109,38 +5109,31 @@ contractScore = qsClamp(Math.round(contractScore), 0, 100);
 const market = qsComputeMarketRisk(rep);
 let marketScore = Number(market.marketScore ?? 100);
 const marketFlags = Array.isArray(market.flags) ? market.flags : [];
-// Confidence (derived from real scan coverage, not only market module)
-let confidence = "low";
+// Confidence for UI (separate var to avoid collisions with market module)
+let uiConfidence = "low";
 
-// raw signals
 const verifiedYes = (verified === true);
 const ownerKnown = !!owner;
 const liqAny = !!rep?.liq?.any;
-const liqRows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows : [];
-const liqActivePools = Number(rep?.meta?.liqActivePools || 0);
-const liqCoverageLow = !!rep?.meta?.liqCoverageLow;
-const liqCoveragePartial = !!rep?.meta?.liqCoveragePartial;
+const activePoolsNum = Number(rep?.meta?.liqActivePools || 0);
 
-// score-like confidence points
-let confPoints = 0;
+// IMPORTANT: reuse existing flags if already declared earlier
+const covLow = !!rep?.meta?.liqCoverageLow;
+const covPartial = !!rep?.meta?.liqCoveragePartial;
 
-// identity / source confidence
-if (verifiedYes) confPoints += 2;
-if (ownerKnown) confPoints += 1;
+let uiConfPoints = 0;
+if (verifiedYes) uiConfPoints += 2;
+if (ownerKnown) uiConfPoints += 1;
+if (liqAny) uiConfPoints += 1;
+if (activePoolsNum >= 2) uiConfPoints += 1;
+if (!covLow && !covPartial) uiConfPoints += 1;
 
-// liquidity confidence
-if (liqAny) confPoints += 1;
-if (liqActivePools >= 2) confPoints += 1;
-if (!liqCoverageLow && !liqCoveragePartial) confPoints += 1;
+if (covLow) uiConfPoints -= 2;
+else if (covPartial) uiConfPoints -= 1;
 
-// penalties
-if (liqCoverageLow) confPoints -= 2;
-else if (liqCoveragePartial) confPoints -= 1;
-
-// map points -> label
-if (confPoints >= 4) confidence = "high";
-else if (confPoints >= 2) confidence = "medium";
-else confidence = "low";
+if (uiConfPoints >= 4) uiConfidence = "high";
+else if (uiConfPoints >= 2) uiConfidence = "medium";
+else uiConfidence = "low";
 
 
 // force market score to respect on-chain effective liquidity
@@ -5219,7 +5212,7 @@ if (verified !== true && ownerUnknown && score > 79) score = 79;
 if (!rep?.liq?.any && score > 64) score = 64;
 
 // C) confidence נמוך + דגלי שוק משמעותיים -> לא Good
-const lowConf = (confidence || "low") === "low";
+const lowConf = (uiConfidence === "low");
 const hasSeriousMarketFlag =
   mFlags.has("possible_manipulated_move") ||
   mFlags.has("very_low_liquidity_usd") ||
@@ -5244,7 +5237,7 @@ rep.meta = {
   ...(rep.meta || {}),
   contractScore,
   marketScore,
-  confidence,
+  confidence: uiConfidence,
   liqQuality,
   liqCoverageLow: !!rep.meta?.liqCoverageLow,
   liqCoveragePartial: !!rep.meta?.liqCoveragePartial,
@@ -5266,10 +5259,11 @@ rep.meta = {
  { type: contractScore >= 85 ? "ok" : contractScore >= 70 ? "warn" : "bad", title: "Contract Score", value: String(contractScore) },
 { type: marketScore >= 85 ? "ok" : marketScore >= 70 ? "warn" : "bad", title: "Market Score", value: String(marketScore) },
 {
-  type: confidence === "high" ? "ok" : confidence === "medium" ? "warn" : "warn",
+  type: uiConfidence === "high" ? "ok" : "warn",
   title: "Confidence",
-  value: confidence
+  value: uiConfidence
 },
+
 
 
   { type: verified === true ? "ok" : "warn", title: "Verified", value: verified === true ? "Yes" : "No/Unknown" },
