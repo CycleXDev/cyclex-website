@@ -4916,7 +4916,13 @@ try {
 
     // 3) Liquidity rows (compact table)
     try {
-      rep.liq = await qsLiqCheckBasic(net, token, read);
+      const liqFn =
+  window.CX?.modules?.qs?.qsLiqCheckBasic ||
+  window.qsLiqCheckBasic ||
+  qsLiqCheckBasic;
+
+rep.liq = await liqFn(net, token, read);
+
     } catch {}
     const totalRows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows.length : 0;
     const activeRows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows.filter(r => r?.ok).length : 0;
@@ -5564,29 +5570,24 @@ try {
     });
   }
 
-  // expose safely
   window.CX_QS_V6 = window.CX_QS_V6 || {};
   window.CX_QS_V6.initQuickScanUi = initQuickScanUi;
   window.CX_QS_V6.runQuickScan = runQuickScan;
+  window.CX_QS_V6.qsLiqCheckBasic = qsLiqCheckBasic; // <-- חשוב
 
   // keep compatibility
   window.initQuickScanUi = initQuickScanUi;
   window.runQuickScan = window.runQuickScan || runQuickScan;
-})();
-      // expose QS module globally (fix for undefined qs/liq function)
+
+  // expose for other modules (Liquidity Scan / external callers)
   window.CX = window.CX || {};
   window.CX.modules = window.CX.modules || {};
   window.CX.modules.qs = window.CX.modules.qs || {};
+  window.CX.modules.qs.qsLiqCheckBasic = qsLiqCheckBasic;
+  window.qsLiqCheckBasic = qsLiqCheckBasic;
+})();
 
-  // if you already use CX_QS_V6 object, prefer it; otherwise fallback to local function
-  window.CX.modules.qs.qsLiqCheckBasic =
-    (window.CX_QS_V6 && window.CX_QS_V6.qsLiqCheckBasic)
-      ? window.CX_QS_V6.qsLiqCheckBasic
-      : qsLiqCheckBasic;
-
-  // optional direct alias
-  window.qsLiqCheckBasic = window.CX.modules.qs.qsLiqCheckBasic;
-
+    
 
 // ✅ Compatibility helper (do NOT remove) — used by Liquidity Scan
 window.qsRiskChip = window.qsRiskChip || function(type, text){
