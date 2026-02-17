@@ -192,10 +192,10 @@
 
             <div class="field">
               <div class="label" data-i18n="options_label">Options</div>
-              <label class="toggle">
+            <!--  <label class="toggle">
                 <input type="checkbox" id="qs-require-liq">
                 <span data-i18n="opt_require_liq">Require liquidity (stricter score)</span>
-              </label>
+              </label> -->
               <label class="toggle" style="margin-top:10px">
                 <input type="checkbox" id="qs-show-json" checked>
                 <span data-i18n="opt_show_json">Enable JSON report (copy)</span>
@@ -4258,8 +4258,10 @@ function qsApplyScoreGates(finalScore, rep, marketFlags){
     try { localStorage.setItem(QS_LS_HISTORY, JSON.stringify(arr || [])); } catch {}
   }
 
-  function qsCacheKey(net, token, requireLiq, useApis){
-    return `${net}:${qsLower(token)}:${requireLiq ? 1 : 0}:${useApis ? 1 : 0}`;
+  function qsCacheKey(net, token, _requireLiq, useApis){
+  return `${net}:${qsLower(token)}:${useApis ? 1 : 0}`;
+}
+
   }
   function addQsHistory(net, token){
     try{
@@ -4723,7 +4725,7 @@ const read = _getRP ? _getRP(net) : null;
 
     const net = netFromSelect("#qs-net");
     const tokenRaw = ($("#qs-token")?.value || "").trim();
-    const requireLiq = !!$("#qs-require-liq")?.checked;
+    const requireLiq = false;
     const uiKey = ($("#api-unified")?.value || "").trim();
     const useApis = !!$("#api-use")?.checked;
 
@@ -5448,7 +5450,7 @@ try {
       const token = ($("#qs-token")?.value || "").trim();
       if (!qsIsAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
 
-      const requireLiq = !!$("#qs-require-liq")?.checked;
+      const requireLiq = false;
       const useApis = !!$("#api-use")?.checked;
       const key = qsCacheKey(net, qsNormAddr(token), requireLiq, useApis);
       const rep = cache?.[key]?.rep;
@@ -5464,7 +5466,7 @@ try {
       const token = ($("#qs-token")?.value || "").trim();
       if (!qsIsAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
 
-      const requireLiq = !!$("#qs-require-liq")?.checked;
+      const requireLiq = false;
       const useApis = !!$("#api-use")?.checked;
       const key = qsCacheKey(net, qsNormAddr(token), requireLiq, useApis);
       const rep = cache?.[key]?.rep;
@@ -5481,7 +5483,7 @@ try {
       const token = ($("#qs-token")?.value || "").trim();
       if (!qsIsAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
 
-      const requireLiq = !!$("#qs-require-liq")?.checked;
+      const requireLiq = false;
       const useApis = !!$("#api-use")?.checked;
       const key = qsCacheKey(net, qsNormAddr(token), requireLiq, useApis);
       const rep = cache?.[key]?.rep;
@@ -5500,7 +5502,7 @@ try {
       const token = ($("#qs-token")?.value || "").trim();
       if (!qsIsAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
 
-      const requireLiq = !!$("#qs-require-liq")?.checked;
+      const requireLiq = false;
       const useApis = !!$("#api-use")?.checked;
       const key = qsCacheKey(net, qsNormAddr(token), requireLiq, useApis);
       const rep = cache?.[key]?.rep;
@@ -5521,7 +5523,7 @@ try {
       const token = ($("#qs-token")?.value || "").trim();
       if (!qsIsAddr(token)) return setStatus($("#qs-status"), "warn", "Enter token address first.");
 
-      const requireLiq = !!$("#qs-require-liq")?.checked;
+      const requireLiq = false;
       const useApis = !!$("#api-use")?.checked;
       const key = qsCacheKey(net, qsNormAddr(token), requireLiq, useApis);
       const rep = cache?.[key]?.rep;
