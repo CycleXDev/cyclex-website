@@ -3948,9 +3948,6 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
     raw: row
   };
 }
-
-
-
     // =========================
     // Formatting helpers
     // =========================
@@ -5141,6 +5138,14 @@ if (liqQuality === "tiny") {
   marketScore = Math.min(marketScore, 78);
 } 
 marketScore = qsClamp(Math.round(marketScore), 0, 100);
+if (
+  liqQuality === "healthy" &&
+  Number(rep.meta?.liqUsdtAmt || 0) >= 100000 &&
+  Number(rep.meta?.liqActivePools || 0) >= 2
+) {
+  marketScore = qsClamp(Math.round(marketScore + 8), 0, 100);
+}
+
 
 // base blend
 let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
@@ -5281,7 +5286,6 @@ rep.overallText = overallText;
     liqQuality === "low" ? "Low" :
     liqQuality === "medium" ? "Medium" : "Healthy"
 },
-
   { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
   { type: "ok", title: "Pause", value: pauseText }
 ];
@@ -5534,10 +5538,7 @@ try {
   // keep compatibility
   window.initQuickScanUi = initQuickScanUi;
   window.runQuickScan = window.runQuickScan || runQuickScan;
-
-
 })();
-
 
 // ✅ Compatibility helper (do NOT remove) — used by Liquidity Scan
 window.qsRiskChip = window.qsRiskChip || function(type, text){
