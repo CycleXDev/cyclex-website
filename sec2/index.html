@@ -4035,49 +4035,46 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
   // QuickScan DEX targets (single “main” DEX for the compact table)
   const QS_NET = {
   bsc: {
-    name: "BSC (BNB Chain)",
-    wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
-    usdt:    "0x55d398326f99059fF775485246999027B3197955", // USDT (BSC)
+  name: "BSC (BNB Chain)",
+  wrapped: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", // WBNB
+  usdt:    "0x55d398326f99059ff775485246999027b3197955", // USDT (BSC)
+  busd:    "0xe9e7cea3dedca5984780bafc599bd69add087d56", // BUSD (BSC)
 
-    // backward-compat (existing code may still read these)
-    v2Factory: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73", // Pancake V2
-    v3Factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865", // Pancake V3
+  // backward-compat
+  v2Factory: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73", // Pancake V2
+  v3Factory: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865", // Pancake V3
 
-    // new multi-DEX lists
-   v2Factories: [
-  { name: "Pancake V2", addr: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73" },
-  { name: "Biswap V2",  addr: "0x858E3312ed3A876947EA49d572A7C42DE08af7EE" },
-  { name: "ApeSwap V2", addr: "0x0841BD0B734E4F5853f0dD8d7Ea041c241fb0Da6" },
-  { name: "Bakery V2",  addr: "0x01bF7C66c6BD861915CDAAe475042d3c4BaE16A7" }
-],
-v3Factories: [
-  { name: "Pancake V3", addr: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865" }
-],
+  v2Factories: [
+    { name: "Pancake V2", addr: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73" },
+    { name: "Biswap V2",  addr: "0x858e3312ed3a876947ea49d572a7c42de08af7ee" },
+    { name: "ApeSwap V2", addr: "0x0841bd0b734e4f5853f0dd8d7ea041c241fb0da6" },
+    { name: "Bakery V2",  addr: "0x01bf7c66c6bd861915cdaae475042d3c4bae16a7" }
+  ],
+  v3Factories: [
+    { name: "Pancake V3", addr: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865" }
+  ],
 
+  addressUrl: (a)=> `https://bscscan.com/address/${a}`
+},
 
-    addressUrl: (a)=> `https://bscscan.com/address/${a}`
-  },
+eth: {
+  name: "Ethereum",
+  wrapped: "0xc02aa39b223fe8d0a0e5c4f27ead9083c756cc2",
+  usdt:    "0xdac17f958d2ee523a2206206994597c13d831ec7",
 
-  eth: {
-    name: "Ethereum",
-    wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
-    usdt:    "0xdAC17F958D2ee523a2206206994597C13D831ec7", // USDT (ETH)
+  v2Factory: "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f",
+  v3Factory: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
 
-    // backward-compat (existing code may still read these)
-    v2Factory: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f", // Uniswap V2
-    v3Factory: "0x1F98431c8aD98523631AE4a59f267346ea31F984", // Uniswap V3
+  v2Factories: [
+    { name: "Uniswap V2", addr: "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f" },
+    { name: "Sushi V2",   addr: "0xc0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac" }
+  ],
+  v3Factories: [
+    { name: "Uniswap V3", addr: "0x1f98431c8ad98523631ae4a59f267346ea31f984" }
+  ],
 
-    // new multi-DEX lists
-    v2Factories: [
-      { name: "Uniswap V2", addr: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f" },
-      { name: "Sushi V2",   addr: "0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac" }
-    ],
-    v3Factories: [
-      { name: "Uniswap V3", addr: "0x1F98431c8aD98523631AE4a59f267346ea31F984" }
-    ],
-
-    addressUrl: (a)=> `https://etherscan.io/address/${a}`
-  }
+  addressUrl: (a)=> `https://etherscan.io/address/${a}`
+}
 };
   // Minimum effective liquidity thresholds (rough heuristic)
 const QS_LIQ_FLOOR = {
@@ -4116,9 +4113,14 @@ const QS_LIQ_FLOOR = {
     } catch {}
     return String(a || "");
   }
-  function qsSafeAddr(a){
-  try { return E.getAddress(String(a || "").trim()); } catch { return ""; }
+ function qsSafeAddr(a){
+  const s = String(a || "").trim();
+  if (!s) return "";
+  try { return E.getAddress(s); } catch {}
+  if (/^0x[a-fA-F0-9]{40}$/.test(s)) return s.toLowerCase();
+  return "";
 }
+
   function qsShortAddr(a){
     try { if (typeof shortAddr === "function") return shortAddr(a); } catch {}
     const s = String(a || "");
@@ -4344,9 +4346,6 @@ function qsUiExplorerKeyFor(net){
     return { key: "", isUnified: false };
   }
 }
-
-
-
   // Chip UI
   function qsMiniChip(type, title, value){
     const map = { ok:"ok", warn:"warn", bad:"bad", info:"warn" };
@@ -4523,36 +4522,24 @@ const read = _getRP ? _getRP(net) : null;
     ? cfg.v2Factories
     : (cfg.v2Factory ? [{ name: "V2", addr: cfg.v2Factory }] : []);
 
-  for (const vf of v2Factories) {
-    const vfAddr = qsSafeAddr(vf?.addr);
-    if (!vfAddr) {
-      rows.push({ type:`V2 • ${vf?.name || "Unknown"}`, target:"—", addr:"—", ok:false, note:"invalid factory address" });
-      continue;
-    }
+ for (const vf of v2Factories) {
+  const vfAddr = qsSafeAddr(vf?.addr);
+  if (!vfAddr) continue;
 
-    let fac;
-    try {
-      fac = new E.Contract(vfAddr, QS_V2_FACTORY_ABI, provider);
-    } catch {
-      rows.push({ type:`V2 • ${vf?.name || "Unknown"}`, target:"—", addr:"—", ok:false, note:"factory init failed" });
-      continue;
-    }
+  let fac;
+  try {
+    fac = new E.Contract(vfAddr, QS_V2_FACTORY_ABI, provider);
+  } catch {
+    continue;
+  }
 
     for (const t of targets) {
       let pair = ZERO;
       try { pair = await fac.getPair(tok, t.addr); } catch {}
 
       if (!pair || pair === ZERO) {
-        rows.push({
-          type: `V2 • ${vf.name || "V2"}`,
-          target: t.label,
-          addr: "—",
-          ok: false,
-          note: "pair not found"
-        });
-        continue;
-      }
-
+  continue; // don't add noisy "not found" rows
+}
       try {
         const p = new E.Contract(pair, QS_V2_PAIR_ABI, provider);
         let token0 = tok, token1 = t.addr;
@@ -4605,19 +4592,15 @@ const read = _getRP ? _getRP(net) : null;
   const feeTiers = [100, 500, 2500, 3000, 10000]; // broaden coverage
 
   for (const vf of v3Factories) {
-    const vfAddr = qsSafeAddr(vf?.addr);
-    if (!vfAddr) {
-      rows.push({ type:`V3 • ${vf?.name || "Unknown"}`, target:"—", addr:"—", ok:false, note:"invalid factory address" });
-      continue;
-    }
+  const vfAddr = qsSafeAddr(vf?.addr);
+  if (!vfAddr) continue;
 
-    let fac3;
-    try {
-      fac3 = new E.Contract(vfAddr, QS_V3_FACTORY_ABI, provider);
-    } catch {
-      rows.push({ type:`V3 • ${vf?.name || "Unknown"}`, target:"—", addr:"—", ok:false, note:"factory init failed" });
-      continue;
-    }
+  let fac3;
+  try {
+    fac3 = new E.Contract(vfAddr, QS_V3_FACTORY_ABI, provider);
+  } catch {
+    continue;
+  }
 
     for (const t of targets) {
       for (const fee of feeTiers) {
@@ -4625,15 +4608,8 @@ const read = _getRP ? _getRP(net) : null;
         try { pool = await fac3.getPool(tok, t.addr, fee); } catch {}
 
         if (!pool || pool === ZERO) {
-          rows.push({
-            type: `V3 ${fee} • ${vf.name || "V3"}`,
-            target: t.label,
-            addr: "—",
-            ok: false,
-            note: "pool not found"
-          });
-          continue;
-        }
+  continue; // don't add noisy "not found" rows
+}
 
         try {
           const p = new E.Contract(pool, QS_V3_POOL_ABI, provider);
@@ -5032,10 +5008,6 @@ try {
   }
 
 } catch {}
-
-
-
-
     // 4) Proxy
     let impl = await tryEip1967Impl(net, token);
     let isProxy = !!impl;
