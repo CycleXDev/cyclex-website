@@ -4114,6 +4114,9 @@ const QS_LIQ_FLOOR = {
     } catch {}
     return String(a || "");
   }
+  function qsSafeAddr(a){
+  try { return E.getAddress(String(a || "").trim()); } catch { return ""; }
+}
   function qsShortAddr(a){
     try { if (typeof shortAddr === "function") return shortAddr(a); } catch {}
     const s = String(a || "");
@@ -4502,10 +4505,11 @@ const read = _getRP ? _getRP(net) : null;
   let any = false;
   const ZERO = "0x0000000000000000000000000000000000000000";
 
-  const targets = [
-    { label: "Wrapped", addr: cfg.wrapped },
-    { label: "USDT", addr: cfg.usdt }
-  ];
+ const targets = [
+  { label: "Wrapped", addr: qsSafeAddr(cfg.wrapped) },
+  { label: "USDT", addr: qsSafeAddr(cfg.usdt) }
+].filter(t => !!t.addr);
+
 
   // ---------- V2 (multi-factory, backward compatible) ----------
   try {
@@ -4513,10 +4517,13 @@ const read = _getRP ? _getRP(net) : null;
       ? cfg.v2Factories
       : (cfg.v2Factory ? [{ name: "V2", addr: cfg.v2Factory }] : []);
 
-    for (const vf of v2Factories) {
-      let fac;
-      try {
-        fac = new E.Contract(vf.addr, QS_V2_FACTORY_ABI, provider);
+   for (const vf of v2Factories) {
+  let fac;
+  const vfAddr = qsSafeAddr(vf?.addr);
+  if (!vfAddr) continue;
+  try {
+    fac = new E.Contract(vfAddr, QS_V2_FACTORY_ABI, provider);
+
       } catch {
         continue;
       }
@@ -4585,9 +4592,11 @@ const read = _getRP ? _getRP(net) : null;
     const feeTiers = [500, 3000, 10000];
 
     for (const vf of v3Factories) {
-      let fac3;
-      try {
-        fac3 = new E.Contract(vf.addr, QS_V3_FACTORY_ABI, provider);
+  let fac3;
+  const vfAddr = qsSafeAddr(vf?.addr);
+  if (!vfAddr) continue;
+  try {
+    fac3 = new E.Contract(vfAddr, QS_V3_FACTORY_ABI, provider);
       } catch {
         continue;
       }
@@ -5573,7 +5582,7 @@ try {
   window.CX_QS_V6 = window.CX_QS_V6 || {};
   window.CX_QS_V6.initQuickScanUi = initQuickScanUi;
   window.CX_QS_V6.runQuickScan = runQuickScan;
-  window.CX_QS_V6.qsLiqCheckBasic = qsLiqCheckBasic; // <-- חשוב
+  window.CX_QS_V6.qsLiqCheckBasic = qsLiqCheckBasic; 
 
   // keep compatibility
   window.initQuickScanUi = initQuickScanUi;
