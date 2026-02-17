@@ -4912,54 +4912,66 @@ rep.meta = {
 };
 
     // --- quick liquidity quality heuristic (no external price API) ---
-// --- effective liquidity quality heuristic (wrapped + USDT floors) ---
-let liqQuality = "unknown"; // unknown | tiny | low | healthy
-let liqStats = { wrapped: 0, usdt: 0, active: 0 };
-
+// --- liquidity quality heuristic (depth-aware, multi-pool aware) ---
+let liqQuality = "unknown"; // unknown | tiny | low | medium | healthy
 try {
   const rows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows : [];
   const active = rows.filter(r => r?.ok);
-  liqStats.active = active.length;
 
-  let wrappedAmt = 0;
-  let usdtAmt = 0;
+  let wrappedAmt = 0; // WBNB/WETH aggregated
+  let usdtAmt = 0;    // USDT aggregated
 
   for (const r of active) {
     const note = String(r?.note || "");
 
-    // supports: "... / X WETH" or "... / X WBNB"
-    const mw = note.match(/\/\s*([0-9.,]+)\s*(WETH|WBNB)/i);
+    // matches "... / X WBNB|WETH"
+    const mw = note.match(/\/\s*([0-9.,]+)\s*(WBNB|WETH)\b/i);
     if (mw) {
       const v = Number(String(mw[1]).replace(/,/g, ""));
       if (Number.isFinite(v)) wrappedAmt += v;
     }
 
-    // supports: "... / X USDT"
-    const mu = note.match(/\/\s*([0-9.,]+)\s*USDT/i);
+    // matches "... / X USDT"
+    const mu = note.match(/\/\s*([0-9.,]+)\s*USDT\b/i);
     if (mu) {
       const v = Number(String(mu[1]).replace(/,/g, ""));
       if (Number.isFinite(v)) usdtAmt += v;
     }
   }
 
-  liqStats.wrapped = wrappedAmt;
-  liqStats.usdt = usdtAmt;
+  // meta for debug/UI
+  rep.meta = {
+    ...(rep.meta || {}),
+    liqWrappedAmt: wrappedAmt,
+    liqUsdtAmt: usdtAmt,
+    liqActivePools: active.length
+  };
 
-  const floor = QS_LIQ_FLOOR[net] || QS_LIQ_FLOOR.bsc;
+  // network-specific floors
+  const floor = (QS_LIQ_FLOOR && QS_LIQ_FLOOR[net]) || { wrappedTiny: 0.03, wrappedLow: 0.3, usdtTiny: 80, usdtLow: 800 };
 
-  const isTiny =
-    active.length <= 1 ||
-    (wrappedAmt <= floor.wrappedTiny && usdtAmt <= floor.usdtTiny);
+  // classify
+  if (active.length === 0) {
+    liqQuality = "unknown";
+  } else if (wrappedAmt < floor.wrappedTiny && usdtAmt < floor.usdtTiny) {
+    liqQuality = "tiny";
+  } else if (wrappedAmt < floor.wrappedLow && usdtAmt < floor.usdtLow) {
+    liqQuality = "low";
+  } else if (usdtAmt >= floor.usdtLow || wrappedAmt >= floor.wrappedLow) {
+    liqQuality = "medium";
+  } else {
+    liqQuality = "low";
+  }
 
-  const isLow =
-    !isTiny &&
-    (wrappedAmt <= floor.wrappedLow || usdtAmt <= floor.usdtLow);
-
-  if (isTiny) liqQuality = "tiny";
-  else if (isLow) liqQuality = "low";
-  else liqQuality = "healthy";
+  // boost when liquidity is distributed across multiple active pools
+  if (active.length >= 3 && (usdtAmt >= floor.usdtLow * 2 || wrappedAmt >= floor.wrappedLow * 2)) {
+    liqQuality = "healthy";
+  } else if (active.length >= 2 && liqQuality === "low" && (usdtAmt >= floor.usdtLow || wrappedAmt >= floor.wrappedLow)) {
+    liqQuality = "medium";
+  }
 
 } catch {}
+
 
 
 
@@ -5097,14 +5109,16 @@ let marketScore = Number(market.marketScore ?? 100);
 const marketFlags = Array.isArray(market.flags) ? market.flags : [];
 const confidence = market.confidence || "low";
 
-// force market score to respect on-chain thin liquidity too
 // force market score to respect on-chain effective liquidity
 if (liqQuality === "tiny") {
   marketScore = Math.min(marketScore, 35);
 } else if (liqQuality === "low") {
-  marketScore = Math.min(marketScore, 60);
-}
+  marketScore = Math.min(marketScore, 68);
+} else if (liqQuality === "medium") {
+  marketScore = Math.min(marketScore, 78);
+} // healthy => no hard cap
 marketScore = qsClamp(Math.round(marketScore), 0, 100);
+
 
 // base blend
 let score = Math.round(contractScore * 0.55 + marketScore * 0.45);
@@ -5127,26 +5141,27 @@ if (mFlags.has("holder_concentration_unknown")) score -= 8;
 // liquidity caps with coverage-awareness
 if (liqQuality === "tiny") {
   if (rep.meta?.liqCoverageLow) {
-    score -= 12; // coverage may be incomplete -> softer penalty
+    score -= 10;
     if (!rep.redFlags.includes("Liquidity appears very low, but DEX coverage may be incomplete.")) {
       rep.redFlags.push("Liquidity appears very low, but DEX coverage may be incomplete.");
     }
   } else {
+    score -= 22;
     if (score > 49) score = 49;
     if (!rep.redFlags.includes("Very low effective liquidity (thin market, high manipulation risk).")) {
       rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
     }
   }
 } else if (liqQuality === "low") {
-  if (rep.meta?.liqCoverageLow) {
-    score -= 6; // softer if coverage weak
-  } else {
-    if (score > 64) score = 64;
-  }
+  score -= 8;
+  if (!rep.meta?.liqCoverageLow && score > 68) score = 68;
   if (!rep.redFlags.includes("Low effective liquidity detected.")) {
     rep.redFlags.push("Low effective liquidity detected.");
   }
+} else if (liqQuality === "medium") {
+  score -= 2; // very mild
 }
+
 
 // critical cap
 const hasCritical =
@@ -5171,7 +5186,7 @@ const overallText =
 rep.score = score;
 rep.overallText = overallText;
 
- rep.meta = {
+rep.meta = {
   ...(rep.meta || {}),
   contractScore,
   marketScore,
@@ -5179,10 +5194,16 @@ rep.overallText = overallText;
   liqQuality,
   liqCoverageLow: !!rep.meta?.liqCoverageLow,
   liqCoveragePartial: !!rep.meta?.liqCoveragePartial,
+  liqWrappedAmt: Number(rep.meta?.liqWrappedAmt || 0),
+  liqUsdtAmt: Number(rep.meta?.liqUsdtAmt || 0),
+  liqActivePools: Number(rep.meta?.liqActivePools || 0),
+
+  // keep existing fields:
   ownerBalance: ownerBal?.toString?.() || "0",
   ownerPct: ownerPct,
   marketFlags: Array.from(marketFlags || [])
 };
+
 
 
     
@@ -5200,13 +5221,16 @@ rep.overallText = overallText;
   type:
     !rep.liq?.any ? "warn" :
     liqQuality === "tiny" ? "bad" :
-    liqQuality === "low" ? "warn" : "ok",
+    liqQuality === "low" ? "warn" :
+    liqQuality === "medium" ? "ok" : "ok",
   title: "Liquidity",
   value:
     !rep.liq?.any ? "No/Unknown" :
     liqQuality === "tiny" ? "Very low (thin)" :
-    liqQuality === "low" ? "Low" : "Healthy"
+    liqQuality === "low" ? "Low" :
+    liqQuality === "medium" ? "Medium" : "Healthy"
 },
+
 
 
 
