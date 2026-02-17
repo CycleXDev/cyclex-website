@@ -5176,7 +5176,24 @@ if (hasCritical && score > 69) score = 69;
 if (mFlags.has("holder_concentration_unknown") && rep.meta?.liqCoverageLow && score > 64) {
   score = 64;
 }
+    
+// ----- guardrails (balanced) -----
 
+// A) verified לא ידוע + owner לא ידוע -> לא לעבור Mixed גבוה
+const ownerUnknown = !owner;
+if (verified !== true && ownerUnknown && score > 79) score = 79;
+
+// B) אין בכלל ליקווידיות מזוהה -> לא לעבור Caution
+if (!rep?.liq?.any && score > 64) score = 64;
+
+// C) confidence נמוך + דגלי שוק משמעותיים -> לא Good
+const lowConf = (confidence || "low") === "low";
+const hasSeriousMarketFlag =
+  mFlags.has("possible_manipulated_move") ||
+  mFlags.has("very_low_liquidity_usd") ||
+  mFlags.has("very_few_holders");
+
+if (lowConf && hasSeriousMarketFlag && score > 79) score = 79;
 
 // final clamp
 score = qsClamp(score, 0, 100);
@@ -5216,7 +5233,7 @@ rep.meta = {
   { type: score >= 85 ? "ok" : score >= 70 ? "warn" : score >= 50 ? "warn" : "bad", title: "Overall", value: overallText },
  { type: contractScore >= 85 ? "ok" : contractScore >= 70 ? "warn" : "bad", title: "Contract Score", value: String(contractScore) },
 { type: marketScore >= 85 ? "ok" : marketScore >= 70 ? "warn" : "bad", title: "Market Score", value: String(marketScore) },
-{ type: confidence === "high" ? "ok" : confidence === "medium" ? "warn" : "warn", title: "Confidence", value: confidence || "low" },
+{ type: confidence === "high" ? "ok" : confidence === "medium" ? "ok" : "ok", title: "Confidence", value: confidence || "low" },
 
   { type: verified === true ? "ok" : "warn", title: "Verified", value: verified === true ? "Yes" : "No/Unknown" },
   { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
