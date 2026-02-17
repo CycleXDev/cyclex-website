@@ -4669,7 +4669,18 @@ const read = _getRP ? _getRP(net) : null;
   function qsRenderLiquidityTable(container, liqRes){
     if (!container) return;
 
-    const rows = (liqRes?.rows || []);
+   const rows = [...(liqRes?.rows || [])].sort((a, b) => {
+  const ao = a?.ok ? 1 : 0;
+  const bo = b?.ok ? 1 : 0;
+  if (bo !== ao) return bo - ao; // ok first
+  // secondary sort: V2 before V3 (optional but clean)
+  const at = String(a?.type || "");
+  const bt = String(b?.type || "");
+  const av2 = at.includes("V2") ? 0 : 1;
+  const bv2 = bt.includes("V2") ? 0 : 1;
+  return av2 - bv2;
+});
+
     const body = rows.length ? rows.map(r => `
       <div class="trow ${r.ok ? "highlight" : ""}">
         <div class="cell wrap"><span class="mono">${r.addr ? qsEscapeHtml(qsShortAddr(r.addr)) : "—"}</span></div>
@@ -5389,23 +5400,30 @@ try {
 
       out.className = "status info";
       out.style.display = "block";
-      out.innerHTML = `
-        <div style="font-size:18px;font-weight:900;letter-spacing:-0.01em;">
-          ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}
-        </div>
-        <div class="small" style="margin-top:6px;">
-          Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b> • Score: <b>${rep.score}/100</b> (${qsEscapeHtml(rep.overallText)})
-        </div>
-        <div class="small" style="margin-top:8px;">
-          Token: <span class="mono">${qsEscapeHtml(rep.token)}</span>
-        </div>
-        <div class="small" style="margin-top:8px;">
-          Supply: <span class="mono">${qsEscapeHtml(supplyTxt)}</span>
-        </div>
-        <div class="small" style="margin-top:8px;">
-          Explorer: <a href="${qsEscapeHtml(rep.explorer)}" target="_blank" rel="noopener">open</a>
-        </div>
-      `;
+      const thinLiqWarn = (rep?.meta?.liqQuality === "tiny")
+  ? `<div class="small" style="margin-top:10px;color:#ff6b6b;font-weight:800;">
+       ⚠️ Thin liquidity detected — price impact/slippage may be extreme.
+     </div>`
+  : "";
+
+out.innerHTML = `
+  <div style="font-size:18px;font-weight:900;letter-spacing:-0.01em;">
+    ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}
+  </div>
+  <div class="small" style="margin-top:6px;">
+    Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b> • Score: <b>${rep.score}/100</b> (${qsEscapeHtml(rep.overallText)})
+  </div>
+  <div class="small" style="margin-top:8px;">
+    Token: <span class="mono">${qsEscapeHtml(rep.token)}</span>
+  </div>
+  <div class="small" style="margin-top:8px;">
+    Supply: <span class="mono">${qsEscapeHtml(supplyTxt)}</span>
+  </div>
+  <div class="small" style="margin-top:8px;">
+    Explorer: <a href="${qsEscapeHtml(rep.explorer)}" target="_blank" rel="noopener">open</a>
+  </div>
+  ${thinLiqWarn}
+`;
 
       if (chipsWrap){
         chipsWrap.innerHTML = (rep.mini || []).map(x => qsMiniChip(x.type, x.title, x.value)).join("");
