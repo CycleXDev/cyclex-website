@@ -5098,6 +5098,7 @@ const marketFlags = Array.isArray(market.flags) ? market.flags : [];
 const confidence = market.confidence || "low";
 
 // force market score to respect on-chain thin liquidity too
+// force market score to respect on-chain effective liquidity
 if (liqQuality === "tiny") {
   marketScore = Math.min(marketScore, 35);
 } else if (liqQuality === "low") {
@@ -5105,14 +5106,13 @@ if (liqQuality === "tiny") {
 }
 marketScore = qsClamp(Math.round(marketScore), 0, 100);
 
-
 // base blend
 let score = Math.round(contractScore * 0.55 + marketScore * 0.45);
 
 // existing gates util
 score = qsApplyScoreGates(score, rep, marketFlags);
 
-// one normalized flags set (DECLARE ONCE)
+// one normalized flags set
 const mFlags = new Set((marketFlags || []).map(s => String(s).toLowerCase()));
 
 // market penalties
@@ -5124,10 +5124,10 @@ if (mFlags.has("very_few_holders")) score -= 18;
 else if (mFlags.has("few_holders")) score -= 8;
 if (mFlags.has("holder_concentration_unknown")) score -= 8;
 
-// effective liquidity caps with coverage-awareness
+// liquidity caps with coverage-awareness
 if (liqQuality === "tiny") {
   if (rep.meta?.liqCoverageLow) {
-    if (score > 69) score = 69;
+    score -= 12; // coverage may be incomplete -> softer penalty
     if (!rep.redFlags.includes("Liquidity appears very low, but DEX coverage may be incomplete.")) {
       rep.redFlags.push("Liquidity appears very low, but DEX coverage may be incomplete.");
     }
@@ -5138,33 +5138,29 @@ if (liqQuality === "tiny") {
     }
   }
 } else if (liqQuality === "low") {
-  if (!rep.meta?.liqCoverageLow && score > 64) score = 64;
+  if (rep.meta?.liqCoverageLow) {
+    score -= 6; // softer if coverage weak
+  } else {
+    if (score > 64) score = 64;
+  }
   if (!rep.redFlags.includes("Low effective liquidity detected.")) {
     rep.redFlags.push("Low effective liquidity detected.");
   }
 }
 
-
-// hard caps
+// critical cap
 const hasCritical =
   mFlags.has("possible_manipulated_move") ||
   mFlags.has("very_low_liquidity_usd") ||
   mFlags.has("very_few_holders");
 if (hasCritical && score > 69) score = 69;
 
-// confidence/coverage caps
+// confidence/coverage cap
 if (mFlags.has("holder_concentration_unknown") && score > 64) score = 64;
-
-// thin-liquidity structure cap (active pools/pairs)
-const liqRows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows : [];
-const activeLiqRows = liqRows.filter(r => !!r?.ok);
-if (activeLiqRows.length <= 1 && score > 59) {
-  score = 59;
-  rep.redFlags.push("Only one active liquidity venue detected (thin market structure).");
-}
 
 // final clamp
 score = qsClamp(score, 0, 100);
+
     
 const overallText =
   score >= 85 ? "Good" :
