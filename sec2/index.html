@@ -5175,14 +5175,19 @@ if (liqQuality === "tiny") {
     }
   }
 } else if (liqQuality === "low") {
-  score -= 8;
-  if (!rep.meta?.liqCoverageLow && score > 68) score = 68;
+  if (rep.meta?.liqCoverageLow) {
+    score -= 6; // softer if coverage weak
+  } else {
+    score -= 8;
+    if (score > 64) score = 64;
+  }
   if (!rep.redFlags.includes("Low effective liquidity detected.")) {
     rep.redFlags.push("Low effective liquidity detected.");
   }
 } else if (liqQuality === "medium") {
   score -= 2; // very mild
 }
+
 
   if (rep.meta?.liqCoverageLow) {
     score -= 6; // softer if coverage weak
@@ -5316,8 +5321,6 @@ for (const f of (marketFlags || [])) {
   }
 
 }
-
-
     rep.json = safeJson(rep);
 
     cache[ckey] = { ts: qsNowTs(), rep };
