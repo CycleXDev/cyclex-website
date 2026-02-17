@@ -4044,14 +4044,16 @@ async function explorerGetSource(net, addr, apiKey, isUnified) {
     v3Factory: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865", // Pancake V3
 
     // new multi-DEX lists
-    v2Factories: [
-      { name: "Pancake V2", addr: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73" },
-      { name: "Biswap V2",  addr: "0x858E3312ed3A876947EA49d572A7C42DE08af7EE" },
-      { name: "ApeSwap V2", addr: "0x0841BD0B734E4F5853f0D4dDDA0cD8fA1b7Ff814" }
-    ],
-    v3Factories: [
-      { name: "Pancake V3", addr: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865" }
-    ],
+   v2Factories: [
+  { name: "Pancake V2", addr: "0xCA143Ce32Fe78f1f7019d7d551a6402fC5350c73" },
+  { name: "Biswap V2",  addr: "0x858E3312ed3A876947EA49d572A7C42DE08af7EE" },
+  { name: "ApeSwap V2", addr: "0x0841BD0B734E4F5853f0dD8d7Ea041c241fb0Da6" },
+  { name: "Bakery V2",  addr: "0x01bF7C66c6BD861915CDAAe475042d3c4BaE16A7" }
+],
+v3Factories: [
+  { name: "Pancake V3", addr: "0x0BFbCF9fa4f9C56B0F40a671Ad40E0805A091865" }
+],
+
 
     addressUrl: (a)=> `https://bscscan.com/address/${a}`
   },
@@ -4504,51 +4506,60 @@ const read = _getRP ? _getRP(net) : null;
   const rows = [];
   let any = false;
   const ZERO = "0x0000000000000000000000000000000000000000";
+  const tok = qsSafeAddr(token);
+  if (!tok) return { any:false, hint:"none", rows:[] };
 
- const targets = [
-  { label: "Wrapped", addr: qsSafeAddr(cfg.wrapped) },
-  { label: "USDT", addr: qsSafeAddr(cfg.usdt) }
-].filter(t => !!t.addr);
+  // broaden targets so real liquidity is found more often
+  const targets = [
+    { label: "Wrapped", addr: qsSafeAddr(cfg.wrapped) },
+    { label: "USDT",    addr: qsSafeAddr(cfg.usdt) },
+    { label: "BUSD",    addr: net === "bsc" ? qsSafeAddr("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56") : "" },
+    { label: "USDC",    addr: net === "bsc" ? qsSafeAddr("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d") : qsSafeAddr("0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48") },
+    { label: "FDUSD",   addr: net === "bsc" ? qsSafeAddr("0xc5f0f7b66764f6ec8c8dff7ba683102295e16409") : "" }
+  ].filter(t => !!t.addr);
 
+  // ---------- V2 ----------
+  const v2Factories = Array.isArray(cfg.v2Factories) && cfg.v2Factories.length
+    ? cfg.v2Factories
+    : (cfg.v2Factory ? [{ name: "V2", addr: cfg.v2Factory }] : []);
 
-  // ---------- V2 (multi-factory, backward compatible) ----------
-  try {
-    const v2Factories = Array.isArray(cfg.v2Factories) && cfg.v2Factories.length
-      ? cfg.v2Factories
-      : (cfg.v2Factory ? [{ name: "V2", addr: cfg.v2Factory }] : []);
+  for (const vf of v2Factories) {
+    const vfAddr = qsSafeAddr(vf?.addr);
+    if (!vfAddr) {
+      rows.push({ type:`V2 • ${vf?.name || "Unknown"}`, target:"—", addr:"—", ok:false, note:"invalid factory address" });
+      continue;
+    }
 
-   for (const vf of v2Factories) {
-  let fac;
-  const vfAddr = qsSafeAddr(vf?.addr);
-  if (!vfAddr) continue;
-  try {
-    fac = new E.Contract(vfAddr, QS_V2_FACTORY_ABI, provider);
+    let fac;
+    try {
+      fac = new E.Contract(vfAddr, QS_V2_FACTORY_ABI, provider);
+    } catch {
+      rows.push({ type:`V2 • ${vf?.name || "Unknown"}`, target:"—", addr:"—", ok:false, note:"factory init failed" });
+      continue;
+    }
 
-      } catch {
+    for (const t of targets) {
+      let pair = ZERO;
+      try { pair = await fac.getPair(tok, t.addr); } catch {}
+
+      if (!pair || pair === ZERO) {
+        rows.push({
+          type: `V2 • ${vf.name || "V2"}`,
+          target: t.label,
+          addr: "—",
+          ok: false,
+          note: "pair not found"
+        });
         continue;
       }
 
-      for (const t of targets) {
-        const pair = await fac.getPair(token, t.addr).catch(()=> ZERO);
-
-        if (!pair || pair === ZERO) {
-          rows.push({
-            type: `V2${vf?.name ? " • " + vf.name : ""}`,
-            target: t.label,
-            addr: "—",
-            ok: false,
-            note: "pair not found"
-          });
-          continue;
-        }
-
+      try {
         const p = new E.Contract(pair, QS_V2_PAIR_ABI, provider);
-
-        let token0 = token, token1 = t.addr;
+        let token0 = tok, token1 = t.addr;
         try { token0 = await p.token0(); } catch {}
         try { token1 = await p.token1(); } catch {}
 
-        const [r0Raw, r1Raw] = await p.getReserves().catch(()=> [0n,0n,0n]);
+        const [r0Raw, r1Raw] = await p.getReserves().then(x => [x[0], x[1]]).catch(()=>[0n,0n]);
         const r0 = _qsToBI(r0Raw), r1 = _qsToBI(r1Raw);
 
         const m0 = await _qsGetErc20Meta(token0, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token0)}));
@@ -4557,17 +4568,14 @@ const read = _getRP ? _getRP(net) : null;
         const ok = (r0 > 0n || r1 > 0n);
         any = any || ok;
 
-        const a0 = _qsFmtUnits(r0, m0.decimals, 2);
-        const a1 = _qsFmtUnits(r1, m1.decimals, 2);
-
         rows.push({
-          type: `V2${vf?.name ? " • " + vf.name : ""}`,
+          type: `V2 • ${vf.name || "V2"}`,
           target: t.label,
           addr: pair,
           ok,
-          note: ok ? `reserves: ${a0} ${m0.symbol} / ${a1} ${m1.symbol}` : "reserves: 0",
-
-          // NEW (raw for scoring)
+          note: ok
+            ? `reserves: ${_qsFmtUnits(r0, m0.decimals, 2)} ${m0.symbol} / ${_qsFmtUnits(r1, m1.decimals, 2)} ${m1.symbol}`
+            : "reserves: 0",
           token0: qsNormAddr(token0),
           token1: qsNormAddr(token1),
           symbol0: m0.symbol,
@@ -4577,48 +4585,60 @@ const read = _getRP ? _getRP(net) : null;
           raw0: r0.toString(),
           raw1: r1.toString()
         });
+      } catch {
+        rows.push({
+          type: `V2 • ${vf.name || "V2"}`,
+          target: t.label,
+          addr: qsShortAddr(pair),
+          ok: false,
+          note: "pair read failed"
+        });
       }
     }
-  } catch {
-    // ignore (don’t spam rows)
   }
 
-  // ---------- V3 (multi-factory, backward compatible) ----------
-  try {
-    const v3Factories = Array.isArray(cfg.v3Factories) && cfg.v3Factories.length
-      ? cfg.v3Factories
-      : (cfg.v3Factory ? [{ name: "V3", addr: cfg.v3Factory }] : []);
+  // ---------- V3 ----------
+  const v3Factories = Array.isArray(cfg.v3Factories) && cfg.v3Factories.length
+    ? cfg.v3Factories
+    : (cfg.v3Factory ? [{ name: "V3", addr: cfg.v3Factory }] : []);
 
-    const feeTiers = [500, 3000, 10000];
+  const feeTiers = [100, 500, 2500, 3000, 10000]; // broaden coverage
 
-    for (const vf of v3Factories) {
-  let fac3;
-  const vfAddr = qsSafeAddr(vf?.addr);
-  if (!vfAddr) continue;
-  try {
-    fac3 = new E.Contract(vfAddr, QS_V3_FACTORY_ABI, provider);
-      } catch {
-        continue;
-      }
+  for (const vf of v3Factories) {
+    const vfAddr = qsSafeAddr(vf?.addr);
+    if (!vfAddr) {
+      rows.push({ type:`V3 • ${vf?.name || "Unknown"}`, target:"—", addr:"—", ok:false, note:"invalid factory address" });
+      continue;
+    }
 
-      for (const t of targets) {
-        for (const fee of feeTiers) {
-          const pool = await fac3.getPool(token, t.addr, fee).catch(()=> ZERO);
+    let fac3;
+    try {
+      fac3 = new E.Contract(vfAddr, QS_V3_FACTORY_ABI, provider);
+    } catch {
+      rows.push({ type:`V3 • ${vf?.name || "Unknown"}`, target:"—", addr:"—", ok:false, note:"factory init failed" });
+      continue;
+    }
 
-          if (!pool || pool === ZERO) {
-            rows.push({
-              type: `V3 ${fee}${vf?.name ? " • " + vf.name : ""}`,
-              target: t.label,
-              addr: "—",
-              ok: false,
-              note: "pool not found"
-            });
-            continue;
-          }
+    for (const t of targets) {
+      for (const fee of feeTiers) {
+        let pool = ZERO;
+        try { pool = await fac3.getPool(tok, t.addr, fee); } catch {}
 
+        if (!pool || pool === ZERO) {
+          rows.push({
+            type: `V3 ${fee} • ${vf.name || "V3"}`,
+            target: t.label,
+            addr: "—",
+            ok: false,
+            note: "pool not found"
+          });
+          continue;
+        }
+
+        try {
           const p = new E.Contract(pool, QS_V3_POOL_ABI, provider);
 
-          let token0 = token, token1 = t.addr;
+          let token0 = tok, token1 = t.addr;
           try { token0 = await p.token0(); } catch {}
           try { token1 = await p.token1(); } catch {}
 
@@ -4635,17 +4655,14 @@ const read = _getRP ? _getRP(net) : null;
           const ok = (b0 > 0n && b1 > 0n);
           any = any || ok;
 
-          const fb0 = _qsFmtUnits(b0, m0.decimals, 2);
-          const fb1 = _qsFmtUnits(b1, m1.decimals, 2);
-
           rows.push({
-            type: `V3 ${fee}${vf?.name ? " • " + vf.name : ""}`,
+            type: `V3 ${fee} • ${vf.name || "V3"}`,
             target: t.label,
             addr: pool,
             ok,
-            note: ok ? `balances: ${fb0} ${m0.symbol} / ${fb1} ${m1.symbol}` : "balances: 0",
-
-            // NEW (raw for scoring)
+            note: ok
+              ? `balances: ${_qsFmtUnits(b0, m0.decimals, 2)} ${m0.symbol} / ${_qsFmtUnits(b1, m1.decimals, 2)} ${m1.symbol}`
+              : "balances: 0",
             token0: qsNormAddr(token0),
             token1: qsNormAddr(token1),
             symbol0: m0.symbol,
@@ -4655,15 +4672,22 @@ const read = _getRP ? _getRP(net) : null;
             raw0: b0.toString(),
             raw1: b1.toString()
           });
+        } catch {
+          rows.push({
+            type: `V3 ${fee} • ${vf.name || "V3"}`,
+            target: t.label,
+            addr: qsShortAddr(pool),
+            ok: false,
+            note: "pool read failed"
+          });
         }
       }
     }
-  } catch {
-    // ignore
   }
 
-  return { any, hint: any ? "V2/V3 pairs exist" : "none", rows };
+  return { any, hint: any ? "liquidity found" : "none", rows };
 }
+
 
 
   function qsRenderLiquidityTable(container, liqRes){
