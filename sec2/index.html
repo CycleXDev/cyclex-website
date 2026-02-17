@@ -5109,7 +5109,39 @@ contractScore = qsClamp(Math.round(contractScore), 0, 100);
 const market = qsComputeMarketRisk(rep);
 let marketScore = Number(market.marketScore ?? 100);
 const marketFlags = Array.isArray(market.flags) ? market.flags : [];
-const confidence = market.confidence || "low";
+// Confidence (derived from real scan coverage, not only market module)
+let confidence = "low";
+
+// raw signals
+const verifiedYes = (verified === true);
+const ownerKnown = !!owner;
+const liqAny = !!rep?.liq?.any;
+const liqRows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows : [];
+const liqActivePools = Number(rep?.meta?.liqActivePools || 0);
+const liqCoverageLow = !!rep?.meta?.liqCoverageLow;
+const liqCoveragePartial = !!rep?.meta?.liqCoveragePartial;
+
+// score-like confidence points
+let confPoints = 0;
+
+// identity / source confidence
+if (verifiedYes) confPoints += 2;
+if (ownerKnown) confPoints += 1;
+
+// liquidity confidence
+if (liqAny) confPoints += 1;
+if (liqActivePools >= 2) confPoints += 1;
+if (!liqCoverageLow && !liqCoveragePartial) confPoints += 1;
+
+// penalties
+if (liqCoverageLow) confPoints -= 2;
+else if (liqCoveragePartial) confPoints -= 1;
+
+// map points -> label
+if (confPoints >= 4) confidence = "high";
+else if (confPoints >= 2) confidence = "medium";
+else confidence = "low";
+
 
 // force market score to respect on-chain effective liquidity
 if (liqQuality === "tiny") {
@@ -5233,7 +5265,12 @@ rep.meta = {
   { type: score >= 85 ? "ok" : score >= 70 ? "warn" : score >= 50 ? "warn" : "bad", title: "Overall", value: overallText },
  { type: contractScore >= 85 ? "ok" : contractScore >= 70 ? "warn" : "bad", title: "Contract Score", value: String(contractScore) },
 { type: marketScore >= 85 ? "ok" : marketScore >= 70 ? "warn" : "bad", title: "Market Score", value: String(marketScore) },
-{ type: confidence === "high" ? "ok" : confidence === "medium" ? "ok" : "ok", title: "Confidence", value: confidence || "low" },
+{
+  type: confidence === "high" ? "ok" : confidence === "medium" ? "warn" : "warn",
+  title: "Confidence",
+  value: confidence
+},
+
 
   { type: verified === true ? "ok" : "warn", title: "Verified", value: verified === true ? "Yes" : "No/Unknown" },
   { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
