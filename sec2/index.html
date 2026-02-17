@@ -5733,23 +5733,43 @@ function liqGetSources(net){
   return out;
 }
 
-// Extra targets to reduce false negatives
 function liqBuildTargets(net, chain){
+  // hard fallback constants (do NOT rely only on CHAINS object)
+  const FALLBACK = {
+    bsc: {
+      wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
+      usdt:    "0x55d398326f99059fF775485246999027B3197955", // USDT
+      usdc:    "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+      busd:    "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
+      fdusd:   "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409"
+    },
+    eth: {
+      wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // WETH
+      usdt:    "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      usdc:    "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    }
+  };
+
+  const fb = FALLBACK[net] || {};
+  const wrapped = liqNormAddr(chain?.wrapped || fb.wrapped || "");
+  const usdt    = liqNormAddr(chain?.usdt    || fb.usdt    || "");
+
   const t = [
-    { other: liqNormAddr(chain?.wrapped), label: "Wrapped" },
-    { other: liqNormAddr(chain?.usdt),    label: "USDT" }
+    { other: wrapped, label: "Wrapped" },
+    { other: usdt,    label: "USDT" }
   ];
 
   if (net === "bsc") {
-    t.push({ other: liqNormAddr("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"), label: "USDC" });
-    t.push({ other: liqNormAddr("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56"), label: "BUSD" });
-    t.push({ other: liqNormAddr("0xc5f0f7b66764f6ec8c8dff7ba683102295e16409"), label: "FDUSD" });
+    t.push({ other: liqNormAddr(fb.usdc),  label: "USDC" });
+    t.push({ other: liqNormAddr(fb.busd),  label: "BUSD" });
+    t.push({ other: liqNormAddr(fb.fdusd), label: "FDUSD" });
   } else if (net === "eth") {
-    t.push({ other: liqNormAddr("0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), label: "USDC" });
+    t.push({ other: liqNormAddr(fb.usdc), label: "USDC" });
   }
 
   return t.filter(x => !!x.other);
 }
+
 
 function liqSafeBig(v){
   try { return BigInt(v ?? 0); } catch { return 0n; }
@@ -5783,6 +5803,11 @@ async function runLiqScan(){
 
   const sources = liqGetSources(net);
   const targets = liqBuildTargets(net, chain);
+  console.log("[LIQ DEBUG] net:", net);
+console.log("[LIQ DEBUG] token:", token);
+console.log("[LIQ DEBUG] targets:", targets);
+console.log("[LIQ DEBUG] sources:", sources);
+
 
   const res = {
     net, token,
