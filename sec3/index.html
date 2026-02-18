@@ -5370,6 +5370,22 @@ if (lowConf && hasSeriousMarketFlag && score > 84) score = 84; // max Mixed
 if (liqQuality === "tiny" && score > 49) score = 49; // High risk
 if (liqQuality === "low"  && score > 69) score = 69; // Caution max
 if (liqQuality === "medium" && verified !== true && score > 84) score = 84; // no Good unless verified
+// ✅ Tiny verified+healthy bonus (ONLY when truly clean)
+try {
+  // optional: treat owner concentration as "serious" too
+  const ownerPctNum = (typeof ownerPct === "number") ? ownerPct : null;
+  const ownerConcentrationSerious = (ownerPctNum !== null && ownerPctNum >= 35);
+
+  if (
+    liqQuality === "healthy" &&
+    verified === true &&
+    !hasSeriousMarketFlag &&
+    !ownerConcentrationSerious
+  ) {
+    score = qsClamp(score + 2, 0, 100);
+  }
+} catch {}
+
 
 // final clamp
 score = qsClamp(score, 0, 100);
