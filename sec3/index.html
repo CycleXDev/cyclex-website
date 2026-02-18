@@ -5342,34 +5342,38 @@ if (mFlags.has("holder_concentration_unknown") && rep.meta?.liqCoverageLow && sc
   score = 64;
 }
 
-// ----- guardrails (balanced) -----
+// ----- guardrails (aligned with tiers + safe caps) -----
+//
+// Goal:
+// - If everything looks healthy (verified/known signals + healthy liquidity), allow high scores.
+// - Prevent "too safe" scoring when key info is missing or liquidity is weak.
+// - Keep thresholds aligned with overallText:
+//   Good >= 85, Mixed >= 70, Caution >= 50, High risk < 50
 
-// A) verified לא ידוע + owner לא ידוע -> לא לעבור Mixed גבוה
+// A) Unknown Verified + Unknown Owner -> never reach "Good"
 const ownerUnknown = !owner;
-if (verified !== true && ownerUnknown && score > 79) score = 79;
+if (verified !== true && ownerUnknown && score > 84) score = 84; // max Mixed
 
-// B) אין בכלל ליקווידיות מזוהה -> לא לעבור Caution
+// B) No liquidity signal at all -> never exceed Caution (and hard cap)
 if (!rep?.liq?.any && score > 64) score = 64;
+if (hasCode && !rep?.liq?.any && score > 54) score = 54; // strongest cap for "no liquidity"
 
-// C) confidence נמוך + דגלי שוק משמעותיים -> לא Good
+// C) Low confidence + serious market flags -> never reach "Good"
 const lowConf = (uiConfidence === "low");
 const hasSeriousMarketFlag =
   mFlags.has("possible_manipulated_move") ||
   mFlags.has("very_low_liquidity_usd") ||
   mFlags.has("very_few_holders");
 
-if (lowConf && hasSeriousMarketFlag && score > 79) score = 79;
+if (lowConf && hasSeriousMarketFlag && score > 84) score = 84; // max Mixed
 
-// hard cap: token is valid but no liquidity signal
-if (hasCode && !rep?.liq?.any && score > 54) {
-  score = 54;
-}
-
+if (liqQuality === "tiny" && score > 49) score = 49; // High risk
+if (liqQuality === "low"  && score > 69) score = 69; // Caution max
+if (liqQuality === "medium" && verified !== true && score > 84) score = 84; // no Good unless verified
 
 // final clamp
 score = qsClamp(score, 0, 100);
-
-    
+   
 const overallText =
   score >= 85 ? "Good" :
   score >= 70 ? "Mixed signals" :
