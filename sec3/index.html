@@ -4983,17 +4983,31 @@ rep.meta = {
   liqCoveragePartial
 };
 
-// --- liquidity quality heuristic (depth-aware, multi-pool aware) ---
+// --- liquidity quality heuristic (USD-tiered, stable-based) ---
 let liqQuality = "unknown"; // unknown | tiny | low | medium | healthy
 try {
   const rows = Array.isArray(rep?.liq?.rows) ? rep.liq.rows : [];
   const active = rows.filter(r => r?.ok);
 
-  const wrappedAddr = qsLower(QS_NET?.[net]?.wrapped || "");
-  const usdtAddr    = qsLower(QS_NET?.[net]?.usdt || "");
+  const netCfg = QS_NET?.[net] || {};
+  const wrappedAddr = qsLower(netCfg.wrapped || "");
+  const usdtAddr    = qsLower(netCfg.usdt || "");
+  const busdAddr    = qsLower(netCfg.busd || "");
 
-  let wrappedAmt = 0; // aggregated, human units
-  let usdtAmt = 0;    // aggregated, human units
+  // common stables (BSC/ETH) – we treat as ~$1 each
+  const usdcAddr = qsLower(
+    net === "bsc"
+      ? "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"
+      : "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+  );
+  const fdusdAddr = qsLower(net === "bsc" ? "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409" : "");
+
+  // aggregated amounts (human units)
+  let wrappedAmt = 0;
+  let usdtAmt = 0;
+  let usdcAmt = 0;
+  let busdAmt = 0;
+  let fdusdAmt = 0;
 
   for (const r of active) {
     const t0 = qsLower(r?.token0 || "");
@@ -5002,49 +5016,86 @@ try {
     const d0 = Number(r?.decimals0 ?? 18);
     const d1 = Number(r?.decimals1 ?? 18);
 
-    const raw0 = BigInt(String(r?.raw0 ?? "0"));
-    const raw1 = BigInt(String(r?.raw1 ?? "0"));
+    let raw0 = 0n, raw1 = 0n;
+    try { raw0 = BigInt(String(r?.raw0 ?? "0")); } catch { raw0 = 0n; }
+    try { raw1 = BigInt(String(r?.raw1 ?? "0")); } catch { raw1 = 0n; }
 
-    const a0 = Number(E.formatUnits(raw0, d0));
-    const a1 = Number(E.formatUnits(raw1, d1));
+    let a0 = 0, a1 = 0;
+    try { a0 = Number(E.formatUnits(raw0, d0)); } catch { a0 = 0; }
+    try { a1 = Number(E.formatUnits(raw1, d1)); } catch { a1 = 0; }
 
     if (t0 === wrappedAddr && Number.isFinite(a0)) wrappedAmt += a0;
     if (t1 === wrappedAddr && Number.isFinite(a1)) wrappedAmt += a1;
 
     if (t0 === usdtAddr && Number.isFinite(a0)) usdtAmt += a0;
     if (t1 === usdtAddr && Number.isFinite(a1)) usdtAmt += a1;
+
+    if (t0 === usdcAddr && Number.isFinite(a0)) usdcAmt += a0;
+    if (t1 === usdcAddr && Number.isFinite(a1)) usdcAmt += a1;
+
+    if (busdAddr) {
+      if (t0 === busdAddr && Number.isFinite(a0)) busdAmt += a0;
+      if (t1 === busdAddr && Number.isFinite(a1)) busdAmt += a1;
+    }
+
+    if (fdusdAddr) {
+      if (t0 === fdusdAddr && Number.isFinite(a0)) fdusdAmt += a0;
+      if (t1 === fdusdAddr && Number.isFinite(a1)) fdusdAmt += a1;
+    }
   }
 
+  // store what we already show elsewhere
   rep.meta = {
     ...(rep.meta || {}),
     liqWrappedAmt: wrappedAmt,
     liqUsdtAmt: usdtAmt,
+    liqUsdcAmt: usdcAmt,
+    liqBusdAmt: busdAmt,
+    liqFdusdAmt: fdusdAmt,
     liqActivePools: active.length
   };
 
-  const floor = (QS_LIQ_FLOOR && QS_LIQ_FLOOR[net]) || {
-    wrappedTiny: 0.03, wrappedLow: 0.3, usdtTiny: 80, usdtLow: 800
+  // USD estimate from stable side (assumes ~$1 per stable)
+  const stableUsdSide = (usdtAmt + usdcAmt + busdAmt + fdusdAmt);
+  const hasStableUsd = Number.isFinite(stableUsdSide) && stableUsdSide > 0;
+
+  // In AMM, total liquidity (TVL) ~= 2 * stable-side (rough but practical)
+  const liquidityUsdEst = hasStableUsd ? (stableUsdSide * 2) : NaN;
+
+  rep.meta = {
+    ...(rep.meta || {}),
+    liquidityUsdEst: Number.isFinite(liquidityUsdEst) ? liquidityUsdEst : null
   };
 
+  // Tiers (edit these numbers freely)
+  // tiny  : < 25k
+  // low   : 25k – < 250k
+  // medium: 250k – < 500k
+  // healthy: >= 500k
   if (active.length === 0) {
     liqQuality = "unknown";
-  } else if (wrappedAmt < floor.wrappedTiny && usdtAmt < floor.usdtTiny) {
-    liqQuality = "tiny";
-  } else if (wrappedAmt < floor.wrappedLow && usdtAmt < floor.usdtLow) {
-    liqQuality = "low";
-  } else if (usdtAmt >= floor.usdtLow || wrappedAmt >= floor.wrappedLow) {
-    liqQuality = "medium";
+  } else if (Number.isFinite(liquidityUsdEst)) {
+    if (liquidityUsdEst < 25000) liqQuality = "tiny";
+    else if (liquidityUsdEst < 250000) liqQuality = "low";
+    else if (liquidityUsdEst < 500000) liqQuality = "medium";
+    else liqQuality = "healthy";
   } else {
-    liqQuality = "low";
-  }
+    // fallback when no stable-side liquidity was detected (e.g., only WBNB pools)
+    // keep your old heuristic thresholds as a conservative fallback:
+    const floor = (QS_LIQ_FLOOR && QS_LIQ_FLOOR[net]) || {
+      wrappedTiny: 0.03, wrappedLow: 0.3, usdtTiny: 80, usdtLow: 800
+    };
 
-  if (active.length >= 3 && (usdtAmt >= floor.usdtLow * 2 || wrappedAmt >= floor.wrappedLow * 2)) {
-    liqQuality = "healthy";
-  } else if (active.length >= 2 && liqQuality === "low" && (usdtAmt >= floor.usdtLow || wrappedAmt >= floor.wrappedLow)) {
-    liqQuality = "medium";
-  }
+    if (wrappedAmt < floor.wrappedTiny && usdtAmt < floor.usdtTiny) liqQuality = "tiny";
+    else if (wrappedAmt < floor.wrappedLow && usdtAmt < floor.usdtLow) liqQuality = "low";
+    else liqQuality = "medium";
 
+    if (active.length >= 3 && (usdtAmt >= floor.usdtLow * 2 || wrappedAmt >= floor.wrappedLow * 2)) {
+      liqQuality = "healthy";
+    }
+  }
 } catch {}
+
     // 4) Proxy
     let impl = await tryEip1967Impl(net, token);
     let isProxy = !!impl;
@@ -5362,11 +5413,18 @@ rep.overallText = overallText;
     liqQuality === "low" ? "warn" :
     liqQuality === "medium" ? "ok" : "ok",
   title: "Liquidity",
-  value:
-    !rep.liq?.any ? "No/Unknown" :
-    liqQuality === "tiny" ? "Very low (thin)" :
-    liqQuality === "low" ? "Low" :
-    liqQuality === "medium" ? "Medium" : "Healthy"
+    value: (() => {
+    if (!rep.liq?.any) return "No/Unknown";
+
+    const usd = rep?.meta?.liquidityUsdEst;
+    const usdTxt = (typeof usd === "number") ? ` • ~$${qsFmtNum(usd, 0)}` : "";
+
+    if (liqQuality === "tiny") return `Very low (thin)${usdTxt}`;
+    if (liqQuality === "low") return `Low${usdTxt}`;
+    if (liqQuality === "medium") return `Medium${usdTxt}`;
+    return `Healthy${usdTxt}`;
+  })()
+
 },
   { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
   { type: "ok", title: "Pause", value: pauseText }
