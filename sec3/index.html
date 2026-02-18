@@ -5088,11 +5088,10 @@ try {
 
     if (wrappedAmt < floor.wrappedTiny && usdtAmt < floor.usdtTiny) liqQuality = "tiny";
     else if (wrappedAmt < floor.wrappedLow && usdtAmt < floor.usdtLow) liqQuality = "low";
-    else liqQuality = "medium";
+    else liqQuality = "low";
 
-    if (active.length >= 3 && (usdtAmt >= floor.usdtLow * 2 || wrappedAmt >= floor.wrappedLow * 2)) {
-      liqQuality = "healthy";
-    }
+   // no-stable fallback: never mark "healthy" (USD unknown)
+
   }
 } catch {}
 
@@ -5307,18 +5306,23 @@ if (liqQuality === "tiny") {
     }
   }
 } else if (liqQuality === "low") {
+  // Low liquidity should heavily limit score (manipulation/slippage risk)
   if (rep.meta?.liqCoverageLow) {
-    score -= 6; // softer if coverage weak
-  } else {
-    score -= 8;
+    score -= 10;            // coverage weak: still penalize
     if (score > 64) score = 64;
+  } else {
+    score -= 18;
+    if (score > 58) score = 58; // hard cap when liquidity is low
   }
   if (!rep.redFlags.includes("Low effective liquidity detected.")) {
     rep.redFlags.push("Low effective liquidity detected.");
   }
 } else if (liqQuality === "medium") {
-  score -= 2; // very mild
+  // Medium liquidity: still cap to prevent "too safe" scoring
+  score -= 6;
+  if (score > 75) score = 75;
 }
+
 
 // critical cap
 const hasCritical =
