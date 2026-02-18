@@ -5417,17 +5417,29 @@ rep.overallText = overallText;
     liqQuality === "low" ? "warn" :
     liqQuality === "medium" ? "ok" : "ok",
   title: "Liquidity",
-    value: (() => {
-    if (!rep.liq?.any) return "No/Unknown";
+   value: (() => {
+  if (!rep.liq?.any) return "No/Unknown";
 
-    const usd = rep?.meta?.liquidityUsdEst;
-    const usdTxt = (typeof usd === "number") ? ` • ~$${qsFmtNum(usd, 0)}` : "";
+  const usd = rep?.meta?.liquidityUsdEst;
+  const wrapped = Number(rep?.meta?.liqWrappedAmt || 0);
 
+  // Prefer stable-based USD estimate if we have it
+  if (typeof usd === "number") {
+    const usdTxt = ` • ~$${qsFmtNum(usd, 0)}`;
     if (liqQuality === "tiny") return `Very low (thin)${usdTxt}`;
     if (liqQuality === "low") return `Low${usdTxt}`;
     if (liqQuality === "medium") return `Medium${usdTxt}`;
     return `Healthy${usdTxt}`;
-  })()
+  }
+
+  // Fallback: show WBNB amount (and optional USD estimate if you pass BNB price later)
+  const wTxt = (wrapped > 0) ? ` • ~${qsFmtNum(wrapped, 3)} WBNB` : "";
+
+  if (liqQuality === "tiny") return `Very low (thin)${wTxt}`;
+  if (liqQuality === "low") return `Low${wTxt}`;
+  if (liqQuality === "medium") return `Medium${wTxt}`;
+  return `Healthy${wTxt}`;
+})()
 
 },
   { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
