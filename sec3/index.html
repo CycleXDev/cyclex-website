@@ -5420,12 +5420,14 @@ rep.overallText = overallText;
    value: (() => {
   if (!rep.liq?.any) return "No/Unknown";
 
-  const usd = rep?.meta?.liquidityUsdEst;
-  const wrapped = Number(rep?.meta?.liqWrappedAmt || 0);
-
+ const usd = rep?.meta?.liquidityUsdEst;
+ const wrapped = Number(rep?.meta?.liqWrappedAmt || 0);
+ const pools = Number(rep?.meta?.liqActivePools || 0);
+ const poolsTxt = (pools > 0) ? ` • pools: ${pools}` : "";
+     
   // Prefer stable-based USD estimate if we have it
   if (typeof usd === "number") {
-    const usdTxt = ` • ~$${qsFmtNum(usd, 0)}`;
+    const usdTxt = ` • ~$${qsFmtNum(usd, 0)}${poolsTxt}`;
     if (liqQuality === "tiny") return `Very low (thin)${usdTxt}`;
     if (liqQuality === "low") return `Low${usdTxt}`;
     if (liqQuality === "medium") return `Medium${usdTxt}`;
@@ -5433,7 +5435,7 @@ rep.overallText = overallText;
   }
 
   // Fallback: show WBNB amount (and optional USD estimate if you pass BNB price later)
-  const wTxt = (wrapped > 0) ? ` • ~${qsFmtNum(wrapped, 3)} WBNB` : "";
+  const wTxt = (wrapped > 0) ? ` • ~${qsFmtNum(wrapped, 3)} WBNB${poolsTxt}` : poolsTxt;
 
   if (liqQuality === "tiny") return `Very low (thin)${wTxt}`;
   if (liqQuality === "low") return `Low${wTxt}`;
