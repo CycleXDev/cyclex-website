@@ -1,0 +1,1199 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>CycleX Firewall — Wallet Protection</title>
+  <meta name="description" content="Turn any wallet into a protected wallet in 60 seconds. Scan approvals, see your Blast Radius, get a Fix Plan." />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#05060a">
+
+  <style>
+    :root {
+      --bg:#05060a;
+      --cyan:#00e5ff;
+      --green:#5dffb2;
+      --purple:#7c5cff;
+      --red:#ff4757;
+      --yellow:#ffd166;
+      --text:rgba(244,246,255,1);
+      --muted:rgba(244,246,255,.65);
+      --card:rgba(255,255,255,.055);
+      --border:rgba(255,255,255,.12);
+      --radius:22px;
+      --radius-sm:14px;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      --sans:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;overflow-x:hidden}
+    html{font-size:16px;background:#05060a!important}
+    body{
+      font-family:var(--sans);
+      background:
+        radial-gradient(1200px 720px at 14% 10%,rgba(124,92,255,.20),transparent 58%),
+        radial-gradient(1200px 720px at 86% 12%,rgba(0,229,255,.18),transparent 56%),
+        radial-gradient(980px 680px at 55% 120%,rgba(0,58,76,.42),transparent 62%),
+        linear-gradient(160deg,#05060a,#0b0a18,#021b24)!important;
+      background-repeat:no-repeat!important;
+      background-attachment:fixed!important;
+      background-size:cover!important;
+      color:var(--text);
+      min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+    }
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;
+      background:
+        radial-gradient(740px 640px at 20% 14%,rgba(0,229,255,.10),transparent 60%),
+        radial-gradient(940px 780px at 78% 18%,rgba(124,92,255,.09),transparent 62%),
+        radial-gradient(820px 700px at 52% 78%,rgba(93,255,178,.06),transparent 64%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+      background-size:auto,auto,auto,260px 260px;
+      background-repeat:no-repeat,no-repeat,no-repeat,repeat;
+      opacity:.10;mix-blend-mode:overlay;z-index:0
+    }
+    a{color:inherit;text-decoration:none}
+
+    /* ── PAGE SHELL ─────────────────────────────── */
+    .page-shell{width:100%;max-width:1160px;margin:0 auto;padding:32px 20px 80px;position:relative;z-index:1}
+
+    /* ── TOP BAR ────────────────────────────────── */
+    .top-bar{
+      position:sticky;top:14px;z-index:999;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:12px 16px;margin:0 auto 36px;
+      width:min(1160px,calc(100% - 24px));
+      border-radius:999px;
+      background:rgba(10,12,22,.55);
+      border:1px solid rgba(255,255,255,.14);
+      backdrop-filter:blur(18px) saturate(1.12);
+      -webkit-backdrop-filter:blur(18px) saturate(1.12);
+      box-shadow:0 14px 50px rgba(0,0,0,.50),inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .top-bar::before{
+      content:"";position:absolute;inset:0;border-radius:999px;padding:1px;
+      background:linear-gradient(120deg,rgba(0,229,255,.22),rgba(124,92,255,.16),rgba(255,255,255,.10));
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.55
+    }
+    .brand{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+    .brand-logo{width:42px;height:42px;border-radius:14px;object-fit:contain;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);box-shadow:0 12px 32px rgba(0,0,0,.7);flex:0 0 auto}
+    .brand-text{display:flex;flex-direction:column;gap:2px}
+    .brand-title{font-weight:950;letter-spacing:.10em;font-size:13px;text-transform:uppercase;white-space:nowrap}
+    .brand-sub{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(244,246,255,.56);white-space:nowrap}
+    .top-right{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+    .back-link{
+      font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+      color:rgba(244,246,255,.72);padding:8px 14px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);
+      transition:all .18s ease;cursor:pointer
+    }
+    .back-link:hover{background:rgba(255,255,255,.08);color:var(--text)}
+    .firewall-badge{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 12px;border-radius:999px;
+      border:1px solid rgba(255,80,80,.35);background:rgba(255,80,80,.10);
+      font-size:11px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;
+      color:#ff6b6b
+    }
+    .firewall-badge .dot{width:7px;height:7px;border-radius:50%;background:#ff4757;animation:pulse 1.8s infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+
+    /* ── HERO ───────────────────────────────────── */
+    .hero{position:relative;max-width:1100px;margin:10px auto 32px;padding:10px 0 24px;text-align:center;z-index:1}
+    .hero-kicker{
+      display:inline-flex;align-items:center;gap:8px;
+      font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+      color:rgba(255,100,100,.92);margin-bottom:18px;
+      padding:6px 14px;border-radius:999px;border:1px solid rgba(255,80,80,.22);background:rgba(255,80,80,.08)
+    }
+    .hero-title{
+      font-size:clamp(42px,5vw,80px);line-height:1.10;font-weight:950;letter-spacing:-.04em;
+      margin-bottom:14px;
+      background:linear-gradient(110deg,rgba(244,246,255,1) 0%,rgba(255,150,100,.95) 35%,rgba(255,80,80,.90) 65%,rgba(124,92,255,.88) 100%);
+      -webkit-background-clip:text;background-clip:text;color:transparent;
+      background-size:200% 200%;animation:titleSheen 6s ease-in-out infinite
+    }
+    @keyframes titleSheen{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+    .hero-sub{max-width:68ch;margin:0 auto 28px;font-size:16px;line-height:1.75;color:var(--muted)}
+
+    /* ── WALLET INPUT BAR ───────────────────────── */
+    .scan-bar{
+      display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto;
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);
+      border-radius:999px;padding:7px 7px 7px 22px;
+      box-shadow:0 18px 60px rgba(0,0,0,.50),inset 0 1px 0 rgba(255,255,255,.06);
+      transition:border-color .22s ease,box-shadow .22s ease
+    }
+    .scan-bar:focus-within{border-color:rgba(255,100,80,.45);box-shadow:0 18px 60px rgba(0,0,0,.50),0 0 0 3px rgba(255,80,80,.10)}
+    .scan-bar input{
+      flex:1;background:transparent;border:none;outline:none;
+      font-family:var(--mono);font-size:14px;color:var(--text);
+      placeholder-color:var(--muted)
+    }
+    .scan-bar input::placeholder{color:var(--muted)}
+    .scan-net{
+      background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+      color:var(--text);font-size:12px;padding:8px 12px;border-radius:999px;outline:none;cursor:pointer
+    }
+    .btn-scan{
+      background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff;
+      border:none;border-radius:999px;padding:12px 22px;
+      font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+      cursor:pointer;white-space:nowrap;transition:transform .2s ease,box-shadow .2s ease;
+      box-shadow:0 14px 42px rgba(255,71,87,.38)
+    }
+    .btn-scan:hover{transform:translateY(-1px);box-shadow:0 20px 60px rgba(255,71,87,.52)}
+    .btn-scan:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .hero-micro{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px;margin:14px 0 0;font-size:12px;color:var(--muted)}
+    .micro-dot{opacity:.38;margin:0 2px}
+    .demo-hint{
+      margin-top:12px;font-size:12px;color:rgba(255,160,100,.75);cursor:pointer;
+      text-decoration:underline;text-underline-offset:3px;opacity:.85;transition:opacity .2s
+    }
+    .demo-hint:hover{opacity:1}
+
+    /* ── LOADING BAR ────────────────────────────── */
+    #loadWrap{display:none;max-width:760px;margin:28px auto 0;text-align:center}
+    .load-label{font-size:13px;color:var(--muted);margin-bottom:12px;letter-spacing:.04em}
+    .load-steps{display:flex;flex-direction:column;gap:8px;max-width:420px;margin:0 auto 16px}
+    .load-step{
+      display:flex;align-items:center;gap:12px;padding:10px 14px;
+      border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);
+      font-size:13px;color:var(--muted);opacity:.45;transition:opacity .3s,border-color .3s
+    }
+    .load-step.active{opacity:1;border-color:rgba(255,100,80,.35);color:var(--text)}
+    .load-step.done{opacity:.8;color:var(--green)}
+    .load-step .step-icon{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:10px;flex:0 0 auto}
+    .load-step.active .step-icon{border-color:rgba(255,100,80,.6);animation:spin .8s linear infinite}
+    .load-step.done .step-icon{border-color:var(--green);background:rgba(93,255,178,.12)}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .load-bar{height:3px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;max-width:420px;margin:0 auto}
+    .load-bar-fill{height:100%;background:linear-gradient(90deg,#ff4757,#ff9a6b,#ffcc5c);border-radius:999px;width:0%;transition:width .4s ease}
+
+    /* ── DASHBOARD ──────────────────────────────── */
+    #dashboard{display:none;animation:dashIn .5s ease-out forwards}
+    @keyframes dashIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+    .section-title{
+      font-size:11px;letter-spacing:.20em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px
+    }
+    .section-title::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.08)}
+
+    /* Score bar (top 3) */
+    .top3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+    .score-card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:22px 20px;box-shadow:0 20px 55px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05);
+      position:relative;overflow:hidden;transition:transform .18s ease,border-color .18s ease
+    }
+    .score-card:hover{transform:translateY(-2px)}
+    .score-card::before{content:"";position:absolute;inset:0;border-radius:var(--radius);opacity:.12;pointer-events:none}
+    .score-card.card-score::before{background:radial-gradient(circle at 50% -20%,rgba(255,71,87,.6),transparent 60%)}
+    .score-card.card-blast::before{background:radial-gradient(circle at 50% -20%,rgba(255,193,7,.5),transparent 60%)}
+    .score-card.card-drain::before{background:radial-gradient(circle at 50% -20%,rgba(0,229,255,.4),transparent 60%)}
+    .sc-kicker{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+    .sc-big{font-size:clamp(38px,4vw,56px);font-weight:950;letter-spacing:-.02em;line-height:1}
+    .sc-unit{font-size:16px;font-weight:700;opacity:.7;margin-left:4px}
+    .sc-label{margin-top:10px;font-size:13px;display:flex;align-items:center;gap:8px}
+    .sc-dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+    /* score gauge */
+    .gauge-wrap{position:relative;width:90px;height:90px;margin:0 auto 6px}
+    .gauge-svg{transform:rotate(-90deg)}
+    .gauge-track{fill:none;stroke:rgba(255,255,255,.08);stroke-width:8}
+    .gauge-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1)}
+    .gauge-num{
+      position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      font-size:22px;font-weight:950;letter-spacing:-.02em
+    }
+    .gauge-num small{font-size:9px;font-weight:700;opacity:.6;letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
+
+    /* blast + drain cards */
+    .blast-amount{font-size:clamp(30px,3.5vw,46px);font-weight:950;letter-spacing:-.02em;color:#ffd166}
+    .drain-time{font-size:clamp(30px,3.5vw,46px);font-weight:950;letter-spacing:-.02em;color:var(--red)}
+    .drain-fast{animation:drainPulse 2s ease-in-out infinite}
+    @keyframes drainPulse{0%,100%{opacity:1}50%{opacity:.7}}
+    .card-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .meta-chip{
+      display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
+      font-size:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
+      color:var(--muted)
+    }
+    .meta-chip.warn{border-color:rgba(255,193,7,.3);background:rgba(255,193,7,.08);color:#ffd166}
+    .meta-chip.bad{border-color:rgba(255,71,87,.3);background:rgba(255,71,87,.09);color:#ff6b6b}
+    .meta-chip.ok{border-color:rgba(93,255,178,.3);background:rgba(93,255,178,.09);color:var(--green)}
+
+    /* ── MAIN GRID ──────────────────────────────── */
+    .main-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px}
+
+    /* Exposure Map */
+    .exp-card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:20px;box-shadow:0 20px 55px rgba(0,0,0,.55)
+    }
+    .exp-title{font-size:14px;font-weight:800;margin-bottom:4px}
+    .exp-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+    #exposureMap{width:100%;height:280px;background:rgba(0,0,0,.2);border-radius:16px;border:1px solid rgba(255,255,255,.06);overflow:hidden}
+
+    /* Top Threats */
+    .threats-card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:20px;box-shadow:0 20px 55px rgba(0,0,0,.55)
+    }
+    .threat-item{
+      padding:12px 0;border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:8px
+    }
+    .threat-item:last-child{border-bottom:none;padding-bottom:0}
+    .threat-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .threat-name{font-size:13px;font-weight:800;font-family:var(--mono)}
+    .threat-damage{font-size:12px;font-weight:900;color:#ff6b6b}
+    .threat-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .threat-why{font-size:11px;color:var(--muted);flex:1 1 100%}
+    .btn-fix-small{
+      padding:5px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      border:1px solid rgba(255,193,7,.4);background:rgba(255,193,7,.10);color:#ffd166;
+      cursor:pointer;transition:all .18s ease;white-space:nowrap
+    }
+    .btn-fix-small:hover{background:rgba(255,193,7,.18);border-color:rgba(255,193,7,.6)}
+    .btn-fix-small.fixed{border-color:rgba(93,255,178,.4);background:rgba(93,255,178,.10);color:var(--green);cursor:default}
+
+    /* ── FIX MODE ───────────────────────────────── */
+    .fix-card{
+      background:var(--card);border:1px solid rgba(255,193,7,.22);border-radius:var(--radius);
+      padding:22px;box-shadow:0 20px 55px rgba(0,0,0,.55),0 0 0 1px rgba(255,193,7,.10),0 0 28px rgba(255,193,7,.08);
+      margin-bottom:16px
+    }
+    .fix-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .fix-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .fix-step{
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:16px;
+      padding:16px 14px;position:relative;overflow:hidden;transition:all .22s ease
+    }
+    .fix-step.step-done{border-color:rgba(93,255,178,.25);background:rgba(93,255,178,.06)}
+    .fix-step.step-done::before{
+      content:"✓";position:absolute;top:10px;right:12px;font-size:14px;font-weight:900;
+      color:var(--green);opacity:.8
+    }
+    .fix-step-num{
+      width:28px;height:28px;border-radius:50%;
+      background:linear-gradient(135deg,rgba(255,71,87,.3),rgba(255,150,80,.3));
+      border:1px solid rgba(255,100,80,.3);display:flex;align-items:center;justify-content:center;
+      font-size:12px;font-weight:900;color:#ff9a6b;margin-bottom:10px
+    }
+    .fix-step.step-done .fix-step-num{
+      background:rgba(93,255,178,.15);border-color:rgba(93,255,178,.3);color:var(--green)
+    }
+    .fix-step-title{font-size:13px;font-weight:800;margin-bottom:4px}
+    .fix-step-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+    .btn-action{
+      width:100%;padding:9px 12px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+      border:1px solid rgba(255,100,80,.4);background:rgba(255,80,80,.10);color:#ff8080;
+      cursor:pointer;transition:all .2s ease
+    }
+    .btn-action:hover{background:rgba(255,80,80,.18);transform:translateY(-1px)}
+    .btn-action:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .btn-action.done{border-color:rgba(93,255,178,.35);background:rgba(93,255,178,.10);color:var(--green);cursor:default}
+    .fix-score-gain{
+      margin-top:16px;padding:12px 16px;border-radius:12px;
+      background:rgba(93,255,178,.06);border:1px solid rgba(93,255,178,.18);
+      font-size:13px;color:var(--green);display:flex;align-items:center;gap:10px
+    }
+    .fix-score-gain strong{font-size:18px;font-weight:950}
+
+    /* ── PASSPORT ───────────────────────────────── */
+    .passport-wrap{
+      background:var(--card);border:1px solid rgba(0,229,255,.22);border-radius:var(--radius);
+      padding:22px;box-shadow:0 20px 55px rgba(0,0,0,.55),0 0 28px rgba(0,229,255,.08);
+      margin-bottom:16px
+    }
+    .passport-inner{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+    .passport-card-preview{
+      background:linear-gradient(135deg,rgba(5,6,10,1),rgba(20,10,38,1));
+      border:1px solid rgba(0,229,255,.3);border-radius:18px;padding:20px;
+      box-shadow:0 12px 40px rgba(0,0,0,.6),0 0 60px rgba(0,229,255,.08);
+      position:relative;overflow:hidden
+    }
+    .passport-card-preview::before{
+      content:"";position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+      border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.12),transparent 70%)
+    }
+    .pp-logo{font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .pp-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+    .pp-wallet{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:14px;word-break:break-all}
+    .pp-score-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .pp-score-big{font-size:40px;font-weight:950;letter-spacing:-.03em}
+    .pp-score-label{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+    .pp-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+    .pp-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px}
+    .pp-stat-val{font-size:16px;font-weight:900}
+    .pp-stat-key{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+    .pp-status{
+      display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+      border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+      border:1px solid rgba(255,193,7,.35);background:rgba(255,193,7,.10);color:#ffd166
+    }
+    .pp-date{font-size:10px;color:var(--muted);margin-top:10px;font-family:var(--mono)}
+
+    .passport-actions{display:flex;flex-direction:column;gap:12px}
+    .passport-actions h3{font-size:16px;font-weight:800;margin-bottom:4px}
+    .passport-actions p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+    .btn-passport{
+      padding:12px 18px;border-radius:999px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      cursor:pointer;transition:all .2s ease;width:100%;text-align:center;
+      border:1px solid rgba(0,229,255,.35);background:rgba(0,229,255,.10);color:var(--cyan);
+      box-shadow:0 8px 24px rgba(0,229,255,.12)
+    }
+    .btn-passport:hover{background:rgba(0,229,255,.18);transform:translateY(-1px);box-shadow:0 14px 34px rgba(0,229,255,.20)}
+    .btn-passport.secondary{border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:var(--text)}
+    .passport-shared{
+      padding:10px 14px;border-radius:12px;border:1px solid rgba(93,255,178,.25);
+      background:rgba(93,255,178,.07);color:var(--green);font-size:12px;
+      display:none;margin-top:4px;line-height:1.5
+    }
+    .passport-shared.show{display:block}
+
+    /* ── GENERAL SHARED ─────────────────────────── */
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      border-radius:999px;border:1px solid transparent;padding:11px 22px;
+      font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+      cursor:pointer;transition:all .22s ease;user-select:none;white-space:nowrap
+    }
+    .btn-primary{background:linear-gradient(135deg,#00e5ff,#7df2ff);color:#03040a;box-shadow:0 14px 50px rgba(0,229,255,.32)}
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 22px 70px rgba(0,229,255,.48)}
+    .btn-ghost{background:rgba(255,255,255,.04);color:var(--text);border-color:rgba(255,255,255,.14);backdrop-filter:blur(14px)}
+    .btn-ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(0,229,255,.24);transform:translateY(-1px)}
+
+    /* status dots */
+    .sig{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--muted)}
+    .sig.bad{border-color:rgba(220,53,69,.25);background:rgba(220,53,69,.10);color:#ff7a8a}
+    .sig.warn{border-color:rgba(255,193,7,.25);background:rgba(255,193,7,.08);color:#ffd166}
+    .sig.ok{border-color:rgba(0,230,118,.25);background:rgba(0,230,118,.08);color:#78ffbf}
+    .sig-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.9;flex:0 0 auto}
+
+    /* ── FOOTER ─────────────────────────────────── */
+    .footer{border-top:1px solid rgba(255,255,255,.06);margin-top:32px;padding-top:18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}
+    .footer-brand{color:var(--cyan);font-weight:700}
+    .footer-note{font-size:11px;opacity:.7;max-width:580px;line-height:1.5}
+
+    /* ── RESPONSIVE ─────────────────────────────── */
+    @media (max-width:900px){.top3{grid-template-columns:1fr 1fr}.top3 .score-card.card-score{grid-column:1/-1}}
+    @media (max-width:780px){.main-grid{grid-template-columns:1fr}.fix-steps{grid-template-columns:1fr}.passport-inner{grid-template-columns:1fr}.top3{grid-template-columns:1fr}}
+    @media (max-width:640px){.scan-bar{flex-wrap:wrap;border-radius:20px;padding:12px 14px}.scan-bar input{width:100%;flex:1 1 100%}.scan-net,.btn-scan{flex:1 1 calc(50% - 5px)}}
+    @media (min-width:901px){html{zoom:1.10}}
+
+    /* ── NOTICE ─────────────────────────────────── */
+    .notice{
+      max-width:760px;margin:0 auto 24px;padding:12px 18px;border-radius:14px;
+      border:1px solid rgba(255,193,7,.22);background:rgba(255,193,7,.07);
+      font-size:12px;color:rgba(244,246,255,.72);line-height:1.5;text-align:center
+    }
+    .notice strong{color:#ffd166}
+  </style>
+</head>
+<body>
+<div class="page-shell">
+
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <a class="brand" href="/" title="Back to CycleX">
+      <picture>
+        <source srcset="/logo.webp" type="image/webp">
+        <img src="/logo.png" alt="CycleX" class="brand-logo" width="42" height="42" onerror="this.style.display='none'">
+      </picture>
+      <div class="brand-text">
+        <div class="brand-title">CYCLEX</div>
+        <div class="brand-sub">Wallet Firewall</div>
+      </div>
+    </a>
+    <div class="top-right">
+      <div class="firewall-badge"><span class="dot"></span>FIREWALL</div>
+      <a class="back-link" href="/">← Back to Hub</a>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── HERO / LANDING ── -->
+    <section class="hero" id="heroSection">
+      <div class="hero-kicker">🔥 Wallet Firewall</div>
+      <h1 class="hero-title">Turn any wallet into<br>a protected wallet.</h1>
+      <p class="hero-sub">
+        Scan your approvals, reveal your Blast Radius, get a guided Fix Plan —
+        and generate a shareable Proof Passport. In 60 seconds.
+      </p>
+
+      <div class="scan-bar">
+        <input id="walletInput" class="mono" placeholder="0x... wallet address" spellcheck="false" autocomplete="off" />
+        <select id="netSelect" class="scan-net">
+          <option value="bsc">BSC</option>
+          <option value="eth">ETH</option>
+          <option value="polygon">POLYGON</option>
+        </select>
+        <button class="btn-scan" id="btnRunFirewall">Run Firewall</button>
+      </div>
+
+      <span class="demo-hint" id="demoHint">↗ Try with demo wallet</span>
+
+      <div class="hero-micro">
+        <span>No signature required</span>
+        <span class="micro-dot">·</span>
+        <span>No transactions</span>
+        <span class="micro-dot">·</span>
+        <span>Read-only scan</span>
+        <span class="micro-dot">·</span>
+        <span>BSC + ETH + Polygon</span>
+      </div>
+    </section>
+
+    <!-- ── LOADING STATE ── -->
+    <div id="loadWrap">
+      <div class="load-label" id="loadLabel">Initializing Firewall Scan…</div>
+      <div class="load-steps">
+        <div class="load-step" id="step1"><div class="step-icon">⟳</div><span>Fetching approval logs</span></div>
+        <div class="load-step" id="step2"><div class="step-icon">⟳</div><span>Analyzing spender risk</span></div>
+        <div class="load-step" id="step3"><div class="step-icon">⟳</div><span>Calculating Blast Radius</span></div>
+        <div class="load-step" id="step4"><div class="step-icon">⟳</div><span>Building Fix Plan</span></div>
+      </div>
+      <div class="load-bar"><div class="load-bar-fill" id="loadBarFill"></div></div>
+    </div>
+
+    <!-- ── DASHBOARD ── -->
+    <div id="dashboard">
+
+      <div class="notice">
+        <strong>Demo mode:</strong> Data shown is simulated for illustration. Connect real API keys in Settings to scan a live wallet. No transactions are made.
+      </div>
+
+      <!-- Wallet badge -->
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="meta-chip" style="font-family:var(--mono);font-size:12px;padding:8px 14px" id="walletBadge">0x...</div>
+          <div class="meta-chip" id="netBadge">BSC</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-ghost" id="btnRescan" style="padding:9px 16px;font-size:12px">↺ Rescan</button>
+          <button class="btn btn-ghost" id="btnNewScan" style="padding:9px 16px;font-size:12px">New wallet</button>
+        </div>
+      </div>
+
+      <!-- TOP 3 CARDS -->
+      <div class="section-title">Firewall Status</div>
+      <div class="top3">
+
+        <!-- Score -->
+        <div class="score-card card-score">
+          <div class="sc-kicker">Firewall Score</div>
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" width="90" height="90" viewBox="0 0 90 90">
+              <circle class="gauge-track" cx="45" cy="45" r="36"/>
+              <circle class="gauge-fill" id="gaugeFill" cx="45" cy="45" r="36"
+                stroke="#ff4757"
+                stroke-dasharray="226.2"
+                stroke-dashoffset="226.2"/>
+            </svg>
+            <div class="gauge-num">
+              <span id="scoreNum">—</span>
+              <small>/100</small>
+            </div>
+          </div>
+          <div class="sc-label">
+            <div class="sc-dot" id="scoreDot" style="background:#ff4757"></div>
+            <span id="scoreLabel" style="font-weight:800">Scanning…</span>
+          </div>
+          <div class="card-meta" id="scoreMeta"></div>
+        </div>
+
+        <!-- Blast Radius -->
+        <div class="score-card card-blast">
+          <div class="sc-kicker">💥 Blast Radius</div>
+          <div class="blast-amount" id="blastAmt">—</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">max drainable if top spender exploited</div>
+          <div class="card-meta" id="blastMeta"></div>
+        </div>
+
+        <!-- Time to Drain -->
+        <div class="score-card card-drain">
+          <div class="sc-kicker">⏱ Time-to-Drain</div>
+          <div class="drain-time" id="drainTime">—</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">estimated drain time for exposed assets</div>
+          <div class="card-meta" id="drainMeta"></div>
+        </div>
+
+      </div>
+
+      <!-- MAIN GRID: Map + Threats -->
+      <div class="main-grid">
+
+        <!-- Exposure Map -->
+        <div class="exp-card">
+          <div class="exp-title">🗺 Exposure Map</div>
+          <div class="exp-sub">Wallet → Spenders → Tokens. Node size = risk weight.</div>
+          <svg id="exposureMap" viewBox="0 0 480 260" xmlns="http://www.w3.org/2000/svg">
+            <!-- rendered by JS -->
+          </svg>
+        </div>
+
+        <!-- Top Threats -->
+        <div class="threats-card">
+          <div class="exp-title" style="margin-bottom:14px">🎯 Top Threats</div>
+          <div id="threatsList"></div>
+        </div>
+
+      </div>
+
+      <!-- FIX MODE -->
+      <div class="section-title">Fix Mode</div>
+      <div class="fix-card">
+        <div class="fix-header">
+          <div>
+            <div style="font-size:16px;font-weight:800;margin-bottom:4px">🛠 3-Step Fix Plan</div>
+            <div style="font-size:13px;color:var(--muted)">Complete these actions to improve your Firewall Score.</div>
+          </div>
+          <div class="fix-score-gain" id="fixGain" style="display:none">
+            After fix: <strong id="fixNewScore">—</strong>/100 <span style="opacity:.7;font-size:12px">(+<span id="fixDelta">—</span> pts)</span>
+          </div>
+        </div>
+
+        <div class="fix-steps">
+          <div class="fix-step" id="fixStep1">
+            <div class="fix-step-num">1</div>
+            <div class="fix-step-title">Revoke Top Spender</div>
+            <div class="fix-step-desc">Remove unlimited allowance from the highest-risk spender detected on your wallet.</div>
+            <button class="btn-action" id="btnFix1">Revoke on Revoke.cash ↗</button>
+          </div>
+          <div class="fix-step" id="fixStep2">
+            <div class="fix-step-num">2</div>
+            <div class="fix-step-title">Cap Unlimited Approvals</div>
+            <div class="fix-step-desc">Replace ∞ allowances with a capped amount ($500 max) for unknown spenders.</div>
+            <button class="btn-action" id="btnFix2">Apply Cap Template</button>
+          </div>
+          <div class="fix-step" id="fixStep3">
+            <div class="fix-step-num">3</div>
+            <div class="fix-step-title">Lock Risky dApp</div>
+            <div class="fix-step-desc">Flag and monitor the unverified spender contract to receive alerts on new activity.</div>
+            <button class="btn-action" id="btnFix3">Add to Watchlist</button>
+          </div>
+        </div>
+
+        <div class="fix-score-gain" id="fixComplete" style="display:none">
+          ✅ Fix complete! Your estimated score after applying all fixes: <strong id="finalScore">—</strong>/100
+        </div>
+      </div>
+
+      <!-- WALLET PASSPORT -->
+      <div class="section-title">Wallet Passport</div>
+      <div class="passport-wrap">
+        <div style="margin-bottom:18px">
+          <div style="font-size:16px;font-weight:800;margin-bottom:4px">🪪 Proof Passport</div>
+          <div style="font-size:13px;color:var(--muted)">A shareable, verifiable snapshot of your wallet's security state. Tweet it, share it, flex it.</div>
+        </div>
+        <div class="passport-inner">
+
+          <!-- Card Preview -->
+          <div class="passport-card-preview" id="passportCard">
+            <div class="pp-logo"><div class="pp-logo-dot"></div>CycleX Firewall</div>
+            <div class="pp-wallet" id="ppWallet">0x...</div>
+            <div class="pp-score-row">
+              <div>
+                <div class="pp-score-big" id="ppScore" style="color:#ffd166">—</div>
+                <div class="pp-score-label">Firewall Score</div>
+              </div>
+              <div class="pp-status" id="ppStatus">⚠ Exposed</div>
+            </div>
+            <div class="pp-stats">
+              <div class="pp-stat">
+                <div class="pp-stat-val" id="ppApprovals" style="color:#ff6b6b">—</div>
+                <div class="pp-stat-key">Risky Approvals</div>
+              </div>
+              <div class="pp-stat">
+                <div class="pp-stat-val" id="ppBlast" style="color:#ffd166">—</div>
+                <div class="pp-stat-key">Blast Radius</div>
+              </div>
+              <div class="pp-stat">
+                <div class="pp-stat-val" id="ppDrain" style="color:#ff4757">—</div>
+                <div class="pp-stat-key">Drain Time</div>
+              </div>
+              <div class="pp-stat">
+                <div class="pp-stat-val" id="ppChain">BSC</div>
+                <div class="pp-stat-key">Network</div>
+              </div>
+            </div>
+            <div class="pp-date" id="ppDate">Scanned: —</div>
+          </div>
+
+          <!-- Actions -->
+          <div class="passport-actions">
+            <h3>Share your Wallet Passport</h3>
+            <p>Generate a proof badge others can verify. No KYC. Signed snapshot of on-chain data.</p>
+            <button class="btn-passport" id="btnShareX">🐦 Share to X (Twitter)</button>
+            <button class="btn-passport secondary" id="btnCopyPassport">📋 Copy Passport Text</button>
+            <button class="btn-passport secondary" id="btnCopyLink">🔗 Copy Share Link</button>
+            <div class="passport-shared" id="passportShared"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SPEND RULES TEMPLATES -->
+      <div class="section-title">Firewall Rules</div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:800;margin-bottom:4px">🔒 Spend Limit Templates</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:18px">Apply a spending rule profile to minimize future exposure.</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="ruleTemplates">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+
+    </div><!-- end #dashboard -->
+  </main>
+
+  <footer class="footer">
+    <div>
+      <span class="footer-brand">CycleX Firewall</span>
+      <span style="margin:0 8px;opacity:.35">·</span>
+      <span>Wallet Protection Tool</span>
+    </div>
+    <div class="footer-note">
+      Informational only. No signatures. No transactions. Always verify contracts independently.
+      Revoke actions redirect to revoke.cash or equivalent external services.
+    </div>
+  </footer>
+
+</div><!-- .page-shell -->
+
+<script>
+// ──────────────────────────────────────────
+// DEMO DATA
+// ──────────────────────────────────────────
+const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
+const DEMO_NET = "bsc";
+
+const DEMO_DATA = {
+  score: 34,
+  scoreLabel: "Critical",
+  blastAmt: "$18,430",
+  drainTime: "22 sec",
+  drainFast: true,
+  riskyApprovals: 7,
+  threats: [
+    {
+      name: "0x1b81D67...c9f4",
+      label: "Unknown Router",
+      damage: "$12,430",
+      risk: "bad",
+      why: "Unlimited approval on USDT + BUSD. Fresh contract (12 days old), 0 verified interactions.",
+      tokens: ["USDT", "BUSD"]
+    },
+    {
+      name: "PancakeSwap V2",
+      label: "Known DEX",
+      damage: "$4,100",
+      risk: "warn",
+      why: "Old unlimited approval from 2022. Consider capping to current needs.",
+      tokens: ["CAKE", "BNB"]
+    },
+    {
+      name: "0x9aB8E4...d31c",
+      label: "Unverified",
+      damage: "$1,900",
+      risk: "bad",
+      why: "Unverified contract. Interacted with known scam deployer address.",
+      tokens: ["SHIB"]
+    },
+    {
+      name: "1inch Router V5",
+      label: "Known DEX",
+      damage: "$600",
+      risk: "warn",
+      why: "Unlimited approval but reputable aggregator. Low risk, but review.",
+      tokens: ["USDC"]
+    },
+    {
+      name: "0x44aD3F...8801",
+      label: "Unknown",
+      damage: "$400",
+      risk: "warn",
+      why: "Unknown token bridge. Minimal exposure. Monitor.",
+      tokens: ["BNB"]
+    }
+  ],
+  scoreMeta: [
+    { label: "7 unlimited", cls: "bad" },
+    { label: "2 unverified spenders", cls: "bad" },
+    { label: "3 capped", cls: "warn" }
+  ],
+  blastMeta: [
+    { label: "Top path: USDT drain", cls: "bad" },
+    { label: "2 high-liquidity tokens", cls: "warn" }
+  ],
+  drainMeta: [
+    { label: "unlimited + liquid", cls: "bad" },
+    { label: "3 spenders active", cls: "warn" }
+  ]
+};
+
+// ──────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────
+let currentScore = 0;
+let fixDone = [false, false, false];
+let scoreIncrements = [18, 14, 10];
+
+// ──────────────────────────────────────────
+// UTILS
+// ──────────────────────────────────────────
+function shortAddr(a) {
+  if (!a || a.length < 10) return a;
+  return a.slice(0, 8) + "…" + a.slice(-5);
+}
+function today() {
+  return new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+
+// ──────────────────────────────────────────
+// LOADING ANIMATION
+// ──────────────────────────────────────────
+async function runLoadSequence(wallet) {
+  const hero = document.getElementById("heroSection");
+  const loadWrap = document.getElementById("loadWrap");
+  const dashboard = document.getElementById("dashboard");
+
+  hero.style.transition = "opacity .3s ease, transform .3s ease";
+  hero.style.opacity = "0";
+  hero.style.transform = "translateY(-12px)";
+  await wait(320);
+  hero.style.display = "none";
+
+  loadWrap.style.display = "block";
+  document.getElementById("loadLabel").textContent = `Scanning ${shortAddr(wallet)}…`;
+
+  const steps = ["step1","step2","step3","step4"];
+  const durations = [900, 800, 700, 600];
+  const fill = document.getElementById("loadBarFill");
+
+  for (let i = 0; i < steps.length; i++) {
+    const el = document.getElementById(steps[i]);
+    el.classList.add("active");
+    fill.style.width = ((i+1) / steps.length * 100) + "%";
+    await wait(durations[i]);
+    el.classList.remove("active");
+    el.classList.add("done");
+    el.querySelector(".step-icon").textContent = "✓";
+  }
+
+  await wait(300);
+  loadWrap.style.display = "none";
+  dashboard.style.display = "block";
+  renderDashboard(wallet);
+}
+
+// ──────────────────────────────────────────
+// RENDER DASHBOARD
+// ──────────────────────────────────────────
+function renderDashboard(wallet) {
+  const d = DEMO_DATA;
+  currentScore = d.score;
+
+  // wallet badges
+  document.getElementById("walletBadge").textContent = shortAddr(wallet);
+  document.getElementById("netBadge").textContent = document.getElementById("netSelect").value.toUpperCase();
+
+  // Score gauge
+  animateScore(d.score, d.scoreLabel, d.scoreMeta);
+
+  // Blast Radius
+  animateCount("blastAmt", d.blastAmt, 1000);
+  renderMeta("blastMeta", d.blastMeta);
+
+  // Time-to-Drain
+  setTimeout(() => {
+    document.getElementById("drainTime").textContent = d.drainTime;
+    if (d.drainFast) document.getElementById("drainTime").classList.add("drain-fast");
+    renderMeta("drainMeta", d.drainMeta);
+  }, 800);
+
+  // Exposure Map
+  setTimeout(() => renderExposureMap(wallet, d.threats), 400);
+
+  // Threats
+  setTimeout(() => renderThreats(d.threats), 600);
+
+  // Fix Mode
+  setTimeout(() => renderFixGain(), 300);
+
+  // Passport
+  setTimeout(() => renderPassport(wallet, d), 200);
+
+  // Rule Templates
+  renderRuleTemplates();
+}
+
+function animateScore(target, label, meta) {
+  const circumference = 226.2;
+  const fill = document.getElementById("gaugeFill");
+  const numEl = document.getElementById("scoreNum");
+  const labelEl = document.getElementById("scoreLabel");
+  const dotEl = document.getElementById("scoreDot");
+
+  const color = target < 45 ? "#ff4757" : target < 70 ? "#ffd166" : "#3cffb0";
+  fill.style.stroke = color;
+  dotEl.style.background = color;
+
+  let current = 0;
+  const step = target / 35;
+  const timer = setInterval(() => {
+    current = Math.min(current + step, target);
+    numEl.textContent = Math.round(current);
+    const offset = circumference - (circumference * current / 100);
+    fill.style.strokeDashoffset = offset;
+    if (current >= target) {
+      clearInterval(timer);
+      labelEl.textContent = label;
+      renderMeta("scoreMeta", meta);
+    }
+  }, 28);
+}
+
+function animateCount(id, target, duration) {
+  // Just display directly for non-numeric formatted values
+  setTimeout(() => { document.getElementById(id).textContent = target; }, duration * 0.3);
+}
+
+function renderMeta(id, items) {
+  const el = document.getElementById(id);
+  if (!el || !items) return;
+  el.innerHTML = items.map(i => `<div class="meta-chip ${i.cls}">${i.label}</div>`).join("");
+}
+
+// ──────────────────────────────────────────
+// EXPOSURE MAP (SVG)
+// ──────────────────────────────────────────
+function renderExposureMap(wallet, threats) {
+  const svg = document.getElementById("exposureMap");
+  const W = 480, H = 260;
+  const cx = W / 2, cy = H / 2;
+
+  const riskColor = { bad: "#ff4757", warn: "#ffd166", ok: "#3cffb0" };
+
+  // positions for spenders (circle around center)
+  const n = Math.min(threats.length, 5);
+  const positions = [];
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const r = 98;
+    positions.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
+  }
+
+  // token nodes further out
+  const tokenPositions = [];
+  threats.slice(0, n).forEach((t, ti) => {
+    t.tokens.forEach((tok, ki) => {
+      const angle = ((ti + (ki * .28)) / n) * Math.PI * 2 - Math.PI / 2;
+      const r = 168;
+      tokenPositions.push({ x: cx + r * Math.cos(angle + ki * .32), y: cy + r * Math.sin(angle + ki * .32), name: tok, ti });
+    });
+  });
+
+  let html = `<defs>
+    <radialGradient id="gCenter" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(0,229,255,.4)"/>
+      <stop offset="100%" stop-color="rgba(0,229,255,.05)"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+
+  // Lines: center → spenders
+  threats.slice(0, n).forEach((t, i) => {
+    const p = positions[i];
+    const col = riskColor[t.risk] || "#888";
+    const w = t.risk === "bad" ? 2 : 1.2;
+    html += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="${col}" stroke-width="${w}" stroke-opacity=".5" stroke-dasharray="4 3"/>`;
+  });
+
+  // Lines: spenders → tokens
+  tokenPositions.forEach(tp => {
+    const sp = positions[tp.ti];
+    if (!sp) return;
+    html += `<line x1="${sp.x}" y1="${sp.y}" x2="${tp.x}" y2="${tp.y}" stroke="rgba(255,255,255,.15)" stroke-width="1"/>`;
+  });
+
+  // Token nodes
+  tokenPositions.forEach(tp => {
+    html += `<circle cx="${tp.x}" cy="${tp.y}" r="11" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
+      <text x="${tp.x}" y="${tp.y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(244,246,255,.75)" font-size="8" font-family="system-ui" font-weight="700">${tp.name}</text>`;
+  });
+
+  // Spender nodes
+  threats.slice(0, n).forEach((t, i) => {
+    const p = positions[i];
+    const col = riskColor[t.risk] || "#888";
+    const r = t.risk === "bad" ? 22 : 17;
+    html += `<circle cx="${p.x}" cy="${p.y}" r="${r+8}" fill="${col}" fill-opacity=".06"/>
+      <circle cx="${p.x}" cy="${p.y}" r="${r}" fill="rgba(5,6,10,.9)" stroke="${col}" stroke-width="1.5" filter="url(#glow)"/>
+      <text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" fill="${col}" font-size="8" font-family="system-ui" font-weight="800">${t.label.split(" ").map(w=>w[0]).join("").slice(0,4)}</text>`;
+  });
+
+  // Center: wallet
+  html += `<circle cx="${cx}" cy="${cy}" r="36" fill="url(#gCenter)"/>
+    <circle cx="${cx}" cy="${cy}" r="28" fill="rgba(0,229,255,.10)" stroke="rgba(0,229,255,.45)" stroke-width="1.5"/>
+    <text x="${cx}" y="${cy-5}" text-anchor="middle" dominant-baseline="middle" fill="rgba(0,229,255,.95)" font-size="9" font-family="system-ui" font-weight="900">WALLET</text>
+    <text x="${cx}" y="${cy+8}" text-anchor="middle" dominant-baseline="middle" fill="rgba(0,229,255,.65)" font-size="7.5" font-family="ui-monospace,monospace">${shortAddr(wallet)}</text>`;
+
+  svg.innerHTML = html;
+}
+
+// ──────────────────────────────────────────
+// THREATS LIST
+// ──────────────────────────────────────────
+function renderThreats(threats) {
+  const el = document.getElementById("threatsList");
+  if (!el) return;
+  el.innerHTML = threats.map((t, i) => `
+    <div class="threat-item">
+      <div class="threat-top">
+        <div>
+          <div class="threat-name">${t.name}</div>
+          <div class="threat-meta">
+            <span class="sig ${t.risk}"><span class="sig-dot"></span>${t.label}</span>
+            ${t.tokens.map(tk=>`<span class="meta-chip" style="font-size:10px;padding:3px 7px">${tk}</span>`).join("")}
+          </div>
+        </div>
+        <div style="text-align:right;flex:0 0 auto">
+          <div class="threat-damage">${t.damage}</div>
+          <button class="btn-fix-small" id="threatBtn${i}" onclick="fixThreat(${i})">Fix ↗</button>
+        </div>
+      </div>
+      <div class="threat-why">${t.why}</div>
+    </div>
+  `).join("");
+}
+
+function fixThreat(i) {
+  const btn = document.getElementById(`threatBtn${i}`);
+  if (!btn || btn.classList.contains("fixed")) return;
+  btn.classList.add("fixed");
+  btn.textContent = "✓ Fixed";
+}
+
+// ──────────────────────────────────────────
+// FIX MODE
+// ──────────────────────────────────────────
+function renderFixGain() {
+  const total = scoreIncrements.reduce((a,b)=>a+b,0);
+  const newScore = Math.min(100, currentScore + total);
+  document.getElementById("fixGain").style.display = "flex";
+  document.getElementById("fixNewScore").textContent = newScore;
+  document.getElementById("fixDelta").textContent = total;
+}
+
+function applyFix(step) {
+  if (fixDone[step]) return;
+  fixDone[step] = true;
+  const el = document.getElementById(`fixStep${step+1}`);
+  const btn = document.getElementById(`btnFix${step+1}`);
+  el.classList.add("step-done");
+  btn.textContent = "✓ Done";
+  btn.classList.add("done");
+  btn.disabled = true;
+
+  if (step === 0) {
+    // Open revoke.cash in new tab
+    window.open("https://revoke.cash", "_blank");
+  }
+
+  // Update score visually
+  currentScore = Math.min(100, currentScore + scoreIncrements[step]);
+  document.getElementById("scoreNum").textContent = currentScore;
+  const circumference = 226.2;
+  const offset = circumference - (circumference * currentScore / 100);
+  document.getElementById("gaugeFill").style.strokeDashoffset = offset;
+  if (currentScore >= 70) {
+    document.getElementById("gaugeFill").style.stroke = "#ffd166";
+    document.getElementById("scoreDot").style.background = "#ffd166";
+    document.getElementById("scoreLabel").textContent = "Exposed";
+  }
+  if (currentScore >= 85) {
+    document.getElementById("gaugeFill").style.stroke = "#3cffb0";
+    document.getElementById("scoreDot").style.background = "#3cffb0";
+    document.getElementById("scoreLabel").textContent = "Protected";
+  }
+
+  // Update passport score
+  document.getElementById("ppScore").textContent = currentScore;
+
+  // Check all done
+  if (fixDone.every(Boolean)) {
+    document.getElementById("fixComplete").style.display = "flex";
+    document.getElementById("finalScore").textContent = currentScore;
+  }
+}
+
+// ──────────────────────────────────────────
+// PASSPORT
+// ──────────────────────────────────────────
+function renderPassport(wallet, d) {
+  document.getElementById("ppWallet").textContent = shortAddr(wallet) + " · " + document.getElementById("netSelect").value.toUpperCase();
+  document.getElementById("ppScore").textContent = d.score;
+  document.getElementById("ppApprovals").textContent = d.riskyApprovals;
+  document.getElementById("ppBlast").textContent = d.blastAmt;
+  document.getElementById("ppDrain").textContent = d.drainTime;
+  document.getElementById("ppDate").textContent = "Scanned: " + today();
+  document.getElementById("ppChain").textContent = document.getElementById("netSelect").value.toUpperCase();
+
+  // status badge
+  const statusEl = document.getElementById("ppStatus");
+  if (d.score < 45) { statusEl.textContent = "🧨 Critical"; statusEl.style.borderColor="rgba(255,71,87,.4)"; statusEl.style.color="#ff6b6b"; statusEl.style.background="rgba(255,71,87,.10)"; }
+  else if (d.score < 70) { statusEl.textContent = "⚠ Exposed"; }
+  else { statusEl.textContent = "✅ Protected"; statusEl.style.borderColor="rgba(93,255,178,.35)"; statusEl.style.color="var(--green)"; statusEl.style.background="rgba(93,255,178,.08)"; }
+
+  // score color
+  const sc = d.score;
+  document.getElementById("ppScore").style.color = sc < 45 ? "#ff4757" : sc < 70 ? "#ffd166" : "#3cffb0";
+}
+
+function getPassportText(wallet) {
+  const score = document.getElementById("ppScore").textContent;
+  const blast = document.getElementById("ppBlast").textContent;
+  const drain = document.getElementById("ppDrain").textContent;
+  const net = document.getElementById("ppChain").textContent;
+  return `🔥 CycleX Firewall Scan — ${today()}
+
+Wallet: ${shortAddr(wallet)}
+Network: ${net}
+
+🛡 Firewall Score: ${score}/100
+💥 Blast Radius: ${blast}
+⏱ Drain Time: ${drain}
+🎯 Risky Approvals: 7
+
+Scan your wallet at: https://cyclex.io/firewall
+#CycleX #WalletSecurity #DeFi`;
+}
+
+// ──────────────────────────────────────────
+// RULE TEMPLATES
+// ──────────────────────────────────────────
+const RULES = [
+  { name: "🔒 Strict", desc: "No unlimited. Cap $50 for unknown. Alerts on any new spender.", badge: "ok", applied: false },
+  { name: "⚖ Balanced", desc: "Cap $200 for unknown. Whitelist major DEXes. Weekly review.", badge: "warn", applied: false },
+  { name: "📈 Trader", desc: "Allow known DEX unlimited. Alert on fresh/unknown spenders only.", badge: "warn", applied: false }
+];
+
+function renderRuleTemplates() {
+  const el = document.getElementById("ruleTemplates");
+  if (!el) return;
+  el.innerHTML = RULES.map((r, i) => `
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:16px 14px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px">${r.name}</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">${r.desc}</div>
+      <button class="btn-action" id="ruleBtn${i}" onclick="applyRule(${i})" style="font-size:10px">Apply Template</button>
+    </div>
+  `).join("");
+}
+
+function applyRule(i) {
+  const btn = document.getElementById(`ruleBtn${i}`);
+  if (!btn) return;
+  btn.textContent = "✓ Applied";
+  btn.classList.add("done");
+  btn.disabled = true;
+  RULES[i].applied = true;
+  showPassportMsg(`✅ Rule "${RULES[i].name}" applied to watchlist. You'll be alerted on violations.`);
+}
+
+// ──────────────────────────────────────────
+// EVENTS
+// ──────────────────────────────────────────
+function showPassportMsg(msg) {
+  const el = document.getElementById("passportShared");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 5000);
+}
+
+document.getElementById("btnFix1").addEventListener("click", () => applyFix(0));
+document.getElementById("btnFix2").addEventListener("click", () => applyFix(1));
+document.getElementById("btnFix3").addEventListener("click", () => applyFix(2));
+
+document.getElementById("btnShareX").addEventListener("click", () => {
+  const wallet = document.getElementById("walletInput").value || DEMO_WALLET;
+  const text = encodeURIComponent(getPassportText(wallet));
+  window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank");
+});
+
+document.getElementById("btnCopyPassport").addEventListener("click", () => {
+  const wallet = document.getElementById("walletInput").value || DEMO_WALLET;
+  navigator.clipboard.writeText(getPassportText(wallet)).then(() => {
+    showPassportMsg("✅ Passport text copied to clipboard!");
+  }).catch(() => showPassportMsg("Copy failed — try manually."));
+});
+
+document.getElementById("btnCopyLink").addEventListener("click", () => {
+  const wallet = document.getElementById("walletInput").value || DEMO_WALLET;
+  const url = `${location.origin}/firewall?wallet=${wallet}&net=${document.getElementById("netSelect").value}`;
+  navigator.clipboard.writeText(url).then(() => {
+    showPassportMsg("✅ Share link copied!");
+  }).catch(() => showPassportMsg("Copy failed."));
+});
+
+document.getElementById("btnRescan").addEventListener("click", () => {
+  const wallet = document.getElementById("walletInput").value || DEMO_WALLET;
+  document.getElementById("dashboard").style.display = "none";
+  runLoadSequence(wallet);
+});
+
+document.getElementById("btnNewScan").addEventListener("click", () => {
+  document.getElementById("dashboard").style.display = "none";
+  const hero = document.getElementById("heroSection");
+  hero.style.display = "block";
+  hero.style.opacity = "1";
+  hero.style.transform = "none";
+  document.getElementById("walletInput").value = "";
+  document.getElementById("walletInput").focus();
+  // reset load steps
+  ["step1","step2","step3","step4"].forEach(s => {
+    const el = document.getElementById(s);
+    el.classList.remove("active","done");
+    el.querySelector(".step-icon").textContent = "⟳";
+  });
+  document.getElementById("loadBarFill").style.width = "0%";
+  // reset fixes
+  fixDone = [false,false,false];
+  currentScore = DEMO_DATA.score;
+});
+
+document.getElementById("btnRunFirewall").addEventListener("click", startScan);
+document.getElementById("walletInput").addEventListener("keydown", e => { if (e.key === "Enter") startScan(); });
+
+document.getElementById("demoHint").addEventListener("click", () => {
+  document.getElementById("walletInput").value = DEMO_WALLET;
+  document.getElementById("netSelect").value = "bsc";
+  startScan();
+});
+
+function startScan() {
+  let wallet = document.getElementById("walletInput").value.trim();
+  if (!wallet) wallet = DEMO_WALLET;
+  runLoadSequence(wallet);
+}
+
+// auto-run if wallet in URL
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+(function checkAutoRun() {
+  const params = new URLSearchParams(location.search);
+  const w = params.get("wallet");
+  const n = params.get("net");
+  if (w) {
+    document.getElementById("walletInput").value = w;
+    if (n) document.getElementById("netSelect").value = n;
+    startScan();
+  }
+})();
+</script>
+</body>
+</html>
