@@ -1636,40 +1636,12 @@ function computeMetrics(approvals) {
   };
 }
 
-// ── APPKIT INTEGRATION ───────────────────────────────────────────
-// APPKIT_PROJECT_ID already declared above
-let _appkitLoadPromise = null;
+// ── APPKIT INTEGRATION (fw delegates to shared loader) ──────────
+// ── APPKIT ─────────────────────────────────────────────────────
+// fwLoadAppKit delegates to the shared loadAppKit() above.
+// This avoids duplicate let/const at module scope.
+const fwLoadAppKit = () => loadAppKit();
 
-async function fwLoadAppKit() {
-  if (window.CxAppKitModal) return window.CxAppKitModal;
-  if (_appkitLoadPromise) return _appkitLoadPromise;
-  _appkitLoadPromise = (async () => {
-    const [{ createAppKit }, { EthersAdapter }, { bsc, mainnet }] = await Promise.all([
-      import("https://esm.sh/@reown/appkit@1.8.15"),
-      import("https://esm.sh/@reown/appkit-adapter-ethers@1.8.15"),
-      import("https://esm.sh/@reown/appkit/networks"),
-    ]);
-    const appkit = createAppKit({
-      adapters: [new EthersAdapter()],
-      networks: [bsc, mainnet],
-      defaultNetwork: bsc,
-      projectId: APPKIT_PROJECT_ID,
-      analytics: false,
-      metadata: {
-        name: "CycleX Firewall",
-        description: "CycleX Wallet Firewall",
-        url: window.location.origin,
-        icons: [`${window.location.origin}/logo.png`]
-      }
-    });
-    window.CxAppKitModal = appkit;
-    if (!window.E && window.ethers) window.E = window.ethers;
-    return appkit;
-  })();
-  return _appkitLoadPromise;
-}
-
-async function fwWaitForWallet(timeoutMs = 16000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (window.wallet?.address) return window.wallet.address;
