@@ -1070,9 +1070,9 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
     let __mobileAccessReadyToPay = false;
     
 
-    function isMobileLike(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||""); }
+    function isMobileLikeLegacy(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||""); }
 
-    async function accessFetchBnbUsd(){
+    async function accessFetchBnbUsdLegacy(){
       const now = Date.now();
       if(ACCESS_PRICE_CACHE.bnbUsd && (now-ACCESS_PRICE_CACHE.ts)<60000) return ACCESS_PRICE_CACHE.bnbUsd;
       const r = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT",{cache:"no-store"});
@@ -1083,7 +1083,7 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
       return px;
     }
 
-    async function accessReadEthCall(to, data){
+    async function accessReadEthCallLegacy2(to, data){
       for(const url of ACCESS_READ_RPCS){
         try{
           const r = await fetch(url,{method:"POST",headers:{"content-type":"application/json"},
@@ -1102,20 +1102,20 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
       return wei;
     }
 
-    function accessSetBusy(on){
+    function accessSetBusyLegacy(on){
       ["btn-pay-bnb","btn-pay-usdt"].forEach(id=>{
         const b=document.getElementById(id);
         if(b){ b.disabled=!!on; b.classList.toggle("is-busy",!!on); }
       });
     }
 
-    function accessSetStatus(msg){
+    function accessSetStatusLegacy(msg){
       const el=document.getElementById("access-status");
       if(el) el.textContent=msg||"";
     }
 
-    async function accessUpdatePricesUI(usdPrice){
-      accessSetBusy(true);
+    async function accessUpdatePricesUILegacy(usdPrice){
+      accessSetBusyLegacy(true);
       try{
         const usdtEl=document.getElementById("access-price-usdt");
         const bnbEl=document.getElementById("access-price-bnb");
@@ -1130,7 +1130,7 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
           if(bnbEl) bnbEl.textContent=`~${txt} BNB`;
           window.__ACCESS_BNB_WEI = wei;
         }catch{
-          const bnbUsd = await accessFetchBnbUsd();
+          const bnbUsd = await accessFetchBnbUsdLegacy();
           const bnbAmt = usdPrice/bnbUsd;
           const txt = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
           if(bnbEl) bnbEl.textContent=`~${txt} BNB`;
@@ -1139,20 +1139,20 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
         if(b1) b1.disabled=false;
         if(b2) b2.disabled=false;
       }catch(e){ console.error("price load failed:",e); }
-      finally{ accessSetBusy(false); }
+      finally{ accessSetBusyLegacy(false); }
     }
 
-    function openAccessModal(){
-      accessSetStatus("");
+    function openAccessModalLegacy(){
+      accessSetStatusLegacy("");
       __mobileAccessReadyToPay=false; __mobileAccessReadyKind="";
       const m=document.getElementById("access-modal");
       if(!m) return;
       m.classList.add("is-open");
       m.setAttribute("aria-hidden","false");
-      accessUpdatePricesUI(ACCESS_USD_PRICE).catch(console.error);
+      accessUpdatePricesUILegacy(ACCESS_USD_PRICE).catch(console.error);
     }
 
-    function closeAccessModal(){
+    function closeAccessModalLegacy(){
       const m=document.getElementById("access-modal");
       if(!m) return;
       m.classList.remove("is-open");
@@ -1160,7 +1160,7 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
       __mobileAccessReadyToPay=false; __mobileAccessReadyKind="";
     }
 
-    async function accessWaitForConfirm(provider, txHash, maxMs=120000){
+    async function accessWaitForConfirmLegacy(provider, txHash, maxMs=120000){
       const start=Date.now();
       while(Date.now()-start<maxMs){
         try{
@@ -1172,21 +1172,21 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
       return false;
     }
 
-    async function accessBuyFlow(kind, { skipConnectModal=false }={}){
+    async function accessBuyFlowLegacy(kind, { skipConnectModal=false }={}){
       if(__accessFlowRunning) return;
-      __accessFlowRunning=true; accessSetBusy(true);
+      __accessFlowRunning=true; accessSetBusyLegacy(true);
       try{
         const connected = skipConnectModal
           ? (!!window.wallet?.address)
           : await cxConnectWallet({ silent:false });
-        if(!connected){ accessSetStatus("Wallet not connected. Please try again."); return; }
+        if(!connected){ accessSetStatusLegacy("Wallet not connected. Please try again."); return; }
 
         let provider =
           (window.wallet?.providerRaw?.request && window.wallet.providerRaw)||
           (window.wallet?.browserProvider?.provider?.request && window.wallet.browserProvider.provider)||
           window.ethereum;
         let from = String(window.wallet?.address||"").trim();
-        if(!from||!provider?.request){ accessSetStatus("Could not get wallet address."); return; }
+        if(!from||!provider?.request){ accessSetStatusLegacy("Could not get wallet address."); return; }
 
         const TARGET_CHAIN="0x38";
         try{
@@ -1202,63 +1202,63 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
               rpcUrls:["https://bsc-dataseed.binance.org/"],
               blockExplorerUrls:["https://bscscan.com/"]
             }]});
-          } else if(err?.code===4001){ accessSetStatus("Network switch canceled."); return; }
+          } else if(err?.code===4001){ accessSetStatusLegacy("Network switch canceled."); return; }
           else throw err;
         }
 
         if(kind==="bnb"){
           let WEI = window.__ACCESS_BNB_WEI;
           if(!WEI){ try{ WEI=await accessQuoteBNB(); }catch{} }
-          if(!WEI||BigInt(WEI)<=0n){ accessSetStatus("Couldn\'t fetch BNB quote. Try again."); return; }
+          if(!WEI||BigInt(WEI)<=0n){ accessSetStatusLegacy("Couldn\'t fetch BNB quote. Try again."); return; }
           const val = (BigInt(WEI)*101n)/100n;
           const txParams={from,to:ACCESS_SALE_ADDR,value:"0x"+val.toString(16),data:"0x20f1fc61"};
-          accessSetStatus("Open wallet to approve…");
+          accessSetStatusLegacy("Open wallet to approve…");
           let txHash;
           try{ txHash=await provider.request({method:"eth_sendTransaction",params:[txParams]}); }
           catch(e){
             const msg=String(e?.message||e||"");
-            if(/user rejected|rejected|denied|cancel|4001/i.test(msg)) accessSetStatus("Payment canceled.");
-            else accessSetStatus("Wallet open failed. Try again.");
+            if(/user rejected|rejected|denied|cancel|4001/i.test(msg)) accessSetStatusLegacy("Payment canceled.");
+            else accessSetStatusLegacy("Wallet open failed. Try again.");
             return;
           }
-          accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
-          const ok=await accessWaitForConfirm(provider,txHash);
-          if(ok){ accessSetStatus("Confirmed ✅"); setTimeout(async()=>{ closeAccessModal(); await requestFullAccess(); },1200); }
-          else accessSetStatus("Pending on-chain… You can close and try again.");
+          accessSetStatusLegacy("Transaction sent ✅ Waiting for confirmation…");
+          const ok=await accessWaitForConfirmLegacy(provider,txHash);
+          if(ok){ accessSetStatusLegacy("Confirmed ✅"); setTimeout(async()=>{ closeAccessModalLegacy(); await requestFullAccess(); },1200); }
+          else accessSetStatusLegacy("Pending on-chain… You can close and try again.");
           return;
         }
 
         if(kind==="usdt"){
           const Eth=window.ethers||window.E;
-          if(!Eth){ accessSetStatus("Ethers.js required."); return; }
+          if(!Eth){ accessSetStatusLegacy("Ethers.js required."); return; }
           const web3Provider=new Eth.BrowserProvider(provider);
           const signer=await web3Provider.getSigner();
           const usdt=new Eth.Contract(ACCESS_USDT_ADDR,["function decimals() view returns (uint8)","function approve(address,uint256) returns (bool)"],signer);
           const sale=new Eth.Contract(ACCESS_SALE_ADDR,["function buyWithUSDT() external"],signer);
           const decimals=Number(await usdt.decimals());
           const amount=Eth.parseUnits(String(ACCESS_USD_PRICE),decimals);
-          accessSetStatus("Approve USDT in wallet…");
+          accessSetStatusLegacy("Approve USDT in wallet…");
           const tx1=await usdt.approve(ACCESS_SALE_ADDR,amount);
           await tx1.wait();
-          accessSetStatus("Confirm purchase in wallet…");
+          accessSetStatusLegacy("Confirm purchase in wallet…");
           const tx2=await sale.buyWithUSDT();
-          accessSetStatus("Transaction sent ✅ Waiting…");
+          accessSetStatusLegacy("Transaction sent ✅ Waiting…");
           const ok=await tx2.wait().then(r=>r&&r.status===1).catch(()=>false);
-          if(ok){ accessSetStatus("Confirmed ✅"); setTimeout(async()=>{ closeAccessModal(); await requestFullAccess(); },1200); }
-          else accessSetStatus("Pending on-chain… You can close and try again.");
+          if(ok){ accessSetStatusLegacy("Confirmed ✅"); setTimeout(async()=>{ closeAccessModalLegacy(); await requestFullAccess(); },1200); }
+          else accessSetStatusLegacy("Pending on-chain… You can close and try again.");
           return;
         }
       }catch(e){
         const msg=String(e?.message||e||"");
-        if(/user rejected|rejected|denied|cancel|4001/i.test(msg)) accessSetStatus("Payment canceled.");
-        else accessSetStatus("Checkout error: "+msg.substring(0,100));
+        if(/user rejected|rejected|denied|cancel|4001/i.test(msg)) accessSetStatusLegacy("Payment canceled.");
+        else accessSetStatusLegacy("Checkout error: "+msg.substring(0,100));
         console.error("accessBuyFlow:",e);
       }finally{
-        accessSetBusy(false); __accessFlowRunning=false;
+        accessSetBusyLegacy(false); __accessFlowRunning=false;
       }
     }
 
-    function bindAccessModal(){
+    function bindAccessModalLegacy(){
       if(window.__accessModalBound) return;
       window.__accessModalBound=true;
       const m=document.getElementById("access-modal");
@@ -1266,30 +1266,30 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
       m.querySelectorAll("[data-close-access]").forEach(el=>el.addEventListener("click",closeAccessModal));
       document.getElementById("btn-pay-bnb")?.addEventListener("click",async(e)=>{
         e.preventDefault(); e.stopPropagation();
-        if(!isMobileLike()){ accessBuyFlow("bnb"); return; }
+        if(!isMobileLikeLegacy()){ accessBuyFlowLegacy("bnb"); return; }
         if(!__mobileAccessReadyToPay||__mobileAccessReadyKind!=="bnb"){
-          accessSetStatus("Step 1/2: Connecting wallet…");
+          accessSetStatusLegacy("Step 1/2: Connecting wallet…");
           const ok=await cxConnectWallet({silent:false});
-          if(!ok){ accessSetStatus("Connection failed. Tap again."); return; }
-          try{ await accessUpdatePricesUI(ACCESS_USD_PRICE); }catch{}
+          if(!ok){ accessSetStatusLegacy("Connection failed. Tap again."); return; }
+          try{ await accessUpdatePricesUILegacy(ACCESS_USD_PRICE); }catch{}
           __mobileAccessReadyToPay=true; __mobileAccessReadyKind="bnb";
-          accessSetStatus("Step 1 ✅ Tap BNB again to confirm payment.");
+          accessSetStatusLegacy("Step 1 ✅ Tap BNB again to confirm payment.");
           return;
         }
-        await accessBuyFlow("bnb",{skipConnectModal:true});
+        await accessBuyFlowLegacy("bnb",{skipConnectModal:true});
       });
       document.getElementById("btn-pay-usdt")?.addEventListener("click",async(e)=>{
         e.preventDefault(); e.stopPropagation();
-        if(!isMobileLike()){ accessBuyFlow("usdt"); return; }
+        if(!isMobileLikeLegacy()){ accessBuyFlowLegacy("usdt"); return; }
         if(!__mobileAccessReadyToPay||__mobileAccessReadyKind!=="usdt"){
-          accessSetStatus("Step 1/2: Connecting wallet…");
+          accessSetStatusLegacy("Step 1/2: Connecting wallet…");
           const ok=await cxConnectWallet({silent:false});
-          if(!ok){ accessSetStatus("Connection failed. Tap again."); return; }
+          if(!ok){ accessSetStatusLegacy("Connection failed. Tap again."); return; }
           __mobileAccessReadyToPay=true; __mobileAccessReadyKind="usdt";
-          accessSetStatus("Step 1 ✅ Tap USDT again to confirm payment.");
+          accessSetStatusLegacy("Step 1 ✅ Tap USDT again to confirm payment.");
           return;
         }
-        await accessBuyFlow("usdt",{skipConnectModal:true});
+        await accessBuyFlowLegacy("usdt",{skipConnectModal:true});
       });
     }
 
