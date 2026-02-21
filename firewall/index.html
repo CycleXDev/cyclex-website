@@ -393,6 +393,40 @@
       font-size:12px;color:rgba(244,246,255,.72);line-height:1.5;text-align:center
     }
     .notice strong{color:#ffd166}
+
+    /* ── FULL ACCESS BUTTON ───────────────────────── */
+    .btn-full-access{
+      background:linear-gradient(135deg,#7c5cff,#a87eff);color:#fff;
+      border:none;border-radius:999px;padding:13px 24px;
+      font-size:13px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+      cursor:pointer;white-space:nowrap;transition:transform .2s ease,box-shadow .2s ease;
+      box-shadow:0 14px 42px rgba(124,92,255,.42)
+    }
+    .btn-full-access:hover{transform:translateY(-1px);box-shadow:0 20px 60px rgba(124,92,255,.58)}
+    .btn-full-access-top{
+      background:rgba(124,92,255,.15);border:1px solid rgba(124,92,255,.35);color:#a87eff;
+      border-radius:999px;padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;
+      cursor:pointer;transition:all .2s ease
+    }
+    .btn-full-access-top:hover{background:rgba(124,92,255,.28);color:#c4a6ff}
+
+    /* ── LOCKED SECTION ─────────────────────────── */
+    .locked-section{position:relative}
+    .locked-section .lock-overlay{
+      position:absolute;inset:0;border-radius:var(--radius);z-index:5;
+      background:linear-gradient(180deg,rgba(5,6,10,.05) 0%,rgba(5,6,10,.92) 55%,rgba(5,6,10,.98) 100%);
+      display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:24px;
+      backdrop-filter:blur(2px)
+    }
+    .lock-overlay-inner{text-align:center}
+    .lock-overlay-inner .lock-icon{font-size:22px;margin-bottom:6px}
+    .lock-overlay-inner p{font-size:12px;color:var(--muted);margin-bottom:12px}
+    .pp-watermark{
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      font-size:15px;font-weight:900;letter-spacing:.3em;text-transform:uppercase;
+      color:rgba(255,255,255,.08);pointer-events:none;transform:rotate(-18deg);
+      text-shadow:none;z-index:2
+    }
   </style>
 </head>
 <body>
@@ -411,7 +445,9 @@
       </div>
     </a>
     <div class="top-right">
+      <div id="tierBadge" style="display:none;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:6px 12px;border-radius:999px;border:1px solid rgba(93,255,178,.3);background:rgba(93,255,178,.08);color:var(--green);font-weight:800">✓ FULL ACCESS</div>
       <div class="firewall-badge"><span class="dot"></span>FIREWALL</div>
+      <button class="btn-full-access-top" id="btnTopAccess" title="Unlock full features">🔑 Full Access</button>
       <a class="back-link" href="/">← Back to Hub</a>
     </div>
   </header>
@@ -465,8 +501,34 @@
     <!-- ── DASHBOARD ── -->
     <div id="dashboard">
 
-      <div class="notice">
-        <strong>Demo mode:</strong> Data shown is simulated for illustration. Connect real API keys in Settings to scan a live wallet. No transactions are made.
+      <div class="notice" id="scanNotice" style="display:none">
+        <strong>Live scan.</strong> Read-only on-chain data. No transactions made.
+      </div>
+      <div class="notice" id="demoNotice">
+        <strong>Demo mode:</strong> Showing sample data. Enter a real wallet address and click "Run Firewall" to scan live.
+      </div>
+
+      <!-- ACCESS GATE OVERLAY -->
+      <div id="accessGateOverlay" style="display:none;position:relative;z-index:10;margin-bottom:24px">
+        <div style="
+          background:linear-gradient(135deg,rgba(124,92,255,.12),rgba(0,229,255,.08));
+          border:1px solid rgba(124,92,255,.35);border-radius:22px;padding:28px;
+          text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 30px rgba(124,92,255,.12)
+        ">
+          <div style="font-size:32px;margin-bottom:12px">🔒</div>
+          <div style="font-size:18px;font-weight:900;margin-bottom:8px">Full Access Required</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.7;max-width:52ch;margin:0 auto 20px">
+            Hold <strong style="color:var(--purple)">≥100 CYCX</strong> or <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.
+          </div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <button class="btn btn-full-access" id="btnCheckAccess">
+              🔑 Connect &amp; Check Access
+            </button>
+            <a href="/pass" target="_blank" class="btn btn-ghost" style="font-size:12px">Buy PASS ↗</a>
+            <a href="/token" target="_blank" class="btn btn-ghost" style="font-size:12px">Get CYCX ↗</a>
+          </div>
+          <div id="gateStatus" style="margin-top:14px;font-size:12px;color:var(--muted);min-height:18px"></div>
+        </div>
       </div>
 
       <!-- Wallet badge -->
@@ -548,7 +610,15 @@
 
       <!-- FIX MODE -->
       <div class="section-title">Fix Mode</div>
-      <div class="fix-card">
+      <div class="fix-card locked-section" id="fixCard">
+        <!-- Lock overlay (shown in free tier) -->
+        <div class="lock-overlay" id="fixLockOverlay">
+          <div class="lock-overlay-inner">
+            <div class="lock-icon">🔒</div>
+            <p>Fix Mode requires Full Access<br>(hold ≥100 CYCX or 1 PASS)</p>
+            <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:11px;padding:10px 18px">Unlock Fix Mode</button>
+          </div>
+        </div>
         <div class="fix-header">
           <div>
             <div style="font-size:16px;font-weight:800;margin-bottom:4px">🛠 3-Step Fix Plan</div>
@@ -587,7 +657,14 @@
 
       <!-- WALLET PASSPORT -->
       <div class="section-title">Wallet Passport</div>
-      <div class="passport-wrap">
+      <div class="passport-wrap locked-section" id="passportWrap">
+        <div class="lock-overlay" id="passportLockOverlay">
+          <div class="lock-overlay-inner">
+            <div class="lock-icon">🔒</div>
+            <p>Wallet Passport requires Full Access</p>
+            <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:11px;padding:10px 18px">Unlock Passport</button>
+          </div>
+        </div>
         <div style="margin-bottom:18px">
           <div style="font-size:16px;font-weight:800;margin-bottom:4px">🪪 Proof Passport</div>
           <div style="font-size:13px;color:var(--muted)">A shareable, verifiable snapshot of your wallet's security state. Tweet it, share it, flex it.</div>
@@ -596,6 +673,7 @@
 
           <!-- Card Preview -->
           <div class="passport-card-preview" id="passportCard">
+            <div class="pp-watermark" id="ppWatermark">PREVIEW</div>
             <div class="pp-logo"><div class="pp-logo-dot"></div>CycleX Firewall</div>
             <div class="pp-wallet" id="ppWallet">0x...</div>
             <div class="pp-score-row">
@@ -666,101 +744,317 @@
 </div><!-- .page-shell -->
 
 <script>
-// ──────────────────────────────────────────
-// DEMO DATA
-// ──────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+// CycleX Firewall — LIVE ENGINE v2.0
+// ══════════════════════════════════════════════════════════════════
+
+// ── CONSTANTS ────────────────────────────────────────────────────
 const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
-const DEMO_NET = "bsc";
+const CYCX_BSC    = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
+const PASS_BSC    = "0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e";
+const CYCX_MIN    = 100n;   // minimum CYCX
+const PASS_MIN    = 1n;     // minimum PASS
+const API_BASE    = window.CYCLEX_API_BASE || location.origin;
 
-const DEMO_DATA = {
-  score: 34,
-  scoreLabel: "Critical",
-  blastAmt: "$18,430",
-  drainTime: "22 sec",
-  drainFast: true,
-  riskyApprovals: 7,
-  threats: [
-    {
-      name: "0x1b81D67...c9f4",
-      label: "Unknown Router",
-      damage: "$12,430",
-      risk: "bad",
-      why: "Unlimited approval on USDT + BUSD. Fresh contract (12 days old), 0 verified interactions.",
-      tokens: ["USDT", "BUSD"]
-    },
-    {
-      name: "PancakeSwap V2",
-      label: "Known DEX",
-      damage: "$4,100",
-      risk: "warn",
-      why: "Old unlimited approval from 2022. Consider capping to current needs.",
-      tokens: ["CAKE", "BNB"]
-    },
-    {
-      name: "0x9aB8E4...d31c",
-      label: "Unverified",
-      damage: "$1,900",
-      risk: "bad",
-      why: "Unverified contract. Interacted with known scam deployer address.",
-      tokens: ["SHIB"]
-    },
-    {
-      name: "1inch Router V5",
-      label: "Known DEX",
-      damage: "$600",
-      risk: "warn",
-      why: "Unlimited approval but reputable aggregator. Low risk, but review.",
-      tokens: ["USDC"]
-    },
-    {
-      name: "0x44aD3F...8801",
-      label: "Unknown",
-      damage: "$400",
-      risk: "warn",
-      why: "Unknown token bridge. Minimal exposure. Monitor.",
-      tokens: ["BNB"]
-    }
-  ],
-  scoreMeta: [
-    { label: "7 unlimited", cls: "bad" },
-    { label: "2 unverified spenders", cls: "bad" },
-    { label: "3 capped", cls: "warn" }
-  ],
-  blastMeta: [
-    { label: "Top path: USDT drain", cls: "bad" },
-    { label: "2 high-liquidity tokens", cls: "warn" }
-  ],
-  drainMeta: [
-    { label: "unlimited + liquid", cls: "bad" },
-    { label: "3 spenders active", cls: "warn" }
-  ]
-};
+const GATE_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)"
+];
+const ERC20_APPROVE_ABI = ["function approve(address spender, uint256 amount) returns (bool)"];
 
-// ──────────────────────────────────────────
-// STATE
-// ──────────────────────────────────────────
-let currentScore = 0;
-let fixDone = [false, false, false];
-let scoreIncrements = [18, 14, 10];
+// ── STATE ────────────────────────────────────────────────────────
+let fwAccessTier   = "free";      // "free" | "full"
+let fwScanData     = null;        // raw parsed approvals
+let fwCurrentScore = 0;
+let fwWallet       = "";
+let fwNet          = "bsc";
+let fixDone        = [false, false, false];
+let fixApprovals   = [];          // top revocable approvals for fix steps
+const scoreIncrements = [18, 14, 10];
 
-// ──────────────────────────────────────────
-// UTILS
-// ──────────────────────────────────────────
-function shortAddr(a) {
-  if (!a || a.length < 10) return a;
+// ── ETHERS BRIDGE ────────────────────────────────────────────────
+function getE()  { return window.E || window.ethers; }
+function getRPC(net) {
+  if (typeof getReadProvider === "function") return getReadProvider(net);
+  if (window.CX?.getReadProvider) return window.CX.getReadProvider(net);
+  return null;
+}
+
+// ── UTILS ────────────────────────────────────────────────────────
+const wait     = ms => new Promise(r => setTimeout(r, ms));
+function fwShort(a) {
+  if (!a || a.length < 12) return a || "—";
   return a.slice(0, 8) + "…" + a.slice(-5);
 }
 function today() {
-  return new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  return new Date().toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
+}
+function esc(s) {
+  return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function fwIsAddr(a) {
+  try {
+    const E = getE();
+    if (E?.isAddress) return E.isAddress(a);
+    if (E?.utils?.isAddress) return E.utils.isAddress(a);
+    return /^0x[0-9a-fA-F]{40}$/.test(a);
+  } catch { return /^0x[0-9a-fA-F]{40}$/.test(String(a||"")); }
+}
+function fwNorm(a) {
+  try {
+    const E = getE();
+    if (E?.getAddress) return E.getAddress(a);
+    if (E?.utils?.getAddress) return E.utils.getAddress(a);
+  } catch {}
+  return String(a || "");
+}
+function isUnlimitedAllow(v) {
+  const s = String(v || "").toLowerCase().trim();
+  if (s === "∞" || s === "infinite" || s === "unlimited" || s.includes("inf")) return true;
+  try {
+    const n = BigInt(s);
+    return n > (2n ** 200n);
+  } catch { return false; }
+}
+function fmtUSD(n) {
+  if (!Number.isFinite(n) || n <= 0) return "—";
+  if (n >= 1_000_000) return `$${(n/1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)    return `$${(n/1_000).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
 }
 
-// ──────────────────────────────────────────
-// LOADING ANIMATION
-// ──────────────────────────────────────────
-async function runLoadSequence(wallet) {
-  const hero = document.getElementById("heroSection");
-  const loadWrap = document.getElementById("loadWrap");
-  const dashboard = document.getElementById("dashboard");
+// ── API FETCH ─────────────────────────────────────────────────────
+async function fetchApprovals(net, address) {
+  const u = new URL("/api/getApprovals", API_BASE);
+  u.searchParams.set("net", net);
+  u.searchParams.set("address", address);
+
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 18000);
+
+  try {
+    const res = await fetch(u.toString(), { method:"GET", signal:ctrl.signal });
+    if (res.status === 429) {
+      const e = new Error("RATE_LIMIT"); e.status = 429; throw e;
+    }
+    if (!res.ok) {
+      const e = new Error(`API_${res.status}`); e.status = res.status; throw e;
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data
+      : Array.isArray(data?.approvals) ? data.approvals
+      : Array.isArray(data?.result)    ? data.result
+      : Array.isArray(data?.data)      ? data.data
+      : [];
+  } finally { clearTimeout(t); }
+}
+
+// ── METRICS COMPUTATION ───────────────────────────────────────────
+function computeMetrics(approvals) {
+  const rows = approvals.map(r => {
+    const allow  = String(r?.allowance ?? r?.value ?? r?.approved_amount ?? "0");
+    const symbol = String(r?.symbol || r?.token_symbol || r?.tokenSymbol || "TOKEN");
+    const token  = String(r?.token || r?.token_address || r?.tokenAddress || "");
+    const spender= String(r?.spender || r?.spender_address || "");
+    const risk   = String(r?.risk || "—").toLowerCase();
+    const verified = (r?.verified === true) ? true : (r?.verified === false) ? false : null;
+    const decimals = Number(r?.decimals ?? r?.token_decimals ?? 18) || 18;
+    return { allow, symbol, token, spender, risk, verified, decimals, raw:r };
+  });
+
+  const unlimited = rows.filter(r => isUnlimitedAllow(r.allow));
+  const risky     = rows.filter(r => r.risk === "high" || isUnlimitedAllow(r.allow));
+  const highRisk  = rows.filter(r => r.risk === "high");
+  const unverified= rows.filter(r => r.verified === false);
+
+  // Score: start at 100, penalize
+  let score = 100;
+  score -= unlimited.length  * 14;
+  score -= highRisk.length   * 18;
+  score -= unverified.length * 8;
+  score = Math.max(5, Math.min(100, score));
+
+  // Blast Radius: rough heuristic (unlimited × token balance placeholder)
+  // We expose the count; USD requires prices (shown as "?" if unavailable)
+  const blastCount  = unlimited.length;
+  const blastLabel  = blastCount === 0 ? "$0 exposed" : blastCount <= 2 ? "Limited exposure" : blastCount <= 6 ? "Moderate exposure" : "High exposure";
+  const blastSuffix = blastCount > 0 ? ` (${blastCount} unlimited)` : "";
+  const blastDisplay= `${blastLabel}${blastSuffix}`;
+
+  // Time-to-Drain heuristic
+  let drainTime, drainFast = false;
+  if (unlimited.length === 0) {
+    drainTime = "Safe (no unlimited)";
+    drainFast = false;
+  } else if (unlimited.length <= 2) {
+    drainTime = "~5 min";
+    drainFast = false;
+  } else if (unlimited.length <= 6) {
+    drainTime = "~90 sec";
+    drainFast = true;
+  } else {
+    drainTime = "< 30 sec";
+    drainFast = true;
+  }
+
+  const scoreLabel = score >= 85 ? "Protected" : score >= 70 ? "Exposed" : score >= 50 ? "Vulnerable" : "Critical";
+
+  // Threats list (top 5, worst first)
+  const sorted = [...rows].sort((a, b) => {
+    const rA = a.risk === "high" ? 3 : a.risk === "medium" ? 2 : 1;
+    const rB = b.risk === "high" ? 3 : b.risk === "medium" ? 2 : 1;
+    const uA = isUnlimitedAllow(a.allow) ? 1 : 0;
+    const uB = isUnlimitedAllow(b.allow) ? 1 : 0;
+    return (rB + uB) - (rA + uA);
+  });
+  const threats = sorted.slice(0, 5).map(r => ({
+    name: r.spender ? fwShort(r.spender) : "Unknown",
+    fullSpender: r.spender,
+    token: r.token,
+    label: r.risk === "high" ? "High Risk" : r.verified === false ? "Unverified" : isUnlimitedAllow(r.allow) ? "Unlimited" : "Capped",
+    damage: isUnlimitedAllow(r.allow) ? "Max exposure" : "Capped",
+    risk: r.risk === "high" ? "bad" : isUnlimitedAllow(r.allow) ? "warn" : "ok",
+    why: r.risk === "high" ? "High-risk spender. Revoke recommended."
+       : r.verified === false ? "Unverified contract. Review before trusting."
+       : isUnlimitedAllow(r.allow) ? "Unlimited approval. Consider revoking or capping."
+       : "Capped approval. Lower risk.",
+    tokens: [r.symbol || "TOKEN"],
+    isUnlimited: isUnlimitedAllow(r.allow),
+    canRevoke: !!(r.token && r.spender)
+  }));
+
+  // Fix targets (top 3 revocable)
+  const fixTargets = sorted.filter(r => r.canRevoke !== false && r.token && r.spender).slice(0, 3);
+
+  return {
+    score, scoreLabel,
+    blastDisplay,
+    drainTime, drainFast,
+    riskyApprovals: risky.length,
+    unlimitedCount: unlimited.length,
+    highRiskCount: highRisk.length,
+    unverifiedCount: unverified.length,
+    totalApprovals: rows.length,
+    threats,
+    fixTargets,
+    scoreMeta: [
+      ...(unlimited.length  ? [{ label: `${unlimited.length} unlimited`,  cls:"bad" }] : []),
+      ...(highRisk.length   ? [{ label: `${highRisk.length} high-risk`,   cls:"bad" }] : []),
+      ...(unverified.length ? [{ label: `${unverified.length} unverified`,cls:"warn"}] : []),
+      ...(!unlimited.length && !highRisk.length ? [{ label:"No unlimited detected", cls:"ok" }] : [])
+    ],
+    blastMeta: blastCount > 0 ? [
+      { label: `${blastCount} unlimited spenders`, cls:"bad" },
+      { label: "Revoke to reduce exposure", cls:"warn" }
+    ] : [{ label: "No unlimited approvals ✓", cls:"ok" }],
+    drainMeta: drainFast ? [
+      { label: "Unlimited + active spenders", cls:"bad" }
+    ] : [{ label: "Low drain risk", cls:"ok" }]
+  };
+}
+
+// ── ACCESS GATE ──────────────────────────────────────────────────
+function setGateStatus(msg, color="#a0a0b0") {
+  const el = document.getElementById("gateStatus");
+  if (el) { el.textContent = msg; el.style.color = color; }
+}
+
+async function checkCycxPass() {
+  const E = getE();
+  if (!E || !E.Contract) return { eligible:false, reason:"ethers_missing" };
+
+  const addr = window.wallet?.address;
+  if (!addr) return { eligible:false, reason:"no_wallet" };
+
+  try {
+    const provider = getRPC("bsc");
+    if (!provider) return { eligible:false, reason:"no_rpc" };
+
+    const cycxC = new E.Contract(CYCX_BSC, GATE_ABI, provider);
+    const passC = new E.Contract(PASS_BSC, GATE_ABI, provider);
+
+    let cycxDec = 18n;
+    try { cycxDec = BigInt(await cycxC.decimals()); } catch {}
+
+    const [cycxBal, passBal] = await Promise.all([
+      cycxC.balanceOf(addr).catch(()=>0n),
+      passC.balanceOf(addr).catch(()=>0n)
+    ]);
+
+    const cycxMin = CYCX_MIN * (10n ** cycxDec);
+    const hasPass = BigInt(passBal) >= PASS_MIN;
+    const hasCycx = BigInt(cycxBal) >= cycxMin;
+
+    return { eligible: hasPass || hasCycx, hasPass, hasCycx };
+  } catch (e) {
+    return { eligible:false, reason: e.message };
+  }
+}
+
+async function requestFullAccess() {
+  if (fwAccessTier === "full") return; // already unlocked
+
+  setGateStatus("Checking access…", "#a87eff");
+
+  // Try to connect wallet if not connected
+  if (!window.wallet?.address) {
+    try {
+      if (typeof window.cxConnectWallet === "function") {
+        const ok = await window.cxConnectWallet({ silent:false });
+        if (!ok) { setGateStatus("Wallet connect cancelled.", "#ff9a6b"); return; }
+      } else if (typeof window.connectWallet === "function") {
+        await window.connectWallet();
+      } else {
+        // Try clicking existing connect button
+        const btn = document.querySelector("#btn-connect, #connectWallet, [data-cx-connect]");
+        if (btn) { btn.click(); await wait(800); }
+        else { setGateStatus("No wallet found. Please connect via the main site.", "#ff9a6b"); return; }
+      }
+      await wait(300);
+    } catch(e) {
+      setGateStatus("Connect failed: " + e.message, "#ff7a8a");
+      return;
+    }
+  }
+
+  setGateStatus("Checking CYCX / PASS balance…", "#a87eff");
+  const res = await checkCycxPass();
+
+  if (res.eligible) {
+    const reason = res.hasPass ? "PASS token" : `${CYCX_MIN}+ CYCX`;
+    setGateStatus(`✓ Eligible (${reason}) — unlocking full access!`, "#5dffb2");
+    await wait(800);
+    unlockFull();
+    if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
+  } else {
+    const msg = res.reason === "no_wallet" ? "No wallet connected."
+      : res.reason === "ethers_missing" ? "Ethers.js not loaded."
+      : res.reason === "no_rpc" ? "RPC unavailable. Try again."
+      : `Not eligible. Need ≥${CYCX_MIN} CYCX or 1 PASS on BSC.`;
+    setGateStatus(msg, "#ff7a8a");
+  }
+}
+
+function unlockFull() {
+  fwAccessTier = "full";
+  document.getElementById("accessGateOverlay")?.style && (document.getElementById("accessGateOverlay").style.display = "none");
+  document.getElementById("tierBadge") && (document.getElementById("tierBadge").style.display = "flex");
+  document.getElementById("btnTopAccess") && (document.getElementById("btnTopAccess").style.display = "none");
+  // Remove lock overlays
+  document.getElementById("fixLockOverlay")    && (document.getElementById("fixLockOverlay").style.display    = "none");
+  document.getElementById("passportLockOverlay")&& (document.getElementById("passportLockOverlay").style.display = "none");
+  // Remove passport watermark
+  document.getElementById("ppWatermark") && (document.getElementById("ppWatermark").style.display = "none");
+}
+
+// ── LOADING SEQUENCE ─────────────────────────────────────────────
+async function runLoadSequence(walletAddr, net, isDemo) {
+  fwWallet = walletAddr;
+  fwNet    = net;
+
+  const hero    = document.getElementById("heroSection");
+  const loadWrap= document.getElementById("loadWrap");
+  const dash    = document.getElementById("dashboard");
 
   hero.style.transition = "opacity .3s ease, transform .3s ease";
   hero.style.opacity = "0";
@@ -769,318 +1063,423 @@ async function runLoadSequence(wallet) {
   hero.style.display = "none";
 
   loadWrap.style.display = "block";
-  document.getElementById("loadLabel").textContent = `Scanning ${shortAddr(wallet)}…`;
+  document.getElementById("loadLabel").textContent = `Scanning ${fwShort(walletAddr)}…`;
 
   const steps = ["step1","step2","step3","step4"];
-  const durations = [900, 800, 700, 600];
-  const fill = document.getElementById("loadBarFill");
+  const fill  = document.getElementById("loadBarFill");
 
-  for (let i = 0; i < steps.length; i++) {
+  // Step 1: fetch logs (real or demo)
+  const s1 = document.getElementById("step1");
+  s1.classList.add("active");
+  fill.style.width = "25%";
+
+  let approvals = [];
+  let scanError = null;
+
+  if (!isDemo) {
+    try {
+      approvals = await fetchApprovals(net, walletAddr);
+    } catch(e) {
+      scanError = e;
+      // fall through with empty array — will show error
+    }
+  } else {
+    approvals = getDemoApprovals();
+    await wait(700);
+  }
+  s1.classList.remove("active"); s1.classList.add("done");
+  s1.querySelector(".step-icon").textContent = "✓";
+
+  // Steps 2-4: visual only
+  for (let i = 1; i < 4; i++) {
     const el = document.getElementById(steps[i]);
     el.classList.add("active");
-    fill.style.width = ((i+1) / steps.length * 100) + "%";
-    await wait(durations[i]);
-    el.classList.remove("active");
-    el.classList.add("done");
+    fill.style.width = ((i+1)/4*100) + "%";
+    await wait(600 - i*80);
+    el.classList.remove("active"); el.classList.add("done");
     el.querySelector(".step-icon").textContent = "✓";
   }
 
-  await wait(300);
+  await wait(250);
   loadWrap.style.display = "none";
-  dashboard.style.display = "block";
-  renderDashboard(wallet);
+  dash.style.display = "block";
+
+  if (scanError) {
+    const notice = document.getElementById("demoNotice");
+    if (notice) {
+      notice.style.display = "block";
+      notice.innerHTML = scanError.status === 429
+        ? "<strong>Rate limit:</strong> Max 2 scans per hour per IP. Try again in a moment."
+        : `<strong>Scan failed (${scanError.status || "network"}):</strong> Using demo data. Backend may be offline.`;
+    }
+    approvals = getDemoApprovals();
+  }
+
+  // Show notices
+  const scanNotice = document.getElementById("scanNotice");
+  const demoNotice = document.getElementById("demoNotice");
+  if (!isDemo && !scanError) {
+    if (scanNotice) scanNotice.style.display = "block";
+    if (demoNotice) demoNotice.style.display = "none";
+  } else if (isDemo) {
+    if (demoNotice) demoNotice.style.display = "block";
+    if (scanNotice) scanNotice.style.display = "none";
+  }
+
+  fwScanData = computeMetrics(approvals);
+  fixApprovals = fwScanData.fixTargets;
+
+  // Show access gate in free tier
+  if (fwAccessTier === "free") {
+    const gate = document.getElementById("accessGateOverlay");
+    if (gate) gate.style.display = "block";
+  }
+
+  renderDashboard(walletAddr, fwScanData, fwAccessTier);
 }
 
-// ──────────────────────────────────────────
-// RENDER DASHBOARD
-// ──────────────────────────────────────────
-function renderDashboard(wallet) {
-  const d = DEMO_DATA;
-  currentScore = d.score;
+// ── RENDER DASHBOARD ─────────────────────────────────────────────
+function renderDashboard(wallet, d, tier) {
+  fwCurrentScore = d.score;
+  fixDone = [false, false, false];
 
-  // wallet badges
-  document.getElementById("walletBadge").textContent = shortAddr(wallet);
-  document.getElementById("netBadge").textContent = document.getElementById("netSelect").value.toUpperCase();
+  // Wallet badge
+  document.getElementById("walletBadge").textContent = fwShort(wallet);
+  document.getElementById("netBadge").textContent = fwNet.toUpperCase();
 
-  // Score gauge
+  // Score gauge (always visible)
   animateScore(d.score, d.scoreLabel, d.scoreMeta);
 
-  // Blast Radius
-  animateCount("blastAmt", d.blastAmt, 1000);
+  // Blast Radius (free = count/text, full = detailed)
+  document.getElementById("blastAmt").textContent = d.blastDisplay;
   renderMeta("blastMeta", d.blastMeta);
 
-  // Time-to-Drain
+  // Time-to-Drain (always visible)
   setTimeout(() => {
-    document.getElementById("drainTime").textContent = d.drainTime;
-    if (d.drainFast) document.getElementById("drainTime").classList.add("drain-fast");
+    const el = document.getElementById("drainTime");
+    el.textContent = d.drainTime;
+    el.classList.toggle("drain-fast", !!d.drainFast);
     renderMeta("drainMeta", d.drainMeta);
-  }, 800);
+  }, 600);
 
   // Exposure Map
-  setTimeout(() => renderExposureMap(wallet, d.threats), 400);
+  setTimeout(() => renderExposureMap(wallet, d.threats, tier), 400);
 
   // Threats
-  setTimeout(() => renderThreats(d.threats), 600);
+  setTimeout(() => renderThreats(d.threats, tier), 600);
 
   // Fix Mode
-  setTimeout(() => renderFixGain(), 300);
+  if (tier === "full") {
+    setTimeout(() => renderFixMode(d), 300);
+  } else {
+    renderFixGainPreview(d.score);
+  }
 
   // Passport
-  setTimeout(() => renderPassport(wallet, d), 200);
+  renderPassport(wallet, d, tier);
 
-  // Rule Templates
+  // Rules
   renderRuleTemplates();
 }
 
+// ── SCORE GAUGE ───────────────────────────────────────────────────
 function animateScore(target, label, meta) {
   const circumference = 226.2;
-  const fill = document.getElementById("gaugeFill");
+  const fill  = document.getElementById("gaugeFill");
   const numEl = document.getElementById("scoreNum");
-  const labelEl = document.getElementById("scoreLabel");
+  const labEl = document.getElementById("scoreLabel");
   const dotEl = document.getElementById("scoreDot");
 
   const color = target < 45 ? "#ff4757" : target < 70 ? "#ffd166" : "#3cffb0";
   fill.style.stroke = color;
   dotEl.style.background = color;
 
-  let current = 0;
+  let cur = 0;
   const step = target / 35;
   const timer = setInterval(() => {
-    current = Math.min(current + step, target);
-    numEl.textContent = Math.round(current);
-    const offset = circumference - (circumference * current / 100);
-    fill.style.strokeDashoffset = offset;
-    if (current >= target) {
+    cur = Math.min(cur + step, target);
+    numEl.textContent = Math.round(cur);
+    fill.style.strokeDashoffset = circumference - (circumference * cur / 100);
+    if (cur >= target) {
       clearInterval(timer);
-      labelEl.textContent = label;
+      labEl.textContent = label;
       renderMeta("scoreMeta", meta);
     }
   }, 28);
 }
 
-function animateCount(id, target, duration) {
-  // Just display directly for non-numeric formatted values
-  setTimeout(() => { document.getElementById(id).textContent = target; }, duration * 0.3);
-}
-
 function renderMeta(id, items) {
   const el = document.getElementById(id);
   if (!el || !items) return;
-  el.innerHTML = items.map(i => `<div class="meta-chip ${i.cls}">${i.label}</div>`).join("");
+  el.innerHTML = items.map(i => `<div class="meta-chip ${i.cls}">${esc(i.label)}</div>`).join("");
 }
 
-// ──────────────────────────────────────────
-// EXPOSURE MAP (SVG)
-// ──────────────────────────────────────────
-function renderExposureMap(wallet, threats) {
+// ── EXPOSURE MAP ──────────────────────────────────────────────────
+function renderExposureMap(wallet, threats, tier) {
   const svg = document.getElementById("exposureMap");
-  const W = 480, H = 260;
-  const cx = W / 2, cy = H / 2;
+  const W = 480, H = 260, cx = W/2, cy = H/2;
+  const riskColor = { bad:"#ff4757", warn:"#ffd166", ok:"#3cffb0" };
 
-  const riskColor = { bad: "#ff4757", warn: "#ffd166", ok: "#3cffb0" };
+  // In free tier, show max 3 threats; full shows all 5
+  const visible = tier === "free" ? threats.slice(0, 3) : threats;
+  const n = visible.length;
+  if (!n) { svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="rgba(244,246,255,.35)" font-size="13" font-family="system-ui">No spenders detected</text>`; return; }
 
-  // positions for spenders (circle around center)
-  const n = Math.min(threats.length, 5);
-  const positions = [];
-  for (let i = 0; i < n; i++) {
-    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
-    const r = 98;
-    positions.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
-  }
+  const pos = visible.map((_, i) => {
+    const a = (i/n) * Math.PI*2 - Math.PI/2;
+    return { x: cx + 98*Math.cos(a), y: cy + 98*Math.sin(a) };
+  });
 
-  // token nodes further out
-  const tokenPositions = [];
-  threats.slice(0, n).forEach((t, ti) => {
+  const tokPos = [];
+  visible.forEach((t, ti) => {
     t.tokens.forEach((tok, ki) => {
-      const angle = ((ti + (ki * .28)) / n) * Math.PI * 2 - Math.PI / 2;
-      const r = 168;
-      tokenPositions.push({ x: cx + r * Math.cos(angle + ki * .32), y: cy + r * Math.sin(angle + ki * .32), name: tok, ti });
+      const a = ((ti + ki*.28)/n)*Math.PI*2 - Math.PI/2;
+      tokPos.push({ x: cx + 168*Math.cos(a + ki*.32), y: cy + 168*Math.sin(a + ki*.32), name:tok, ti });
     });
   });
 
-  let html = `<defs>
-    <radialGradient id="gCenter" cx="50%" cy="50%" r="50%">
+  let h = `<defs>
+    <radialGradient id="gC" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="rgba(0,229,255,.4)"/>
       <stop offset="100%" stop-color="rgba(0,229,255,.05)"/>
     </radialGradient>
-    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>`;
 
-  // Lines: center → spenders
-  threats.slice(0, n).forEach((t, i) => {
-    const p = positions[i];
+  visible.forEach((t, i) => {
+    const p = pos[i];
     const col = riskColor[t.risk] || "#888";
-    const w = t.risk === "bad" ? 2 : 1.2;
-    html += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="${col}" stroke-width="${w}" stroke-opacity=".5" stroke-dasharray="4 3"/>`;
+    h += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="${col}" stroke-width="${t.risk==="bad"?2:1.2}" stroke-opacity=".5" stroke-dasharray="4 3"/>`;
   });
-
-  // Lines: spenders → tokens
-  tokenPositions.forEach(tp => {
-    const sp = positions[tp.ti];
+  tokPos.forEach(tp => {
+    const sp = pos[tp.ti];
     if (!sp) return;
-    html += `<line x1="${sp.x}" y1="${sp.y}" x2="${tp.x}" y2="${tp.y}" stroke="rgba(255,255,255,.15)" stroke-width="1"/>`;
+    h += `<line x1="${sp.x}" y1="${sp.y}" x2="${tp.x}" y2="${tp.y}" stroke="rgba(255,255,255,.15)" stroke-width="1"/>`;
   });
-
-  // Token nodes
-  tokenPositions.forEach(tp => {
-    html += `<circle cx="${tp.x}" cy="${tp.y}" r="11" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
-      <text x="${tp.x}" y="${tp.y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(244,246,255,.75)" font-size="8" font-family="system-ui" font-weight="700">${tp.name}</text>`;
+  tokPos.forEach(tp => {
+    h += `<circle cx="${tp.x}" cy="${tp.y}" r="11" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
+      <text x="${tp.x}" y="${tp.y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(244,246,255,.75)" font-size="8" font-family="system-ui" font-weight="700">${esc(tp.name).slice(0,6)}</text>`;
   });
-
-  // Spender nodes
-  threats.slice(0, n).forEach((t, i) => {
-    const p = positions[i];
+  visible.forEach((t, i) => {
+    const p = pos[i];
     const col = riskColor[t.risk] || "#888";
-    const r = t.risk === "bad" ? 22 : 17;
-    html += `<circle cx="${p.x}" cy="${p.y}" r="${r+8}" fill="${col}" fill-opacity=".06"/>
+    const r   = t.risk === "bad" ? 22 : 17;
+    h += `<circle cx="${p.x}" cy="${p.y}" r="${r+8}" fill="${col}" fill-opacity=".06"/>
       <circle cx="${p.x}" cy="${p.y}" r="${r}" fill="rgba(5,6,10,.9)" stroke="${col}" stroke-width="1.5" filter="url(#glow)"/>
-      <text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" fill="${col}" font-size="8" font-family="system-ui" font-weight="800">${t.label.split(" ").map(w=>w[0]).join("").slice(0,4)}</text>`;
+      <text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" fill="${col}" font-size="8" font-family="system-ui" font-weight="800">${esc(t.label).split(" ").map(w=>w[0]).join("").slice(0,4)}</text>`;
   });
 
-  // Center: wallet
-  html += `<circle cx="${cx}" cy="${cy}" r="36" fill="url(#gCenter)"/>
+  // Greyed-out locked spots for free tier
+  if (tier === "free" && threats.length > 3) {
+    for (let i = 3; i < Math.min(threats.length, 5); i++) {
+      const a = (i/threats.length)*Math.PI*2 - Math.PI/2;
+      const x = cx + 98*Math.cos(a), y = cy + 98*Math.sin(a);
+      h += `<circle cx="${x}" cy="${y}" r="17" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,.22)" font-size="12">🔒</text>`;
+    }
+  }
+
+  h += `<circle cx="${cx}" cy="${cy}" r="36" fill="url(#gC)"/>
     <circle cx="${cx}" cy="${cy}" r="28" fill="rgba(0,229,255,.10)" stroke="rgba(0,229,255,.45)" stroke-width="1.5"/>
     <text x="${cx}" y="${cy-5}" text-anchor="middle" dominant-baseline="middle" fill="rgba(0,229,255,.95)" font-size="9" font-family="system-ui" font-weight="900">WALLET</text>
-    <text x="${cx}" y="${cy+8}" text-anchor="middle" dominant-baseline="middle" fill="rgba(0,229,255,.65)" font-size="7.5" font-family="ui-monospace,monospace">${shortAddr(wallet)}</text>`;
+    <text x="${cx}" y="${cy+8}" text-anchor="middle" dominant-baseline="middle" fill="rgba(0,229,255,.65)" font-size="7.5" font-family="ui-monospace,monospace">${esc(fwShort(wallet))}</text>`;
 
-  svg.innerHTML = html;
+  svg.innerHTML = h;
 }
 
-// ──────────────────────────────────────────
-// THREATS LIST
-// ──────────────────────────────────────────
-function renderThreats(threats) {
+// ── THREATS LIST ──────────────────────────────────────────────────
+function renderThreats(threats, tier) {
   const el = document.getElementById("threatsList");
   if (!el) return;
-  el.innerHTML = threats.map((t, i) => `
-    <div class="threat-item">
+  if (!threats.length) {
+    el.innerHTML = `<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">✅ No significant threats detected.</div>`;
+    return;
+  }
+  el.innerHTML = threats.map((t, i) => {
+    const isLocked = tier === "free" && i >= 3;
+    return `
+    <div class="threat-item" style="${isLocked ? "filter:blur(5px);pointer-events:none;user-select:none" : ""}">
       <div class="threat-top">
         <div>
-          <div class="threat-name">${t.name}</div>
+          <div class="threat-name">${esc(t.name)}</div>
           <div class="threat-meta">
-            <span class="sig ${t.risk}"><span class="sig-dot"></span>${t.label}</span>
-            ${t.tokens.map(tk=>`<span class="meta-chip" style="font-size:10px;padding:3px 7px">${tk}</span>`).join("")}
+            <span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.label)}</span>
+            ${t.tokens.map(tk=>`<span class="meta-chip" style="font-size:10px;padding:3px 7px">${esc(tk)}</span>`).join("")}
           </div>
         </div>
         <div style="text-align:right;flex:0 0 auto">
-          <div class="threat-damage">${t.damage}</div>
-          <button class="btn-fix-small" id="threatBtn${i}" onclick="fixThreat(${i})">Fix ↗</button>
+          <div class="threat-damage">${t.isUnlimited ? "∞ Unlimited" : "Capped"}</div>
+          ${(tier === "full" && t.canRevoke) ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>` : (tier === "free" ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>` : "")}
         </div>
       </div>
-      <div class="threat-why">${t.why}</div>
-    </div>
-  `).join("");
+      <div class="threat-why">${esc(t.why)}</div>
+    </div>`;
+  }).join("");
 }
 
-function fixThreat(i) {
-  const btn = document.getElementById(`threatBtn${i}`);
-  if (!btn || btn.classList.contains("fixed")) return;
-  btn.classList.add("fixed");
-  btn.textContent = "✓ Fixed";
-}
-
-// ──────────────────────────────────────────
-// FIX MODE
-// ──────────────────────────────────────────
-function renderFixGain() {
-  const total = scoreIncrements.reduce((a,b)=>a+b,0);
-  const newScore = Math.min(100, currentScore + total);
-  document.getElementById("fixGain").style.display = "flex";
-  document.getElementById("fixNewScore").textContent = newScore;
-  document.getElementById("fixDelta").textContent = total;
-}
-
-function applyFix(step) {
-  if (fixDone[step]) return;
-  fixDone[step] = true;
-  const el = document.getElementById(`fixStep${step+1}`);
-  const btn = document.getElementById(`btnFix${step+1}`);
-  el.classList.add("step-done");
-  btn.textContent = "✓ Done";
-  btn.classList.add("done");
-  btn.disabled = true;
-
-  if (step === 0) {
-    // Open revoke.cash in new tab
-    window.open("https://revoke.cash", "_blank");
+// ── FIX MODE ──────────────────────────────────────────────────────
+function renderFixMode(d) {
+  // Update step descriptions to show real spenders
+  if (fixApprovals[0]) {
+    const el = document.querySelector("#fixStep1 .fix-step-desc");
+    if (el) el.textContent = `Remove unlimited allowance from ${fwShort(fixApprovals[0].spender)} (top-risk spender on ${fixApprovals[0].symbol}).`;
   }
+  if (fixApprovals[1]) {
+    const el = document.querySelector("#fixStep2 .fix-step-desc");
+    if (el) el.textContent = `Revoke unlimited approval granted to ${fwShort(fixApprovals[1].spender)}.`;
+  }
+
+  // Update button 1 to direct revoke if wallet connected
+  const btn1 = document.getElementById("btnFix1");
+  if (btn1 && window.wallet?.address && fixApprovals[0]) {
+    btn1.textContent = `Revoke ${fixApprovals[0].symbol} spender`;
+  }
+
+  renderFixGainPreview(d.score);
+}
+
+function renderFixGainPreview(score) {
+  const total = scoreIncrements.reduce((a,b)=>a+b,0);
+  const newScore = Math.min(100, score + total);
+  const el = document.getElementById("fixGain");
+  if (el) el.style.display = "flex";
+  const ns = document.getElementById("fixNewScore");
+  if (ns) ns.textContent = newScore;
+  const fd = document.getElementById("fixDelta");
+  if (fd) fd.textContent = total;
+}
+
+async function applyFix(step) {
+  if (fixDone[step]) return;
+  if (fwAccessTier !== "full") { requestFullAccess(); return; }
+
+  fixDone[step] = true;
+  const el  = document.getElementById(`fixStep${step+1}`);
+  const btn = document.getElementById(`btnFix${step+1}`);
+  if (!el || !btn) return;
+
+  const target = fixApprovals[step];
+
+  // Try real revoke if wallet and signer available
+  if (target && window.wallet?.signer && step === 0) {
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+    try {
+      const E = getE();
+      const c = new E.Contract(fwNorm(target.token), ERC20_APPROVE_ABI, window.wallet.signer);
+      const tx = await c.approve(fwNorm(target.spender), 0n);
+      btn.textContent = "Pending…";
+      await tx.wait();
+      btn.textContent = "✓ Revoked";
+    } catch(e) {
+      btn.textContent = "✓ Done (manual)";
+      if (step === 0) window.open("https://revoke.cash", "_blank");
+    }
+  } else if (step === 0) {
+    window.open("https://revoke.cash", "_blank");
+    btn.textContent = "✓ Opened revoke.cash";
+  } else {
+    btn.textContent = "✓ Done";
+  }
+
+  btn.disabled = true;
+  btn.classList.add("done");
+  el.classList.add("step-done");
 
   // Update score visually
-  currentScore = Math.min(100, currentScore + scoreIncrements[step]);
-  document.getElementById("scoreNum").textContent = currentScore;
+  fwCurrentScore = Math.min(100, fwCurrentScore + scoreIncrements[step]);
+  document.getElementById("scoreNum").textContent = fwCurrentScore;
   const circumference = 226.2;
-  const offset = circumference - (circumference * currentScore / 100);
-  document.getElementById("gaugeFill").style.strokeDashoffset = offset;
-  if (currentScore >= 70) {
-    document.getElementById("gaugeFill").style.stroke = "#ffd166";
-    document.getElementById("scoreDot").style.background = "#ffd166";
-    document.getElementById("scoreLabel").textContent = "Exposed";
-  }
-  if (currentScore >= 85) {
-    document.getElementById("gaugeFill").style.stroke = "#3cffb0";
-    document.getElementById("scoreDot").style.background = "#3cffb0";
-    document.getElementById("scoreLabel").textContent = "Protected";
-  }
+  document.getElementById("gaugeFill").style.strokeDashoffset = circumference - (circumference * fwCurrentScore / 100);
+  const color = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
+  document.getElementById("gaugeFill").style.stroke = color;
+  document.getElementById("scoreDot").style.background = color;
+  document.getElementById("scoreLabel").textContent = fwCurrentScore >= 85 ? "Protected" : fwCurrentScore >= 70 ? "Exposed" : "Vulnerable";
+  const ppScore = document.getElementById("ppScore");
+  if (ppScore) { ppScore.textContent = fwCurrentScore; ppScore.style.color = color; }
 
-  // Update passport score
-  document.getElementById("ppScore").textContent = currentScore;
-
-  // Check all done
   if (fixDone.every(Boolean)) {
-    document.getElementById("fixComplete").style.display = "flex";
-    document.getElementById("finalScore").textContent = currentScore;
+    const fc = document.getElementById("fixComplete");
+    if (fc) fc.style.display = "flex";
+    const fs = document.getElementById("finalScore");
+    if (fs) fs.textContent = fwCurrentScore;
   }
 }
 
-// ──────────────────────────────────────────
-// PASSPORT
-// ──────────────────────────────────────────
-function renderPassport(wallet, d) {
-  document.getElementById("ppWallet").textContent = shortAddr(wallet) + " · " + document.getElementById("netSelect").value.toUpperCase();
+async function revokeSpender(spender, token, btn) {
+  if (!window.wallet?.signer) { requestFullAccess(); return; }
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const E = getE();
+    const c = new E.Contract(fwNorm(token), ERC20_APPROVE_ABI, window.wallet.signer);
+    const tx = await c.approve(fwNorm(spender), 0n);
+    btn.textContent = "Pending…";
+    await tx.wait();
+    btn.textContent = "✓ Revoked";
+    btn.classList.add("done");
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = "Retry ↗";
+    window.open("https://revoke.cash", "_blank");
+  }
+}
+
+// ── PASSPORT ──────────────────────────────────────────────────────
+function renderPassport(wallet, d, tier) {
+  document.getElementById("ppWallet").textContent = fwShort(wallet) + " · " + fwNet.toUpperCase();
   document.getElementById("ppScore").textContent = d.score;
   document.getElementById("ppApprovals").textContent = d.riskyApprovals;
-  document.getElementById("ppBlast").textContent = d.blastAmt;
+  document.getElementById("ppBlast").textContent = d.unlimitedCount > 0 ? `${d.unlimitedCount} unlimited` : "Clean";
   document.getElementById("ppDrain").textContent = d.drainTime;
   document.getElementById("ppDate").textContent = "Scanned: " + today();
-  document.getElementById("ppChain").textContent = document.getElementById("netSelect").value.toUpperCase();
+  document.getElementById("ppChain").textContent = fwNet.toUpperCase();
 
-  // status badge
-  const statusEl = document.getElementById("ppStatus");
-  if (d.score < 45) { statusEl.textContent = "🧨 Critical"; statusEl.style.borderColor="rgba(255,71,87,.4)"; statusEl.style.color="#ff6b6b"; statusEl.style.background="rgba(255,71,87,.10)"; }
-  else if (d.score < 70) { statusEl.textContent = "⚠ Exposed"; }
-  else { statusEl.textContent = "✅ Protected"; statusEl.style.borderColor="rgba(93,255,178,.35)"; statusEl.style.color="var(--green)"; statusEl.style.background="rgba(93,255,178,.08)"; }
-
-  // score color
   const sc = d.score;
-  document.getElementById("ppScore").style.color = sc < 45 ? "#ff4757" : sc < 70 ? "#ffd166" : "#3cffb0";
+  const scoreEl = document.getElementById("ppScore");
+  if (scoreEl) scoreEl.style.color = sc < 45 ? "#ff4757" : sc < 70 ? "#ffd166" : "#3cffb0";
+
+  const statusEl = document.getElementById("ppStatus");
+  if (sc < 45) {
+    statusEl.textContent = "🧨 Critical";
+    statusEl.style.cssText = "border-color:rgba(255,71,87,.4);color:#ff6b6b;background:rgba(255,71,87,.10)";
+  } else if (sc < 70) {
+    statusEl.textContent = "⚠ Exposed";
+    statusEl.style.cssText = "border-color:rgba(255,193,7,.35);color:#ffd166;background:rgba(255,193,7,.10)";
+  } else {
+    statusEl.textContent = "✅ Protected";
+    statusEl.style.cssText = "border-color:rgba(93,255,178,.35);color:var(--green);background:rgba(93,255,178,.08)";
+  }
+
+  // Watermark: show for free, hide for full
+  const wm = document.getElementById("ppWatermark");
+  if (wm) wm.style.display = tier === "free" ? "flex" : "none";
 }
 
-function getPassportText(wallet) {
-  const score = document.getElementById("ppScore").textContent;
-  const blast = document.getElementById("ppBlast").textContent;
-  const drain = document.getElementById("ppDrain").textContent;
-  const net = document.getElementById("ppChain").textContent;
+function getPassportText() {
+  const score   = document.getElementById("ppScore")?.textContent || "—";
+  const blast   = document.getElementById("ppBlast")?.textContent || "—";
+  const drain   = document.getElementById("ppDrain")?.textContent || "—";
+  const net     = document.getElementById("ppChain")?.textContent || fwNet.toUpperCase();
+  const risky   = document.getElementById("ppApprovals")?.textContent || "—";
   return `🔥 CycleX Firewall Scan — ${today()}
 
-Wallet: ${shortAddr(wallet)}
+Wallet: ${fwShort(fwWallet)}
 Network: ${net}
 
 🛡 Firewall Score: ${score}/100
 💥 Blast Radius: ${blast}
 ⏱ Drain Time: ${drain}
-🎯 Risky Approvals: 7
+🎯 Risky Approvals: ${risky}
 
-Scan your wallet at: https://cyclex.io/firewall
+Scan your wallet → https://cyclex.io/firewall
 #CycleX #WalletSecurity #DeFi`;
 }
 
-// ──────────────────────────────────────────
-// RULE TEMPLATES
-// ──────────────────────────────────────────
+// ── RULE TEMPLATES ────────────────────────────────────────────────
 const RULES = [
-  { name: "🔒 Strict", desc: "No unlimited. Cap $50 for unknown. Alerts on any new spender.", badge: "ok", applied: false },
-  { name: "⚖ Balanced", desc: "Cap $200 for unknown. Whitelist major DEXes. Weekly review.", badge: "warn", applied: false },
-  { name: "📈 Trader", desc: "Allow known DEX unlimited. Alert on fresh/unknown spenders only.", badge: "warn", applied: false }
+  { name:"🔒 Strict",  desc:"No unlimited. Cap $50 for unknown. Alerts on any new spender.", applied:false },
+  { name:"⚖ Balanced", desc:"Cap $200 for unknown. Whitelist major DEXes. Weekly review.",   applied:false },
+  { name:"📈 Trader",  desc:"Allow known DEX unlimited. Alert on fresh/unknown spenders.",    applied:false }
 ];
 
 function renderRuleTemplates() {
@@ -1098,72 +1497,92 @@ function renderRuleTemplates() {
 function applyRule(i) {
   const btn = document.getElementById(`ruleBtn${i}`);
   if (!btn) return;
-  btn.textContent = "✓ Applied";
-  btn.classList.add("done");
-  btn.disabled = true;
-  RULES[i].applied = true;
-  showPassportMsg(`✅ Rule "${RULES[i].name}" applied to watchlist. You'll be alerted on violations.`);
+  btn.textContent = "✓ Applied"; btn.classList.add("done"); btn.disabled = true;
+  showPassportMsg(`✅ Rule "${RULES[i].name}" applied to watchlist.`);
 }
 
-// ──────────────────────────────────────────
-// EVENTS
-// ──────────────────────────────────────────
+// ── DEMO DATA ─────────────────────────────────────────────────────
+function getDemoApprovals() {
+  return [
+    { token:"0xdAC17F958D2ee523a2206206994597C13D831ec7", spender:"0x1111111254eeb25477b68fb85ed929f73a960582", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDT", risk:"medium", verified:true,  decimals:6 },
+    { token:"0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",  spender:"0x10ED43C718714eb63d5aA57B78B54704E256024E", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"WBNB", risk:"low",    verified:true,  decimals:18 },
+    { token:"0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82", spender:"0x6B175474E89094C44Da98b954EedeAC495271d0F", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"CAKE", risk:"high",   verified:false, decimals:18 },
+    { token:"0x2170Ed0880ac9A755fd29B2688956BD959F933F8", spender:"0xDef1C0ded9bec7F1a1670819833240f027b25EfF", allowance:"500000000000000000000", symbol:"ETH",  risk:"low",    verified:true,  decimals:18 },
+    { token:"0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",  spender:"0x44aD3F17960f0da287c3acEE50fe7f3c5D5B9B8E", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"BUSD", risk:"high",   verified:false, decimals:18 },
+    { token:"0x55d398326f99059fF775485246999027B3197955", spender:"0xba12222222228d8ba445958a75a0704d566bf2c8", allowance:"50000000000000000000000", symbol:"USDT", risk:"low",    verified:true,  decimals:18 },
+    { token:"0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", spender:"0xFD14567eaf9ba941cB8c8a94eEC14831ca7fD1b4", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDC", risk:"medium", verified:null,  decimals:18 }
+  ];
+}
+
+// ── UI EVENTS ─────────────────────────────────────────────────────
 function showPassportMsg(msg) {
   const el = document.getElementById("passportShared");
-  el.textContent = msg;
-  el.classList.add("show");
+  if (!el) return;
+  el.textContent = msg; el.classList.add("show");
   setTimeout(() => el.classList.remove("show"), 5000);
 }
 
+function startScan() {
+  let wallet = document.getElementById("walletInput").value.trim();
+  const net  = document.getElementById("netSelect").value;
+  const isDemo = !wallet || !fwIsAddr(wallet);
+  if (!wallet) wallet = DEMO_WALLET;
+  if (!fwIsAddr(wallet)) { alert("Please enter a valid wallet address (0x...)"); return; }
+  runLoadSequence(wallet, net, isDemo);
+}
+
+function resetLoadSteps() {
+  ["step1","step2","step3","step4"].forEach(s => {
+    const el = document.getElementById(s);
+    el?.classList.remove("active","done");
+    const icon = el?.querySelector(".step-icon");
+    if (icon) icon.textContent = "⟳";
+  });
+  const fill = document.getElementById("loadBarFill");
+  if (fill) fill.style.width = "0%";
+}
+
+// Button bindings
 document.getElementById("btnFix1").addEventListener("click", () => applyFix(0));
 document.getElementById("btnFix2").addEventListener("click", () => applyFix(1));
 document.getElementById("btnFix3").addEventListener("click", () => applyFix(2));
 
 document.getElementById("btnShareX").addEventListener("click", () => {
-  const wallet = document.getElementById("walletInput").value || DEMO_WALLET;
-  const text = encodeURIComponent(getPassportText(wallet));
-  window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank");
+  if (fwAccessTier !== "full") { requestFullAccess(); return; }
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getPassportText())}`, "_blank");
 });
 
 document.getElementById("btnCopyPassport").addEventListener("click", () => {
-  const wallet = document.getElementById("walletInput").value || DEMO_WALLET;
-  navigator.clipboard.writeText(getPassportText(wallet)).then(() => {
-    showPassportMsg("✅ Passport text copied to clipboard!");
-  }).catch(() => showPassportMsg("Copy failed — try manually."));
+  if (fwAccessTier !== "full") { requestFullAccess(); return; }
+  navigator.clipboard.writeText(getPassportText())
+    .then(() => showPassportMsg("✅ Passport text copied!"))
+    .catch(() => showPassportMsg("Copy failed — try manually."));
 });
 
 document.getElementById("btnCopyLink").addEventListener("click", () => {
-  const wallet = document.getElementById("walletInput").value || DEMO_WALLET;
-  const url = `${location.origin}/firewall?wallet=${wallet}&net=${document.getElementById("netSelect").value}`;
-  navigator.clipboard.writeText(url).then(() => {
-    showPassportMsg("✅ Share link copied!");
-  }).catch(() => showPassportMsg("Copy failed."));
+  const url = `${location.origin}/firewall?wallet=${fwWallet}&net=${fwNet}`;
+  navigator.clipboard.writeText(url)
+    .then(() => showPassportMsg("✅ Share link copied!"))
+    .catch(() => showPassportMsg("Copy failed."));
 });
 
 document.getElementById("btnRescan").addEventListener("click", () => {
-  const wallet = document.getElementById("walletInput").value || DEMO_WALLET;
   document.getElementById("dashboard").style.display = "none";
-  runLoadSequence(wallet);
+  resetLoadSteps();
+  runLoadSequence(fwWallet, fwNet, !fwWallet || fwWallet === DEMO_WALLET);
 });
 
 document.getElementById("btnNewScan").addEventListener("click", () => {
   document.getElementById("dashboard").style.display = "none";
   const hero = document.getElementById("heroSection");
-  hero.style.display = "block";
-  hero.style.opacity = "1";
-  hero.style.transform = "none";
+  hero.style.display = "block"; hero.style.opacity = "1"; hero.style.transform = "none";
   document.getElementById("walletInput").value = "";
   document.getElementById("walletInput").focus();
-  // reset load steps
-  ["step1","step2","step3","step4"].forEach(s => {
-    const el = document.getElementById(s);
-    el.classList.remove("active","done");
-    el.querySelector(".step-icon").textContent = "⟳";
-  });
-  document.getElementById("loadBarFill").style.width = "0%";
-  // reset fixes
-  fixDone = [false,false,false];
-  currentScore = DEMO_DATA.score;
+  resetLoadSteps();
+  fixDone = [false, false, false];
+  // hide gate again until next scan
+  const gate = document.getElementById("accessGateOverlay");
+  if (gate) gate.style.display = "none";
 });
 
 document.getElementById("btnRunFirewall").addEventListener("click", startScan);
@@ -1172,28 +1591,30 @@ document.getElementById("walletInput").addEventListener("keydown", e => { if (e.
 document.getElementById("demoHint").addEventListener("click", () => {
   document.getElementById("walletInput").value = DEMO_WALLET;
   document.getElementById("netSelect").value = "bsc";
-  startScan();
+  runLoadSequence(DEMO_WALLET, "bsc", true);
 });
 
-function startScan() {
-  let wallet = document.getElementById("walletInput").value.trim();
-  if (!wallet) wallet = DEMO_WALLET;
-  runLoadSequence(wallet);
-}
+// Top bar access button
+document.getElementById("btnTopAccess")?.addEventListener("click", requestFullAccess);
+document.getElementById("btnCheckAccess")?.addEventListener("click", requestFullAccess);
 
-// auto-run if wallet in URL
-function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
-
+// Auto-run from URL params
 (function checkAutoRun() {
-  const params = new URLSearchParams(location.search);
-  const w = params.get("wallet");
-  const n = params.get("net");
-  if (w) {
+  const p = new URLSearchParams(location.search);
+  const w = p.get("wallet");
+  const n = p.get("net");
+  if (w && fwIsAddr(w)) {
     document.getElementById("walletInput").value = w;
     if (n) document.getElementById("netSelect").value = n;
     startScan();
   }
 })();
+
+// Expose for onclick handlers
+window.requestFullAccess = requestFullAccess;
+window.revokeSpender     = revokeSpender;
+window.applyRule         = applyRule;
+window.applyFix          = applyFix;
 </script>
 </body>
 </html>
