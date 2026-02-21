@@ -10,6 +10,9 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="theme-color" content="#05060a">
 
+  <!-- Ethers (same version as main site) -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js" defer></script>
+
   <style>
     :root {
       --bg:#05060a;
@@ -409,6 +412,13 @@
       cursor:pointer;transition:all .2s ease
     }
     .btn-full-access-top:hover{background:rgba(124,92,255,.28);color:#c4a6ff}
+    /* Coming soon badge on disabled CYCX button */
+    .coming-soon-badge{
+      position:absolute;top:-8px;right:-4px;
+      background:linear-gradient(135deg,#ff9a6b,#ffd166);color:#03040a;
+      font-size:8px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+      padding:2px 6px;border-radius:999px;white-space:nowrap
+    }
 
     /* ── LOCKED SECTION ─────────────────────────── */
     .locked-section{position:relative}
@@ -521,13 +531,75 @@
             Hold <strong style="color:var(--purple)">≥100 CYCX</strong> or <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.
           </div>
           <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <!-- Connect & Check — triggers AppKit modal -->
             <button class="btn btn-full-access" id="btnCheckAccess">
               🔑 Connect &amp; Check Access
             </button>
-            <a href="/pass" target="_blank" class="btn btn-ghost" style="font-size:12px">Buy PASS ↗</a>
-            <a href="/token" target="_blank" class="btn btn-ghost" style="font-size:12px">Get CYCX ↗</a>
+            <!-- PASS: opens purchase popup -->
+            <button class="btn btn-ghost" id="btnBuyPass" style="font-size:12px">
+              🎫 Get PASS ↗
+            </button>
+            <!-- CYCX: disabled until TGE -->
+            <button class="btn btn-ghost" id="btnGetCycx" disabled title="CYCX token launching soon — stay tuned!" style="font-size:12px;opacity:.45;cursor:not-allowed;position:relative">
+              <span class="coming-soon-badge">Soon</span>
+              🪙 Get CYCX
+            </button>
           </div>
           <div id="gateStatus" style="margin-top:14px;font-size:12px;color:var(--muted);min-height:18px"></div>
+        </div>
+      </div>
+
+      <!-- PASS PURCHASE POPUP -->
+      <div id="passPopup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);align-items:center;justify-content:center">
+        <div style="
+          background:linear-gradient(135deg,rgba(12,14,28,1),rgba(18,10,40,1));
+          border:1px solid rgba(0,229,255,.3);border-radius:24px;padding:32px;
+          max-width:420px;width:calc(100% - 32px);position:relative;
+          box-shadow:0 24px 80px rgba(0,0,0,.7),0 0 40px rgba(0,229,255,.10);
+          animation:dashIn .3s ease-out
+        ">
+          <button id="closePassPopup" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1">✕</button>
+
+          <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-weight:800">🎫 CycleX PASS</div>
+          <div style="font-size:22px;font-weight:950;margin-bottom:8px;line-height:1.2">One token.<br>Full access. Forever.</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">
+            Hold <strong style="color:var(--cyan)">1 PASS token</strong> to unlock all premium features across the CycleX platform — no subscriptions, no expiry.
+          </div>
+
+          <!-- What you get -->
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:14px;margin-bottom:20px">
+            <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">What's included</div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> Firewall Fix Mode + real revoke</div>
+              <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> Full Blast Radius breakdown</div>
+              <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> Wallet Passport (verified, no watermark)</div>
+              <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> DNA Scanner full access + export</div>
+              <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> All future premium features</div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <!-- Primary CTA: PancakeSwap / DEX (update URL when live) -->
+            <a id="linkPassBuy" href="https://pancakeswap.finance/swap?outputCurrency=0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e" target="_blank" rel="noopener"
+               style="display:block;text-align:center;padding:14px;border-radius:999px;
+                      background:linear-gradient(135deg,#00e5ff,#7df2ff);color:#03040a;
+                      font-weight:900;font-size:14px;letter-spacing:.06em;text-transform:uppercase;
+                      text-decoration:none;transition:transform .2s,box-shadow .2s;
+                      box-shadow:0 14px 50px rgba(0,229,255,.32)"
+               onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+              Buy PASS on PancakeSwap ↗
+            </a>
+            <!-- Secondary: contract address copy -->
+            <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 14px">
+              <span style="font-size:10px;color:var(--muted);white-space:nowrap">PASS Contract:</span>
+              <span id="passContract" style="font-family:var(--mono);font-size:10px;color:var(--cyan);flex:1;word-break:break-all">0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e</span>
+              <button id="btnCopyPassAddr" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;flex:0 0 auto;padding:2px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.12)">Copy</button>
+            </div>
+          </div>
+
+          <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:14px;line-height:1.6;opacity:.7">
+            BSC network only · Verify contract on BscScan before buying
+          </div>
         </div>
       </div>
 
@@ -953,6 +1025,65 @@ function computeMetrics(approvals) {
   };
 }
 
+// ── APPKIT INTEGRATION ───────────────────────────────────────────
+const APPKIT_PROJECT_ID = "7886bcb95105e9e47337cec481d5de75";
+let _appkitLoadPromise = null;
+
+async function fwLoadAppKit() {
+  if (window.CxAppKitModal) return window.CxAppKitModal;
+  if (_appkitLoadPromise) return _appkitLoadPromise;
+  _appkitLoadPromise = (async () => {
+    const [{ createAppKit }, { EthersAdapter }, { bsc, mainnet }] = await Promise.all([
+      import("https://esm.sh/@reown/appkit@1.8.15"),
+      import("https://esm.sh/@reown/appkit-adapter-ethers@1.8.15"),
+      import("https://esm.sh/@reown/appkit/networks"),
+    ]);
+    const appkit = createAppKit({
+      adapters: [new EthersAdapter()],
+      networks: [bsc, mainnet],
+      defaultNetwork: bsc,
+      projectId: APPKIT_PROJECT_ID,
+      analytics: false,
+      metadata: {
+        name: "CycleX Firewall",
+        description: "CycleX Wallet Firewall",
+        url: window.location.origin,
+        icons: [`${window.location.origin}/logo.png`]
+      }
+    });
+    window.CxAppKitModal = appkit;
+    if (!window.E && window.ethers) window.E = window.ethers;
+    return appkit;
+  })();
+  return _appkitLoadPromise;
+}
+
+async function fwWaitForWallet(timeoutMs = 16000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (window.wallet?.address) return window.wallet.address;
+    try {
+      const p = window.CxAppKitModal?.getWalletProvider?.();
+      if (p) {
+        const Eth = window.E || window.ethers;
+        if (Eth) {
+          const web3Provider = new Eth.BrowserProvider(p);
+          const signer = await web3Provider.getSigner();
+          const address = await signer.getAddress();
+          if (address) {
+            if (!window.wallet) window.wallet = {};
+            window.wallet.address = address;
+            window.wallet.signer  = signer;
+            return address;
+          }
+        }
+      }
+    } catch {}
+    await wait(350);
+  }
+  return null;
+}
+
 // ── ACCESS GATE ──────────────────────────────────────────────────
 function setGateStatus(msg, color="#a0a0b0") {
   const el = document.getElementById("gateStatus");
@@ -960,80 +1091,91 @@ function setGateStatus(msg, color="#a0a0b0") {
 }
 
 async function checkCycxPass() {
-  const E = getE();
-  if (!E || !E.Contract) return { eligible:false, reason:"ethers_missing" };
-
+  const Eth = getE() || window.ethers;
+  if (!Eth?.Contract) return { eligible:false, reason:"ethers_missing" };
   const addr = window.wallet?.address;
   if (!addr) return { eligible:false, reason:"no_wallet" };
 
   try {
+    const runCheck = async (provider) => {
+      const cycxC = new Eth.Contract(CYCX_BSC, GATE_ABI, provider);
+      const passC = new Eth.Contract(PASS_BSC, GATE_ABI, provider);
+      let cycxDec = 18n;
+      try { cycxDec = BigInt(await cycxC.decimals()); } catch {}
+      const [cycxBal, passBal] = await Promise.all([
+        cycxC.balanceOf(addr).catch(()=>0n),
+        passC.balanceOf(addr).catch(()=>0n)
+      ]);
+      const cycxMin = CYCX_MIN * (10n ** cycxDec);
+      return {
+        eligible: BigInt(passBal) >= PASS_MIN || BigInt(cycxBal) >= cycxMin,
+        hasPass:  BigInt(passBal) >= PASS_MIN,
+        hasCycx:  BigInt(cycxBal) >= cycxMin
+      };
+    };
+
+    if (typeof withRpcFallback === "function") {
+      const r = await withRpcFallback("bsc", runCheck, { timeoutMs:9000 });
+      if (!r.ok) return { eligible:false, reason:"rpc_failed" };
+      return { ok:true, ...r.res };
+    }
     const provider = getRPC("bsc");
     if (!provider) return { eligible:false, reason:"no_rpc" };
-
-    const cycxC = new E.Contract(CYCX_BSC, GATE_ABI, provider);
-    const passC = new E.Contract(PASS_BSC, GATE_ABI, provider);
-
-    let cycxDec = 18n;
-    try { cycxDec = BigInt(await cycxC.decimals()); } catch {}
-
-    const [cycxBal, passBal] = await Promise.all([
-      cycxC.balanceOf(addr).catch(()=>0n),
-      passC.balanceOf(addr).catch(()=>0n)
-    ]);
-
-    const cycxMin = CYCX_MIN * (10n ** cycxDec);
-    const hasPass = BigInt(passBal) >= PASS_MIN;
-    const hasCycx = BigInt(cycxBal) >= cycxMin;
-
-    return { eligible: hasPass || hasCycx, hasPass, hasCycx };
-  } catch (e) {
+    return { ok:true, ...(await runCheck(provider)) };
+  } catch(e) {
     return { eligible:false, reason: e.message };
   }
 }
 
 async function requestFullAccess() {
-  if (fwAccessTier === "full") return; // already unlocked
+  if (fwAccessTier === "full") return;
+  setGateStatus("Loading wallet module…", "#a87eff");
 
-  setGateStatus("Checking access…", "#a87eff");
+  let appkit;
+  try {
+    appkit = await fwLoadAppKit();
+  } catch(e) {
+    setGateStatus("Could not load wallet module. Check your connection.", "#ff7a8a");
+    return;
+  }
 
-  // Try to connect wallet if not connected
   if (!window.wallet?.address) {
     try {
-      if (typeof window.cxConnectWallet === "function") {
-        const ok = await window.cxConnectWallet({ silent:false });
-        if (!ok) { setGateStatus("Wallet connect cancelled.", "#ff9a6b"); return; }
-      } else if (typeof window.connectWallet === "function") {
-        await window.connectWallet();
-      } else {
-        // Try clicking existing connect button
-        const btn = document.querySelector("#btn-connect, #connectWallet, [data-cx-connect]");
-        if (btn) { btn.click(); await wait(800); }
-        else { setGateStatus("No wallet found. Please connect via the main site.", "#ff9a6b"); return; }
-      }
-      await wait(300);
+      setGateStatus("Opening wallet connect…", "#a87eff");
+      await appkit.open();
+      const addr = await fwWaitForWallet(20000);
+      if (!addr) { setGateStatus("Wallet not connected. Please try again.", "#ff9a6b"); return; }
     } catch(e) {
-      setGateStatus("Connect failed: " + e.message, "#ff7a8a");
+      setGateStatus("Connect cancelled or failed.", "#ff9a6b");
       return;
     }
   }
 
-  setGateStatus("Checking CYCX / PASS balance…", "#a87eff");
+  setGateStatus("Checking CYCX / PASS on BSC…", "#a87eff");
   const res = await checkCycxPass();
+  const eligible = res.eligible === true || (res.ok && res.eligible);
 
-  if (res.eligible) {
-    const reason = res.hasPass ? "PASS token" : `${CYCX_MIN}+ CYCX`;
-    setGateStatus(`✓ Eligible (${reason}) — unlocking full access!`, "#5dffb2");
-    await wait(800);
+  if (eligible) {
+    const why = res.hasPass ? "PASS ✓" : `${Number(CYCX_MIN)} CYCX ✓`;
+    setGateStatus(`Eligible (${why}) — unlocking!`, "#5dffb2");
+    await wait(700);
     unlockFull();
     if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
-  } else {
-    const msg = res.reason === "no_wallet" ? "No wallet connected."
-      : res.reason === "ethers_missing" ? "Ethers.js not loaded."
-      : res.reason === "no_rpc" ? "RPC unavailable. Try again."
-      : `Not eligible. Need ≥${CYCX_MIN} CYCX or 1 PASS on BSC.`;
-    setGateStatus(msg, "#ff7a8a");
+    return;
   }
+
+  const msg =
+    res.reason === "no_wallet"      ? "Wallet not detected." :
+    res.reason === "ethers_missing" ? "Ethers.js not loaded. Refresh and try again." :
+    res.reason === "rpc_failed"     ? "BSC RPC check failed. Try again." :
+    res.reason === "no_rpc"         ? "BSC RPC unavailable. Try again." :
+    `Not eligible. Need ≥${Number(CYCX_MIN)} CYCX or 1 PASS on BSC.`;
+  setGateStatus(msg, "#ff7a8a");
 }
+
+// ── PASS POPUP ────────────────────────────────────────────────────
+function openPassPopup()  { const el = document.getElementById("passPopup"); if(el) el.style.display="flex"; }
+function closePassPopup() { const el = document.getElementById("passPopup"); if(el) el.style.display="none"; }
 
 function unlockFull() {
   fwAccessTier = "full";
@@ -1597,6 +1739,25 @@ document.getElementById("demoHint").addEventListener("click", () => {
 // Top bar access button
 document.getElementById("btnTopAccess")?.addEventListener("click", requestFullAccess);
 document.getElementById("btnCheckAccess")?.addEventListener("click", requestFullAccess);
+
+// PASS popup
+document.getElementById("btnBuyPass")?.addEventListener("click", openPassPopup);
+document.getElementById("closePassPopup")?.addEventListener("click", closePassPopup);
+document.getElementById("passPopup")?.addEventListener("click", e => {
+  if (e.target.id === "passPopup") closePassPopup();
+});
+document.getElementById("btnCopyPassAddr")?.addEventListener("click", () => {
+  navigator.clipboard.writeText("0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e").then(() => {
+    const btn = document.getElementById("btnCopyPassAddr");
+    if (btn) { const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(()=>btn.textContent=p, 1500); }
+  });
+});
+// CYCX disabled tooltip
+document.getElementById("btnGetCycx")?.addEventListener("click", () => {
+  setGateStatus("🪙 CYCX token is launching soon — follow https://x.com/CyclexNetwork for the announcement!", "#ffd166");
+});
+// Expose popup for lock overlays
+window.openPassPopup = openPassPopup;
 
 // Auto-run from URL params
 (function checkAutoRun() {
