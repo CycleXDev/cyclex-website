@@ -648,11 +648,12 @@
       </div>
 
       <!-- PASS PURCHASE POPUP -->
-      <div id="passPopup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);align-items:center;justify-content:center">
+      <div id="passPopup" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:16px">
         <div style="
           background:linear-gradient(135deg,rgba(12,14,28,1),rgba(18,10,40,1));
           border:1px solid rgba(0,229,255,.3);border-radius:24px;padding:32px;
-          max-width:420px;width:calc(100% - 32px);position:relative;
+          max-width:460px;width:100%;max-height:calc(100dvh - 40px);overflow-y:auto;
+          position:relative;margin:auto;
           box-shadow:0 24px 80px rgba(0,0,0,.7),0 0 40px rgba(0,229,255,.10);
           animation:dashIn .3s ease-out
         ">
@@ -678,7 +679,7 @@
 
           <div style="display:flex;flex-direction:column;gap:10px">
             <!-- Primary CTA: PancakeSwap / DEX (update URL when live) -->
-            <a id="linkPassBuy" href="https://pancakeswap.finance/swap?outputCurrency=0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e" target="_blank" rel="noopener"
+            <a id="linkPassBuy" href="/pass" target="_self"
                style="display:block;text-align:center;padding:14px;border-radius:999px;
                       background:linear-gradient(135deg,#00e5ff,#7df2ff);color:#03040a;
                       font-weight:900;font-size:14px;letter-spacing:.06em;text-transform:uppercase;
@@ -1443,6 +1444,48 @@ const GATE_ABI = [
   "function balanceOf(address) view returns (uint256)",
   "function decimals() view returns (uint8)"
 ];
+
+// ── BSC RPC FALLBACK (9 public nodes, tries in order) ───────────
+const FW_BSC_RPCS = [
+  "https://bsc-dataseed.binance.org",
+  "https://bsc-dataseed1.binance.org",
+  "https://bsc-dataseed2.binance.org",
+  "https://bsc-dataseed3.binance.org",
+  "https://bsc-dataseed4.binance.org",
+  "https://rpc.ankr.com/bsc",
+  "https://bsc-rpc.publicnode.com",
+  "https://bsc.meowrpc.com",
+  "https://bsc-mainnet.public.blastapi.io"
+];
+
+const _fwRpcCache = new Map();
+function fwGetProvider(url) {
+  if (_fwRpcCache.has(url)) return _fwRpcCache.get(url);
+  const Eth = window.E || window.ethers;
+  if (!Eth?.JsonRpcProvider) return null;
+  try {
+    const n = Eth.Network.from({ name: "bnb", chainId: 56 });
+    const p = new Eth.JsonRpcProvider(url, n, { staticNetwork: n });
+    _fwRpcCache.set(url, p);
+    return p;
+  } catch { return null; }
+}
+
+async function fwWithRpcFallback(fn, { timeoutMs = 10000 } = {}) {
+  let lastErr = null;
+  for (const url of FW_BSC_RPCS) {
+    const provider = fwGetProvider(url);
+    if (!provider) continue;
+    try {
+      const res = await Promise.race([
+        fn(provider),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), timeoutMs))
+      ]);
+      return { ok: true, res };
+    } catch(e) { lastErr = e; }
+  }
+  return { ok: false, err: lastErr || new Error("All BSC RPCs failed") };
+}
 const ERC20_APPROVE_ABI = ["function approve(address spender, uint256 amount) returns (bool)"];
 
 // ── STATE ────────────────────────────────────────────────────────
@@ -1636,12 +1679,12 @@ function computeMetrics(approvals) {
   };
 }
 
-// ── APPKIT INTEGRATION (fw delegates to shared loader) ──────────
-// ── APPKIT ─────────────────────────────────────────────────────
-// fwLoadAppKit delegates to the shared loadAppKit() above.
-// This avoids duplicate let/const at module scope.
+// ── APPKIT ───────────────────────────────────────────────────────
+// fwLoadAppKit = alias to the shared loadAppKit() declared above.
+// Avoids duplicate let _appkitLoadPromise at module scope.
 const fwLoadAppKit = () => loadAppKit();
 
+async function fwWaitForWallet(timeoutMs = 16000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     if (window.wallet?.address) return window.wallet.address;
