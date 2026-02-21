@@ -11,6 +11,684 @@
   <meta name="theme-color" content="#05060a">
 
   <!-- Ethers (same version as main site) -->
+  <style>
+    :root {
+      --bg:#05060a;
+      --cyan:#00e5ff;
+      --green:#5dffb2;
+      --purple:#7c5cff;
+      --red:#ff4757;
+      --yellow:#ffd166;
+      --text:rgba(244,246,255,1);
+      --muted:rgba(244,246,255,.65);
+      --card:rgba(255,255,255,.055);
+      --border:rgba(255,255,255,.12);
+      --radius:22px;
+      --radius-sm:14px;
+      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      --sans:system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100%;overflow-x:hidden}
+    html{font-size:16px;background:#05060a!important}
+    body{
+      font-family:var(--sans);
+      background:
+        radial-gradient(1200px 720px at 14% 10%,rgba(124,92,255,.20),transparent 58%),
+        radial-gradient(1200px 720px at 86% 12%,rgba(0,229,255,.18),transparent 56%),
+        radial-gradient(980px 680px at 55% 120%,rgba(0,58,76,.42),transparent 62%),
+        linear-gradient(160deg,#05060a,#0b0a18,#021b24)!important;
+      background-repeat:no-repeat!important;
+      background-attachment:fixed!important;
+      background-size:cover!important;
+      color:var(--text);
+      min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+    }
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;
+      background:
+        radial-gradient(740px 640px at 20% 14%,rgba(0,229,255,.10),transparent 60%),
+        radial-gradient(940px 780px at 78% 18%,rgba(124,92,255,.09),transparent 62%),
+        radial-gradient(820px 700px at 52% 78%,rgba(93,255,178,.06),transparent 64%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+      background-size:auto,auto,auto,260px 260px;
+      background-repeat:no-repeat,no-repeat,no-repeat,repeat;
+      opacity:.10;mix-blend-mode:overlay;z-index:0
+    }
+    a{color:inherit;text-decoration:none}
+
+    /* ── PAGE SHELL ─────────────────────────────── */
+    .page-shell{width:100%;max-width:1160px;margin:0 auto;padding:32px 20px 80px;position:relative;z-index:1}
+
+    /* ── TOP BAR ────────────────────────────────── */
+    .top-bar{
+      position:sticky;top:14px;z-index:999;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:12px 16px;margin:0 auto 36px;
+      width:min(1160px,calc(100% - 24px));
+      border-radius:999px;
+      background:rgba(10,12,22,.55);
+      border:1px solid rgba(255,255,255,.14);
+      backdrop-filter:blur(18px) saturate(1.12);
+      -webkit-backdrop-filter:blur(18px) saturate(1.12);
+      box-shadow:0 14px 50px rgba(0,0,0,.50),inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .top-bar::before{
+      content:"";position:absolute;inset:0;border-radius:999px;padding:1px;
+      background:linear-gradient(120deg,rgba(0,229,255,.22),rgba(124,92,255,.16),rgba(255,255,255,.10));
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.55
+    }
+    .brand{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+    .brand-logo{width:42px;height:42px;border-radius:14px;object-fit:contain;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);box-shadow:0 12px 32px rgba(0,0,0,.7);flex:0 0 auto}
+    .brand-text{display:flex;flex-direction:column;gap:2px}
+    .brand-title{font-weight:950;letter-spacing:.10em;font-size:13px;text-transform:uppercase;white-space:nowrap}
+    .brand-sub{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(244,246,255,.56);white-space:nowrap}
+    .top-right{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+    .back-link{
+      font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+      color:rgba(244,246,255,.72);padding:8px 14px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);
+      transition:all .18s ease;cursor:pointer
+    }
+    .back-link:hover{background:rgba(255,255,255,.08);color:var(--text)}
+    .firewall-badge{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:6px 12px;border-radius:999px;
+      border:1px solid rgba(255,80,80,.35);background:rgba(255,80,80,.10);
+      font-size:11px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;
+      color:#ff6b6b
+    }
+    .firewall-badge .dot{width:7px;height:7px;border-radius:50%;background:#ff4757;animation:pulse 1.8s infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+
+    /* ── HERO ───────────────────────────────────── */
+    .hero{position:relative;max-width:1100px;margin:10px auto 32px;padding:10px 0 24px;text-align:center;z-index:1}
+    .hero-kicker{
+      display:inline-flex;align-items:center;gap:8px;
+      font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+      color:rgba(255,100,100,.92);margin-bottom:18px;
+      padding:6px 14px;border-radius:999px;border:1px solid rgba(255,80,80,.22);background:rgba(255,80,80,.08)
+    }
+    .hero-title{
+      font-size:clamp(42px,5vw,80px);line-height:1.10;font-weight:950;letter-spacing:-.04em;
+      margin-bottom:14px;
+      background:linear-gradient(110deg,rgba(244,246,255,1) 0%,rgba(255,150,100,.95) 35%,rgba(255,80,80,.90) 65%,rgba(124,92,255,.88) 100%);
+      -webkit-background-clip:text;background-clip:text;color:transparent;
+      background-size:200% 200%;animation:titleSheen 6s ease-in-out infinite
+    }
+    @keyframes titleSheen{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+    .hero-sub{max-width:68ch;margin:0 auto 28px;font-size:16px;line-height:1.75;color:var(--muted)}
+
+    /* ── WALLET INPUT BAR ───────────────────────── */
+    .scan-bar{
+      display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto;
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.16);
+      border-radius:999px;padding:7px 7px 7px 22px;
+      box-shadow:0 18px 60px rgba(0,0,0,.50),inset 0 1px 0 rgba(255,255,255,.06);
+      transition:border-color .22s ease,box-shadow .22s ease
+    }
+    .scan-bar:focus-within{border-color:rgba(255,100,80,.45);box-shadow:0 18px 60px rgba(0,0,0,.50),0 0 0 3px rgba(255,80,80,.10)}
+    .scan-bar input{
+      flex:1;background:transparent;border:none;outline:none;
+      font-family:var(--mono);font-size:14px;color:var(--text);
+      placeholder-color:var(--muted)
+    }
+    .scan-bar input::placeholder{color:var(--muted)}
+    .scan-net{
+      background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+      color:var(--text);font-size:12px;padding:8px 12px;border-radius:999px;outline:none;cursor:pointer
+    }
+    .btn-scan{
+      background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff;
+      border:none;border-radius:999px;padding:12px 22px;
+      font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+      cursor:pointer;white-space:nowrap;transition:transform .2s ease,box-shadow .2s ease;
+      box-shadow:0 14px 42px rgba(255,71,87,.38)
+    }
+    .btn-scan:hover{transform:translateY(-1px);box-shadow:0 20px 60px rgba(255,71,87,.52)}
+    .btn-scan:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .hero-micro{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:10px;margin:14px 0 0;font-size:12px;color:var(--muted)}
+    .micro-dot{opacity:.38;margin:0 2px}
+    .demo-hint{
+      margin-top:12px;font-size:12px;color:rgba(255,160,100,.75);cursor:pointer;
+      text-decoration:underline;text-underline-offset:3px;opacity:.85;transition:opacity .2s
+    }
+    .demo-hint:hover{opacity:1}
+
+    /* ── LOADING BAR ────────────────────────────── */
+    #loadWrap{display:none;max-width:760px;margin:28px auto 0;text-align:center}
+    .load-label{font-size:13px;color:var(--muted);margin-bottom:12px;letter-spacing:.04em}
+    .load-steps{display:flex;flex-direction:column;gap:8px;max-width:420px;margin:0 auto 16px}
+    .load-step{
+      display:flex;align-items:center;gap:12px;padding:10px 14px;
+      border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);
+      font-size:13px;color:var(--muted);opacity:.45;transition:opacity .3s,border-color .3s
+    }
+    .load-step.active{opacity:1;border-color:rgba(255,100,80,.35);color:var(--text)}
+    .load-step.done{opacity:.8;color:var(--green)}
+    .load-step .step-icon{width:22px;height:22px;border-radius:50%;border:2px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:10px;flex:0 0 auto}
+    .load-step.active .step-icon{border-color:rgba(255,100,80,.6);animation:spin .8s linear infinite}
+    .load-step.done .step-icon{border-color:var(--green);background:rgba(93,255,178,.12)}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .load-bar{height:3px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;max-width:420px;margin:0 auto}
+    .load-bar-fill{height:100%;background:linear-gradient(90deg,#ff4757,#ff9a6b,#ffcc5c);border-radius:999px;width:0%;transition:width .4s ease}
+
+    /* ── DASHBOARD ──────────────────────────────── */
+    #dashboard{display:none;animation:dashIn .5s ease-out forwards}
+    @keyframes dashIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+    .section-title{
+      font-size:11px;letter-spacing:.20em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px
+    }
+    .section-title::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.08)}
+
+    /* Score bar (top 3) */
+    .top3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+    .score-card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:22px 20px;box-shadow:0 20px 55px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05);
+      position:relative;overflow:hidden;transition:transform .18s ease,border-color .18s ease
+    }
+    .score-card:hover{transform:translateY(-2px)}
+    .score-card::before{content:"";position:absolute;inset:0;border-radius:var(--radius);opacity:.12;pointer-events:none}
+    .score-card.card-score::before{background:radial-gradient(circle at 50% -20%,rgba(255,71,87,.6),transparent 60%)}
+    .score-card.card-blast::before{background:radial-gradient(circle at 50% -20%,rgba(255,193,7,.5),transparent 60%)}
+    .score-card.card-drain::before{background:radial-gradient(circle at 50% -20%,rgba(0,229,255,.4),transparent 60%)}
+    .sc-kicker{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+    .sc-big{font-size:clamp(38px,4vw,56px);font-weight:950;letter-spacing:-.02em;line-height:1}
+    .sc-unit{font-size:16px;font-weight:700;opacity:.7;margin-left:4px}
+    .sc-label{margin-top:10px;font-size:13px;display:flex;align-items:center;gap:8px}
+    .sc-dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+    /* score gauge */
+    .gauge-wrap{position:relative;width:90px;height:90px;margin:0 auto 6px}
+    .gauge-svg{transform:rotate(-90deg)}
+    .gauge-track{fill:none;stroke:rgba(255,255,255,.08);stroke-width:8}
+    .gauge-fill{fill:none;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1)}
+    .gauge-num{
+      position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      font-size:22px;font-weight:950;letter-spacing:-.02em
+    }
+    .gauge-num small{font-size:9px;font-weight:700;opacity:.6;letter-spacing:.14em;text-transform:uppercase;margin-top:1px}
+
+    /* blast + drain cards */
+    .blast-amount{font-size:clamp(30px,3.5vw,46px);font-weight:950;letter-spacing:-.02em;color:#ffd166}
+    .drain-time{font-size:clamp(30px,3.5vw,46px);font-weight:950;letter-spacing:-.02em;color:var(--red)}
+    .drain-fast{animation:drainPulse 2s ease-in-out infinite}
+    @keyframes drainPulse{0%,100%{opacity:1}50%{opacity:.7}}
+    .card-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    .meta-chip{
+      display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
+      font-size:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);
+      color:var(--muted)
+    }
+    .meta-chip.warn{border-color:rgba(255,193,7,.3);background:rgba(255,193,7,.08);color:#ffd166}
+    .meta-chip.bad{border-color:rgba(255,71,87,.3);background:rgba(255,71,87,.09);color:#ff6b6b}
+    .meta-chip.ok{border-color:rgba(93,255,178,.3);background:rgba(93,255,178,.09);color:var(--green)}
+
+    /* ── MAIN GRID ──────────────────────────────── */
+    .main-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px}
+
+    /* Exposure Map */
+    .exp-card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:20px;box-shadow:0 20px 55px rgba(0,0,0,.55)
+    }
+    .exp-title{font-size:14px;font-weight:800;margin-bottom:4px}
+    .exp-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+    #exposureMap{width:100%;height:280px;background:rgba(0,0,0,.2);border-radius:16px;border:1px solid rgba(255,255,255,.06);overflow:hidden}
+
+    /* Top Threats */
+    .threats-card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:20px;box-shadow:0 20px 55px rgba(0,0,0,.55)
+    }
+    .threat-item{
+      padding:12px 0;border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:8px
+    }
+    .threat-item:last-child{border-bottom:none;padding-bottom:0}
+    .threat-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .threat-name{font-size:13px;font-weight:800;font-family:var(--mono)}
+    .threat-damage{font-size:12px;font-weight:900;color:#ff6b6b}
+    .threat-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .threat-why{font-size:11px;color:var(--muted);flex:1 1 100%}
+    .btn-fix-small{
+      padding:5px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      border:1px solid rgba(255,193,7,.4);background:rgba(255,193,7,.10);color:#ffd166;
+      cursor:pointer;transition:all .18s ease;white-space:nowrap
+    }
+    .btn-fix-small:hover{background:rgba(255,193,7,.18);border-color:rgba(255,193,7,.6)}
+    .btn-fix-small.fixed{border-color:rgba(93,255,178,.4);background:rgba(93,255,178,.10);color:var(--green);cursor:default}
+
+    /* ── FIX MODE ───────────────────────────────── */
+    .fix-card{
+      background:var(--card);border:1px solid rgba(255,193,7,.22);border-radius:var(--radius);
+      padding:22px;box-shadow:0 20px 55px rgba(0,0,0,.55),0 0 0 1px rgba(255,193,7,.10),0 0 28px rgba(255,193,7,.08);
+      margin-bottom:16px
+    }
+    .fix-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .fix-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .fix-step{
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);border-radius:16px;
+      padding:16px 14px;position:relative;overflow:hidden;transition:all .22s ease
+    }
+    .fix-step.step-done{border-color:rgba(93,255,178,.25);background:rgba(93,255,178,.06)}
+    .fix-step.step-done::before{
+      content:"✓";position:absolute;top:10px;right:12px;font-size:14px;font-weight:900;
+      color:var(--green);opacity:.8
+    }
+    .fix-step-num{
+      width:28px;height:28px;border-radius:50%;
+      background:linear-gradient(135deg,rgba(255,71,87,.3),rgba(255,150,80,.3));
+      border:1px solid rgba(255,100,80,.3);display:flex;align-items:center;justify-content:center;
+      font-size:12px;font-weight:900;color:#ff9a6b;margin-bottom:10px
+    }
+    .fix-step.step-done .fix-step-num{
+      background:rgba(93,255,178,.15);border-color:rgba(93,255,178,.3);color:var(--green)
+    }
+    .fix-step-title{font-size:13px;font-weight:800;margin-bottom:4px}
+    .fix-step-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+    .btn-action{
+      width:100%;padding:9px 12px;border-radius:999px;font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+      border:1px solid rgba(255,100,80,.4);background:rgba(255,80,80,.10);color:#ff8080;
+      cursor:pointer;transition:all .2s ease
+    }
+    .btn-action:hover{background:rgba(255,80,80,.18);transform:translateY(-1px)}
+    .btn-action:disabled{opacity:.45;cursor:not-allowed;transform:none}
+    .btn-action.done{border-color:rgba(93,255,178,.35);background:rgba(93,255,178,.10);color:var(--green);cursor:default}
+    .fix-score-gain{
+      margin-top:16px;padding:12px 16px;border-radius:12px;
+      background:rgba(93,255,178,.06);border:1px solid rgba(93,255,178,.18);
+      font-size:13px;color:var(--green);display:flex;align-items:center;gap:10px
+    }
+    .fix-score-gain strong{font-size:18px;font-weight:950}
+
+    /* ── PASSPORT ───────────────────────────────── */
+    .passport-wrap{
+      background:var(--card);border:1px solid rgba(0,229,255,.22);border-radius:var(--radius);
+      padding:22px;box-shadow:0 20px 55px rgba(0,0,0,.55),0 0 28px rgba(0,229,255,.08);
+      margin-bottom:16px
+    }
+    .passport-inner{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+    .passport-card-preview{
+      background:linear-gradient(135deg,rgba(5,6,10,1),rgba(20,10,38,1));
+      border:1px solid rgba(0,229,255,.3);border-radius:18px;padding:20px;
+      box-shadow:0 12px 40px rgba(0,0,0,.6),0 0 60px rgba(0,229,255,.08);
+      position:relative;overflow:hidden
+    }
+    .passport-card-preview::before{
+      content:"";position:absolute;top:-40px;right:-40px;width:160px;height:160px;
+      border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,.12),transparent 70%)
+    }
+    .pp-logo{font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .pp-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+    .pp-wallet{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:14px;word-break:break-all}
+    .pp-score-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .pp-score-big{font-size:40px;font-weight:950;letter-spacing:-.03em}
+    .pp-score-label{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+    .pp-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+    .pp-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px}
+    .pp-stat-val{font-size:16px;font-weight:900}
+    .pp-stat-key{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+    .pp-status{
+      display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
+      border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+      border:1px solid rgba(255,193,7,.35);background:rgba(255,193,7,.10);color:#ffd166
+    }
+    .pp-date{font-size:10px;color:var(--muted);margin-top:10px;font-family:var(--mono)}
+
+    .passport-actions{display:flex;flex-direction:column;gap:12px}
+    .passport-actions h3{font-size:16px;font-weight:800;margin-bottom:4px}
+    .passport-actions p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+    .btn-passport{
+      padding:12px 18px;border-radius:999px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      cursor:pointer;transition:all .2s ease;width:100%;text-align:center;
+      border:1px solid rgba(0,229,255,.35);background:rgba(0,229,255,.10);color:var(--cyan);
+      box-shadow:0 8px 24px rgba(0,229,255,.12)
+    }
+    .btn-passport:hover{background:rgba(0,229,255,.18);transform:translateY(-1px);box-shadow:0 14px 34px rgba(0,229,255,.20)}
+    .btn-passport.secondary{border-color:rgba(255,255,255,.16);background:rgba(255,255,255,.04);color:var(--text)}
+    .passport-shared{
+      padding:10px 14px;border-radius:12px;border:1px solid rgba(93,255,178,.25);
+      background:rgba(93,255,178,.07);color:var(--green);font-size:12px;
+      display:none;margin-top:4px;line-height:1.5
+    }
+    .passport-shared.show{display:block}
+
+    /* ── GENERAL SHARED ─────────────────────────── */
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      border-radius:999px;border:1px solid transparent;padding:11px 22px;
+      font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+      cursor:pointer;transition:all .22s ease;user-select:none;white-space:nowrap
+    }
+    .btn-primary{background:linear-gradient(135deg,#00e5ff,#7df2ff);color:#03040a;box-shadow:0 14px 50px rgba(0,229,255,.32)}
+    .btn-primary:hover{transform:translateY(-1px);box-shadow:0 22px 70px rgba(0,229,255,.48)}
+    .btn-ghost{background:rgba(255,255,255,.04);color:var(--text);border-color:rgba(255,255,255,.14);backdrop-filter:blur(14px)}
+    .btn-ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(0,229,255,.24);transform:translateY(-1px)}
+
+    /* status dots */
+    .sig{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--muted)}
+    .sig.bad{border-color:rgba(220,53,69,.25);background:rgba(220,53,69,.10);color:#ff7a8a}
+    .sig.warn{border-color:rgba(255,193,7,.25);background:rgba(255,193,7,.08);color:#ffd166}
+    .sig.ok{border-color:rgba(0,230,118,.25);background:rgba(0,230,118,.08);color:#78ffbf}
+    .sig-dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.9;flex:0 0 auto}
+
+    /* ── FOOTER ─────────────────────────────────── */
+    .footer{border-top:1px solid rgba(255,255,255,.06);margin-top:32px;padding-top:18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}
+    .footer-brand{color:var(--cyan);font-weight:700}
+    .footer-note{font-size:11px;opacity:.7;max-width:580px;line-height:1.5}
+
+    /* ── RESPONSIVE ─────────────────────────────── */
+    @media (max-width:900px){.top3{grid-template-columns:1fr 1fr}.top3 .score-card.card-score{grid-column:1/-1}}
+    @media (max-width:780px){.main-grid{grid-template-columns:1fr}.fix-steps{grid-template-columns:1fr}.passport-inner{grid-template-columns:1fr}.top3{grid-template-columns:1fr}}
+    @media (max-width:640px){.scan-bar{flex-wrap:wrap;border-radius:20px;padding:12px 14px}.scan-bar input{width:100%;flex:1 1 100%}.scan-net,.btn-scan{flex:1 1 calc(50% - 5px)}}
+    @media (min-width:901px){html{zoom:1.10}}
+
+    /* ── NOTICE ─────────────────────────────────── */
+    .notice{
+      max-width:760px;margin:0 auto 24px;padding:12px 18px;border-radius:14px;
+      border:1px solid rgba(255,193,7,.22);background:rgba(255,193,7,.07);
+      font-size:12px;color:rgba(244,246,255,.72);line-height:1.5;text-align:center
+    }
+    .notice strong{color:#ffd166}
+
+    /* ── FULL ACCESS BUTTON ───────────────────────── */
+    .btn-full-access{
+      background:linear-gradient(135deg,#7c5cff,#a87eff);color:#fff;
+      border:none;border-radius:999px;padding:13px 24px;
+      font-size:13px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+      cursor:pointer;white-space:nowrap;transition:transform .2s ease,box-shadow .2s ease;
+      box-shadow:0 14px 42px rgba(124,92,255,.42)
+    }
+    .btn-full-access:hover{transform:translateY(-1px);box-shadow:0 20px 60px rgba(124,92,255,.58)}
+    .btn-full-access-top{
+      background:rgba(124,92,255,.15);border:1px solid rgba(124,92,255,.35);color:#a87eff;
+      border-radius:999px;padding:8px 14px;font-size:11px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;
+      cursor:pointer;transition:all .2s ease
+    }
+    .btn-full-access-top:hover{background:rgba(124,92,255,.28);color:#c4a6ff}
+    /* Coming soon badge on disabled CYCX button */
+    .coming-soon-badge{
+      position:absolute;top:-8px;right:-4px;
+      background:linear-gradient(135deg,#ff9a6b,#ffd166);color:#03040a;
+      font-size:8px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+      padding:2px 6px;border-radius:999px;white-space:nowrap
+    }
+
+    /* ── LOCKED SECTION ─────────────────────────── */
+    .locked-section{position:relative}
+    .locked-section .lock-overlay{
+      position:absolute;inset:0;border-radius:var(--radius);z-index:5;
+      background:linear-gradient(180deg,rgba(5,6,10,.05) 0%,rgba(5,6,10,.92) 55%,rgba(5,6,10,.98) 100%);
+      display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:24px;
+      backdrop-filter:blur(2px)
+    }
+    .lock-overlay-inner{text-align:center}
+    .lock-overlay-inner .lock-icon{font-size:22px;margin-bottom:6px}
+    .lock-overlay-inner p{font-size:12px;color:var(--muted);margin-bottom:12px}
+    .pp-watermark{
+      position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      font-size:15px;font-weight:900;letter-spacing:.3em;text-transform:uppercase;
+      color:rgba(255,255,255,.08);pointer-events:none;transform:rotate(-18deg);
+      text-shadow:none;z-index:2
+    }
+  
+    /* ── LANG SWITCH ───────────────────────────────────────────── */
+    .lang-switch{position:relative;z-index:1;display:inline-flex;align-items:center;padding:4px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 10px 26px rgba(0,0,0,.35);gap:2px;flex:0 0 auto}
+    .lang-btn{border:none;background:transparent;color:rgba(244,246,255,.56);font-size:11px;padding:6px 10px;border-radius:999px;cursor:pointer;user-select:none;white-space:nowrap;transition:transform .18s ease-out,background .18s ease-out,color .18s ease-out}
+    .lang-btn:hover{transform:translateY(-1px)}
+    .lang-btn.active{background:rgba(0,229,255,.14);color:rgba(0,229,255,.95)}
+    body.lang-switching{animation:langFade .28s ease-out}
+    @keyframes langFade{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    /* ── CX-MODAL ───────────────────────────────────────────────── */
+    .cx-modal{position:fixed;inset:0;display:none;z-index:10000;align-items:center;justify-content:center;padding:22px}
+    .cx-modal.is-open{display:flex}
+    .cx-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px)}
+    .cx-modal__dialog{position:relative;z-index:1;width:min(500px,100%);border-radius:26px;background:linear-gradient(135deg,rgba(12,14,28,1),rgba(18,10,40,1));border:1px solid rgba(255,255,255,.14);box-shadow:0 26px 92px rgba(0,0,0,.7),0 0 40px rgba(0,229,255,.08);overflow:hidden;animation:dashIn .3s ease-out}
+    .cx-modal__top{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+    .cx-modal__title{font-weight:900;letter-spacing:.06em;font-size:17px;text-transform:uppercase}
+    .cx-modal__close{border:0;background:rgba(255,255,255,.08);color:rgba(255,255,255,.92);width:38px;height:38px;border-radius:12px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+    .cx-modal__close:hover{background:rgba(255,255,255,.16)}
+    .cx-modal__body{padding:24px 24px 22px;max-height:min(72vh,640px);overflow:auto}
+    .cx-modal__desc{line-height:1.7;font-size:15px;color:rgba(255,255,255,.92);margin-bottom:14px}
+    .cx-modal__note{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);font-size:13px;line-height:1.6;color:rgba(255,255,255,.82);margin-bottom:20px}
+    .cx-modal__actions{display:flex;flex-direction:column;gap:12px}
+    .cx-modal__status{margin-top:12px;font-size:13px;opacity:.9;text-align:center;min-height:20px;line-height:1.5}
+    .cx-modal__foot{margin-top:14px;font-size:12px;line-height:1.5;color:rgba(255,255,255,.62);text-align:center}
+    w3m-modal,w3m-router,w3m-overlay,wui-modal,wui-dialog,.w3m-modal{z-index:2147483000!important;position:fixed!important}
+    html[dir="rtl"] .top-bar{flex-direction:row-reverse}
+    html[dir="rtl"] .brand{flex-direction:row-reverse}
+    html[dir="rtl"] .top-right{flex-direction:row-reverse}
+
+    /* ── ACCESS MODAL ── */
+    .cx-modal{position:fixed;inset:0;display:none;z-index:10000;align-items:center;justify-content:center;padding:22px}.cx-modal.is-open{display:flex}.cx-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.42);backdrop-filter:blur(7px)}.cx-modal__dialog{position:relative;z-index:1;width:min(860px,100%);border-radius:26px;background:#13213a;border:1px solid rgba(255,255,255,.14);box-shadow:0 26px 92px rgba(0,0,0,.44),0 0 0 1px rgba(255,255,255,.07) inset;overflow:hidden}.cx-modal__top{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)}.cx-modal__title{font-weight:900;letter-spacing:.3px;font-size:18px}.cx-modal__close{border:0;background:rgba(255,255,255,.08);color:rgba(255,255,255,.92);width:42px;height:42px;border-radius:14px;cursor:pointer}.cx-modal__close:hover{background:rgba(255,255,255,.14)}.cx-modal__body{padding:20px 20px 22px;max-height:min(72vh,760px);overflow:auto}.cx-modal__desc{line-height:1.65;font-size:16px;color:rgba(255,255,255,.92)}.cx-modal__note{margin-top:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-size:14px;line-height:1.55;color:rgba(255,255,255,.88)}.cx-modal__actions{display:flex;gap:14px;justify-content:center;align-items:stretch;flex-wrap:wrap;margin-top:18px}.cx-modal__actions .btn{flex:0 1 360px;min-height:74px;padding:16px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.cx-modal__actions .btn .btn-main{font-weight:900;letter-spacing:.6px}.cx-modal__actions .btn .btn-sub{margin-top:8px;font-size:13px;font-weight:700;opacity:.85}.cx-modal__actions .btn.is-busy{opacity:.75;cursor:progress;filter:saturate(.9)}.cx-modal__status{margin-top:12px;font-size:13px;opacity:.85;text-align:center}.cx-modal__foot{margin-top:14px;font-size:13.5px;line-height:1.45;color:rgba(255,255,255,.72)}#access-modal #btn-pay-bnb{background:linear-gradient(135deg,#f3ba2f 0%,#ff8a00 100%);color:#061018;border:1px solid rgba(255,255,255,.12)}#access-modal #btn-pay-bnb:hover{filter:brightness(1.02)}#access-modal #btn-pay-bnb:disabled{opacity:.78}#access-modal #btn-pay-usdt{background:linear-gradient(135deg,#22e6a7 0%,#63f5bf 100%)!important;color:#04130e!important;border:1px solid rgba(34,230,167,.42)!important;box-shadow:0 16px 46px rgba(34,230,167,.28),inset 0 1px 0 rgba(255,255,255,.28)!important;text-shadow:none!important}#access-modal #btn-pay-usdt:hover{transform:translateY(-1px);filter:saturate(1.05) brightness(1.02);box-shadow:0 24px 64px rgba(34,230,167,.34),inset 0 1px 0 rgba(255,255,255,.30)!important}
+  </style>
+</head>
+<body>
+<div class="page-shell">
+
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <a class="brand" href="/" title="Back to CycleX">
+      <picture>
+        <source srcset="/logo.webp" type="image/webp">
+        <img src="/logo.png" alt="CycleX" class="brand-logo" width="42" height="42" onerror="this.style.display='none'">
+      </picture>
+      <div class="brand-text">
+        <div class="brand-title">CYCLEX</div>
+        <div class="brand-sub">Wallet Firewall</div>
+      </div>
+    </a>
+    <div class="top-right">
+      <div class="lang-switch" role="navigation" aria-label="Language selector">
+        <button class="lang-btn active" data-lang="en">🇺🇸 EN</button>
+        <button class="lang-btn" data-lang="zh">🇨🇳 中文</button>
+        <button class="lang-btn" data-lang="ar">🇸🇦 عربي</button>
+        <button class="lang-btn" data-lang="ru">🇷🇺 RU</button>
+      </div>
+      <div id="tierBadge" style="display:none;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:6px 12px;border-radius:999px;border:1px solid rgba(93,255,178,.3);background:rgba(93,255,178,.08);color:var(--green);font-weight:800">✓ FULL ACCESS</div>
+      <div class="firewall-badge"><span class="dot"></span>FIREWALL</div>
+      <button class="btn-full-access-top" id="btnTopAccess" title="Unlock full features">🔑 Full Access</button>
+      <a class="back-link" href="https://cyclex.network/security">← Back to Hub</a>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── HERO / LANDING ── -->
+    <section class="hero" id="heroSection">
+      <div class="hero-kicker">🔥 Wallet Firewall</div>
+      <h1 class="hero-title">Turn any wallet into<br>a protected wallet.</h1>
+      <p class="hero-sub">
+        Scan your approvals, reveal your Blast Radius, get a guided Fix Plan —
+        and generate a shareable Proof Passport. In 60 seconds.
+      </p>
+
+      <div class="scan-bar">
+        <input id="walletInput" class="mono" placeholder="0x... wallet address" spellcheck="false" autocomplete="off" />
+        <select id="netSelect" class="scan-net">
+          <option value="bsc">BSC</option>
+          <option value="eth">ETH</option>
+          <option value="polygon">POLYGON</option>
+        </select>
+        <button class="btn-scan" id="btnRunFirewall">Run Firewall</button>
+      </div>
+
+      <span class="demo-hint" id="demoHint">↗ Try with demo wallet</span>
+
+      <div class="hero-micro">
+        <span>No signature required</span>
+        <span class="micro-dot">·</span>
+        <span>No transactions</span>
+        <span class="micro-dot">·</span>
+        <span>Read-only scan</span>
+        <span class="micro-dot">·</span>
+        <span>BSC + ETH + Polygon</span>
+      </div>
+    </section>
+
+    <!-- ── LOADING STATE ── -->
+    <div id="loadWrap">
+      <div class="load-label" id="loadLabel">Initializing Firewall Scan…</div>
+      <div class="load-steps">
+        <div class="load-step" id="step1"><div class="step-icon">⟳</div><span>Fetching approval logs</span></div>
+        <div class="load-step" id="step2"><div class="step-icon">⟳</div><span>Analyzing spender risk</span></div>
+        <div class="load-step" id="step3"><div class="step-icon">⟳</div><span>Calculating Blast Radius</span></div>
+        <div class="load-step" id="step4"><div class="step-icon">⟳</div><span>Building Fix Plan</span></div>
+      </div>
+      <div class="load-bar"><div class="load-bar-fill" id="loadBarFill"></div></div>
+    </div>
+
+    <!-- ── DASHBOARD ── -->
+    <div id="dashboard">
+
+      <div class="notice" id="scanNotice" style="display:none">
+        <strong>Live scan.</strong> Read-only on-chain data. No transactions made.
+      </div>
+      <div class="notice" id="demoNotice">
+        <strong>Demo mode:</strong> Showing sample data. Enter a real wallet address and click "Run Firewall" to scan live.
+      </div>
+
+      <!-- ACCESS GATE OVERLAY -->
+      <div id="accessGateOverlay" style="display:none;position:relative;z-index:10;margin-bottom:24px">
+        <div style="
+          background:linear-gradient(135deg,rgba(124,92,255,.12),rgba(0,229,255,.08));
+          border:1px solid rgba(124,92,255,.35);border-radius:22px;padding:28px;
+          text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 30px rgba(124,92,255,.12)
+        ">
+          <div style="font-size:32px;margin-bottom:12px">🔒</div>
+          <div style="font-size:18px;font-weight:900;margin-bottom:8px">Full Access Required</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.7;max-width:52ch;margin:0 auto 20px">
+            Hold <strong style="color:var(--purple)">≥100 CYCX</strong> or <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.
+          </div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <!-- Connect & Check — triggers AppKit modal -->
+            <button class="btn btn-full-access" id="btnCheckAccess">
+              🔑 Connect &amp; Check Access
+            </button>
+            <!-- PASS: opens purchase popup -->
+            <button class="btn btn-ghost" id="btnBuyPass" style="font-size:12px">
+              🎫 Get PASS ↗
+            </button>
+            <!-- CYCX: disabled until TGE -->
+            <button class="btn btn-ghost" id="btnGetCycx" disabled title="CYCX token launching soon — stay tuned!" style="font-size:12px;opacity:.45;cursor:not-allowed;position:relative">
+              <span class="coming-soon-badge">Soon</span>
+              🪙 Get CYCX
+            </button>
+          </div>
+          <div id="gateStatus" style="margin-top:14px;font-size:12px;color:var(--muted);min-height:18px"></div>
+        </div>
+      </div>
+
+      <!-- ACCESS MODAL (CX-MODAL, viewport-fixed) -->
+<div id="access-modal" class="cx-modal" aria-hidden="true" role="dialog">
+  <div class="cx-modal__backdrop" data-close-access></div>
+  <div class="cx-modal__dialog">
+    <div class="cx-modal__top">
+      <div class="cx-modal__title" data-i18n="access_title">Get PASS</div>
+      <button class="cx-modal__close" type="button" data-close-access aria-label="Close">✕</button>
+    </div>
+    <div class="cx-modal__body">
+      <div class="cx-modal__desc" data-i18n="access_desc">
+        Unlock Firewall Fix Mode, full Blast Radius, Wallet Passport and real revoke actions. Your PASS is non-tradable and converts to CYCX at public sale.
+      </div>
+      <div class="cx-modal__note">
+        <span data-i18n="access_note">No signature needed to unlock. Revoke actions always require your approval in-wallet.</span>
+      </div>
+      <div class="cx-modal__actions">
+        <button class="btn btn-primary" id="btn-pay-bnb" type="button" disabled>
+          <span class="btn-main" data-i18n="access_pay_bnb">Buy Access Pass (BNB)</span>
+          <span class="btn-sub"><span data-i18n="access_price_label">Price:</span> <span id="access-price-bnb">…</span></span>
+        </button>
+        <button class="btn btn-secondary" id="btn-pay-usdt" type="button" disabled>
+          <span class="btn-main" data-i18n="access_pay_usdt">Buy Access Pass (USDT)</span>
+          <span class="btn-sub"><span data-i18n="access_price_label">Price:</span> <span id="access-price-usdt">—</span></span>
+        </button>
+      </div>
+      <div class="cx-modal__status muted" id="access-status" aria-live="polite"></div>
+      <div class="cx-modal__foot muted" data-i18n="access_foot">
+        Early access: $9 for first 500 passes, then $19. 1 pass per wallet.
+      </div>
+    </div>
+  </div>
+</div>
+
+      <!-- ACCESS GATE OVERLAY -->
+      <div id="accessGateOverlay" style="display:none;position:relative;z-index:10;margin-bottom:24px">
+        <div style="
+          background:linear-gradient(135deg,rgba(124,92,255,.12),rgba(0,229,255,.08));
+          border:1px solid rgba(124,92,255,.35);border-radius:22px;padding:28px;
+          text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 30px rgba(124,92,255,.12)
+        ">
+          <div style="font-size:32px;margin-bottom:12px">🔒</div>
+          <div style="font-size:18px;font-weight:900;margin-bottom:8px">Full Access Required</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.7;max-width:52ch;margin:0 auto 20px">
+            Hold <strong style="color:var(--purple)">≥100 CYCX</strong> or <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.
+          </div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <!-- Connect & Check — triggers AppKit modal -->
+            <button class="btn btn-full-access" id="btnCheckAccess">
+              🔑 Connect &amp; Check Access
+            </button>
+            <!-- PASS: opens purchase popup -->
+            <button class="btn btn-ghost" id="btnBuyPass" style="font-size:12px">
+              🎫 Get PASS ↗
+            </button>
+            <!-- CYCX: disabled until TGE -->
+            <button class="btn btn-ghost" id="btnGetCycx" disabled title="CYCX token launching soon — stay tuned!" style="font-size:12px;opacity:.45;cursor:not-allowed;position:relative">
+              <span class="coming-soon-badge">Soon</span>
+              🪙 Get CYCX
+            </button>
+          </div>
+          <div id="gateStatus" style="margin-top:14px;font-size:12px;color:var(--muted);min-height:18px"></div>
+        </div>
+      </div>
+
+            <!-- ACCESS MODAL (exact from security site) -->
+      <div class="cx-modal" id="access-modal" aria-hidden="true">
+        <div class="cx-modal__backdrop" data-close-access></div>
+        <div class="cx-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="access-title">
+          <div class="cx-modal__top">
+            <div class="cx-modal__title" id="access-title">Get PASS — Full Access</div>
+            <button class="cx-modal__close" type="button" data-close-access aria-label="Close">✕</button>
+          </div>
+          <div class="cx-modal__body">
+            <div class="cx-modal__desc">
+              Unlock the full Firewall in seconds — Fix Mode, Blast Radius, Wallet Passport, and real revoke actions.
+            </div>
+            <div class="cx-modal__note">
+              No signature needed to check access. Revoke actions always require your approval in-wallet.
+            </div>
+            <div class="cx-modal__actions">
+              <button class="btn btn-primary" id="btn-pay-bnb" type="button" disabled>
+                <span class="btn-main">Buy Access Pass (BNB)</span>
+                <span class="btn-sub">Price: <span id="access-price-bnb">—</span></span>
+              </button>
+              <button class="btn btn-secondary" id="btn-pay-usdt" type="button" disabled>
+                <span class="btn-main">Buy Access Pass (USDT)</span>
+                <span class="btn-sub">Price: <span id="access-price-usdt">—</span></span>
+              </button>
+            </div>
+            <div class="cx-modal__status muted" id="access-status" aria-live="polite"></div>
+            <div class="cx-modal__foot muted">
+              Early access: $9 for first 500 access passes, then $19. 1 pass per wallet.
+            </div>
+          </div>
+        </div>
+      </div><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>CycleX Firewall — Wallet Protection</title>
+  <meta name="description" content="Turn any wallet into a protected wallet in 60 seconds. Scan approvals, see your Blast Radius, get a Fix Plan." />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#05060a">
+
+  <!-- Ethers (same version as main site) -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js" defer></script>
 
   <style>
@@ -465,6 +1143,8 @@
     html[dir="rtl"] .brand{flex-direction:row-reverse}
     html[dir="rtl"] .top-right{flex-direction:row-reverse}
 
+    /* ── ACCESS MODAL ── */
+    .cx-modal{position:fixed;inset:0;display:none;z-index:10000;align-items:center;justify-content:center;padding:22px}.cx-modal.is-open{display:flex}.cx-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.42);backdrop-filter:blur(7px)}.cx-modal__dialog{position:relative;z-index:1;width:min(860px,100%);border-radius:26px;background:#13213a;border:1px solid rgba(255,255,255,.14);box-shadow:0 26px 92px rgba(0,0,0,.44),0 0 0 1px rgba(255,255,255,.07) inset;overflow:hidden}.cx-modal__top{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)}.cx-modal__title{font-weight:900;letter-spacing:.3px;font-size:18px}.cx-modal__close{border:0;background:rgba(255,255,255,.08);color:rgba(255,255,255,.92);width:42px;height:42px;border-radius:14px;cursor:pointer}.cx-modal__close:hover{background:rgba(255,255,255,.14)}.cx-modal__body{padding:20px 20px 22px;max-height:min(72vh,760px);overflow:auto}.cx-modal__desc{line-height:1.65;font-size:16px;color:rgba(255,255,255,.92)}.cx-modal__note{margin-top:14px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-size:14px;line-height:1.55;color:rgba(255,255,255,.88)}.cx-modal__actions{display:flex;gap:14px;justify-content:center;align-items:stretch;flex-wrap:wrap;margin-top:18px}.cx-modal__actions .btn{flex:0 1 360px;min-height:74px;padding:16px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.cx-modal__actions .btn .btn-main{font-weight:900;letter-spacing:.6px}.cx-modal__actions .btn .btn-sub{margin-top:8px;font-size:13px;font-weight:700;opacity:.85}.cx-modal__actions .btn.is-busy{opacity:.75;cursor:progress;filter:saturate(.9)}.cx-modal__status{margin-top:12px;font-size:13px;opacity:.85;text-align:center}.cx-modal__foot{margin-top:14px;font-size:13.5px;line-height:1.45;color:rgba(255,255,255,.72)}#access-modal #btn-pay-bnb{background:linear-gradient(135deg,#f3ba2f 0%,#ff8a00 100%);color:#061018;border:1px solid rgba(255,255,255,.12)}#access-modal #btn-pay-bnb:hover{filter:brightness(1.02)}#access-modal #btn-pay-bnb:disabled{opacity:.78}#access-modal #btn-pay-usdt{background:linear-gradient(135deg,#22e6a7 0%,#63f5bf 100%)!important;color:#04130e!important;border:1px solid rgba(34,230,167,.42)!important;box-shadow:0 16px 46px rgba(34,230,167,.28),inset 0 1px 0 rgba(255,255,255,.28)!important;text-shadow:none!important}#access-modal #btn-pay-usdt:hover{transform:translateY(-1px);filter:saturate(1.05) brightness(1.02);box-shadow:0 24px 64px rgba(34,230,167,.34),inset 0 1px 0 rgba(255,255,255,.30)!important}
   </style>
 </head>
 <body>
@@ -648,12 +1328,11 @@
       </div>
 
       <!-- PASS PURCHASE POPUP -->
-      <div id="passPopup" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:16px">
+      <div id="passPopup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.72);backdrop-filter:blur(6px);align-items:center;justify-content:center">
         <div style="
           background:linear-gradient(135deg,rgba(12,14,28,1),rgba(18,10,40,1));
           border:1px solid rgba(0,229,255,.3);border-radius:24px;padding:32px;
-          max-width:460px;width:100%;max-height:calc(100dvh - 40px);overflow-y:auto;
-          position:relative;margin:auto;
+          max-width:420px;width:calc(100% - 32px);position:relative;
           box-shadow:0 24px 80px rgba(0,0,0,.7),0 0 40px rgba(0,229,255,.10);
           animation:dashIn .3s ease-out
         ">
@@ -679,7 +1358,7 @@
 
           <div style="display:flex;flex-direction:column;gap:10px">
             <!-- Primary CTA: PancakeSwap / DEX (update URL when live) -->
-            <a id="linkPassBuy" href="/pass" target="_self"
+            <a id="linkPassBuy" href="https://pancakeswap.finance/swap?outputCurrency=0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e" target="_blank" rel="noopener"
                style="display:block;text-align:center;padding:14px;border-radius:999px;
                       background:linear-gradient(135deg,#00e5ff,#7df2ff);color:#03040a;
                       font-weight:900;font-size:14px;letter-spacing:.06em;text-transform:uppercase;
@@ -914,7 +1593,7 @@
 
 </div><!-- .page-shell -->
 
-<script>
+<script type="module">
 // ══════════════════════════════════════════════════════════════════
 // CycleX Firewall — LIVE ENGINE v2.0
 // ══════════════════════════════════════════════════════════════════
@@ -1091,10 +1770,10 @@ const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
       "https://rpc.ankr.com/bsc","https://bsc-dataseed.binance.org/",
       "https://1rpc.io/bnb","https://bsc-dataseed1.defibit.io/"
     ];
-    let ACCESS_PRICE_CACHE = { ts:0, bnbUsd:null };
+    // ACCESS_PRICE_CACHE defined below
     let __accessFlowRunning = false;
     let __mobileAccessReadyToPay = false;
-    let __mobileAccessReadyKind = "";
+    
 
     function isMobileLike(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||""); }
 
@@ -1444,48 +2123,6 @@ const GATE_ABI = [
   "function balanceOf(address) view returns (uint256)",
   "function decimals() view returns (uint8)"
 ];
-
-// ── BSC RPC FALLBACK (9 public nodes, tries in order) ───────────
-const FW_BSC_RPCS = [
-  "https://bsc-dataseed.binance.org",
-  "https://bsc-dataseed1.binance.org",
-  "https://bsc-dataseed2.binance.org",
-  "https://bsc-dataseed3.binance.org",
-  "https://bsc-dataseed4.binance.org",
-  "https://rpc.ankr.com/bsc",
-  "https://bsc-rpc.publicnode.com",
-  "https://bsc.meowrpc.com",
-  "https://bsc-mainnet.public.blastapi.io"
-];
-
-const _fwRpcCache = new Map();
-function fwGetProvider(url) {
-  if (_fwRpcCache.has(url)) return _fwRpcCache.get(url);
-  const Eth = window.E || window.ethers;
-  if (!Eth?.JsonRpcProvider) return null;
-  try {
-    const n = Eth.Network.from({ name: "bnb", chainId: 56 });
-    const p = new Eth.JsonRpcProvider(url, n, { staticNetwork: n });
-    _fwRpcCache.set(url, p);
-    return p;
-  } catch { return null; }
-}
-
-async function fwWithRpcFallback(fn, { timeoutMs = 10000 } = {}) {
-  let lastErr = null;
-  for (const url of FW_BSC_RPCS) {
-    const provider = fwGetProvider(url);
-    if (!provider) continue;
-    try {
-      const res = await Promise.race([
-        fn(provider),
-        new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), timeoutMs))
-      ]);
-      return { ok: true, res };
-    } catch(e) { lastErr = e; }
-  }
-  return { ok: false, err: lastErr || new Error("All BSC RPCs failed") };
-}
 const ERC20_APPROVE_ABI = ["function approve(address spender, uint256 amount) returns (bool)"];
 
 // ── STATE ────────────────────────────────────────────────────────
@@ -1679,9 +2316,8 @@ function computeMetrics(approvals) {
   };
 }
 
-// ── APPKIT ───────────────────────────────────────────────────────
-// fwLoadAppKit = alias to the shared loadAppKit() declared above.
-// Avoids duplicate let _appkitLoadPromise at module scope.
+// ── APPKIT ─────────────────────────────────────────────────────
+// fwLoadAppKit = alias to loadAppKit() declared above — no duplicate vars.
 const fwLoadAppKit = () => loadAppKit();
 
 async function fwWaitForWallet(timeoutMs = 16000) {
@@ -1789,23 +2425,1369 @@ async function requestFullAccess() {
   setGateStatus(msg, "#ff7a8a");
 }
 
-// ── PASS POPUP ────────────────────────────────────────────────────
-function openAccessModal()  { const el = document.getElementById("passPopup"); if(el) el.style.display="flex"; }
-function closePassPopup() { const el = document.getElementById("passPopup"); if(el) el.style.display="none"; }
+let ACCESS_PRICE_CACHE = { ts: 0, bnbUsd: null };
 
-function unlockFull() {
-  fwAccessTier = "full";
-  document.getElementById("accessGateOverlay")?.style && (document.getElementById("accessGateOverlay").style.display = "none");
-  document.getElementById("tierBadge") && (document.getElementById("tierBadge").style.display = "flex");
-  document.getElementById("btnTopAccess") && (document.getElementById("btnTopAccess").style.display = "none");
-  // Remove lock overlays
-  document.getElementById("fixLockOverlay")    && (document.getElementById("fixLockOverlay").style.display    = "none");
-  document.getElementById("passportLockOverlay")&& (document.getElementById("passportLockOverlay").style.display = "none");
-  // Remove passport watermark
-  document.getElementById("ppWatermark") && (document.getElementById("ppWatermark").style.display = "none");
+async function accessFetchBnbUsd() {
+  const now = Date.now();
+
+  // cache 60s
+  if (ACCESS_PRICE_CACHE.bnbUsd && (now - ACCESS_PRICE_CACHE.ts) < 60000) {
+    return ACCESS_PRICE_CACHE.bnbUsd;
+  }
+
+  const r = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT", { cache: "no-store" });
+  if (!r.ok) throw new Error("BNB_PRICE_FETCH_FAILED");
+
+  const j = await r.json();
+  const px = Number(j.price);
+  if (!isFinite(px) || px <= 0) throw new Error("BNB_PRICE_BAD");
+
+  ACCESS_PRICE_CACHE = { ts: now, bnbUsd: px };
+  return px;
 }
 
-// ── LOADING SEQUENCE ─────────────────────────────────────────────
+async function accessReadEthCall(to, data) {
+  let lastErr = null;
+
+  for (const url of ACCESS_READ_RPCS) {
+    try {
+      const body = {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_call",
+        params: [{ to, data }, "latest"]
+      };
+
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(`HTTP_${r.status}`);
+      if (j.error) throw new Error(j.error.message || "RPC_ERROR");
+      if (!j.result) throw new Error("NO_RESULT");
+
+      return j.result; // hex
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw lastErr || new Error("ALL_RPCS_FAILED");
+}
+
+async function accessQuoteBNBWeiOnchain() {
+  const SALE = ACCESS_SALE_OR_RECEIVER;
+  const QUOTE_BNB_WEI_SELECTOR = "0x42773499"; // quoteBNBWei()
+
+  const out = await accessReadEthCall(SALE, QUOTE_BNB_WEI_SELECTOR);
+  const wei = BigInt(out);
+
+  if (wei <= 0n) throw new Error("QUOTE_ZERO");
+  return wei;
+}
+
+function accessSetBusy(on) {
+  const bnbBtn = document.getElementById("btn-pay-bnb");
+  const usdtBtn = document.getElementById("btn-pay-usdt");
+
+  if (bnbBtn) bnbBtn.disabled = !!on;
+  if (usdtBtn) usdtBtn.disabled = !!on;
+
+  if (bnbBtn) bnbBtn.classList.toggle("is-busy", !!on);
+  if (usdtBtn) usdtBtn.classList.toggle("is-busy", !!on);
+}
+
+async function accessUpdatePricesUI(usdPrice) {
+  accessSetBusy(true);
+
+  try {
+    const bnbBtn = document.getElementById("btn-pay-bnb");
+    const usdtBtn = document.getElementById("btn-pay-usdt");
+
+    if (bnbBtn) bnbBtn.disabled = true;
+    if (usdtBtn) usdtBtn.disabled = true;
+
+    // USDT exact display
+    const usdtEl = document.getElementById("access-price-usdt");
+    if (usdtEl) usdtEl.textContent = `${usdPrice} USDT`;
+
+    // BNB display
+    const bnbEl = document.getElementById("access-price-bnb");
+    if (bnbEl) bnbEl.textContent = "…";
+
+    try {
+      // Prefer on-chain quote
+      const quoteWei = await accessQuoteBNBWeiOnchain();
+      const quoteBnb = Number(quoteWei) / 1e18;
+
+      const bnbText = quoteBnb.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+      if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+      window.__ACCESS_BNB_WEI = quoteWei;
+      window.__ACCESS_BNB_TEXT = bnbText;
+
+      if (bnbBtn) bnbBtn.disabled = false;
+      if (usdtBtn) usdtBtn.disabled = false;
+      return;
+    } catch (e) {
+      console.warn("on-chain quote failed, fallback to Binance:", e);
+    }
+
+    // Fallback: Binance
+    const bnbUsd = await accessFetchBnbUsd();
+    const bnbAmt = usdPrice / bnbUsd;
+
+    const bnbText = bnbAmt.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+    if (bnbEl) bnbEl.textContent = `~${bnbText} BNB`;
+
+    if (window.ethers?.parseUnits) {
+      const preciseStr = bnbAmt.toFixed(18);
+      window.__ACCESS_BNB_WEI = window.ethers.parseUnits(preciseStr, 18);
+      window.__ACCESS_BNB_TEXT = bnbText;
+    } else {
+      window.__ACCESS_BNB_WEI = null;
+      window.__ACCESS_BNB_TEXT = bnbText;
+    }
+
+    if (bnbBtn) bnbBtn.disabled = false;
+    if (usdtBtn) usdtBtn.disabled = false;
+  } catch (e) {
+    console.error("BNB price load failed:", e);
+
+    const bnbEl = document.getElementById("access-price-bnb");
+    const usdtBtn = document.getElementById("btn-pay-usdt");
+
+    if (bnbEl) bnbEl.textContent = "—";
+    if (usdtBtn) usdtBtn.disabled = false;
+  } finally {
+    accessSetBusy(false);
+  }
+}
+
+function accessSetStatus(msg) {
+  const el = document.getElementById("access-status");
+  if (!el) return;
+  el.textContent = msg || "";
+}
+// =========================
+// Mobile resume checkout helpers (AUTO RESUME, SAFE)
+// =========================
+const ACCESS_PENDING_KEY = "cx_access_pending_kind";
+const ACCESS_PENDING_TS_KEY = "cx_access_pending_ts";
+const ACCESS_RESUME_PAUSED_KEY = "cx_access_resume_paused";
+const ACCESS_LAST_ATTEMPT_TS_KEY = "cx_access_last_attempt_ts";
+
+let __resumePollTimer = null;
+let __resumeInProgress = false;
+    let __mobileAccessReadyKind = "";
+
+
+function isMobileLike() {
+  try {
+    // Mobile only by user agent (not by window width)
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+  } catch {
+    return false;
+  }
+}
+    window.isMobileLike = isMobileLike;
+
+
+
+function setPendingCheckoutKind(kind) {
+  try {
+    if (kind) {
+      sessionStorage.setItem(ACCESS_PENDING_KEY, kind);
+      sessionStorage.setItem(ACCESS_PENDING_TS_KEY, String(Date.now()));
+    } else {
+      sessionStorage.removeItem(ACCESS_PENDING_KEY);
+      sessionStorage.removeItem(ACCESS_PENDING_TS_KEY);
+    }
+  } catch {}
+}
+
+function getPendingCheckoutKind() {
+  try { return sessionStorage.getItem(ACCESS_PENDING_KEY) || ""; } catch { return ""; }
+}
+
+function isPendingFresh(maxAgeMs = 5 * 60 * 1000) {
+  try {
+    const ts = Number(sessionStorage.getItem(ACCESS_PENDING_TS_KEY) || 0);
+    if (!ts) return false;
+    return (Date.now() - ts) <= maxAgeMs;
+  } catch {
+    return false;
+  }
+}
+
+function clearPendingCheckoutKind() {
+  try {
+    sessionStorage.removeItem(ACCESS_PENDING_KEY);
+    sessionStorage.removeItem(ACCESS_PENDING_TS_KEY);
+  } catch {}
+}
+
+function setResumePaused(v) {
+  try {
+    if (v) sessionStorage.setItem(ACCESS_RESUME_PAUSED_KEY, "1");
+    else sessionStorage.removeItem(ACCESS_RESUME_PAUSED_KEY);
+  } catch {}
+}
+
+function isResumePaused() {
+  try { return sessionStorage.getItem(ACCESS_RESUME_PAUSED_KEY) === "1"; } catch { return false; }
+}
+
+function touchLastAttemptTs() {
+  try { sessionStorage.setItem(ACCESS_LAST_ATTEMPT_TS_KEY, String(Date.now())); } catch {}
+}
+
+function isAttemptCooldown(ms = 5000) {
+  try {
+    const ts = Number(sessionStorage.getItem(ACCESS_LAST_ATTEMPT_TS_KEY) || 0);
+    return !!ts && (Date.now() - ts < ms);
+  } catch {
+    return false;
+  }
+}
+
+async function tryHydrateWalletAddressFromProvider() {
+  try {
+    const p =
+      (wallet?.providerRaw?.request && wallet.providerRaw) ||
+      (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+      window.ethereum;
+
+    if (!p?.request) return "";
+
+    const accs = await p.request({ method: "eth_accounts" });
+    const a = safeGetAddress(accs?.[0] || "");
+    if (a) {
+      wallet.address = a;
+      if (!wallet.providerRaw) wallet.providerRaw = p;
+      attachProviderListeners(wallet.providerRaw);
+
+      try {
+        if (!wallet.browserProvider) wallet.browserProvider = new E.BrowserProvider(wallet.providerRaw);
+        if (!wallet.signer) wallet.signer = await wallet.browserProvider.getSigner();
+        const net = await wallet.browserProvider.getNetwork();
+        wallet.chainId = parseChainIdAny(net?.chainId);
+      } catch {}
+
+      renderWalletLabels();
+    }
+    return a || "";
+  } catch {
+    return "";
+  }
+}
+
+function removeContinueCheckoutButton() {
+  const n = document.getElementById("continue-checkout-wrap");
+  if (n) n.remove();
+}
+
+    function getActiveCheckoutProvider() {
+  // Keep desktop behavior intact, add stronger mobile fallbacks.
+  const p1 = (wallet?.providerRaw?.request && wallet.providerRaw) || null;
+  if (p1) return p1;
+
+  const p2 = (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) || null;
+  if (p2) return p2;
+
+  const p3 = (window?.ethereum?.request && window.ethereum) || null;
+  if (p3) return p3;
+
+  return null;
+}
+
+    
+function renderContinueCheckoutButton(kind) {
+ if (!isMobileLike()) return;
+  const st = document.getElementById("access-status");
+  if (!st || !kind) return;
+  if (document.getElementById("btn-continue-checkout")) return;
+
+  const wrap = document.createElement("div");
+  wrap.id = "continue-checkout-wrap";
+  wrap.style.marginTop = "10px";
+
+  const btn = document.createElement("button");
+  btn.id = "btn-continue-checkout";
+  btn.type = "button";
+  btn.className = "btn btn-primary";
+  btn.textContent = "Continue checkout";
+  btn.style.width = "100%";
+
+  btn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (btn.disabled) return;
+    btn.disabled = true;
+
+    try {
+      setResumePaused(false);
+
+stopResumePoll();
+__resumeInProgress = false;
+
+accessSetStatus("Opening wallet app...");
+await accessBuyFlow(kind, { skipConnectModal: true, manual: true });
+
+    } catch (err) {
+      const msg = String(err?.message || err || "");
+      accessSetStatus("❌ Continue failed: " + msg.substring(0, 100));
+    } finally {
+      // if still pending, allow another click
+      const stillPending = !!getPendingCheckoutKind();
+if (stillPending) {
+  btn.disabled = false;
+  startResumePoll(12000, 400);
+}
+
+    }
+  });
+
+  wrap.appendChild(btn);
+  st.parentNode?.insertBefore(wrap, st.nextSibling);
+}
+
+function startResumePoll(maxMs = 12000, stepMs = 400) {
+  try { if (__resumePollTimer) clearInterval(__resumePollTimer); } catch {}
+  const started = Date.now();
+
+  __resumePollTimer = setInterval(async () => {
+    try {
+      await tryResumeCheckoutUI();
+
+      if (!getPendingCheckoutKind()) {
+        clearInterval(__resumePollTimer);
+        __resumePollTimer = null;
+        return;
+      }
+
+      if (Date.now() - started >= maxMs) {
+        clearInterval(__resumePollTimer);
+        __resumePollTimer = null;
+      }
+    } catch {}
+  }, stepMs);
+}
+
+function stopResumePoll() {
+  try { if (__resumePollTimer) clearInterval(__resumePollTimer); } catch {}
+  __resumePollTimer = null;
+}
+
+async function tryResumeCheckoutUI() {
+  const kind = getPendingCheckoutKind();
+  if (!kind) return;
+  if (!isMobileLike()) return;
+
+  if (!isPendingFresh()) {
+    clearPendingCheckoutKind();
+    setResumePaused(false);
+    return;
+  }
+
+  if (__resumeInProgress) return;
+  __resumeInProgress = true;
+
+  try {
+    const hydrated = await tryHydrateWalletAddressFromProvider();
+
+    const hasProvider = !!(
+      wallet?.providerRaw?.request ||
+      wallet?.browserProvider?.provider?.request ||
+      window.ethereum?.request
+    );
+    const hasWallet = !!(hydrated || wallet?.address);
+
+    const m = document.getElementById("access-modal");
+    if (m && m.getAttribute("aria-hidden") === "true") {
+      openAccessModal();
+    }
+
+    if (!hasProvider || !hasWallet) {
+      accessSetStatus("Wallet session not ready. Tap Continue checkout.");
+      renderContinueCheckoutButton(kind);
+      return;
+    }
+
+    // IMPORTANT: never auto-loop after user rejected/canceled
+    if (isResumePaused()) {
+      accessSetStatus("Payment not approved yet. Open wallet and tap Continue checkout when ready.");
+      renderContinueCheckoutButton(kind);
+      return;
+    }
+
+    // cooldown to prevent repeated auto-popup storms
+    if (isAttemptCooldown(5000)) {
+      return;
+    }
+
+const cc = document.getElementById("btn-continue-checkout");
+if (cc && cc.offsetParent !== null) {
+  return;
+}
+
+  } finally {
+    __resumeInProgress = false;
+  }
+}
+
+function openAccessModal() {
+  accessSetStatus("");
+  if (!isMobileLike()) {
+  __mobileAccessReadyToPay = false;
+  __mobileAccessReadyKind = "";
+}
+
+  const m = document.getElementById("access-modal");
+  if (!m) return;
+
+  m.classList.add("is-open");
+  m.setAttribute("aria-hidden", "false");
+
+  accessUpdatePricesUI(ACCESS_USD_PRICE).catch((e) => {
+    console.error("accessUpdatePricesUI failed:", e);
+  });
+}
+
+function closeAccessModal() {
+  const m = $("#access-modal");
+  if (!m) return;
+
+  m.classList.remove("is-open");
+  m.setAttribute("aria-hidden", "true");
+
+  clearPendingCheckoutKind();
+  setResumePaused(false);
+  removeContinueCheckoutButton();
+  stopResumePoll();
+  __mobileAccessReadyToPay = false;
+  __mobileAccessReadyKind = "";
+
+}
+
+// =========================
+// ACCESS PASS — TEMP CONFIG
+// =========================
+// ACCESS_USD_PRICE defined below
+
+
+async function waitForAccounts(provider, maxMs = 30000) {
+  if (!provider?.request) return "";
+
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    try {
+      const accs = await provider.request({ method: "eth_accounts" });
+      const a = accs?.[0] || "";
+      if (a) return a;
+    } catch {}
+    await new Promise(r => setTimeout(r, 350));
+  }
+  return "";
+}
+
+async function accessWaitForConfirm(provider, txHash, maxMs = 120000) {
+  if (!provider?.request) return false;
+
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    try {
+      const receipt = await provider.request({
+        method: "eth_getTransactionReceipt",
+        params: [txHash],
+      });
+
+      if (receipt && receipt.status != null) {
+        return receipt.status === "0x1" || receipt.status === 1 || receipt.status === true;
+      }
+    } catch {}
+
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
+  return false;
+}
+
+    function withTimeout(promise, ms, timeoutMsg = "TIMEOUT") {
+  let timer = null;
+  const t = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(timeoutMsg)), ms);
+  });
+  return Promise.race([promise, t]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+
+async function accessBuyFlow(kind, { skipConnectModal = false, manual = false } = {}) {
+ if (__accessFlowRunning && !manual) return;
+__accessFlowRunning = true;
+
+  accessSetBusy(true);
+
+  try {
+   if (isMobileLike()) {
+  setPendingCheckoutKind(kind);
+  setResumePaused(false);
+  removeContinueCheckoutButton();
+  stopResumePoll();
+} else {
+  clearPendingCheckoutKind();
+  setResumePaused(false);
+  removeContinueCheckoutButton();
+  stopResumePoll();
+}
+
+
+
+
+    const modalEl = document.getElementById("access-modal");
+    const wasOpen = !!(modalEl && (
+      modalEl.classList.contains("is-open") ||
+      modalEl.classList.contains("open") ||
+      modalEl.getAttribute("aria-hidden") === "false"
+    ));
+
+    if (typeof cxConnectWallet !== "function") {
+      accessSetStatus("Wallet connector is not ready.");
+      return;
+    }
+
+    let connected = true;
+
+if (isMobileLike() && skipConnectModal) {
+  const p =
+    (wallet?.providerRaw?.request && wallet.providerRaw) ||
+    (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+    window.ethereum;
+
+  let fromNow = String(wallet?.address || "").trim();
+
+  // hydrate once before deciding not connected
+  if (!fromNow && p?.request) {
+    try {
+      const accs = await p.request({ method: "eth_accounts" });
+      fromNow = safeGetAddress(accs?.[0] || "");
+      if (fromNow) {
+        wallet.address = fromNow;
+        renderWalletLabels();
+      }
+    } catch {}
+  }
+
+  connected = !!(p?.request && fromNow);
+} else {
+  connected = skipConnectModal
+    ? await cxConnectWallet({ silent: true })
+    : await cxConnectWallet();
+}
+
+
+    if (!connected) {
+      if (wasOpen) openAccessModal();
+      // Do not auto-loop after failed connect
+      setResumePaused(true);
+      accessSetStatus("Connection completed. Open wallet app and tap Continue checkout to approve payment.");
+      renderContinueCheckoutButton(kind);
+      return;
+    }
+
+    let provider =
+      (wallet?.providerRaw?.request && wallet.providerRaw) ||
+      (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+      window.ethereum;
+
+    let from = String(wallet?.address || "").trim();
+
+    if (!from && provider?.request) {
+      try {
+        const accs = await provider.request({ method: "eth_accounts" });
+        from = safeGetAddress(accs?.[0] || "");
+        if (from) {
+          wallet.address = from;
+          renderWalletLabels();
+        }
+      } catch {}
+    }
+
+    if (!from) {
+      await tryHydrateWalletAddressFromProvider();
+      from = String(wallet?.address || "").trim();
+    }
+
+    if ((!provider?.request || !from) && isMobileLike() && !skipConnectModal) {
+      await new Promise(r => setTimeout(r, 700));
+      await cxConnectWallet({ silent: true }).catch(() => {});
+      provider =
+        (wallet?.providerRaw?.request && wallet.providerRaw) ||
+        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+        window.ethereum;
+      from = String(wallet?.address || "").trim();
+    }
+
+    if (!provider?.request || !from) {
+      if (wasOpen) openAccessModal();
+      setResumePaused(true);
+      accessSetStatus("Wallet connected. Open wallet app and tap Continue checkout to approve payment.");
+      renderContinueCheckoutButton(kind);
+      return;
+    }
+   
+    const TARGET_CHAIN = "0x38";
+    try {
+      const chainId = await provider.request({ method: "eth_chainId" });
+      if (chainId !== TARGET_CHAIN) {
+        await provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: TARGET_CHAIN }],
+        });
+      }
+    } catch (err) {
+      if (err && (err.code === 4902 || String(err.message || "").includes("4902"))) {
+        await provider.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: TARGET_CHAIN,
+            chainName: "BNB Smart Chain",
+            nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+            rpcUrls: ["https://bsc-dataseed.binance.org/"],
+            blockExplorerUrls: ["https://bscscan.com/"],
+          }],
+        });
+      } else if (err && err.code === 4001) {
+        // user canceled chain switch -> pause auto
+        setResumePaused(true);
+        accessSetStatus("Network switch canceled. Open wallet app and tap Continue checkout.");
+        renderContinueCheckoutButton(kind);
+        return;
+      } else {
+        throw err;
+      }
+    }
+
+    if (kind === "bnb") {
+      const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+      if (!PASS_CONTRACT || !/^0x[a-fA-F0-9]{40}$/.test(String(PASS_CONTRACT))) {
+        accessSetStatus("PASS_CONTRACT missing/invalid. Check ACCESS_SALE_OR_RECEIVER.");
+        return;
+      }
+
+      let PRICE_WEI = window.__ACCESS_BNB_WEI;
+      if (!PRICE_WEI) {
+        try {
+          PRICE_WEI = await accessQuoteBNBWeiOnchain();
+          window.__ACCESS_BNB_WEI = PRICE_WEI;
+        } catch {}
+      }
+
+      if (!PRICE_WEI || BigInt(PRICE_WEI) <= 0n) {
+        accessSetStatus("Couldn't fetch live BNB quote. Try again.");
+        setResumePaused(true);
+        renderContinueCheckoutButton(kind);
+        return;
+      }
+
+      const BUY_WITH_BNB_SELECTOR = "0x20f1fc61";
+      const baseWei = BigInt(PRICE_WEI);
+      const valueWei = (baseWei * 101n) / 100n;
+
+      const txForEstimate = {
+        from,
+        to: PASS_CONTRACT,
+        value: "0x" + valueWei.toString(16),
+        data: BUY_WITH_BNB_SELECTOR
+      };
+
+   
+      const txParams = {
+        from,
+        to: PASS_CONTRACT,
+        value: "0x" + valueWei.toString(16),
+        data: BUY_WITH_BNB_SELECTOR,
+      };
+
+      const mobile = isMobileLike();
+accessSetStatus("Open wallet app to approve transaction…");
+
+let txHash = "";
+try {
+  const sendPromise = provider.request({
+    method: "eth_sendTransaction",
+    params: [txParams],
+  });
+
+  // On mobile, don't wait forever
+  txHash = mobile
+  ? await withTimeout(sendPromise, 60000, "WALLET_OPEN_TIMEOUT")
+  : await sendPromise;
+} catch (e) {
+  const msg = String(e?.message || e || "");
+
+  // keep pending + show continue again
+  setResumePaused(true);
+
+  if (/WALLET_OPEN_TIMEOUT/.test(msg)) {
+    accessSetStatus("Wallet did not open. Tap Continue checkout again.");
+  } else if (/user rejected|rejected|denied|cancel|4001/i.test(msg)) {
+    accessSetStatus("Payment canceled. Tap Continue checkout to retry.");
+  } else {
+    accessSetStatus("Could not open wallet. Tap Continue checkout.");
+  }
+
+  renderContinueCheckoutButton(kind);
+  return;
+}
+
+// only now tx really exists -> safe to remove continue button
+removeContinueCheckoutButton();
+stopResumePoll();
+setResumePaused(false);
+
+accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
+
+const ok = await accessWaitForConfirm(provider, txHash);
+if (ok) {
+  clearPendingCheckoutKind();
+  __mobileAccessReadyToPay = false;
+  __mobileAccessReadyKind = "";
+  accessSetStatus("Confirmed ✅");
+  setTimeout(() => {
+    closeAccessModal();
+    accessSetStatus("");
+  }, 900);
+} else {
+  // keep recovery path
+  setResumePaused(true);
+  accessSetStatus("Pending on-chain… If needed, tap Continue checkout.");
+  renderContinueCheckoutButton(kind);
+}
+return;
+
+    }
+
+    if (kind === "usdt") {
+      const USDT = ACCESS_USDT;
+      const PASS_CONTRACT = ACCESS_SALE_OR_RECEIVER;
+
+      const ERC20_ABI = [
+        { constant: true, inputs: [], name: "decimals", outputs: [{ name: "", type: "uint8" }], type: "function" },
+        { constant: false, inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], name: "approve", outputs: [{ name: "", type: "bool" }], type: "function" }
+      ];
+      const SALE_ABI = [
+        { constant: false, inputs: [], name: "buyWithUSDT", outputs: [], type: "function" }
+      ];
+
+      if (!window.ethers) {
+        accessSetStatus("USDT checkout needs ethers.js.");
+        return;
+      }
+
+      const ethers = window.ethers;
+      const web3Provider = new ethers.BrowserProvider(provider);
+      const signer = await web3Provider.getSigner();
+
+      const usdtContract = new ethers.Contract(USDT, ERC20_ABI, signer);
+      const sale = new ethers.Contract(PASS_CONTRACT, SALE_ABI, signer);
+
+      const decimals = Number(await usdtContract.decimals());
+      const amount = ethers.parseUnits(String(ACCESS_USD_PRICE), decimals);
+
+      accessSetStatus("Approve USDT in wallet…");
+      const tx1 = await usdtContract.approve(PASS_CONTRACT, amount);
+      await tx1.wait();
+
+      accessSetStatus("Confirm purchase in wallet…");
+      const tx2 = await sale.buyWithUSDT();
+
+      accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
+      const ok = await tx2.wait().then(r => r && r.status === 1).catch(() => false);
+
+      if (ok) {
+        clearPendingCheckoutKind();
+        setResumePaused(false);
+        removeContinueCheckoutButton();
+        stopResumePoll();
+        __mobileAccessReadyToPay = false;
+        __mobileAccessReadyKind = "";
+
+        accessSetStatus("Confirmed ✅");
+        setTimeout(() => {
+          closeAccessModal();
+          accessSetStatus("");
+        }, 900);
+      } else {
+        accessSetStatus("Pending on-chain… You can close this window.");
+      }
+      return;
+    }
+
+    accessSetStatus("Unsupported payment method.");
+  } catch (e) {
+    const msg = String(e?.message || e || "");
+    const code = Number(e?.code);
+
+    // user rejected / canceled in wallet => PAUSE auto-resume
+    const isUserRejected =
+      code === 4001 ||
+      /user rejected|rejected|denied|cancel/i.test(msg);
+
+    if (isUserRejected) {
+      setResumePaused(true);
+      accessSetStatus("Payment request was canceled. Open wallet app and tap Continue checkout when ready.");
+      const k = getPendingCheckoutKind();
+      if (k) renderContinueCheckoutButton(k);
+    } else {
+      accessSetStatus(`Checkout failed: ${msg.substring(0, 120)}`);
+      const k = getPendingCheckoutKind();
+      if (k) renderContinueCheckoutButton(k);
+    }
+
+    console.error("accessBuyFlow error:", e);
+  } finally {
+    accessSetBusy(false);
+    __accessFlowRunning = false;
+  }
+}
+
+function bindAccessModal() {
+  if (window.__accessModalBound) return;
+  window.__accessModalBound = true;
+
+  const m = $("#access-modal");
+  if (!m) return;
+
+  m.querySelectorAll("[data-close-access]").forEach((el) => {
+    el.addEventListener("click", closeAccessModal);
+  });
+
+  const bnbBtn = document.getElementById("btn-pay-bnb");
+  const usdtBtn = document.getElementById("btn-pay-usdt");
+
+ bnbBtn?.addEventListener("click", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setResumePaused(false);
+
+  // Desktop stays exactly the same behavior
+  if (!isMobileLike()) {
+    accessBuyFlow("bnb", { manual: true });
+    return;
+  }
+
+  // Mobile two-step flow
+  try {
+    // STEP A: connect only
+    if (!__mobileAccessReadyToPay || __mobileAccessReadyKind !== "bnb") {
+      accessSetStatus("Step 1/2: Connect wallet...");
+      const connected = await cxConnectWallet({ silent: false });
+
+      if (!connected) {
+        accessSetStatus("Connection failed. Tap again.");
+        return;
+      }
+
+      // Optional: ensure chain now (still in connect step)
+      const p =
+        (wallet?.providerRaw?.request && wallet.providerRaw) ||
+        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+        window.ethereum;
+
+      if (p?.request) {
+        const TARGET_CHAIN = "0x38";
+        try {
+          const chainId = await p.request({ method: "eth_chainId" });
+          if (chainId !== TARGET_CHAIN) {
+            await p.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: TARGET_CHAIN }],
+            });
+          }
+        } catch {}
+      }
+
+      // Make sure quote is ready BEFORE payment click
+      try { await accessUpdatePricesUI(ACCESS_USD_PRICE); } catch {}
+
+      __mobileAccessReadyToPay = true;
+      __mobileAccessReadyKind = "bnb";
+      accessSetStatus("Step 1 complete ✅ Tap BNB again to confirm payment.");
+      return;
+    }
+
+    // STEP B: pay only (fresh user click)
+    accessSetStatus("Step 2/2: Opening wallet for payment...");
+   await accessBuyFlow("bnb", { skipConnectModal: true, manual: true });
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
+  }
+});
+
+
+  usdtBtn?.addEventListener("click", async (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setResumePaused(false);
+
+  // Desktop stays exactly the same behavior
+  if (!isMobileLike()) {
+    accessBuyFlow("usdt", { manual: true });
+    return;
+  }
+
+  // Mobile two-step flow
+  try {
+    // STEP A: connect only
+    if (!__mobileAccessReadyToPay || __mobileAccessReadyKind !== "usdt") {
+      accessSetStatus("Step 1/2: Connect wallet...");
+      const connected = await cxConnectWallet({ silent: false });
+
+      if (!connected) {
+        accessSetStatus("Connection failed. Tap again.");
+        return;
+      }
+
+      // Ensure BSC now (same as BNB flow)
+      const p =
+        (wallet?.providerRaw?.request && wallet.providerRaw) ||
+        (wallet?.browserProvider?.provider?.request && wallet.browserProvider.provider) ||
+        window.ethereum;
+
+      if (p?.request) {
+        const TARGET_CHAIN = "0x38";
+        try {
+          const chainId = await p.request({ method: "eth_chainId" });
+          if (chainId !== TARGET_CHAIN) {
+            await p.request({
+              method: "wallet_switchEthereumChain",
+              params: [{ chainId: TARGET_CHAIN }],
+            });
+          }
+        } catch {}
+      }
+
+      __mobileAccessReadyToPay = true;
+      __mobileAccessReadyKind = "usdt";
+      accessSetStatus("Step 1 complete ✅ Tap USDT again to confirm payment.");
+      return;
+    }
+
+    // STEP B: pay only (fresh user click)
+    accessSetStatus("Step 2/2: Opening wallet for payment...");
+    await accessBuyFlow("usdt", { skipConnectModal: true, manual: true });
+  } catch (err) {
+    const msg = String(err?.message || err || "");
+    accessSetStatus("Mobile flow error: " + msg.substring(0, 100));
+  }
+});
+
+
+  if (!window.__accessEscBound) {
+    window.__accessEscBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeAccessModal();
+    });
+  }
+}
+
+
+
+// ══ CORE FIREWALL FUNCTIONS (restored) ══
+
+
+function animateScore(target, label, meta) {
+  const circumference = 226.2;
+  const fill  = document.getElementById("gaugeFill");
+  const numEl = document.getElementById("scoreNum");
+  const labEl = document.getElementById("scoreLabel");
+  const dotEl = document.getElementById("scoreDot");
+
+  const color = target < 45 ? "#ff4757" : target < 70 ? "#ffd166" : "#3cffb0";
+  fill.style.stroke = color;
+  dotEl.style.background = color;
+
+  let cur = 0;
+  const step = target / 35;
+  const timer = setInterval(() => {
+    cur = Math.min(cur + step, target);
+    numEl.textContent = Math.round(cur);
+    fill.style.strokeDashoffset = circumference - (circumference * cur / 100);
+    if (cur >= target) {
+      clearInterval(timer);
+      labEl.textContent = label;
+      renderMeta("scoreMeta", meta);
+    }
+  }, 28);
+}
+
+async function applyFix(step) {
+  if (fixDone[step]) return;
+  if (fwAccessTier !== "full") { requestFullAccess(); return; }
+
+  fixDone[step] = true;
+  const el  = document.getElementById(`fixStep${step+1}`);
+  const btn = document.getElementById(`btnFix${step+1}`);
+  if (!el || !btn) return;
+
+  const target = fixApprovals[step];
+
+  // Try real revoke if wallet and signer available
+  if (target && window.wallet?.signer && step === 0) {
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+    try {
+      const E = getE();
+      const c = new E.Contract(fwNorm(target.token), ERC20_APPROVE_ABI, window.wallet.signer);
+      const tx = await c.approve(fwNorm(target.spender), 0n);
+      btn.textContent = "Pending…";
+      await tx.wait();
+      btn.textContent = "✓ Revoked";
+    } catch(e) {
+      btn.textContent = "✓ Done (manual)";
+      if (step === 0) window.open("https://revoke.cash", "_blank");
+    }
+  } else if (step === 0) {
+    window.open("https://revoke.cash", "_blank");
+    btn.textContent = "✓ Opened revoke.cash";
+  } else {
+    btn.textContent = "✓ Done";
+  }
+
+  btn.disabled = true;
+  btn.classList.add("done");
+  el.classList.add("step-done");
+
+  // Update score visually
+  fwCurrentScore = Math.min(100, fwCurrentScore + scoreIncrements[step]);
+  document.getElementById("scoreNum").textContent = fwCurrentScore;
+  const circumference = 226.2;
+  document.getElementById("gaugeFill").style.strokeDashoffset = circumference - (circumference * fwCurrentScore / 100);
+  const color = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
+  document.getElementById("gaugeFill").style.stroke = color;
+  document.getElementById("scoreDot").style.background = color;
+  document.getElementById("scoreLabel").textContent = fwCurrentScore >= 85 ? "Protected" : fwCurrentScore >= 70 ? "Exposed" : "Vulnerable";
+  const ppScore = document.getElementById("ppScore");
+  if (ppScore) { ppScore.textContent = fwCurrentScore; ppScore.style.color = color; }
+
+  if (fixDone.every(Boolean)) {
+    const fc = document.getElementById("fixComplete");
+    if (fc) fc.style.display = "flex";
+    const fs = document.getElementById("finalScore");
+    if (fs) fs.textContent = fwCurrentScore;
+  }
+}
+
+function applyRule(i) {
+  const btn = document.getElementById(`ruleBtn${i}`);
+  if (!btn) return;
+  btn.textContent = "✓ Applied"; btn.classList.add("done"); btn.disabled = true;
+  showPassportMsg(`✅ Rule "${RULES[i].name}" applied to watchlist.`);
+}
+
+function checkAutoRun() {
+  const p = new URLSearchParams(location.search);
+  const w = p.get("wallet");
+  const n = p.get("net");
+  if (w && fwIsAddr(w)) {
+    document.getElementById("walletInput").value = w;
+    if (n) document.getElementById("netSelect").value = n;
+    startScan();
+  }
+}
+
+function getDemoApprovals() {
+  return [
+    { token:"0xdAC17F958D2ee523a2206206994597C13D831ec7", spender:"0x1111111254eeb25477b68fb85ed929f73a960582", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDT", risk:"medium", verified:true,  decimals:6 },
+    { token:"0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",  spender:"0x10ED43C718714eb63d5aA57B78B54704E256024E", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"WBNB", risk:"low",    verified:true,  decimals:18 },
+    { token:"0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82", spender:"0x6B175474E89094C44Da98b954EedeAC495271d0F", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"CAKE", risk:"high",   verified:false, decimals:18 },
+    { token:"0x2170Ed0880ac9A755fd29B2688956BD959F933F8", spender:"0xDef1C0ded9bec7F1a1670819833240f027b25EfF", allowance:"500000000000000000000", symbol:"ETH",  risk:"low",    verified:true,  decimals:18 },
+    { token:"0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",  spender:"0x44aD3F17960f0da287c3acEE50fe7f3c5D5B9B8E", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"BUSD", risk:"high",   verified:false, decimals:18 },
+    { token:"0x55d398326f99059fF775485246999027B3197955", spender:"0xba12222222228d8ba445958a75a0704d566bf2c8", allowance:"50000000000000000000000", symbol:"USDT", risk:"low",    verified:true,  decimals:18 },
+    { token:"0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", spender:"0xFD14567eaf9ba941cB8c8a94eEC14831ca7fD1b4", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDC", risk:"medium", verified:null,  decimals:18 }
+  ];
+}
+
+function getPassportText() {
+  const score   = document.getElementById("ppScore")?.textContent || "—";
+  const blast   = document.getElementById("ppBlast")?.textContent || "—";
+  const drain   = document.getElementById("ppDrain")?.textContent || "—";
+  const net     = document.getElementById("ppChain")?.textContent || fwNet.toUpperCase();
+  const risky   = document.getElementById("ppApprovals")?.textContent || "—";
+  return `🔥 CycleX Firewall Scan — ${today()}
+
+Wallet: ${fwShort(fwWallet)}
+Network: ${net}
+
+🛡 Firewall Score: ${score}/100
+💥 Blast Radius: ${blast}
+⏱ Drain Time: ${drain}
+🎯 Risky Approvals: ${risky}
+
+Scan your wallet → https://cyclex.io/firewall
+#CycleX #WalletSecurity #DeFi`;
+}
+
+function renderDashboard(wallet, d, tier) {
+  fwCurrentScore = d.score;
+  fixDone = [false, false, false];
+
+  // Wallet badge
+  document.getElementById("walletBadge").textContent = fwShort(wallet);
+  document.getElementById("netBadge").textContent = fwNet.toUpperCase();
+
+  // Score gauge (always visible)
+  animateScore(d.score, d.scoreLabel, d.scoreMeta);
+
+  // Blast Radius (free = count/text, full = detailed)
+  document.getElementById("blastAmt").textContent = d.blastDisplay;
+  renderMeta("blastMeta", d.blastMeta);
+
+  // Time-to-Drain (always visible)
+  setTimeout(() => {
+    const el = document.getElementById("drainTime");
+    el.textContent = d.drainTime;
+    el.classList.toggle("drain-fast", !!d.drainFast);
+    renderMeta("drainMeta", d.drainMeta);
+  }, 600);
+
+  // Exposure Map
+  setTimeout(() => renderExposureMap(wallet, d.threats, tier), 400);
+
+  // Threats
+  setTimeout(() => renderThreats(d.threats, tier), 600);
+
+  // Fix Mode
+  if (tier === "full") {
+    setTimeout(() => renderFixMode(d), 300);
+  } else {
+    renderFixGainPreview(d.score);
+  }
+
+  // Passport
+  renderPassport(wallet, d, tier);
+
+  // Rules
+  renderRuleTemplates();
+}
+
+function renderExposureMap(wallet, threats, tier) {
+  const svg = document.getElementById("exposureMap");
+  const W = 480, H = 260, cx = W/2, cy = H/2;
+  const riskColor = { bad:"#ff4757", warn:"#ffd166", ok:"#3cffb0" };
+
+  // In free tier, show max 3 threats; full shows all 5
+  const visible = tier === "free" ? threats.slice(0, 3) : threats;
+  const n = visible.length;
+  if (!n) { svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="rgba(244,246,255,.35)" font-size="13" font-family="system-ui">No spenders detected</text>`; return; }
+
+  const pos = visible.map((_, i) => {
+    const a = (i/n) * Math.PI*2 - Math.PI/2;
+    return { x: cx + 98*Math.cos(a), y: cy + 98*Math.sin(a) };
+  });
+
+  const tokPos = [];
+  visible.forEach((t, ti) => {
+    t.tokens.forEach((tok, ki) => {
+      const a = ((ti + ki*.28)/n)*Math.PI*2 - Math.PI/2;
+      tokPos.push({ x: cx + 168*Math.cos(a + ki*.32), y: cy + 168*Math.sin(a + ki*.32), name:tok, ti });
+    });
+  });
+
+  let h = `<defs>
+    <radialGradient id="gC" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(0,229,255,.4)"/>
+      <stop offset="100%" stop-color="rgba(0,229,255,.05)"/>
+    </radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>`;
+
+  visible.forEach((t, i) => {
+    const p = pos[i];
+    const col = riskColor[t.risk] || "#888";
+    h += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="${col}" stroke-width="${t.risk==="bad"?2:1.2}" stroke-opacity=".5" stroke-dasharray="4 3"/>`;
+  });
+  tokPos.forEach(tp => {
+    const sp = pos[tp.ti];
+    if (!sp) return;
+    h += `<line x1="${sp.x}" y1="${sp.y}" x2="${tp.x}" y2="${tp.y}" stroke="rgba(255,255,255,.15)" stroke-width="1"/>`;
+  });
+  tokPos.forEach(tp => {
+    h += `<circle cx="${tp.x}" cy="${tp.y}" r="11" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
+      <text x="${tp.x}" y="${tp.y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(244,246,255,.75)" font-size="8" font-family="system-ui" font-weight="700">${esc(tp.name).slice(0,6)}</text>`;
+  });
+  visible.forEach((t, i) => {
+    const p = pos[i];
+    const col = riskColor[t.risk] || "#888";
+    const r   = t.risk === "bad" ? 22 : 17;
+    h += `<circle cx="${p.x}" cy="${p.y}" r="${r+8}" fill="${col}" fill-opacity=".06"/>
+      <circle cx="${p.x}" cy="${p.y}" r="${r}" fill="rgba(5,6,10,.9)" stroke="${col}" stroke-width="1.5" filter="url(#glow)"/>
+      <text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" fill="${col}" font-size="8" font-family="system-ui" font-weight="800">${esc(t.label).split(" ").map(w=>w[0]).join("").slice(0,4)}</text>`;
+  });
+
+  // Greyed-out locked spots for free tier
+  if (tier === "free" && threats.length > 3) {
+    for (let i = 3; i < Math.min(threats.length, 5); i++) {
+      const a = (i/threats.length)*Math.PI*2 - Math.PI/2;
+      const x = cx + 98*Math.cos(a), y = cy + 98*Math.sin(a);
+      h += `<circle cx="${x}" cy="${y}" r="17" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,.22)" font-size="12">🔒</text>`;
+    }
+  }
+
+  h += `<circle cx="${cx}" cy="${cy}" r="36" fill="url(#gC)"/>
+    <circle cx="${cx}" cy="${cy}" r="28" fill="rgba(0,229,255,.10)" stroke="rgba(0,229,255,.45)" stroke-width="1.5"/>
+    <text x="${cx}" y="${cy-5}" text-anchor="middle" dominant-baseline="middle" fill="rgba(0,229,255,.95)" font-size="9" font-family="system-ui" font-weight="900">WALLET</text>
+    <text x="${cx}" y="${cy+8}" text-anchor="middle" dominant-baseline="middle" fill="rgba(0,229,255,.65)" font-size="7.5" font-family="ui-monospace,monospace">${esc(fwShort(wallet))}</text>`;
+
+  svg.innerHTML = h;
+}
+
+function renderFixGainPreview(score) {
+  const total = scoreIncrements.reduce((a,b)=>a+b,0);
+  const newScore = Math.min(100, score + total);
+  const el = document.getElementById("fixGain");
+  if (el) el.style.display = "flex";
+  const ns = document.getElementById("fixNewScore");
+  if (ns) ns.textContent = newScore;
+  const fd = document.getElementById("fixDelta");
+  if (fd) fd.textContent = total;
+}
+
+function renderFixMode(d) {
+  // Update step descriptions to show real spenders
+  if (fixApprovals[0]) {
+    const el = document.querySelector("#fixStep1 .fix-step-desc");
+    if (el) el.textContent = `Remove unlimited allowance from ${fwShort(fixApprovals[0].spender)} (top-risk spender on ${fixApprovals[0].symbol}).`;
+  }
+  if (fixApprovals[1]) {
+    const el = document.querySelector("#fixStep2 .fix-step-desc");
+    if (el) el.textContent = `Revoke unlimited approval granted to ${fwShort(fixApprovals[1].spender)}.`;
+  }
+
+  // Update button 1 to direct revoke if wallet connected
+  const btn1 = document.getElementById("btnFix1");
+  if (btn1 && window.wallet?.address && fixApprovals[0]) {
+    btn1.textContent = `Revoke ${fixApprovals[0].symbol} spender`;
+  }
+
+  renderFixGainPreview(d.score);
+}
+
+function renderMeta(id, items) {
+  const el = document.getElementById(id);
+  if (!el || !items) return;
+  el.innerHTML = items.map(i => `<div class="meta-chip ${i.cls}">${esc(i.label)}</div>`).join("");
+}
+
+function renderPassport(wallet, d, tier) {
+  document.getElementById("ppWallet").textContent = fwShort(wallet) + " · " + fwNet.toUpperCase();
+  document.getElementById("ppScore").textContent = d.score;
+  document.getElementById("ppApprovals").textContent = d.riskyApprovals;
+  document.getElementById("ppBlast").textContent = d.unlimitedCount > 0 ? `${d.unlimitedCount} unlimited` : "Clean";
+  document.getElementById("ppDrain").textContent = d.drainTime;
+  document.getElementById("ppDate").textContent = "Scanned: " + today();
+  document.getElementById("ppChain").textContent = fwNet.toUpperCase();
+
+  const sc = d.score;
+  const scoreEl = document.getElementById("ppScore");
+  if (scoreEl) scoreEl.style.color = sc < 45 ? "#ff4757" : sc < 70 ? "#ffd166" : "#3cffb0";
+
+  const statusEl = document.getElementById("ppStatus");
+  if (sc < 45) {
+    statusEl.textContent = "🧨 Critical";
+    statusEl.style.cssText = "border-color:rgba(255,71,87,.4);color:#ff6b6b;background:rgba(255,71,87,.10)";
+  } else if (sc < 70) {
+    statusEl.textContent = "⚠ Exposed";
+    statusEl.style.cssText = "border-color:rgba(255,193,7,.35);color:#ffd166;background:rgba(255,193,7,.10)";
+  } else {
+    statusEl.textContent = "✅ Protected";
+    statusEl.style.cssText = "border-color:rgba(93,255,178,.35);color:var(--green);background:rgba(93,255,178,.08)";
+  }
+
+  // Watermark: show for free, hide for full
+  const wm = document.getElementById("ppWatermark");
+  if (wm) wm.style.display = tier === "free" ? "flex" : "none";
+}
+
+function renderRuleTemplates() {
+  const el = document.getElementById("ruleTemplates");
+  if (!el) return;
+  el.innerHTML = RULES.map((r, i) => `
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:16px 14px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px">${r.name}</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">${r.desc}</div>
+      <button class="btn-action" id="ruleBtn${i}" onclick="applyRule(${i})" style="font-size:10px">Apply Template</button>
+    </div>
+  `).join("");
+}
+
+function renderThreats(threats, tier) {
+  const el = document.getElementById("threatsList");
+  if (!el) return;
+  if (!threats.length) {
+    el.innerHTML = `<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">✅ No significant threats detected.</div>`;
+    return;
+  }
+  el.innerHTML = threats.map((t, i) => {
+    const isLocked = tier === "free" && i >= 3;
+    return `
+    <div class="threat-item" style="${isLocked ? "filter:blur(5px);pointer-events:none;user-select:none" : ""}">
+      <div class="threat-top">
+        <div>
+          <div class="threat-name">${esc(t.name)}</div>
+          <div class="threat-meta">
+            <span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.label)}</span>
+            ${t.tokens.map(tk=>`<span class="meta-chip" style="font-size:10px;padding:3px 7px">${esc(tk)}</span>`).join("")}
+          </div>
+        </div>
+        <div style="text-align:right;flex:0 0 auto">
+          <div class="threat-damage">${t.isUnlimited ? "∞ Unlimited" : "Capped"}</div>
+          ${(tier === "full" && t.canRevoke) ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>` : (tier === "free" ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>` : "")}
+        </div>
+      </div>
+      <div class="threat-why">${esc(t.why)}</div>
+    </div>`;
+  }).join("");
+}
+
+function resetLoadSteps() {
+  ["step1","step2","step3","step4"].forEach(s => {
+    const el = document.getElementById(s);
+    el?.classList.remove("active","done");
+    const icon = el?.querySelector(".step-icon");
+    if (icon) icon.textContent = "⟳";
+  });
+  const fill = document.getElementById("loadBarFill");
+  if (fill) fill.style.width = "0%";
+}
+
+async function revokeSpender(spender, token, btn) {
+  if (!window.wallet?.signer) { requestFullAccess(); return; }
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const E = getE();
+    const c = new E.Contract(fwNorm(token), ERC20_APPROVE_ABI, window.wallet.signer);
+    const tx = await c.approve(fwNorm(spender), 0n);
+    btn.textContent = "Pending…";
+    await tx.wait();
+    btn.textContent = "✓ Revoked";
+    btn.classList.add("done");
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = "Retry ↗";
+    window.open("https://revoke.cash", "_blank");
+  }
+}
+
 async function runLoadSequence(walletAddr, net, isDemo) {
   fwWallet = walletAddr;
   fwNet    = net;
@@ -1896,383 +3878,6 @@ async function runLoadSequence(walletAddr, net, isDemo) {
   renderDashboard(walletAddr, fwScanData, fwAccessTier);
 }
 
-// ── RENDER DASHBOARD ─────────────────────────────────────────────
-function renderDashboard(wallet, d, tier) {
-  fwCurrentScore = d.score;
-  fixDone = [false, false, false];
-
-  // Wallet badge
-  document.getElementById("walletBadge").textContent = fwShort(wallet);
-  document.getElementById("netBadge").textContent = fwNet.toUpperCase();
-
-  // Score gauge (always visible)
-  animateScore(d.score, d.scoreLabel, d.scoreMeta);
-
-  // Blast Radius (free = count/text, full = detailed)
-  document.getElementById("blastAmt").textContent = d.blastDisplay;
-  renderMeta("blastMeta", d.blastMeta);
-
-  // Time-to-Drain (always visible)
-  setTimeout(() => {
-    const el = document.getElementById("drainTime");
-    el.textContent = d.drainTime;
-    el.classList.toggle("drain-fast", !!d.drainFast);
-    renderMeta("drainMeta", d.drainMeta);
-  }, 600);
-
-  // Exposure Map
-  setTimeout(() => renderExposureMap(wallet, d.threats, tier), 400);
-
-  // Threats
-  setTimeout(() => renderThreats(d.threats, tier), 600);
-
-  // Fix Mode
-  if (tier === "full") {
-    setTimeout(() => renderFixMode(d), 300);
-  } else {
-    renderFixGainPreview(d.score);
-  }
-
-  // Passport
-  renderPassport(wallet, d, tier);
-
-  // Rules
-  renderRuleTemplates();
-}
-
-// ── SCORE GAUGE ───────────────────────────────────────────────────
-function animateScore(target, label, meta) {
-  const circumference = 226.2;
-  const fill  = document.getElementById("gaugeFill");
-  const numEl = document.getElementById("scoreNum");
-  const labEl = document.getElementById("scoreLabel");
-  const dotEl = document.getElementById("scoreDot");
-
-  const color = target < 45 ? "#ff4757" : target < 70 ? "#ffd166" : "#3cffb0";
-  fill.style.stroke = color;
-  dotEl.style.background = color;
-
-  let cur = 0;
-  const step = target / 35;
-  const timer = setInterval(() => {
-    cur = Math.min(cur + step, target);
-    numEl.textContent = Math.round(cur);
-    fill.style.strokeDashoffset = circumference - (circumference * cur / 100);
-    if (cur >= target) {
-      clearInterval(timer);
-      labEl.textContent = label;
-      renderMeta("scoreMeta", meta);
-    }
-  }, 28);
-}
-
-function renderMeta(id, items) {
-  const el = document.getElementById(id);
-  if (!el || !items) return;
-  el.innerHTML = items.map(i => `<div class="meta-chip ${i.cls}">${esc(i.label)}</div>`).join("");
-}
-
-// ── EXPOSURE MAP ──────────────────────────────────────────────────
-function renderExposureMap(wallet, threats, tier) {
-  const svg = document.getElementById("exposureMap");
-  const W = 480, H = 260, cx = W/2, cy = H/2;
-  const riskColor = { bad:"#ff4757", warn:"#ffd166", ok:"#3cffb0" };
-
-  // In free tier, show max 3 threats; full shows all 5
-  const visible = tier === "free" ? threats.slice(0, 3) : threats;
-  const n = visible.length;
-  if (!n) { svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="rgba(244,246,255,.35)" font-size="13" font-family="system-ui">No spenders detected</text>`; return; }
-
-  const pos = visible.map((_, i) => {
-    const a = (i/n) * Math.PI*2 - Math.PI/2;
-    return { x: cx + 98*Math.cos(a), y: cy + 98*Math.sin(a) };
-  });
-
-  const tokPos = [];
-  visible.forEach((t, ti) => {
-    t.tokens.forEach((tok, ki) => {
-      const a = ((ti + ki*.28)/n)*Math.PI*2 - Math.PI/2;
-      tokPos.push({ x: cx + 168*Math.cos(a + ki*.32), y: cy + 168*Math.sin(a + ki*.32), name:tok, ti });
-    });
-  });
-
-  let h = `<defs>
-    <radialGradient id="gC" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="rgba(0,229,255,.4)"/>
-      <stop offset="100%" stop-color="rgba(0,229,255,.05)"/>
-    </radialGradient>
-    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-  </defs>`;
-
-  visible.forEach((t, i) => {
-    const p = pos[i];
-    const col = riskColor[t.risk] || "#888";
-    h += `<line x1="${cx}" y1="${cy}" x2="${p.x}" y2="${p.y}" stroke="${col}" stroke-width="${t.risk==="bad"?2:1.2}" stroke-opacity=".5" stroke-dasharray="4 3"/>`;
-  });
-  tokPos.forEach(tp => {
-    const sp = pos[tp.ti];
-    if (!sp) return;
-    h += `<line x1="${sp.x}" y1="${sp.y}" x2="${tp.x}" y2="${tp.y}" stroke="rgba(255,255,255,.15)" stroke-width="1"/>`;
-  });
-  tokPos.forEach(tp => {
-    h += `<circle cx="${tp.x}" cy="${tp.y}" r="11" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
-      <text x="${tp.x}" y="${tp.y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(244,246,255,.75)" font-size="8" font-family="system-ui" font-weight="700">${esc(tp.name).slice(0,6)}</text>`;
-  });
-  visible.forEach((t, i) => {
-    const p = pos[i];
-    const col = riskColor[t.risk] || "#888";
-    const r   = t.risk === "bad" ? 22 : 17;
-    h += `<circle cx="${p.x}" cy="${p.y}" r="${r+8}" fill="${col}" fill-opacity=".06"/>
-      <circle cx="${p.x}" cy="${p.y}" r="${r}" fill="rgba(5,6,10,.9)" stroke="${col}" stroke-width="1.5" filter="url(#glow)"/>
-      <text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" fill="${col}" font-size="8" font-family="system-ui" font-weight="800">${esc(t.label).split(" ").map(w=>w[0]).join("").slice(0,4)}</text>`;
-  });
-
-  // Greyed-out locked spots for free tier
-  if (tier === "free" && threats.length > 3) {
-    for (let i = 3; i < Math.min(threats.length, 5); i++) {
-      const a = (i/threats.length)*Math.PI*2 - Math.PI/2;
-      const x = cx + 98*Math.cos(a), y = cy + 98*Math.sin(a);
-      h += `<circle cx="${x}" cy="${y}" r="17" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.08)" stroke-width="1" stroke-dasharray="3 3"/>
-        <text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="rgba(255,255,255,.22)" font-size="12">🔒</text>`;
-    }
-  }
-
-  h += `<circle cx="${cx}" cy="${cy}" r="36" fill="url(#gC)"/>
-    <circle cx="${cx}" cy="${cy}" r="28" fill="rgba(0,229,255,.10)" stroke="rgba(0,229,255,.45)" stroke-width="1.5"/>
-    <text x="${cx}" y="${cy-5}" text-anchor="middle" dominant-baseline="middle" fill="rgba(0,229,255,.95)" font-size="9" font-family="system-ui" font-weight="900">WALLET</text>
-    <text x="${cx}" y="${cy+8}" text-anchor="middle" dominant-baseline="middle" fill="rgba(0,229,255,.65)" font-size="7.5" font-family="ui-monospace,monospace">${esc(fwShort(wallet))}</text>`;
-
-  svg.innerHTML = h;
-}
-
-// ── THREATS LIST ──────────────────────────────────────────────────
-function renderThreats(threats, tier) {
-  const el = document.getElementById("threatsList");
-  if (!el) return;
-  if (!threats.length) {
-    el.innerHTML = `<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">✅ No significant threats detected.</div>`;
-    return;
-  }
-  el.innerHTML = threats.map((t, i) => {
-    const isLocked = tier === "free" && i >= 3;
-    return `
-    <div class="threat-item" style="${isLocked ? "filter:blur(5px);pointer-events:none;user-select:none" : ""}">
-      <div class="threat-top">
-        <div>
-          <div class="threat-name">${esc(t.name)}</div>
-          <div class="threat-meta">
-            <span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.label)}</span>
-            ${t.tokens.map(tk=>`<span class="meta-chip" style="font-size:10px;padding:3px 7px">${esc(tk)}</span>`).join("")}
-          </div>
-        </div>
-        <div style="text-align:right;flex:0 0 auto">
-          <div class="threat-damage">${t.isUnlimited ? "∞ Unlimited" : "Capped"}</div>
-          ${(tier === "full" && t.canRevoke) ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>` : (tier === "free" ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>` : "")}
-        </div>
-      </div>
-      <div class="threat-why">${esc(t.why)}</div>
-    </div>`;
-  }).join("");
-}
-
-// ── FIX MODE ──────────────────────────────────────────────────────
-function renderFixMode(d) {
-  // Update step descriptions to show real spenders
-  if (fixApprovals[0]) {
-    const el = document.querySelector("#fixStep1 .fix-step-desc");
-    if (el) el.textContent = `Remove unlimited allowance from ${fwShort(fixApprovals[0].spender)} (top-risk spender on ${fixApprovals[0].symbol}).`;
-  }
-  if (fixApprovals[1]) {
-    const el = document.querySelector("#fixStep2 .fix-step-desc");
-    if (el) el.textContent = `Revoke unlimited approval granted to ${fwShort(fixApprovals[1].spender)}.`;
-  }
-
-  // Update button 1 to direct revoke if wallet connected
-  const btn1 = document.getElementById("btnFix1");
-  if (btn1 && window.wallet?.address && fixApprovals[0]) {
-    btn1.textContent = `Revoke ${fixApprovals[0].symbol} spender`;
-  }
-
-  renderFixGainPreview(d.score);
-}
-
-function renderFixGainPreview(score) {
-  const total = scoreIncrements.reduce((a,b)=>a+b,0);
-  const newScore = Math.min(100, score + total);
-  const el = document.getElementById("fixGain");
-  if (el) el.style.display = "flex";
-  const ns = document.getElementById("fixNewScore");
-  if (ns) ns.textContent = newScore;
-  const fd = document.getElementById("fixDelta");
-  if (fd) fd.textContent = total;
-}
-
-async function applyFix(step) {
-  if (fixDone[step]) return;
-  if (fwAccessTier !== "full") { requestFullAccess(); return; }
-
-  fixDone[step] = true;
-  const el  = document.getElementById(`fixStep${step+1}`);
-  const btn = document.getElementById(`btnFix${step+1}`);
-  if (!el || !btn) return;
-
-  const target = fixApprovals[step];
-
-  // Try real revoke if wallet and signer available
-  if (target && window.wallet?.signer && step === 0) {
-    btn.disabled = true;
-    btn.textContent = "Sending…";
-    try {
-      const E = getE();
-      const c = new E.Contract(fwNorm(target.token), ERC20_APPROVE_ABI, window.wallet.signer);
-      const tx = await c.approve(fwNorm(target.spender), 0n);
-      btn.textContent = "Pending…";
-      await tx.wait();
-      btn.textContent = "✓ Revoked";
-    } catch(e) {
-      btn.textContent = "✓ Done (manual)";
-      if (step === 0) window.open("https://revoke.cash", "_blank");
-    }
-  } else if (step === 0) {
-    window.open("https://revoke.cash", "_blank");
-    btn.textContent = "✓ Opened revoke.cash";
-  } else {
-    btn.textContent = "✓ Done";
-  }
-
-  btn.disabled = true;
-  btn.classList.add("done");
-  el.classList.add("step-done");
-
-  // Update score visually
-  fwCurrentScore = Math.min(100, fwCurrentScore + scoreIncrements[step]);
-  document.getElementById("scoreNum").textContent = fwCurrentScore;
-  const circumference = 226.2;
-  document.getElementById("gaugeFill").style.strokeDashoffset = circumference - (circumference * fwCurrentScore / 100);
-  const color = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
-  document.getElementById("gaugeFill").style.stroke = color;
-  document.getElementById("scoreDot").style.background = color;
-  document.getElementById("scoreLabel").textContent = fwCurrentScore >= 85 ? "Protected" : fwCurrentScore >= 70 ? "Exposed" : "Vulnerable";
-  const ppScore = document.getElementById("ppScore");
-  if (ppScore) { ppScore.textContent = fwCurrentScore; ppScore.style.color = color; }
-
-  if (fixDone.every(Boolean)) {
-    const fc = document.getElementById("fixComplete");
-    if (fc) fc.style.display = "flex";
-    const fs = document.getElementById("finalScore");
-    if (fs) fs.textContent = fwCurrentScore;
-  }
-}
-
-async function revokeSpender(spender, token, btn) {
-  if (!window.wallet?.signer) { requestFullAccess(); return; }
-  btn.disabled = true; btn.textContent = "Sending…";
-  try {
-    const E = getE();
-    const c = new E.Contract(fwNorm(token), ERC20_APPROVE_ABI, window.wallet.signer);
-    const tx = await c.approve(fwNorm(spender), 0n);
-    btn.textContent = "Pending…";
-    await tx.wait();
-    btn.textContent = "✓ Revoked";
-    btn.classList.add("done");
-  } catch(e) {
-    btn.disabled = false;
-    btn.textContent = "Retry ↗";
-    window.open("https://revoke.cash", "_blank");
-  }
-}
-
-// ── PASSPORT ──────────────────────────────────────────────────────
-function renderPassport(wallet, d, tier) {
-  document.getElementById("ppWallet").textContent = fwShort(wallet) + " · " + fwNet.toUpperCase();
-  document.getElementById("ppScore").textContent = d.score;
-  document.getElementById("ppApprovals").textContent = d.riskyApprovals;
-  document.getElementById("ppBlast").textContent = d.unlimitedCount > 0 ? `${d.unlimitedCount} unlimited` : "Clean";
-  document.getElementById("ppDrain").textContent = d.drainTime;
-  document.getElementById("ppDate").textContent = "Scanned: " + today();
-  document.getElementById("ppChain").textContent = fwNet.toUpperCase();
-
-  const sc = d.score;
-  const scoreEl = document.getElementById("ppScore");
-  if (scoreEl) scoreEl.style.color = sc < 45 ? "#ff4757" : sc < 70 ? "#ffd166" : "#3cffb0";
-
-  const statusEl = document.getElementById("ppStatus");
-  if (sc < 45) {
-    statusEl.textContent = "🧨 Critical";
-    statusEl.style.cssText = "border-color:rgba(255,71,87,.4);color:#ff6b6b;background:rgba(255,71,87,.10)";
-  } else if (sc < 70) {
-    statusEl.textContent = "⚠ Exposed";
-    statusEl.style.cssText = "border-color:rgba(255,193,7,.35);color:#ffd166;background:rgba(255,193,7,.10)";
-  } else {
-    statusEl.textContent = "✅ Protected";
-    statusEl.style.cssText = "border-color:rgba(93,255,178,.35);color:var(--green);background:rgba(93,255,178,.08)";
-  }
-
-  // Watermark: show for free, hide for full
-  const wm = document.getElementById("ppWatermark");
-  if (wm) wm.style.display = tier === "free" ? "flex" : "none";
-}
-
-function getPassportText() {
-  const score   = document.getElementById("ppScore")?.textContent || "—";
-  const blast   = document.getElementById("ppBlast")?.textContent || "—";
-  const drain   = document.getElementById("ppDrain")?.textContent || "—";
-  const net     = document.getElementById("ppChain")?.textContent || fwNet.toUpperCase();
-  const risky   = document.getElementById("ppApprovals")?.textContent || "—";
-  return `🔥 CycleX Firewall Scan — ${today()}
-
-Wallet: ${fwShort(fwWallet)}
-Network: ${net}
-
-🛡 Firewall Score: ${score}/100
-💥 Blast Radius: ${blast}
-⏱ Drain Time: ${drain}
-🎯 Risky Approvals: ${risky}
-
-Scan your wallet → https://cyclex.io/firewall
-#CycleX #WalletSecurity #DeFi`;
-}
-
-// ── RULE TEMPLATES ────────────────────────────────────────────────
-const RULES = [
-  { name:"🔒 Strict",  desc:"No unlimited. Cap $50 for unknown. Alerts on any new spender.", applied:false },
-  { name:"⚖ Balanced", desc:"Cap $200 for unknown. Whitelist major DEXes. Weekly review.",   applied:false },
-  { name:"📈 Trader",  desc:"Allow known DEX unlimited. Alert on fresh/unknown spenders.",    applied:false }
-];
-
-function renderRuleTemplates() {
-  const el = document.getElementById("ruleTemplates");
-  if (!el) return;
-  el.innerHTML = RULES.map((r, i) => `
-    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:16px 14px">
-      <div style="font-size:14px;font-weight:800;margin-bottom:6px">${r.name}</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">${r.desc}</div>
-      <button class="btn-action" id="ruleBtn${i}" onclick="applyRule(${i})" style="font-size:10px">Apply Template</button>
-    </div>
-  `).join("");
-}
-
-function applyRule(i) {
-  const btn = document.getElementById(`ruleBtn${i}`);
-  if (!btn) return;
-  btn.textContent = "✓ Applied"; btn.classList.add("done"); btn.disabled = true;
-  showPassportMsg(`✅ Rule "${RULES[i].name}" applied to watchlist.`);
-}
-
-// ── DEMO DATA ─────────────────────────────────────────────────────
-function getDemoApprovals() {
-  return [
-    { token:"0xdAC17F958D2ee523a2206206994597C13D831ec7", spender:"0x1111111254eeb25477b68fb85ed929f73a960582", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDT", risk:"medium", verified:true,  decimals:6 },
-    { token:"0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",  spender:"0x10ED43C718714eb63d5aA57B78B54704E256024E", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"WBNB", risk:"low",    verified:true,  decimals:18 },
-    { token:"0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82", spender:"0x6B175474E89094C44Da98b954EedeAC495271d0F", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"CAKE", risk:"high",   verified:false, decimals:18 },
-    { token:"0x2170Ed0880ac9A755fd29B2688956BD959F933F8", spender:"0xDef1C0ded9bec7F1a1670819833240f027b25EfF", allowance:"500000000000000000000", symbol:"ETH",  risk:"low",    verified:true,  decimals:18 },
-    { token:"0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",  spender:"0x44aD3F17960f0da287c3acEE50fe7f3c5D5B9B8E", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"BUSD", risk:"high",   verified:false, decimals:18 },
-    { token:"0x55d398326f99059fF775485246999027B3197955", spender:"0xba12222222228d8ba445958a75a0704d566bf2c8", allowance:"50000000000000000000000", symbol:"USDT", risk:"low",    verified:true,  decimals:18 },
-    { token:"0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", spender:"0xFD14567eaf9ba941cB8c8a94eEC14831ca7fD1b4", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDC", risk:"medium", verified:null,  decimals:18 }
-  ];
-}
-
-// ── UI EVENTS ─────────────────────────────────────────────────────
 function showPassportMsg(msg) {
   const el = document.getElementById("passportShared");
   if (!el) return;
@@ -2289,99 +3894,27 @@ function startScan() {
   runLoadSequence(wallet, net, isDemo);
 }
 
-function resetLoadSteps() {
-  ["step1","step2","step3","step4"].forEach(s => {
-    const el = document.getElementById(s);
-    el?.classList.remove("active","done");
-    const icon = el?.querySelector(".step-icon");
-    if (icon) icon.textContent = "⟳";
-  });
-  const fill = document.getElementById("loadBarFill");
-  if (fill) fill.style.width = "0%";
+function unlockFull() {
+  fwAccessTier = "full";
+  document.getElementById("accessGateOverlay")?.style && (document.getElementById("accessGateOverlay").style.display = "none");
+  document.getElementById("tierBadge") && (document.getElementById("tierBadge").style.display = "flex");
+  document.getElementById("btnTopAccess") && (document.getElementById("btnTopAccess").style.display = "none");
+  // Remove lock overlays
+  document.getElementById("fixLockOverlay")    && (document.getElementById("fixLockOverlay").style.display    = "none");
+  document.getElementById("passportLockOverlay")&& (document.getElementById("passportLockOverlay").style.display = "none");
+  // Remove passport watermark
+  document.getElementById("ppWatermark") && (document.getElementById("ppWatermark").style.display = "none");
 }
 
-// Button bindings
-document.getElementById("btnFix1").addEventListener("click", () => applyFix(0));
-document.getElementById("btnFix2").addEventListener("click", () => applyFix(1));
-document.getElementById("btnFix3").addEventListener("click", () => applyFix(2));
 
-document.getElementById("btnShareX").addEventListener("click", () => {
-  if (fwAccessTier !== "full") { requestFullAccess(); return; }
-  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getPassportText())}`, "_blank");
-});
+// ── Bridge: openPassPopup → cx-modal ─────────────────────────
+function openPassPopup()  { openAccessModal(); }
+function closePassPopup() { closeAccessModal(); }
 
-document.getElementById("btnCopyPassport").addEventListener("click", () => {
-  if (fwAccessTier !== "full") { requestFullAccess(); return; }
-  navigator.clipboard.writeText(getPassportText())
-    .then(() => showPassportMsg("✅ Passport text copied!"))
-    .catch(() => showPassportMsg("Copy failed — try manually."));
-});
-
-document.getElementById("btnCopyLink").addEventListener("click", () => {
-  const url = `${location.origin}/firewall?wallet=${fwWallet}&net=${fwNet}`;
-  navigator.clipboard.writeText(url)
-    .then(() => showPassportMsg("✅ Share link copied!"))
-    .catch(() => showPassportMsg("Copy failed."));
-});
-
-document.getElementById("btnRescan").addEventListener("click", () => {
-  document.getElementById("dashboard").style.display = "none";
-  resetLoadSteps();
-  runLoadSequence(fwWallet, fwNet, !fwWallet || fwWallet === DEMO_WALLET);
-});
-
-document.getElementById("btnNewScan").addEventListener("click", () => {
-  document.getElementById("dashboard").style.display = "none";
-  const hero = document.getElementById("heroSection");
-  hero.style.display = "block"; hero.style.opacity = "1"; hero.style.transform = "none";
-  document.getElementById("walletInput").value = "";
-  document.getElementById("walletInput").focus();
-  resetLoadSteps();
-  fixDone = [false, false, false];
-  // hide gate again until next scan
-  const gate = document.getElementById("accessGateOverlay");
-  if (gate) gate.style.display = "none";
-});
-
-document.getElementById("btnRunFirewall").addEventListener("click", startScan);
-document.getElementById("walletInput").addEventListener("keydown", e => { if (e.key === "Enter") startScan(); });
-
-document.getElementById("demoHint").addEventListener("click", () => {
-  document.getElementById("walletInput").value = DEMO_WALLET;
-  document.getElementById("netSelect").value = "bsc";
-  runLoadSequence(DEMO_WALLET, "bsc", true);
-});
-
-// ── EVENT BINDINGS ─────────────────────────────────────────────
-document.getElementById("btnTopAccess")?.addEventListener("click", requestFullAccess);
-document.getElementById("btnCheckAccess")?.addEventListener("click", requestFullAccess);
-document.getElementById("btnBuyPass")?.addEventListener("click", openAccessModal);
-document.getElementById("btnGetCycx")?.addEventListener("click", () => {
-  setGateStatus("🪙 CYCX token launching soon — follow @CycleXFinance!", "#ffd166");
-});
-
-// Init access modal + language
+// Wire up the access modal
 bindAccessModal();
-fwInitLang();
-fwBindLangButtons();
 
-// Auto-run from URL params
-(function checkAutoRun() {
-  const p = new URLSearchParams(location.search);
-  const w = p.get("wallet");
-  const n = p.get("net");
-  if (w && fwIsAddr(w)) {
-    document.getElementById("walletInput").value = w;
-    if (n) document.getElementById("netSelect").value = n;
-    startScan();
-  }
-})();
+  </script>
 
-// Expose for onclick handlers
-window.requestFullAccess = requestFullAccess;
-window.revokeSpender     = revokeSpender;
-window.applyRule         = applyRule;
-window.applyFix          = applyFix;
-</script>
 </body>
 </html>
