@@ -437,6 +437,34 @@
       color:rgba(255,255,255,.08);pointer-events:none;transform:rotate(-18deg);
       text-shadow:none;z-index:2
     }
+  
+    /* ── LANG SWITCH ───────────────────────────────────────────── */
+    .lang-switch{position:relative;z-index:1;display:inline-flex;align-items:center;padding:4px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 10px 26px rgba(0,0,0,.35);gap:2px;flex:0 0 auto}
+    .lang-btn{border:none;background:transparent;color:rgba(244,246,255,.56);font-size:11px;padding:6px 10px;border-radius:999px;cursor:pointer;user-select:none;white-space:nowrap;transition:transform .18s ease-out,background .18s ease-out,color .18s ease-out}
+    .lang-btn:hover{transform:translateY(-1px)}
+    .lang-btn.active{background:rgba(0,229,255,.14);color:rgba(0,229,255,.95)}
+    body.lang-switching{animation:langFade .28s ease-out}
+    @keyframes langFade{from{opacity:.5;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    /* ── CX-MODAL ───────────────────────────────────────────────── */
+    .cx-modal{position:fixed;inset:0;display:none;z-index:10000;align-items:center;justify-content:center;padding:22px}
+    .cx-modal.is-open{display:flex}
+    .cx-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px)}
+    .cx-modal__dialog{position:relative;z-index:1;width:min(500px,100%);border-radius:26px;background:linear-gradient(135deg,rgba(12,14,28,1),rgba(18,10,40,1));border:1px solid rgba(255,255,255,.14);box-shadow:0 26px 92px rgba(0,0,0,.7),0 0 40px rgba(0,229,255,.08);overflow:hidden;animation:dashIn .3s ease-out}
+    .cx-modal__top{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)}
+    .cx-modal__title{font-weight:900;letter-spacing:.06em;font-size:17px;text-transform:uppercase}
+    .cx-modal__close{border:0;background:rgba(255,255,255,.08);color:rgba(255,255,255,.92);width:38px;height:38px;border-radius:12px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+    .cx-modal__close:hover{background:rgba(255,255,255,.16)}
+    .cx-modal__body{padding:24px 24px 22px;max-height:min(72vh,640px);overflow:auto}
+    .cx-modal__desc{line-height:1.7;font-size:15px;color:rgba(255,255,255,.92);margin-bottom:14px}
+    .cx-modal__note{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);font-size:13px;line-height:1.6;color:rgba(255,255,255,.82);margin-bottom:20px}
+    .cx-modal__actions{display:flex;flex-direction:column;gap:12px}
+    .cx-modal__status{margin-top:12px;font-size:13px;opacity:.9;text-align:center;min-height:20px;line-height:1.5}
+    .cx-modal__foot{margin-top:14px;font-size:12px;line-height:1.5;color:rgba(255,255,255,.62);text-align:center}
+    w3m-modal,w3m-router,w3m-overlay,wui-modal,wui-dialog,.w3m-modal{z-index:2147483000!important;position:fixed!important}
+    html[dir="rtl"] .top-bar{flex-direction:row-reverse}
+    html[dir="rtl"] .brand{flex-direction:row-reverse}
+    html[dir="rtl"] .top-right{flex-direction:row-reverse}
+
   </style>
 </head>
 <body>
@@ -455,10 +483,16 @@
       </div>
     </a>
     <div class="top-right">
+      <div class="lang-switch" role="navigation" aria-label="Language selector">
+        <button class="lang-btn active" data-lang="en">🇺🇸 EN</button>
+        <button class="lang-btn" data-lang="zh">🇨🇳 中文</button>
+        <button class="lang-btn" data-lang="ar">🇸🇦 عربي</button>
+        <button class="lang-btn" data-lang="ru">🇷🇺 RU</button>
+      </div>
       <div id="tierBadge" style="display:none;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:6px 12px;border-radius:999px;border:1px solid rgba(93,255,178,.3);background:rgba(93,255,178,.08);color:var(--green);font-weight:800">✓ FULL ACCESS</div>
       <div class="firewall-badge"><span class="dot"></span>FIREWALL</div>
       <button class="btn-full-access-top" id="btnTopAccess" title="Unlock full features">🔑 Full Access</button>
-      <a class="back-link" href="/">← Back to Hub</a>
+      <a class="back-link" href="https://cyclex.network/security">← Back to Hub</a>
     </div>
   </header>
 
@@ -517,6 +551,70 @@
       <div class="notice" id="demoNotice">
         <strong>Demo mode:</strong> Showing sample data. Enter a real wallet address and click "Run Firewall" to scan live.
       </div>
+
+      <!-- ACCESS GATE OVERLAY -->
+      <div id="accessGateOverlay" style="display:none;position:relative;z-index:10;margin-bottom:24px">
+        <div style="
+          background:linear-gradient(135deg,rgba(124,92,255,.12),rgba(0,229,255,.08));
+          border:1px solid rgba(124,92,255,.35);border-radius:22px;padding:28px;
+          text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.55),0 0 30px rgba(124,92,255,.12)
+        ">
+          <div style="font-size:32px;margin-bottom:12px">🔒</div>
+          <div style="font-size:18px;font-weight:900;margin-bottom:8px">Full Access Required</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.7;max-width:52ch;margin:0 auto 20px">
+            Hold <strong style="color:var(--purple)">≥100 CYCX</strong> or <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.
+          </div>
+          <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+            <!-- Connect & Check — triggers AppKit modal -->
+            <button class="btn btn-full-access" id="btnCheckAccess">
+              🔑 Connect &amp; Check Access
+            </button>
+            <!-- PASS: opens purchase popup -->
+            <button class="btn btn-ghost" id="btnBuyPass" style="font-size:12px">
+              🎫 Get PASS ↗
+            </button>
+            <!-- CYCX: disabled until TGE -->
+            <button class="btn btn-ghost" id="btnGetCycx" disabled title="CYCX token launching soon — stay tuned!" style="font-size:12px;opacity:.45;cursor:not-allowed;position:relative">
+              <span class="coming-soon-badge">Soon</span>
+              🪙 Get CYCX
+            </button>
+          </div>
+          <div id="gateStatus" style="margin-top:14px;font-size:12px;color:var(--muted);min-height:18px"></div>
+        </div>
+      </div>
+
+      <!-- ACCESS MODAL (CX-MODAL, viewport-fixed) -->
+<div id="access-modal" class="cx-modal" aria-hidden="true" role="dialog">
+  <div class="cx-modal__backdrop" data-close-access></div>
+  <div class="cx-modal__dialog">
+    <div class="cx-modal__top">
+      <div class="cx-modal__title" data-i18n="access_title">Get PASS</div>
+      <button class="cx-modal__close" type="button" data-close-access aria-label="Close">✕</button>
+    </div>
+    <div class="cx-modal__body">
+      <div class="cx-modal__desc" data-i18n="access_desc">
+        Unlock Firewall Fix Mode, full Blast Radius, Wallet Passport and real revoke actions. Your PASS is non-tradable and converts to CYCX at public sale.
+      </div>
+      <div class="cx-modal__note">
+        <span data-i18n="access_note">No signature needed to unlock. Revoke actions always require your approval in-wallet.</span>
+      </div>
+      <div class="cx-modal__actions">
+        <button class="btn btn-primary" id="btn-pay-bnb" type="button" disabled>
+          <span class="btn-main" data-i18n="access_pay_bnb">Buy Access Pass (BNB)</span>
+          <span class="btn-sub"><span data-i18n="access_price_label">Price:</span> <span id="access-price-bnb">…</span></span>
+        </button>
+        <button class="btn btn-secondary" id="btn-pay-usdt" type="button" disabled>
+          <span class="btn-main" data-i18n="access_pay_usdt">Buy Access Pass (USDT)</span>
+          <span class="btn-sub"><span data-i18n="access_price_label">Price:</span> <span id="access-price-usdt">—</span></span>
+        </button>
+      </div>
+      <div class="cx-modal__status muted" id="access-status" aria-live="polite"></div>
+      <div class="cx-modal__foot muted" data-i18n="access_foot">
+        Early access: $9 for first 500 passes, then $19. 1 pass per wallet.
+      </div>
+    </div>
+  </div>
+</div>
 
       <!-- ACCESS GATE OVERLAY -->
       <div id="accessGateOverlay" style="display:none;position:relative;z-index:10;margin-bottom:24px">
@@ -734,7 +832,7 @@
           <div class="lock-overlay-inner">
             <div class="lock-icon">🔒</div>
             <p>Wallet Passport requires Full Access</p>
-            <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:11px;padding:10px 18px">Unlock Passport</button>
+            <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:11px;padding:10px 18px" data-i18n="unlock_passport">Unlock Passport</button>
           </div>
         </div>
         <div style="margin-bottom:18px">
@@ -822,6 +920,519 @@
 
 // ── CONSTANTS ────────────────────────────────────────────────────
 const DEMO_WALLET = "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD";
+
+    // =========================
+    // CHAINS + RPC SYSTEM (from Security Hub)
+    // =========================
+    const CHAINS_FW = {
+      bsc: {
+        chainId: 56, name: "BSC",
+        publicRpcs: [
+          "https://bsc-rpc.publicnode.com",
+          "https://bsc.publicnode.com",
+          "https://bsc-dataseed.binance.org",
+          "https://bsc-dataseed1.binance.org",
+          "https://bsc-dataseed2.binance.org",
+          "https://rpc.ankr.com/bsc",
+          "https://bsc-dataseed3.binance.org",
+          "https://bsc-dataseed4.binance.org",
+          "https://1rpc.io/bnb"
+        ]
+      },
+      eth: {
+        chainId: 1, name: "Ethereum",
+        publicRpcs: [
+          "https://ethereum-rpc.publicnode.com",
+          "https://rpc.ankr.com/eth",
+          "https://eth.llamarpc.com",
+          "https://1rpc.io/eth"
+        ]
+      }
+    };
+
+    const LS_FW_BEST = (net) => `cx_fw_best_rpc_${net}`;
+    const LS_FW_PRIV = (net) => `cx_fw_priv_rpc_${net}`;
+    function fwGetSavedBestRpc(net){ try{ return localStorage.getItem(LS_FW_BEST(net))||""; }catch{ return ""; } }
+    function fwSetSavedBestRpc(net,url){ try{ localStorage.setItem(LS_FW_BEST(net),url); }catch{} }
+    function fwGetSavedPrivRpc(net){ try{ return localStorage.getItem(LS_FW_PRIV(net))||""; }catch{ return ""; } }
+
+    function fwUniq(arr){ return [...new Set(arr.filter(Boolean))]; }
+
+    function fwBuildRpcCandidates(net){
+      const chain = CHAINS_FW[net];
+      const saved = fwGetSavedBestRpc(net);
+      const priv  = fwGetSavedPrivRpc(net);
+      return fwUniq([priv, saved, ...(chain?.publicRpcs||[])]);
+    }
+
+    const _fwProviderCache = new Map();
+    function fwGetProviderForUrl(net, url){
+      const Eth = window.E||window.ethers;
+      if(!Eth?.JsonRpcProvider) return null;
+      const key = `${net}|${url}`;
+      if(_fwProviderCache.has(key)) return _fwProviderCache.get(key);
+      const chain = CHAINS_FW[net];
+      try {
+        const n = Eth.Network.from({ name: chain.name.toLowerCase(), chainId: chain.chainId });
+        const p = new Eth.JsonRpcProvider(url, n, { staticNetwork: n });
+        _fwProviderCache.set(key, p);
+        return p;
+      } catch(e) { return null; }
+    }
+
+    async function fwWithRpcFallback(net, fn, { timeoutMs=9000 }={}){
+      const Eth = window.E||window.ethers;
+      if(!Eth) return { ok:false, err: new Error("ethers not loaded") };
+      const urls = fwBuildRpcCandidates(net);
+      let lastErr = null;
+      for(const url of urls){
+        if(!url) continue;
+        try{
+          const provider = fwGetProviderForUrl(net, url);
+          if(!provider) continue;
+          const res = await Promise.race([
+            fn(provider, url),
+            new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),timeoutMs))
+          ]);
+          fwSetSavedBestRpc(net, url);
+          return { ok:true, url, res };
+        }catch(e){ lastErr=e; continue; }
+      }
+      return { ok:false, err: lastErr||new Error("All RPCs failed") };
+    }
+
+    // =========================
+    // APPKIT (lazy-loaded, same pattern as Security Hub)
+    // =========================
+    const APPKIT_PROJECT_ID = "7886bcb95105e9e47337cec481d5de75";
+    let _appkitLoadPromise = null;
+
+    async function loadAppKit(){
+      if(window.CxAppKitModal) return window.CxAppKitModal;
+      if(_appkitLoadPromise) return _appkitLoadPromise;
+      _appkitLoadPromise = (async()=>{
+        const [{ createAppKit },{ EthersAdapter },{ bsc, mainnet }] = await Promise.all([
+          import("https://esm.sh/@reown/appkit@1.8.15"),
+          import("https://esm.sh/@reown/appkit-adapter-ethers@1.8.15"),
+          import("https://esm.sh/@reown/appkit/networks"),
+        ]);
+        const appkit = createAppKit({
+          adapters:[new EthersAdapter()],
+          networks:[bsc, mainnet],
+          defaultNetwork:bsc,
+          projectId:APPKIT_PROJECT_ID,
+          analytics:false,
+          metadata:{
+            name:"CycleX Firewall",
+            description:"CycleX Wallet Firewall",
+            url:window.location.origin,
+            icons:[`${window.location.origin}/logo.png`]
+          }
+        });
+        window.CxAppKitModal = appkit;
+        if(!window.E && window.ethers){ window.E = window.ethers; }
+        return appkit;
+      })();
+      return _appkitLoadPromise;
+    }
+    setTimeout(()=>{ try{ loadAppKit(); }catch{} }, 6000);
+
+    async function fwHydrateWallet(timeoutMs=16000){
+      const start = Date.now();
+      while(Date.now()-start<timeoutMs){
+        if(window.wallet?.address) return window.wallet.address;
+        try{
+          const p = window.CxAppKitModal?.getWalletProvider?.();
+          if(p){
+            const Eth = window.E||window.ethers;
+            if(Eth){
+              const web3Provider = new Eth.BrowserProvider(p);
+              const signer = await web3Provider.getSigner();
+              const address = await signer.getAddress();
+              if(address){
+                if(!window.wallet) window.wallet={};
+                window.wallet.address = address;
+                window.wallet.signer  = signer;
+                window.wallet.browserProvider = web3Provider;
+                window.wallet.providerRaw = p;
+                return address;
+              }
+            }
+          }
+        }catch{}
+        await new Promise(r=>setTimeout(r,300));
+      }
+      return null;
+    }
+
+    async function cxConnectWallet({ silent=false }={}){
+      if(window.wallet?.address && window.wallet?.signer){ return true; }
+      try{
+        const appkit = await loadAppKit();
+        await appkit.open();
+        const addr = await fwHydrateWallet(20000);
+        return !!addr;
+      }catch(e){
+        console.warn("cxConnectWallet error:", e);
+        return false;
+      }
+    }
+    window.cxConnectWallet = cxConnectWallet;
+
+    // =========================
+    // ACCESS MODAL — buy PASS via BNB or USDT
+    // =========================
+    const ACCESS_USD_PRICE = 9;
+    const ACCESS_USDT_ADDR = "0x55d398326f99059fF775485246999027B3197955";
+    const ACCESS_SALE_ADDR = "0x1993b2D333713cdA3C6166bb02F71E304A14471f";
+    const ACCESS_READ_RPCS = [
+      "https://bsc-rpc.publicnode.com","https://bsc.publicnode.com",
+      "https://rpc.ankr.com/bsc","https://bsc-dataseed.binance.org/",
+      "https://1rpc.io/bnb","https://bsc-dataseed1.defibit.io/"
+    ];
+    let ACCESS_PRICE_CACHE = { ts:0, bnbUsd:null };
+    let __accessFlowRunning = false;
+    let __mobileAccessReadyToPay = false;
+    let __mobileAccessReadyKind = "";
+
+    function isMobileLike(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||""); }
+
+    async function accessFetchBnbUsd(){
+      const now = Date.now();
+      if(ACCESS_PRICE_CACHE.bnbUsd && (now-ACCESS_PRICE_CACHE.ts)<60000) return ACCESS_PRICE_CACHE.bnbUsd;
+      const r = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BNBUSDT",{cache:"no-store"});
+      const j = await r.json();
+      const px = Number(j.price);
+      if(!isFinite(px)||px<=0) throw new Error("BAD_PRICE");
+      ACCESS_PRICE_CACHE = { ts:now, bnbUsd:px };
+      return px;
+    }
+
+    async function accessReadEthCall(to, data){
+      for(const url of ACCESS_READ_RPCS){
+        try{
+          const r = await fetch(url,{method:"POST",headers:{"content-type":"application/json"},
+            body:JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_call",params:[{to,data},"latest"]})});
+          const j = await r.json();
+          if(j.result) return j.result;
+        }catch{}
+      }
+      throw new Error("ALL_RPCS_FAILED");
+    }
+
+    async function accessQuoteBNB(){
+      const out = await accessReadEthCall(ACCESS_SALE_ADDR,"0x42773499");
+      const wei = BigInt(out);
+      if(wei<=0n) throw new Error("QUOTE_ZERO");
+      return wei;
+    }
+
+    function accessSetBusy(on){
+      ["btn-pay-bnb","btn-pay-usdt"].forEach(id=>{
+        const b=document.getElementById(id);
+        if(b){ b.disabled=!!on; b.classList.toggle("is-busy",!!on); }
+      });
+    }
+
+    function accessSetStatus(msg){
+      const el=document.getElementById("access-status");
+      if(el) el.textContent=msg||"";
+    }
+
+    async function accessUpdatePricesUI(usdPrice){
+      accessSetBusy(true);
+      try{
+        const usdtEl=document.getElementById("access-price-usdt");
+        const bnbEl=document.getElementById("access-price-bnb");
+        const b1=document.getElementById("btn-pay-bnb");
+        const b2=document.getElementById("btn-pay-usdt");
+        if(usdtEl) usdtEl.textContent=`${usdPrice} USDT`;
+        if(bnbEl) bnbEl.textContent="…";
+        try{
+          const wei = await accessQuoteBNB();
+          const bnb = Number(wei)/1e18;
+          const txt = bnb.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+          if(bnbEl) bnbEl.textContent=`~${txt} BNB`;
+          window.__ACCESS_BNB_WEI = wei;
+        }catch{
+          const bnbUsd = await accessFetchBnbUsd();
+          const bnbAmt = usdPrice/bnbUsd;
+          const txt = bnbAmt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+          if(bnbEl) bnbEl.textContent=`~${txt} BNB`;
+          if(window.ethers?.parseUnits) window.__ACCESS_BNB_WEI = window.ethers.parseUnits(bnbAmt.toFixed(18),18);
+        }
+        if(b1) b1.disabled=false;
+        if(b2) b2.disabled=false;
+      }catch(e){ console.error("price load failed:",e); }
+      finally{ accessSetBusy(false); }
+    }
+
+    function openAccessModal(){
+      accessSetStatus("");
+      __mobileAccessReadyToPay=false; __mobileAccessReadyKind="";
+      const m=document.getElementById("access-modal");
+      if(!m) return;
+      m.classList.add("is-open");
+      m.setAttribute("aria-hidden","false");
+      accessUpdatePricesUI(ACCESS_USD_PRICE).catch(console.error);
+    }
+
+    function closeAccessModal(){
+      const m=document.getElementById("access-modal");
+      if(!m) return;
+      m.classList.remove("is-open");
+      m.setAttribute("aria-hidden","true");
+      __mobileAccessReadyToPay=false; __mobileAccessReadyKind="";
+    }
+
+    async function accessWaitForConfirm(provider, txHash, maxMs=120000){
+      const start=Date.now();
+      while(Date.now()-start<maxMs){
+        try{
+          const rc=await provider.request({method:"eth_getTransactionReceipt",params:[txHash]});
+          if(rc&&rc.status!=null) return rc.status==="0x1"||rc.status===1||rc.status===true;
+        }catch{}
+        await new Promise(r=>setTimeout(r,2000));
+      }
+      return false;
+    }
+
+    async function accessBuyFlow(kind, { skipConnectModal=false }={}){
+      if(__accessFlowRunning) return;
+      __accessFlowRunning=true; accessSetBusy(true);
+      try{
+        const connected = skipConnectModal
+          ? (!!window.wallet?.address)
+          : await cxConnectWallet({ silent:false });
+        if(!connected){ accessSetStatus("Wallet not connected. Please try again."); return; }
+
+        let provider =
+          (window.wallet?.providerRaw?.request && window.wallet.providerRaw)||
+          (window.wallet?.browserProvider?.provider?.request && window.wallet.browserProvider.provider)||
+          window.ethereum;
+        let from = String(window.wallet?.address||"").trim();
+        if(!from||!provider?.request){ accessSetStatus("Could not get wallet address."); return; }
+
+        const TARGET_CHAIN="0x38";
+        try{
+          const cid=await provider.request({method:"eth_chainId"});
+          if(cid!==TARGET_CHAIN){
+            await provider.request({method:"wallet_switchEthereumChain",params:[{chainId:TARGET_CHAIN}]});
+          }
+        }catch(err){
+          if(err?.code===4902||String(err?.message||"").includes("4902")){
+            await provider.request({method:"wallet_addEthereumChain",params:[{
+              chainId:TARGET_CHAIN,chainName:"BNB Smart Chain",
+              nativeCurrency:{name:"BNB",symbol:"BNB",decimals:18},
+              rpcUrls:["https://bsc-dataseed.binance.org/"],
+              blockExplorerUrls:["https://bscscan.com/"]
+            }]});
+          } else if(err?.code===4001){ accessSetStatus("Network switch canceled."); return; }
+          else throw err;
+        }
+
+        if(kind==="bnb"){
+          let WEI = window.__ACCESS_BNB_WEI;
+          if(!WEI){ try{ WEI=await accessQuoteBNB(); }catch{} }
+          if(!WEI||BigInt(WEI)<=0n){ accessSetStatus("Couldn\'t fetch BNB quote. Try again."); return; }
+          const val = (BigInt(WEI)*101n)/100n;
+          const txParams={from,to:ACCESS_SALE_ADDR,value:"0x"+val.toString(16),data:"0x20f1fc61"};
+          accessSetStatus("Open wallet to approve…");
+          let txHash;
+          try{ txHash=await provider.request({method:"eth_sendTransaction",params:[txParams]}); }
+          catch(e){
+            const msg=String(e?.message||e||"");
+            if(/user rejected|rejected|denied|cancel|4001/i.test(msg)) accessSetStatus("Payment canceled.");
+            else accessSetStatus("Wallet open failed. Try again.");
+            return;
+          }
+          accessSetStatus("Transaction sent ✅ Waiting for confirmation…");
+          const ok=await accessWaitForConfirm(provider,txHash);
+          if(ok){ accessSetStatus("Confirmed ✅"); setTimeout(async()=>{ closeAccessModal(); await requestFullAccess(); },1200); }
+          else accessSetStatus("Pending on-chain… You can close and try again.");
+          return;
+        }
+
+        if(kind==="usdt"){
+          const Eth=window.ethers||window.E;
+          if(!Eth){ accessSetStatus("Ethers.js required."); return; }
+          const web3Provider=new Eth.BrowserProvider(provider);
+          const signer=await web3Provider.getSigner();
+          const usdt=new Eth.Contract(ACCESS_USDT_ADDR,["function decimals() view returns (uint8)","function approve(address,uint256) returns (bool)"],signer);
+          const sale=new Eth.Contract(ACCESS_SALE_ADDR,["function buyWithUSDT() external"],signer);
+          const decimals=Number(await usdt.decimals());
+          const amount=Eth.parseUnits(String(ACCESS_USD_PRICE),decimals);
+          accessSetStatus("Approve USDT in wallet…");
+          const tx1=await usdt.approve(ACCESS_SALE_ADDR,amount);
+          await tx1.wait();
+          accessSetStatus("Confirm purchase in wallet…");
+          const tx2=await sale.buyWithUSDT();
+          accessSetStatus("Transaction sent ✅ Waiting…");
+          const ok=await tx2.wait().then(r=>r&&r.status===1).catch(()=>false);
+          if(ok){ accessSetStatus("Confirmed ✅"); setTimeout(async()=>{ closeAccessModal(); await requestFullAccess(); },1200); }
+          else accessSetStatus("Pending on-chain… You can close and try again.");
+          return;
+        }
+      }catch(e){
+        const msg=String(e?.message||e||"");
+        if(/user rejected|rejected|denied|cancel|4001/i.test(msg)) accessSetStatus("Payment canceled.");
+        else accessSetStatus("Checkout error: "+msg.substring(0,100));
+        console.error("accessBuyFlow:",e);
+      }finally{
+        accessSetBusy(false); __accessFlowRunning=false;
+      }
+    }
+
+    function bindAccessModal(){
+      if(window.__accessModalBound) return;
+      window.__accessModalBound=true;
+      const m=document.getElementById("access-modal");
+      if(!m) return;
+      m.querySelectorAll("[data-close-access]").forEach(el=>el.addEventListener("click",closeAccessModal));
+      document.getElementById("btn-pay-bnb")?.addEventListener("click",async(e)=>{
+        e.preventDefault(); e.stopPropagation();
+        if(!isMobileLike()){ accessBuyFlow("bnb"); return; }
+        if(!__mobileAccessReadyToPay||__mobileAccessReadyKind!=="bnb"){
+          accessSetStatus("Step 1/2: Connecting wallet…");
+          const ok=await cxConnectWallet({silent:false});
+          if(!ok){ accessSetStatus("Connection failed. Tap again."); return; }
+          try{ await accessUpdatePricesUI(ACCESS_USD_PRICE); }catch{}
+          __mobileAccessReadyToPay=true; __mobileAccessReadyKind="bnb";
+          accessSetStatus("Step 1 ✅ Tap BNB again to confirm payment.");
+          return;
+        }
+        await accessBuyFlow("bnb",{skipConnectModal:true});
+      });
+      document.getElementById("btn-pay-usdt")?.addEventListener("click",async(e)=>{
+        e.preventDefault(); e.stopPropagation();
+        if(!isMobileLike()){ accessBuyFlow("usdt"); return; }
+        if(!__mobileAccessReadyToPay||__mobileAccessReadyKind!=="usdt"){
+          accessSetStatus("Step 1/2: Connecting wallet…");
+          const ok=await cxConnectWallet({silent:false});
+          if(!ok){ accessSetStatus("Connection failed. Tap again."); return; }
+          __mobileAccessReadyToPay=true; __mobileAccessReadyKind="usdt";
+          accessSetStatus("Step 1 ✅ Tap USDT again to confirm payment.");
+          return;
+        }
+        await accessBuyFlow("usdt",{skipConnectModal:true});
+      });
+    }
+
+    // =========================
+    // i18n (EN / ZH / AR / RU)
+    // =========================
+    let currentLang = "en";
+    const FW_TRANSLATIONS = {
+      en: {
+        access_title:"Get PASS",
+        access_desc:"Unlock Firewall Fix Mode, full Blast Radius, Wallet Passport and real revoke actions. Your PASS is non-tradable and converts to CYCX at public sale.",
+        access_note:"No signature needed to unlock. Revoke actions always require your approval in-wallet.",
+        access_pay_bnb:"Buy Access Pass (BNB)",
+        access_pay_usdt:"Buy Access Pass (USDT)",
+        access_price_label:"Price:",
+        access_foot:"Early access: $9 for first 500 passes, then $19. 1 pass per wallet.",
+        unlock_passport:"Unlock Passport",
+        connect_check:"🔑 Connect & Check Access",
+        get_pass:"🎫 Get PASS",
+        get_cycx:"🪙 Get CYCX",
+        gate_title:"Full Access Required",
+        gate_desc:"Hold <strong style=\'color:var(--purple)\'>≥100 CYCX</strong> or <strong style=\'color:var(--cyan)\'>1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.",
+        full_access_btn:"🔑 Full Access"
+      },
+      zh: {
+        access_title:"获取 PASS",
+        access_desc:"解锁防火墙修复模式、完整爆炸半径、钱包护照和真实撤销操作。你的 PASS 不可转让，并在公开发售时转换为 CYCX。",
+        access_note:"解锁无需签名。任何撤销操作都需要你在钱包内确认。",
+        access_pay_bnb:"购买访问通行证（BNB）",
+        access_pay_usdt:"购买访问通行证（USDT）",
+        access_price_label:"价格：",
+        access_foot:"早鸟：前 500 个 PASS 仅 $9，之后 $19。每个钱包限 1 个。",
+        unlock_passport:"解锁护照",
+        connect_check:"🔑 连接并检查访问权限",
+        get_pass:"🎫 获取 PASS",
+        get_cycx:"🪙 获取 CYCX",
+        gate_title:"需要完整访问权限",
+        gate_desc:"持有 <strong style=\'color:var(--purple)\'>≥100 CYCX</strong> 或 <strong style=\'color:var(--cyan)\'>1 PASS 代币</strong> 以解锁修复模式。",
+        full_access_btn:"🔑 完整访问"
+      },
+      ar: {
+        access_title:"احصل على PASS",
+        access_desc:"افتح وضع الإصلاح ونطاق الانفجار الكامل وجواز المحفظة وإجراءات الإلغاء الحقيقية. PASS غير قابل للتحويل.",
+        access_note:"لا حاجة لتوقيع للفتح. تتطلب إجراءات الإلغاء دائمًا موافقتك في المحفظة.",
+        access_pay_bnb:"شراء تصريح الوصول (BNB)",
+        access_pay_usdt:"شراء تصريح الوصول (USDT)",
+        access_price_label:"السعر:",
+        access_foot:"وصول مبكر: $9 لأول 500 تصريح، ثم $19. تصريح واحد لكل محفظة.",
+        unlock_passport:"فتح جواز السفر",
+        connect_check:"🔑 توصيل وفحص الوصول",
+        get_pass:"🎫 احصل على PASS",
+        get_cycx:"🪙 احصل على CYCX",
+        gate_title:"مطلوب وصول كامل",
+        gate_desc:"احتفظ بـ <strong style=\'color:var(--purple)\'>≥100 CYCX</strong> أو <strong style=\'color:var(--cyan)\'>رمز PASS واحد</strong> لفتح وضع الإصلاح.",
+        full_access_btn:"🔑 وصول كامل"
+      },
+      ru: {
+        access_title:"Получить PASS",
+        access_desc:"Разблокируйте режим исправления, полный радиус взрыва, паспорт кошелька и реальные действия отзыва. PASS непередаваем.",
+        access_note:"Разблокировка не требует подписи. Действия отзыва всегда требуют подтверждения.",
+        access_pay_bnb:"Купить Access Pass (BNB)",
+        access_pay_usdt:"Купить Access Pass (USDT)",
+        access_price_label:"Цена:",
+        access_foot:"Ранний доступ: $9 за первые 500 пропусков, затем $19. 1 пропуск на кошелёк.",
+        unlock_passport:"Разблокировать паспорт",
+        connect_check:"🔑 Подключить и проверить доступ",
+        get_pass:"🎫 Получить PASS",
+        get_cycx:"🪙 Получить CYCX",
+        gate_title:"Требуется полный доступ",
+        gate_desc:"Держите <strong style=\'color:var(--purple)\'>≥100 CYCX</strong> или <strong style=\'color:var(--cyan)\'>1 токен PASS</strong> для доступа к режиму исправления.",
+        full_access_btn:"🔑 Полный доступ"
+      }
+    };
+
+    function fwT(key){ return FW_TRANSLATIONS[currentLang]?.[key]||FW_TRANSLATIONS.en?.[key]||""; }
+    function fwNormLang(x){
+      const v=String(x||"").trim().toLowerCase();
+      return {"cn":"zh","zh-cn":"zh","zh-hans":"zh"}[v]||v;
+    }
+    function fwSetDir(lang){ 
+      document.documentElement.setAttribute("lang",lang);
+      document.documentElement.setAttribute("dir",lang==="ar"?"rtl":"ltr");
+    }
+    function fwApplyI18n(lang){
+      const L=fwNormLang(lang);
+      currentLang=FW_TRANSLATIONS[L]?L:"en";
+      if(document.body){ document.body.classList.add("lang-switching"); setTimeout(()=>document.body&&document.body.classList.remove("lang-switching"),260); }
+      document.querySelectorAll("[data-i18n]").forEach(el=>{
+        const key=el.getAttribute("data-i18n");
+        const val=fwT(key);
+        if(val) el.innerHTML=val;
+      });
+      fwSetDir(currentLang);
+    }
+    function fwSetLang(lang){
+      const picked=fwNormLang(lang);
+      currentLang=FW_TRANSLATIONS[picked]?picked:"en";
+      try{ localStorage.setItem("cx_fw_lang",currentLang); }catch{}
+      document.querySelectorAll(".lang-btn").forEach(b=>{
+        const bl=fwNormLang(b.dataset?.lang||b.getAttribute("data-lang")||"");
+        b.classList.toggle("active",bl===currentLang);
+      });
+      fwApplyI18n(currentLang);
+    }
+    function fwInitLang(){
+      let saved=null;
+      try{ saved=localStorage.getItem("cx_fw_lang"); }catch{}
+      fwSetLang(FW_TRANSLATIONS[fwNormLang(saved)]?fwNormLang(saved):"en");
+    }
+    function fwBindLangButtons(){
+      document.querySelectorAll(".lang-btn").forEach(btn=>{
+        btn.addEventListener("click",(e)=>{
+          try{ e.preventDefault(); }catch{}
+          fwSetLang(fwNormLang(btn.dataset?.lang||btn.getAttribute("data-lang")||""));
+        });
+      });
+    }
+
 const CYCX_BSC    = "0xda63b65825AE30532a507B0C091B0bD9F8204F7E";
 const PASS_BSC    = "0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e";
 const CYCX_MIN    = 100n;   // minimum CYCX
@@ -1091,10 +1702,11 @@ function setGateStatus(msg, color="#a0a0b0") {
 }
 
 async function checkCycxPass() {
-  const Eth = getE() || window.ethers;
-  if (!Eth?.Contract) return { eligible:false, reason:"ethers_missing" };
+  // Ethers might be defer-loaded — try all references
+  const Eth = window.E || window.ethers || (typeof ethers !== "undefined" ? ethers : null);
+  if(!Eth?.Contract) return { eligible:false, reason:"ethers_missing" };
   const addr = window.wallet?.address;
-  if (!addr) return { eligible:false, reason:"no_wallet" };
+  if(!addr) return { eligible:false, reason:"no_wallet" };
 
   try {
     const runCheck = async (provider) => {
@@ -1107,74 +1719,63 @@ async function checkCycxPass() {
         passC.balanceOf(addr).catch(()=>0n)
       ]);
       const cycxMin = CYCX_MIN * (10n ** cycxDec);
-      return {
-        eligible: BigInt(passBal) >= PASS_MIN || BigInt(cycxBal) >= cycxMin,
-        hasPass:  BigInt(passBal) >= PASS_MIN,
-        hasCycx:  BigInt(cycxBal) >= cycxMin
-      };
+      const hasPass = BigInt(passBal) >= PASS_MIN;
+      const hasCycx = BigInt(cycxBal) >= cycxMin;
+      return { eligible: hasPass || hasCycx, hasPass, hasCycx };
     };
-
-    if (typeof withRpcFallback === "function") {
-      const r = await withRpcFallback("bsc", runCheck, { timeoutMs:9000 });
-      if (!r.ok) return { eligible:false, reason:"rpc_failed" };
-      return { ok:true, ...r.res };
-    }
-    const provider = getRPC("bsc");
-    if (!provider) return { eligible:false, reason:"no_rpc" };
-    return { ok:true, ...(await runCheck(provider)) };
+    // Use fwWithRpcFallback: tries 9 BSC RPCs until one works
+    const r = await fwWithRpcFallback("bsc", runCheck, { timeoutMs:9500 });
+    if(!r.ok) return { eligible:false, reason:"rpc_failed" };
+    return { ok:true, ...r.res };
   } catch(e) {
-    return { eligible:false, reason: e.message };
+    return { eligible:false, reason: String(e?.message||e) };
   }
 }
 
 async function requestFullAccess() {
   if (fwAccessTier === "full") return;
-  setGateStatus("Loading wallet module…", "#a87eff");
+  setGateStatus("Connecting wallet…", "#a87eff");
 
-  let appkit;
-  try {
-    appkit = await fwLoadAppKit();
-  } catch(e) {
-    setGateStatus("Could not load wallet module. Check your connection.", "#ff7a8a");
-    return;
-  }
-
+  // Step 1: connect
   if (!window.wallet?.address) {
+    setGateStatus("Opening wallet connect…", "#a87eff");
     try {
-      setGateStatus("Opening wallet connect…", "#a87eff");
-      await appkit.open();
-      const addr = await fwWaitForWallet(20000);
-      if (!addr) { setGateStatus("Wallet not connected. Please try again.", "#ff9a6b"); return; }
+      const connected = await cxConnectWallet({ silent: false });
+      if (!connected || !window.wallet?.address) {
+        setGateStatus("Wallet not connected. Please try again.", "#ff9a6b");
+        return;
+      }
     } catch(e) {
-      setGateStatus("Connect cancelled or failed.", "#ff9a6b");
+      setGateStatus("Connect failed. Please try again.", "#ff9a6b");
       return;
     }
   }
 
-  setGateStatus("Checking CYCX / PASS on BSC…", "#a87eff");
+  // Step 2: check balance via multi-RPC fallback
+  setGateStatus("Checking CYCX / PASS balance on BSC…", "#a87eff");
   const res = await checkCycxPass();
   const eligible = res.eligible === true || (res.ok && res.eligible);
 
   if (eligible) {
     const why = res.hasPass ? "PASS ✓" : `${Number(CYCX_MIN)} CYCX ✓`;
-    setGateStatus(`Eligible (${why}) — unlocking!`, "#5dffb2");
+    setGateStatus(`Eligible (${why}) — unlocking full access!`, "#5dffb2");
     await wait(700);
     unlockFull();
     if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
     return;
   }
 
+  // Not eligible — show gate and option to buy
   const msg =
     res.reason === "no_wallet"      ? "Wallet not detected." :
     res.reason === "ethers_missing" ? "Ethers.js not loaded. Refresh and try again." :
-    res.reason === "rpc_failed"     ? "BSC RPC check failed. Try again." :
-    res.reason === "no_rpc"         ? "BSC RPC unavailable. Try again." :
+    res.reason === "rpc_failed"     ? "Balance check failed — all BSC RPCs timed out. Try again in a moment." :
     `Not eligible. Need ≥${Number(CYCX_MIN)} CYCX or 1 PASS on BSC.`;
   setGateStatus(msg, "#ff7a8a");
 }
 
 // ── PASS POPUP ────────────────────────────────────────────────────
-function openPassPopup()  { const el = document.getElementById("passPopup"); if(el) el.style.display="flex"; }
+function openAccessModal()  { const el = document.getElementById("passPopup"); if(el) el.style.display="flex"; }
 function closePassPopup() { const el = document.getElementById("passPopup"); if(el) el.style.display="none"; }
 
 function unlockFull() {
@@ -1736,28 +2337,18 @@ document.getElementById("demoHint").addEventListener("click", () => {
   runLoadSequence(DEMO_WALLET, "bsc", true);
 });
 
-// Top bar access button
+// ── EVENT BINDINGS ─────────────────────────────────────────────
 document.getElementById("btnTopAccess")?.addEventListener("click", requestFullAccess);
 document.getElementById("btnCheckAccess")?.addEventListener("click", requestFullAccess);
-
-// PASS popup
-document.getElementById("btnBuyPass")?.addEventListener("click", openPassPopup);
-document.getElementById("closePassPopup")?.addEventListener("click", closePassPopup);
-document.getElementById("passPopup")?.addEventListener("click", e => {
-  if (e.target.id === "passPopup") closePassPopup();
-});
-document.getElementById("btnCopyPassAddr")?.addEventListener("click", () => {
-  navigator.clipboard.writeText("0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e").then(() => {
-    const btn = document.getElementById("btnCopyPassAddr");
-    if (btn) { const p = btn.textContent; btn.textContent = "Copied!"; setTimeout(()=>btn.textContent=p, 1500); }
-  });
-});
-// CYCX disabled tooltip
+document.getElementById("btnBuyPass")?.addEventListener("click", openAccessModal);
 document.getElementById("btnGetCycx")?.addEventListener("click", () => {
-  setGateStatus("🪙 CYCX token is launching soon — follow https://x.com/CyclexNetwork for the announcement!", "#ffd166");
+  setGateStatus("🪙 CYCX token launching soon — follow @CycleXFinance!", "#ffd166");
 });
-// Expose popup for lock overlays
-window.openPassPopup = openPassPopup;
+
+// Init access modal + language
+bindAccessModal();
+fwInitLang();
+fwBindLangButtons();
 
 // Auto-run from URL params
 (function checkAutoRun() {
