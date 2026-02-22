@@ -647,18 +647,21 @@
             <div class="fix-step-title">Revoke Top Spender</div>
             <div class="fix-step-desc">Remove unlimited allowance from the highest-risk spender detected on your wallet.</div>
             <button class="btn-action" id="btnFix1">Revoke on Revoke.cash ↗</button>
+            <button class="btn-action btn-undo" id="undoFix1" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(0)">↩ Undo — Restore approval</button>
           </div>
           <div class="fix-step" id="fixStep2">
             <div class="fix-step-num">2</div>
             <div class="fix-step-title">Cap Unlimited Approvals</div>
             <div class="fix-step-desc">Replace ∞ allowances with a capped amount ($500 max) for unknown spenders.</div>
             <button class="btn-action" id="btnFix2">Apply Cap Template</button>
+            <button class="btn-action btn-undo" id="undoFix2" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(1)">↩ Undo — Restore unlimited</button>
           </div>
           <div class="fix-step" id="fixStep3">
             <div class="fix-step-num">3</div>
             <div class="fix-step-title">Lock Risky dApp</div>
             <div class="fix-step-desc">Flag and monitor the unverified spender contract to receive alerts on new activity.</div>
             <button class="btn-action" id="btnFix3">Add to Watchlist</button>
+            <button class="btn-action btn-undo" id="undoFix3" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(2)">↩ Undo — Remove from watchlist</button>
           </div>
         </div>
 
@@ -1546,6 +1549,17 @@ async function applyFix(step) {
   btn.classList.add("done");
   el.classList.add("step-done");
 
+  // Show undo button (steps 0 and 1 are real on-chain — undo makes sense)
+  const undoBtn = document.getElementById(`undoFix${step+1}`);
+  if (undoBtn && step < 3) {
+    undoBtn.style.display = "block";
+    // Store undo data
+    window.__fwUndoData = window.__fwUndoData || {};
+    window.__fwUndoData[step] = target
+      ? { spender: target.spender, token: target.token, decimals: Number(target.decimals)||18 }
+      : null;
+  }
+
   // Update score visually
   fwCurrentScore = Math.min(100, fwCurrentScore + scoreIncrements[step]);
   document.getElementById("scoreNum").textContent = fwCurrentScore;
@@ -1563,6 +1577,70 @@ async function applyFix(step) {
     if (fc) fc.style.display = "flex";
     const fs = document.getElementById("finalScore");
     if (fs) fs.textContent = fwCurrentScore;
+  }
+}
+
+// ── UNDO FIX STEP ─────────────────────────────────────────────────
+async function undoFix(step) {
+  if (!window.wallet?.signer) { requestFullAccess(); return; }
+  const undoBtn = document.getElementById(`undoFix${step+1}`);
+  const fixBtn  = document.getElementById(`btnFix${step+1}`);
+  const el      = document.getElementById(`fixStep${step+1}`);
+  const data    = window.__fwUndoData?.[step];
+
+  // Step 2 = localStorage watchlist undo (no wallet needed)
+  if (step === 2) {
+    try { localStorage.removeItem("cx_watchlist"); } catch {}
+    undoBtn.style.display = "none";
+    fixDone[2] = false;
+    el?.classList.remove("step-done");
+    if (fixBtn) { fixBtn.textContent = "Add to Watchlist"; fixBtn.disabled = false; fixBtn.classList.remove("done"); }
+    fwCurrentScore = Math.max(0, fwCurrentScore - scoreIncrements[2]);
+    document.getElementById("scoreNum").textContent = fwCurrentScore;
+    showPassportMsg("↩ Watchlist entry removed.");
+    return;
+  }
+
+  if (!data?.token || !data?.spender) {
+    showPassportMsg("⚠ No undo data stored for this step."); return;
+  }
+
+  const MAX_UINT = 2n**256n - 1n;
+  if (undoBtn) { undoBtn.disabled = true; undoBtn.textContent = "Sending…"; }
+  try {
+    const E = getE();
+    const c = new E.Contract(fwNorm(data.token), ERC20_APPROVE_ABI, window.wallet.signer);
+    const tx = await c.approve(fwNorm(data.spender), MAX_UINT);
+    if (undoBtn) undoBtn.textContent = "Pending…";
+    await tx.wait();
+
+    // Reset UI state
+    undoBtn.style.display = "none";
+    fixDone[step] = false;
+    el?.classList.remove("step-done");
+    if (fixBtn) {
+      fixBtn.textContent = step === 0 ? "Revoke Spender" : "Apply Cap";
+      fixBtn.disabled = false;
+      fixBtn.classList.remove("done");
+    }
+    // Subtract score
+    fwCurrentScore = Math.max(0, fwCurrentScore - scoreIncrements[step]);
+    document.getElementById("scoreNum").textContent = fwCurrentScore;
+    const c2 = 226.2;
+    document.getElementById("gaugeFill").style.strokeDashoffset = c2 - (c2 * fwCurrentScore / 100);
+    const col = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
+    document.getElementById("gaugeFill").style.stroke = col;
+    document.getElementById("scoreDot").style.background = col;
+    document.getElementById("scoreLabel").textContent = fwCurrentScore >= 85 ? "Protected" : fwCurrentScore >= 70 ? "Exposed" : "Vulnerable";
+    showPassportMsg(`↩ Undo complete. Approval for ${fwShort(data.spender)} restored to unlimited. Re-scan to verify.`);
+    delete window.__fwUndoData[step];
+  } catch(e) {
+    if (undoBtn) { undoBtn.disabled = false; undoBtn.textContent = "↩ Retry undo"; }
+    if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
+      showPassportMsg("↩ Undo cancelled.");
+    } else {
+      showPassportMsg(`⚠ Undo failed: ${e.message?.slice(0,80)}`);
+    }
   }
 }
 
@@ -1738,9 +1816,66 @@ async function applyRule(i) {
   btn.textContent = failed === 0 ? `✓ Done (${done} txs)` : `✓ Done (${done}/${targets.length})`;
   btn.classList.add("done");
   showPassportMsg(`✅ Rule "${rule.name}": ${done} approval(s) updated${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
+
+  // Store undo data & show undo button after a short delay
+  window.__fwRuleUndoData = window.__fwRuleUndoData || {};
+  window.__fwRuleUndoData[i] = { targets, rule };
+  await wait(800);
+  btn.textContent = "↩ Undo Rule";
+  btn.disabled = false;
+  btn.classList.remove("done");
+  btn.style.background = "rgba(255,100,50,.08)";
+  btn.style.borderColor = "rgba(255,100,50,.3)";
+  btn.style.color = "#ff9a6b";
+  btn.onclick = () => undoRule(i);
 }
 
-// ── DEMO DATA ─────────────────────────────────────────────────────
+// ── UNDO RULE TEMPLATE ────────────────────────────────────────────
+async function undoRule(i) {
+  if (!window.wallet?.signer) { requestFullAccess(); return; }
+  const undoData = window.__fwRuleUndoData?.[i];
+  if (!undoData?.targets?.length) {
+    showPassportMsg("⚠ No undo data for this rule."); return;
+  }
+  const btn = document.getElementById(`ruleBtn${i}`);
+  if (btn) { btn.disabled = true; btn.textContent = "Undoing…"; }
+
+  const MAX_UINT = 2n**256n - 1n;
+  const E = getE();
+  let done = 0, failed = 0;
+
+  for (const t of undoData.targets) {
+    try {
+      if (btn) btn.textContent = `Restoring ${done+1}/${undoData.targets.length}…`;
+      const c = new E.Contract(fwNorm(t.token), ERC20_APPROVE_ABI, window.wallet.signer);
+      const tx = await c.approve(fwNorm(t.spender), MAX_UINT);
+      await tx.wait();
+      done++;
+    } catch(e) {
+      if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
+        if (btn) { btn.disabled = false; btn.textContent = "↩ Retry undo"; }
+        showPassportMsg(`⚠ Undo cancelled (${done} done).`);
+        return;
+      }
+      failed++;
+    }
+  }
+
+  // Reset button to original "Apply Template" state
+  if (btn) {
+    btn.textContent = "Apply Template";
+    btn.disabled = false;
+    btn.style.background = "";
+    btn.style.borderColor = "";
+    btn.style.color = "";
+    btn.onclick = () => applyRule(i);
+  }
+  delete window.__fwRuleUndoData[i];
+  showPassportMsg(`↩ Undo complete: ${done} approval(s) restored to unlimited${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
+}
+
+window.undoFix  = undoFix;
+window.undoRule = undoRule;
 function getDemoApprovals() {
   return [
     { token:"0xdAC17F958D2ee523a2206206994597C13D831ec7", spender:"0x1111111254eeb25477b68fb85ed929f73a960582", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDT", risk:"medium", verified:true,  decimals:6 },
