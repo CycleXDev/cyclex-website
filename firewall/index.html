@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1411,7 +1409,7 @@ function renderFixMode(d) {
   }
   if (fixApprovals[1]) {
     const el = document.querySelector("#fixStep2 .fix-step-desc");
-    if (el) el.textContent = `Revoke unlimited approval granted to ${fwShort(fixApprovals[1].spender)}.`;
+    if (el) el.textContent = `Cap unlimited approval to 500 tokens for ${fwShort(fixApprovals[1].spender)} — sends real on-chain tx.`;
   }
 
   // Update button 1 to direct revoke if wallet connected
@@ -1438,35 +1436,112 @@ async function applyFix(step) {
   if (fixDone[step]) return;
   if (fwAccessTier !== "full") { requestFullAccess(); return; }
 
-  fixDone[step] = true;
   const el  = document.getElementById(`fixStep${step+1}`);
   const btn = document.getElementById(`btnFix${step+1}`);
   if (!el || !btn) return;
 
   const target = fixApprovals[step];
 
-  // Try real revoke if wallet and signer available
-  if (target && window.wallet?.signer && step === 0) {
-    btn.disabled = true;
-    btn.textContent = "Sending…";
-    try {
-      const E = getE();
-      const c = new E.Contract(fwNorm(target.token), ERC20_APPROVE_ABI, window.wallet.signer);
-      const tx = await c.approve(fwNorm(target.spender), 0n);
-      btn.textContent = "Pending…";
-      await tx.wait();
-      btn.textContent = "✓ Revoked";
-    } catch(e) {
-      btn.textContent = "✓ Done (manual)";
-      if (step === 0) window.open("https://revoke.cash", "_blank");
+  // ── STEP 0: Revoke top spender (approve → 0) ─────────────────────
+  if (step === 0) {
+    if (target && window.wallet?.signer) {
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+      try {
+        const E = getE();
+        const c = new E.Contract(fwNorm(target.token), ERC20_APPROVE_ABI, window.wallet.signer);
+        const tx = await c.approve(fwNorm(target.spender), 0n);
+        btn.textContent = "Pending…";
+        await tx.wait();
+        btn.textContent = "✓ Revoked";
+      } catch(e) {
+        if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
+          btn.disabled = false;
+          btn.textContent = "Revoke (cancelled — retry)";
+          return; // don't mark done if user cancelled
+        }
+        // fallback: open revoke.cash
+        btn.textContent = "✓ Opened revoke.cash";
+        window.open("https://revoke.cash", "_blank");
+      }
+    } else if (!window.wallet?.signer) {
+      // No wallet — prompt connect then return
+      requestFullAccess();
+      return;
+    } else {
+      window.open("https://revoke.cash", "_blank");
+      btn.textContent = "✓ Opened revoke.cash";
     }
-  } else if (step === 0) {
-    window.open("https://revoke.cash", "_blank");
-    btn.textContent = "✓ Opened revoke.cash";
-  } else {
-    btn.textContent = "✓ Done";
+
+  // ── STEP 1: Cap unlimited → approve(spender, cappedAmount) ───────
+  } else if (step === 1) {
+    if (target && window.wallet?.signer) {
+      btn.disabled = true;
+      btn.textContent = "Sending cap tx…";
+      try {
+        const E = getE();
+        // Cap at 500 tokens (in token's native decimals)
+        const decimals = Number(target.decimals) || 18;
+        const cappedAmt = BigInt(500) * (10n ** BigInt(decimals));
+        const c = new E.Contract(fwNorm(target.token), ERC20_APPROVE_ABI, window.wallet.signer);
+        const tx = await c.approve(fwNorm(target.spender), cappedAmt);
+        btn.textContent = "Pending…";
+        await tx.wait();
+        btn.textContent = "✓ Capped at 500 tokens";
+      } catch(e) {
+        if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
+          btn.disabled = false;
+          btn.textContent = "Cap Approval (cancelled — retry)";
+          return;
+        }
+        btn.textContent = "✓ Done (wallet unavailable)";
+      }
+    } else if (!window.wallet?.signer) {
+      requestFullAccess();
+      return;
+    } else {
+      btn.textContent = "✓ No target to cap";
+    }
+
+  // ── STEP 2: Flag to local watchlist (no on-chain action possible) ─
+  } else if (step === 2) {
+    const watchTarget = fixApprovals[step] || fixApprovals[0];
+    if (watchTarget?.spender) {
+      try {
+        const existing = JSON.parse(localStorage.getItem("cx_watchlist") || "[]");
+        const entry = { spender: watchTarget.spender, token: watchTarget.token,
+          symbol: watchTarget.symbol, addedAt: new Date().toISOString(), net: fwNet };
+        const key = `${fwNet}:${watchTarget.spender}`;
+        if (!existing.find(x => `${x.net}:${x.spender}` === key)) existing.unshift(entry);
+        localStorage.setItem("cx_watchlist", JSON.stringify(existing.slice(0, 50)));
+      } catch {}
+    }
+    btn.textContent = "✓ Added to local watchlist";
+    btn.disabled = true;
+    el.classList.add("step-done");
+    fixDone[step] = true;
+
+    // Update score for step 3
+    fwCurrentScore = Math.min(100, fwCurrentScore + scoreIncrements[step]);
+    document.getElementById("scoreNum").textContent = fwCurrentScore;
+    const circumference = 226.2;
+    document.getElementById("gaugeFill").style.strokeDashoffset = circumference - (circumference * fwCurrentScore / 100);
+    const color3 = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
+    document.getElementById("gaugeFill").style.stroke = color3;
+    document.getElementById("scoreDot").style.background = color3;
+    document.getElementById("scoreLabel").textContent = fwCurrentScore >= 85 ? "Protected" : fwCurrentScore >= 70 ? "Exposed" : "Vulnerable";
+    const ppScore3 = document.getElementById("ppScore");
+    if (ppScore3) { ppScore3.textContent = fwCurrentScore; ppScore3.style.color = color3; }
+    if (fixDone.every(Boolean)) {
+      const fc = document.getElementById("fixComplete");
+      if (fc) fc.style.display = "flex";
+      const fs = document.getElementById("finalScore");
+      if (fs) fs.textContent = fwCurrentScore;
+    }
+    return; // already handled score update above
   }
 
+  fixDone[step] = true;
   btn.disabled = true;
   btn.classList.add("done");
   el.classList.add("step-done");
@@ -1562,9 +1637,24 @@ Scan your wallet → https://cyclex.io/firewall
 
 // ── RULE TEMPLATES ────────────────────────────────────────────────
 const RULES = [
-  { name:"🔒 Strict",  desc:"No unlimited. Cap $50 for unknown. Alerts on any new spender.", applied:false },
-  { name:"⚖ Balanced", desc:"Cap $200 for unknown. Whitelist major DEXes. Weekly review.",   applied:false },
-  { name:"📈 Trader",  desc:"Allow known DEX unlimited. Alert on fresh/unknown spenders.",    applied:false }
+  {
+    name:"🔒 Strict",
+    desc:"Revoke ALL unlimited approvals on your wallet — sends one on-chain tx per approval.",
+    shortDesc:"Revokes all unlimited",
+    action:"revoke_all_unlimited"
+  },
+  {
+    name:"⚖ Balanced",
+    desc:"Cap unlimited approvals for unknown spenders to 200 tokens — sends one tx per approval.",
+    shortDesc:"Caps unknowns at 200",
+    action:"cap_unknown_200"
+  },
+  {
+    name:"📈 Trader",
+    desc:"Saves a watchlist profile locally: flag new unknown spenders. No on-chain action.",
+    shortDesc:"Local watchlist profile",
+    action:"watchlist_only"
+  }
 ];
 
 function renderRuleTemplates() {
@@ -1573,17 +1663,81 @@ function renderRuleTemplates() {
   el.innerHTML = RULES.map((r, i) => `
     <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:16px 14px">
       <div style="font-size:14px;font-weight:800;margin-bottom:6px">${r.name}</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">${r.desc}</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">${r.desc}</div>
+      <div style="font-size:10px;color:${r.action==='watchlist_only'?'#ffd166':'#5dffb2'};margin-bottom:10px;font-weight:700">
+        ${r.action==='watchlist_only'?'⚠ No on-chain tx — local profile only':'⛓ Sends real on-chain transaction(s)'}
+      </div>
       <button class="btn-action" id="ruleBtn${i}" onclick="applyRule(${i})" style="font-size:10px">Apply Template</button>
     </div>
   `).join("");
 }
 
-function applyRule(i) {
+async function applyRule(i) {
+  const rule = RULES[i];
   const btn = document.getElementById(`ruleBtn${i}`);
-  if (!btn) return;
-  btn.textContent = "✓ Applied"; btn.classList.add("done"); btn.disabled = true;
-  showPassportMsg(`✅ Rule "${RULES[i].name}" applied to watchlist.`);
+  if (!btn || btn.disabled) return;
+
+  // ── Watchlist-only (Trader) ───────────────────────────────────────
+  if (rule.action === "watchlist_only") {
+    try {
+      localStorage.setItem("cx_rule_profile", JSON.stringify({
+        profile: rule.name, appliedAt: new Date().toISOString(), net: fwNet
+      }));
+    } catch {}
+    btn.textContent = "✓ Profile saved locally"; btn.classList.add("done"); btn.disabled = true;
+    showPassportMsg(`✅ Rule "${rule.name}" saved as local profile.`);
+    return;
+  }
+
+  // ── On-chain rules: need wallet ───────────────────────────────────
+  if (!window.wallet?.signer) { requestFullAccess(); return; }
+  if (!fwScanData?.rows || fwScanData.rows.length === 0) {
+    showPassportMsg("⚠ No approval data loaded. Run a scan first."); return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Preparing…";
+
+  const E = getE();
+  let targets = [];
+
+  if (rule.action === "revoke_all_unlimited") {
+    targets = fwScanData.rows.filter(r => isUnlimitedAllow(r.allow));
+  } else if (rule.action === "cap_unknown_200") {
+    targets = fwScanData.rows.filter(r => isUnlimitedAllow(r.allow) && r.verified === false);
+  }
+
+  if (targets.length === 0) {
+    btn.textContent = "✓ Nothing to fix"; btn.classList.add("done");
+    showPassportMsg(`✅ No matching approvals found for "${rule.name}".`);
+    return;
+  }
+
+  let done = 0, failed = 0;
+  for (const t of targets) {
+    try {
+      btn.textContent = `Sending ${done+1}/${targets.length}…`;
+      const decimals = Number(t.decimals) || 18;
+      const amount = rule.action === "revoke_all_unlimited" ? 0n
+        : BigInt(200) * (10n ** BigInt(decimals));
+      const c = new E.Contract(fwNorm(t.token), ERC20_APPROVE_ABI, window.wallet.signer);
+      const tx = await c.approve(fwNorm(t.spender), amount);
+      await tx.wait();
+      done++;
+    } catch(e) {
+      if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
+        btn.disabled = false;
+        btn.textContent = "Cancelled — retry";
+        showPassportMsg(`⚠ Transaction cancelled (${done} done, ${targets.length - done} remaining).`);
+        return;
+      }
+      failed++;
+    }
+  }
+
+  btn.textContent = failed === 0 ? `✓ Done (${done} txs)` : `✓ Done (${done}/${targets.length})`;
+  btn.classList.add("done");
+  showPassportMsg(`✅ Rule "${rule.name}": ${done} approval(s) updated${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
 }
 
 // ── DEMO DATA ─────────────────────────────────────────────────────
