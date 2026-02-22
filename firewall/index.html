@@ -1709,7 +1709,7 @@ Scan your wallet → https://cyclex.io/firewall
 }
 
 // ── RULE TEMPLATES ────────────────────────────────────────────────
-const RULES = [
+var RULES = [
   {
     name:"🔒 Strict",
     desc:"No unlimited. Cap $50 for unknown spenders. Alerts on any new spender.",
@@ -1731,7 +1731,7 @@ const RULES = [
 ];
 
 // State: which rule is active per session
-const ruleActive = [false, false, false];
+var ruleActive = [false, false, false];
 
 function renderRuleTemplates() {
   const el = document.getElementById("ruleTemplates");
@@ -1740,18 +1740,18 @@ function renderRuleTemplates() {
 }
 
 function _ruleCardHTML(r, i, isActive) {
-  const activeBorder = isActive ? "border:1.5px solid rgba(93,255,178,.35)" : "border:1px solid rgba(255,255,255,.10)";
+  const borderStyle = isActive ? "border:1.5px solid rgba(93,255,178,.35)" : "border:1px solid rgba(255,255,255,.10)";
   const btnHTML = isActive
     ? `<div style="display:flex;flex-direction:column;gap:6px">
         <div style="font-size:11px;font-weight:800;color:var(--green);letter-spacing:.08em;padding:8px 0 4px">✓ ${r.activeLabel}</div>
-        <button class="btn-action" id="ruleBtn${i}" onclick="undoRule(${i})"
-          style="font-size:10px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b">
-          ↩ Deactivate
-        </button>
+        <button class="btn-action" id="ruleBtn${i}"
+          style="font-size:10px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b"
+          onclick="window.undoRule(${i})">↩ Deactivate</button>
        </div>`
-    : `<button class="btn-action" id="ruleBtn${i}" onclick="applyRule(${i})" style="font-size:10px">Apply Template</button>`;
+    : `<button class="btn-action" id="ruleBtn${i}" style="font-size:10px"
+        onclick="window.applyRule(${i})">Apply Template</button>`;
   return `
-    <div style="background:rgba(255,255,255,.03);${activeBorder};border-radius:16px;padding:16px 14px;transition:border .3s">
+    <div data-rule-card="${i}" style="background:rgba(255,255,255,.03);${borderStyle};border-radius:16px;padding:16px 14px;transition:border .3s">
       <div style="font-size:14px;font-weight:800;margin-bottom:6px">${r.name}</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">${r.desc}</div>
       ${btnHTML}
@@ -1842,9 +1842,11 @@ async function applyRule(i) {
 function _refreshRuleCard(i) {
   const el = document.getElementById("ruleTemplates");
   if (!el) return;
-  const card = el.children[i];
-  if (card) card.outerHTML = _ruleCardHTML(RULES[i], i, ruleActive[i]);
-  // Re-query after DOM update
+  const card = el.querySelector(`[data-rule-card="${i}"]`);
+  if (!card) { el.innerHTML = RULES.map((r, j) => _ruleCardHTML(r, j, ruleActive[j])).join(""); return; }
+  const tmp = document.createElement("div");
+  tmp.innerHTML = _ruleCardHTML(RULES[i], i, ruleActive[i]);
+  card.replaceWith(tmp.firstElementChild);
 }
 
 // ── UNDO / DEACTIVATE RULE ────────────────────────────────────────
@@ -1898,8 +1900,10 @@ async function undoRule(i) {
   showPassportMsg(`↩ "${rule.name}" deactivated — ${done} approval(s) restored${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
 }
 
-window.undoFix  = undoFix;
-window.undoRule = undoRule;
+window.undoFix    = undoFix;
+window.undoRule   = undoRule;
+window.ruleActive = ruleActive;   // expose for tests
+window.RULES      = RULES;        // expose for tests
 function getDemoApprovals() {
   return [
     { token:"0xdAC17F958D2ee523a2206206994597C13D831ec7", spender:"0x1111111254eeb25477b68fb85ed929f73a960582", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDT", risk:"medium", verified:true,  decimals:6 },
