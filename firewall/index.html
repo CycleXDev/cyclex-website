@@ -1712,31 +1712,50 @@ Scan your wallet → https://cyclex.io/firewall
 const RULES = [
   {
     name:"🔒 Strict",
-    desc:"No unlimited. Revoke all unlimited approvals on your wallet now.",
-    action:"revoke_all_unlimited"
+    desc:"No unlimited. Cap $50 for unknown spenders. Alerts on any new spender.",
+    action:"strict",          // revoke all unlimited + cap unknowns at 50
+    activeLabel:"🔒 Strict Protection Active"
   },
   {
     name:"⚖ Balanced",
-    desc:"Cap unlimited approvals for unknown spenders to 200 tokens.",
-    action:"cap_unknown_200"
+    desc:"Cap $200 for unknown spenders. Whitelist major DEXes. Weekly review.",
+    action:"balanced",        // cap unknowns at 200
+    activeLabel:"⚖ Balanced Protection Active"
   },
   {
     name:"📈 Trader",
-    desc:"Allow known DEX unlimited. Flag new unknown spenders to watchlist.",
-    action:"watchlist_only"
+    desc:"Allow known DEX unlimited. Alert on fresh/unknown spenders.",
+    action:"trader",          // save watchlist profile locally
+    activeLabel:"📈 Trader Profile Active"
   }
 ];
+
+// State: which rule is active per session
+const ruleActive = [false, false, false];
 
 function renderRuleTemplates() {
   const el = document.getElementById("ruleTemplates");
   if (!el) return;
-  el.innerHTML = RULES.map((r, i) => `
-    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:16px 14px">
+  el.innerHTML = RULES.map((r, i) => _ruleCardHTML(r, i, ruleActive[i])).join("");
+}
+
+function _ruleCardHTML(r, i, isActive) {
+  const activeBorder = isActive ? "border:1.5px solid rgba(93,255,178,.35)" : "border:1px solid rgba(255,255,255,.10)";
+  const btnHTML = isActive
+    ? `<div style="display:flex;flex-direction:column;gap:6px">
+        <div style="font-size:11px;font-weight:800;color:var(--green);letter-spacing:.08em;padding:8px 0 4px">✓ ${r.activeLabel}</div>
+        <button class="btn-action" id="ruleBtn${i}" onclick="undoRule(${i})"
+          style="font-size:10px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b">
+          ↩ Deactivate
+        </button>
+       </div>`
+    : `<button class="btn-action" id="ruleBtn${i}" onclick="applyRule(${i})" style="font-size:10px">Apply Template</button>`;
+  return `
+    <div style="background:rgba(255,255,255,.03);${activeBorder};border-radius:16px;padding:16px 14px;transition:border .3s">
       <div style="font-size:14px;font-weight:800;margin-bottom:6px">${r.name}</div>
       <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">${r.desc}</div>
-      <button class="btn-action" id="ruleBtn${i}" onclick="applyRule(${i})" style="font-size:10px">Apply Template</button>
-    </div>
-  `).join("");
+      ${btnHTML}
+    </div>`;
 }
 
 async function applyRule(i) {
@@ -1744,123 +1763,139 @@ async function applyRule(i) {
   const btn = document.getElementById(`ruleBtn${i}`);
   if (!btn || btn.disabled) return;
 
-  // ── Watchlist-only (Trader) ───────────────────────────────────────
-  if (rule.action === "watchlist_only") {
+  // ── Trader: local watchlist profile ─────────────────────────────
+  if (rule.action === "trader") {
     try {
       localStorage.setItem("cx_rule_profile", JSON.stringify({
         profile: rule.name, appliedAt: new Date().toISOString(), net: fwNet
       }));
     } catch {}
-    btn.textContent = "✓ Profile saved locally"; btn.classList.add("done"); btn.disabled = true;
-    showPassportMsg(`✅ Rule "${rule.name}" saved as local profile.`);
+    ruleActive[i] = true;
+    _refreshRuleCard(i);
+    showPassportMsg(`✅ Trader profile activated — unknown spenders will be flagged.`);
     return;
   }
 
-  // ── On-chain rules: need wallet ───────────────────────────────────
+  // ── Strict & Balanced: on-chain — need wallet ────────────────────
   if (!window.wallet?.signer) { requestFullAccess(); return; }
   if (!fwScanData?.rows || fwScanData.rows.length === 0) {
     showPassportMsg("⚠ No approval data loaded. Run a scan first."); return;
   }
 
-  btn.disabled = true;
-  btn.textContent = "Preparing…";
-
+  btn.disabled = true; btn.textContent = "Preparing…";
+  await fwEnsureBsc(window.wallet.providerRaw);
   const E = getE();
-  let targets = [];
 
-  if (rule.action === "revoke_all_unlimited") {
-    targets = fwScanData.rows.filter(r => isUnlimitedAllow(r.allow));
-  } else if (rule.action === "cap_unknown_200") {
-    targets = fwScanData.rows.filter(r => isUnlimitedAllow(r.allow) && r.verified === false);
+  // Strict: revoke all unlimited first, then cap unknowns at 50
+  // Balanced: cap unknowns at 200
+  const allUnlimited = fwScanData.rows.filter(r => isUnlimitedAllow(r.allow));
+  const unknowns     = allUnlimited.filter(r => r.verified === false);
+  const CAP_STRICT   = 50n;
+  const CAP_BALANCED = 200n;
+
+  let targets = [];
+  if (rule.action === "strict") {
+    // revoke all unlimited (not just unknowns)
+    targets = allUnlimited.map(r => ({ ...r, amount: 0n }));
+  } else {
+    // balanced: cap unknowns to 200
+    targets = unknowns.map(r => ({
+      ...r, amount: CAP_BALANCED * (10n ** BigInt(Number(r.decimals)||18))
+    }));
   }
 
-  if (targets.length === 0) {
-    btn.textContent = "✓ Nothing to fix"; btn.classList.add("done");
-    showPassportMsg(`✅ No matching approvals found for "${rule.name}".`);
+  if (!targets.length) {
+    ruleActive[i] = true; _refreshRuleCard(i);
+    showPassportMsg(`✅ "${rule.name}" active — no matching approvals to fix right now.`);
     return;
   }
 
   let done = 0, failed = 0;
-  for (const t of targets) {
+  for (let j = 0; j < targets.length; j++) {
+    const t = targets[j];
     try {
-      btn.textContent = `Sending ${done+1}/${targets.length}…`;
-      const decimals = Number(t.decimals) || 18;
-      const amount = rule.action === "revoke_all_unlimited" ? 0n
-        : BigInt(200) * (10n ** BigInt(decimals));
+      btn.textContent = `${j+1}/${targets.length} sending…`;
       const c = new E.Contract(fwNorm(t.token), ERC20_APPROVE_ABI, window.wallet.signer);
-      const tx = await c.approve(fwNorm(t.spender), amount);
+      const tx = await c.approve(fwNorm(t.spender), t.amount);
+      btn.textContent = `${j+1}/${targets.length} pending…`;
       await tx.wait();
       done++;
     } catch(e) {
       if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
-        btn.disabled = false;
-        btn.textContent = "Cancelled — retry";
-        showPassportMsg(`⚠ Transaction cancelled (${done} done, ${targets.length - done} remaining).`);
+        btn.disabled = false; btn.textContent = "Cancelled — retry";
+        showPassportMsg(`⚠ Cancelled after ${done} tx(s). Press Apply to continue.`);
         return;
       }
       failed++;
     }
   }
 
-  btn.textContent = failed === 0 ? `✓ Done (${done} txs)` : `✓ Done (${done}/${targets.length})`;
-  btn.classList.add("done");
-  showPassportMsg(`✅ Rule "${rule.name}": ${done} approval(s) updated${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
-
-  // Store undo data & show undo button after a short delay
+  // Store undo data (restore to MAX_UINT)
   window.__fwRuleUndoData = window.__fwRuleUndoData || {};
-  window.__fwRuleUndoData[i] = { targets, rule };
-  await wait(800);
-  btn.textContent = "↩ Undo Rule";
-  btn.disabled = false;
-  btn.classList.remove("done");
-  btn.style.background = "rgba(255,100,50,.08)";
-  btn.style.borderColor = "rgba(255,100,50,.3)";
-  btn.style.color = "#ff9a6b";
-  btn.onclick = () => undoRule(i);
+  window.__fwRuleUndoData[i] = targets;
+
+  ruleActive[i] = true;
+  _refreshRuleCard(i);
+  showPassportMsg(`✅ "${rule.name}" active — ${done} approval(s) updated${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
 }
 
-// ── UNDO RULE TEMPLATE ────────────────────────────────────────────
+function _refreshRuleCard(i) {
+  const el = document.getElementById("ruleTemplates");
+  if (!el) return;
+  const card = el.children[i];
+  if (card) card.outerHTML = _ruleCardHTML(RULES[i], i, ruleActive[i]);
+  // Re-query after DOM update
+}
+
+// ── UNDO / DEACTIVATE RULE ────────────────────────────────────────
 async function undoRule(i) {
-  if (!window.wallet?.signer) { requestFullAccess(); return; }
-  const undoData = window.__fwRuleUndoData?.[i];
-  if (!undoData?.targets?.length) {
-    showPassportMsg("⚠ No undo data for this rule."); return;
+  const rule = RULES[i];
+
+  // Trader = local only
+  if (rule.action === "trader") {
+    try { localStorage.removeItem("cx_rule_profile"); } catch {}
+    ruleActive[i] = false; _refreshRuleCard(i);
+    showPassportMsg("↩ Trader profile deactivated.");
+    return;
   }
+
+  if (!window.wallet?.signer) { requestFullAccess(); return; }
+  const targets = window.__fwRuleUndoData?.[i];
+  if (!targets?.length) {
+    // No stored data — just deactivate visually
+    ruleActive[i] = false; _refreshRuleCard(i);
+    showPassportMsg("↩ Rule deactivated (no on-chain changes to reverse — re-scan to verify).");
+    return;
+  }
+
   const btn = document.getElementById(`ruleBtn${i}`);
-  if (btn) { btn.disabled = true; btn.textContent = "Undoing…"; }
+  if (btn) { btn.disabled = true; btn.textContent = "Restoring…"; }
 
   const MAX_UINT = 2n**256n - 1n;
   const E = getE();
   let done = 0, failed = 0;
 
-  for (const t of undoData.targets) {
+  for (let j = 0; j < targets.length; j++) {
+    const t = targets[j];
     try {
-      if (btn) btn.textContent = `Restoring ${done+1}/${undoData.targets.length}…`;
+      if (btn) btn.textContent = `${j+1}/${targets.length} restoring…`;
       const c = new E.Contract(fwNorm(t.token), ERC20_APPROVE_ABI, window.wallet.signer);
       const tx = await c.approve(fwNorm(t.spender), MAX_UINT);
       await tx.wait();
       done++;
     } catch(e) {
       if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
-        if (btn) { btn.disabled = false; btn.textContent = "↩ Retry undo"; }
-        showPassportMsg(`⚠ Undo cancelled (${done} done).`);
+        if (btn) { btn.disabled = false; btn.textContent = "↩ Retry deactivate"; }
+        showPassportMsg(`⚠ Cancelled after ${done} restore(s).`);
         return;
       }
       failed++;
     }
   }
 
-  // Reset button to original "Apply Template" state
-  if (btn) {
-    btn.textContent = "Apply Template";
-    btn.disabled = false;
-    btn.style.background = "";
-    btn.style.borderColor = "";
-    btn.style.color = "";
-    btn.onclick = () => applyRule(i);
-  }
   delete window.__fwRuleUndoData[i];
-  showPassportMsg(`↩ Undo complete: ${done} approval(s) restored to unlimited${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
+  ruleActive[i] = false; _refreshRuleCard(i);
+  showPassportMsg(`↩ "${rule.name}" deactivated — ${done} approval(s) restored${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
 }
 
 window.undoFix  = undoFix;
