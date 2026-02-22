@@ -1,7 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Performance: resource hints -->
+  <link rel="preload" as="image" href="/logo.webp" fetchpriority="high">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://esm.sh" crossorigin>
   <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-BXDFXJWCNQ"></script>
 <script>
@@ -11,11 +14,15 @@
 
   gtag('config', 'G-BXDFXJWCNQ');
 </script>
-  <link rel="icon" href="/logo.png">
   <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" href="/logo.png">
-  <link rel="apple-touch-icon" href="/logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
   <title>CycleX – AI-Powered Secure Reward Ecosystem</title>
+  <meta name="description" content="CycleX — AI-powered on-chain security tools and code-enforced rewards on BSC. Earn CYCX by holding, scan approvals, and protect your wallet." />
+  <meta name="theme-color" content="#05060a">
+  <meta name="application-name" content="CycleX">
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <style>
@@ -86,9 +93,9 @@
       radial-gradient(1200px 720px at 86% 12%, rgba(0,229,255,.16), transparent 56%),
       radial-gradient(980px 680px at 55% 120%, rgba(0,58,76,.40), transparent 62%),
       linear-gradient(160deg, var(--bg0), var(--bg1), var(--bg2));
-    animation:bodyIn .55s var(--ease) both;
+    
   }
-  @keyframes bodyIn{from{opacity:0}to{opacity:1}}
+  
 
  body::before{
   content:"";
@@ -345,10 +352,10 @@ body::after{
   margin: 18px auto 36px;
   padding: 18px 0 18px;           
   text-align: center;              
-  animation: heroIn .7s var(--ease) both;
+  
 }
 
-  @keyframes heroIn{from{opacity:0; transform:translateY(14px)}to{opacity:1; transform:translateY(0)}}
+  
 
   .hero::before{
   content:"";
@@ -1559,7 +1566,7 @@ body.modal-open .top-bar{ display:none !important; }
   <header class="top-bar">
     <!-- Left: Brand -->
     <div class="brand">
-      <img src="logo.png" alt="CycleX logo" class="brand-logo" />
+      <img src="logo.webp" alt="CycleX logo" class="brand-logo" width="42" height="42" />
       <div class="brand-text">
         <div class="brand-title">CYCLEX</div>
         <div class="brand-sub" data-i18n="brand_sub">On-Chain Security &amp; Rewards</div>
@@ -1589,7 +1596,7 @@ body.modal-open .top-bar{ display:none !important; }
     </div>
   </header>
   <!-- main logo center -->
-  <img src="logo.png" alt="CycleX main logo" class="main-logo" />
+  <img src="logo.webp" alt="CycleX main logo" class="main-logo" fetchpriority="high" width="92" height="92" />
 
   <!-- hero -->
   <main>
@@ -3778,41 +3785,58 @@ setMetricsDot(true);
   <script type="module">
   cxlog("🟢 [CycleX] Step 2 module loaded");
 
-  import { createAppKit } from "https://esm.sh/@reown/appkit@1.8.15";
-  import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
-  import { bsc } from "https://esm.sh/@reown/appkit/networks";
-
-    async function waitForWalletProvider(timeoutMs = 90000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const p = window.cxAppKitModal?.getWalletProvider?.();
-    if (p) return p;
-    await new Promise(r => setTimeout(r, 250));
-  }
-  return null;
-}
-
-  cxlog("🟢 [CycleX] AppKit imports OK");
-
+  // AppKit lazy loaded on demand - eliminates ~1.5MB blocking at startup
   const projectId = "7886bcb95105e9e47337cec481d5de75";
+  let _appkitLoadPromise = null;
 
-  const modal = createAppKit({
-  adapters: [new EthersAdapter()],
-  networks: [bsc],
-  defaultNetwork: bsc,
-  projectId,
-  analytics: false,
-  metadata: {
-    name: "CycleX",
-    description: "CycleX Claim Portal",
-    url: window.location.origin,
-    icons: [`${window.location.origin}/logo.png`]
+  async function loadAppKit() {
+    if (window.cxAppKitModal) return window.cxAppKitModal;
+    if (_appkitLoadPromise) return _appkitLoadPromise;
+    _appkitLoadPromise = (async () => {
+      const [{ createAppKit }, { EthersAdapter }, { bsc }] = await Promise.all([
+        import("https://esm.sh/@reown/appkit@1.8.15"),
+        import("https://esm.sh/@reown/appkit-adapter-ethers@1.8.15"),
+        import("https://esm.sh/@reown/appkit/networks"),
+      ]);
+      const modal = createAppKit({
+        adapters: [new EthersAdapter()],
+        networks: [bsc],
+        defaultNetwork: bsc,
+        projectId,
+        analytics: false,
+        metadata: {
+          name: "CycleX",
+          description: "CycleX Claim Portal",
+          url: window.location.origin,
+          icons: [`${window.location.origin}/logo.png`]
+        }
+      });
+      window.cxAppKitModal = modal;
+      cxlog("🟢 [CycleX] AppKit initialized (lazy)");
+      return modal;
+    })();
+    return _appkitLoadPromise;
   }
-});
 
-window.cxAppKitModal = modal;
-cxlog("🟢 [CycleX] AppKit modal exposed globally");
-cxlog("🟢 [CycleX] AppKit initialized");
+  // Pre-load after user has settled on the page
+  if (typeof requestIdleCallback !== "undefined") {
+    setTimeout(() => requestIdleCallback(() => loadAppKit(), { timeout: 2000 }), 10000);
+  } else {
+    setTimeout(() => loadAppKit(), 12000);
+  }
+
+  async function waitForWalletProvider(timeoutMs = 90000) {
+    await loadAppKit();
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const p = window.cxAppKitModal?.getWalletProvider?.();
+      if (p) return p;
+      await new Promise(r => setTimeout(r, 250));
+    }
+    return null;
+  }
+
+  cxlog("🟢 [CycleX] AppKit lazy loader ready");
     
 
 
@@ -3857,7 +3881,8 @@ cxlog("🟢 [CycleX] AppKit initialized");
     box.innerHTML = "<strong>⏳ Connecting wallet…</strong>";
   }
 
-  await modal.open({ view: "ConnectWallet" });
+  await loadAppKit();
+  await window.cxAppKitModal.open({ view: "ConnectWallet" });
 
   const provider = await waitForWalletProvider(90000);
   if (!provider) {
