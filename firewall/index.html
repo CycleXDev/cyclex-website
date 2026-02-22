@@ -646,21 +646,21 @@
             <div class="fix-step-num">1</div>
             <div class="fix-step-title">Revoke Top Spender</div>
             <div class="fix-step-desc">Remove unlimited allowance from the highest-risk spender detected on your wallet.</div>
-            <button class="btn-action" id="btnFix1">Revoke on Revoke.cash ↗</button>
+            <button class="btn-action" id="btnFix1" onclick="applyFix(0)">Revoke Top Spender</button>
             <button class="btn-action btn-undo" id="undoFix1" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(0)">↩ Undo — Restore approval</button>
           </div>
           <div class="fix-step" id="fixStep2">
             <div class="fix-step-num">2</div>
-            <div class="fix-step-title">Cap Unlimited Approvals</div>
-            <div class="fix-step-desc">Replace ∞ allowances with a capped amount ($500 max) for unknown spenders.</div>
-            <button class="btn-action" id="btnFix2">Apply Cap Template</button>
-            <button class="btn-action btn-undo" id="undoFix2" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(1)">↩ Undo — Restore unlimited</button>
+            <div class="fix-step-title">Revoke All Unlimited</div>
+            <div class="fix-step-desc">Revoke every unlimited approval on your wallet in one go — one on-chain tx per spender.</div>
+            <button class="btn-action" id="btnFix2" onclick="applyFix(1)">Revoke All Unlimited</button>
+            <button class="btn-action btn-undo" id="undoFix2" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(1)">↩ Undo — Restore all unlimited</button>
           </div>
           <div class="fix-step" id="fixStep3">
             <div class="fix-step-num">3</div>
             <div class="fix-step-title">Lock Risky dApp</div>
             <div class="fix-step-desc">Flag and monitor the unverified spender contract to receive alerts on new activity.</div>
-            <button class="btn-action" id="btnFix3">Add to Watchlist</button>
+            <button class="btn-action" id="btnFix3" onclick="applyFix(2)">Add to Watchlist</button>
             <button class="btn-action btn-undo" id="undoFix3" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(2)">↩ Undo — Remove from watchlist</button>
           </div>
         </div>
@@ -752,7 +752,7 @@
     </div>
     <div class="footer-note">
       Informational only. No signatures. No transactions. Always verify contracts independently.
-      Revoke actions redirect to revoke.cash or equivalent external services.
+      All revoke actions happen on-chain directly from this site.
     </div>
   </footer>
 
@@ -950,6 +950,7 @@ function computeMetrics(approvals) {
     highRiskCount: highRisk.length,
     unverifiedCount: unverified.length,
     totalApprovals: rows.length,
+    rows,          // ← full normalized rows array (needed by Rule Templates & Revoke All)
     threats,
     fixTargets,
     scoreMeta: [
@@ -1410,9 +1411,9 @@ function renderFixMode(d) {
     const el = document.querySelector("#fixStep1 .fix-step-desc");
     if (el) el.textContent = `Remove unlimited allowance from ${fwShort(fixApprovals[0].spender)} (top-risk spender on ${fixApprovals[0].symbol}).`;
   }
-  if (fixApprovals[1]) {
+  if (fwScanData?.unlimitedCount > 0) {
     const el = document.querySelector("#fixStep2 .fix-step-desc");
-    if (el) el.textContent = `Cap unlimited approval to 500 tokens for ${fwShort(fixApprovals[1].spender)} — sends real on-chain tx.`;
+    if (el) el.textContent = `Revoke all ${fwScanData.unlimitedCount} unlimited approval(s) on this wallet — one on-chain tx each.`;
   }
 
   // Update button 1 to direct revoke if wallet connected
@@ -1435,6 +1436,24 @@ function renderFixGainPreview(score) {
   if (fd) fd.textContent = total;
 }
 
+// ── SHARED: score update after fix step ──────────────────────────
+function fwUpdateScoreAfterFix(step) {
+  fwCurrentScore = Math.min(100, fwCurrentScore + scoreIncrements[step]);
+  document.getElementById("scoreNum").textContent = fwCurrentScore;
+  const c = 226.2;
+  document.getElementById("gaugeFill").style.strokeDashoffset = c - (c * fwCurrentScore / 100);
+  const col = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
+  document.getElementById("gaugeFill").style.stroke = col;
+  document.getElementById("scoreDot").style.background = col;
+  document.getElementById("scoreLabel").textContent = fwCurrentScore >= 85 ? "Protected" : fwCurrentScore >= 70 ? "Exposed" : "Vulnerable";
+  const pp = document.getElementById("ppScore");
+  if (pp) { pp.textContent = fwCurrentScore; pp.style.color = col; }
+  if (fixDone.every(Boolean)) {
+    const fc = document.getElementById("fixComplete"); if (fc) fc.style.display = "flex";
+    const fs = document.getElementById("finalScore");  if (fs) fs.textContent = fwCurrentScore;
+  }
+}
+
 async function applyFix(step) {
   if (fixDone[step]) return;
   if (fwAccessTier !== "full") { requestFullAccess(); return; }
@@ -1445,153 +1464,124 @@ async function applyFix(step) {
 
   const target = fixApprovals[step];
 
-  // ── STEP 0: Revoke top spender (approve → 0) ─────────────────────
+  // ── STEP 0: Revoke top spender on-chain (approve → 0) ────────────
   if (step === 0) {
-    if (target && window.wallet?.signer) {
-      btn.disabled = true;
-      btn.textContent = "Sending…";
-      try {
-        const E = getE();
-        const c = new E.Contract(fwNorm(target.token), ERC20_APPROVE_ABI, window.wallet.signer);
-        const tx = await c.approve(fwNorm(target.spender), 0n);
-        btn.textContent = "Pending…";
-        await tx.wait();
-        btn.textContent = "✓ Revoked";
-      } catch(e) {
-        if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
-          btn.disabled = false;
-          btn.textContent = "Revoke (cancelled — retry)";
-          return; // don't mark done if user cancelled
-        }
-        // fallback: open revoke.cash
-        btn.textContent = "✓ Opened revoke.cash";
-        window.open("https://revoke.cash", "_blank");
+    if (!window.wallet?.signer) { requestFullAccess(); return; }
+    if (!target?.token || !target?.spender) {
+      btn.textContent = "✓ No target found"; btn.disabled = true; el.classList.add("step-done");
+      fixDone[0] = true; fwUpdateScoreAfterFix(0); return;
+    }
+    btn.disabled = true; btn.textContent = "Sending revoke tx…";
+    try {
+      const E = getE();
+      await fwEnsureBsc(window.wallet.providerRaw);
+      const c = new E.Contract(fwNorm(target.token), ERC20_APPROVE_ABI, window.wallet.signer);
+      const tx = await c.approve(fwNorm(target.spender), 0n);
+      btn.textContent = `Pending… ${tx.hash?.slice(0,10)}`;
+      await tx.wait();
+      btn.textContent = "✓ Revoked";
+    } catch(e) {
+      if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
+        btn.disabled = false; btn.textContent = "Revoke (retry)"; return;
       }
-    } else if (!window.wallet?.signer) {
-      // No wallet — prompt connect then return
-      requestFullAccess();
-      return;
-    } else {
-      window.open("https://revoke.cash", "_blank");
-      btn.textContent = "✓ Opened revoke.cash";
+      btn.textContent = "✗ Failed — retry"; btn.disabled = false;
+      showPassportMsg(`⚠ Revoke failed: ${e.message?.slice(0,80)}`); return;
     }
 
-  // ── STEP 1: Cap unlimited → approve(spender, cappedAmount) ───────
+  // ── STEP 1: Revoke ALL unlimited approvals (like DNA revokeAll) ───
   } else if (step === 1) {
-    if (target && window.wallet?.signer) {
-      btn.disabled = true;
-      btn.textContent = "Sending cap tx…";
+    if (!window.wallet?.signer) { requestFullAccess(); return; }
+    const rows = fwScanData?.rows || [];
+    const unlimitedRows = rows.filter(r => isUnlimitedAllow(r.allow) && r.token && r.spender);
+    if (!unlimitedRows.length) {
+      btn.textContent = "✓ No unlimited to revoke"; btn.disabled = true; el.classList.add("step-done");
+      fixDone[1] = true; fwUpdateScoreAfterFix(1); return;
+    }
+    btn.disabled = true;
+    await fwEnsureBsc(window.wallet.providerRaw);
+    const E = getE();
+    let done = 0, failed = 0;
+    for (let i = 0; i < unlimitedRows.length; i++) {
+      const r = unlimitedRows[i];
       try {
-        const E = getE();
-        // Cap at 500 tokens (in token's native decimals)
-        const decimals = Number(target.decimals) || 18;
-        const cappedAmt = BigInt(500) * (10n ** BigInt(decimals));
-        const c = new E.Contract(fwNorm(target.token), ERC20_APPROVE_ABI, window.wallet.signer);
-        const tx = await c.approve(fwNorm(target.spender), cappedAmt);
-        btn.textContent = "Pending…";
+        btn.textContent = `Revoking ${i+1}/${unlimitedRows.length}…`;
+        const c = new E.Contract(fwNorm(r.token), ERC20_APPROVE_ABI, window.wallet.signer);
+        const tx = await c.approve(fwNorm(r.spender), 0n);
+        btn.textContent = `Pending ${i+1}/${unlimitedRows.length}…`;
         await tx.wait();
-        btn.textContent = "✓ Capped at 500 tokens";
+        done++;
       } catch(e) {
         if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
-          btn.disabled = false;
-          btn.textContent = "Cap Approval (cancelled — retry)";
+          btn.disabled = false; btn.textContent = `Revoke All (${done} done — retry)`;
+          showPassportMsg(`⚠ Cancelled after ${done} revokes. Press again to continue.`);
+          // Store undo data for what was done so far
+          window.__fwUndoData = window.__fwUndoData || {};
+          window.__fwUndoData[1] = { all: unlimitedRows.slice(0, done) };
+          if (done > 0) {
+            const undoBtn1 = document.getElementById("undoFix2");
+            if (undoBtn1) undoBtn1.style.display = "block";
+          }
           return;
         }
-        btn.textContent = "✓ Done (wallet unavailable)";
+        failed++;
       }
-    } else if (!window.wallet?.signer) {
-      requestFullAccess();
-      return;
-    } else {
-      btn.textContent = "✓ No target to cap";
     }
+    btn.textContent = failed === 0
+      ? `✓ All ${done} revoked`
+      : `✓ ${done} revoked (${failed} failed)`;
+    // Store undo data
+    window.__fwUndoData = window.__fwUndoData || {};
+    window.__fwUndoData[1] = { all: unlimitedRows };
+    showPassportMsg(`✅ Revoke All: ${done} approval(s) revoked${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
 
-  // ── STEP 2: Flag to local watchlist (no on-chain action possible) ─
+  // ── STEP 2: Flag top risky to local watchlist ─────────────────────
   } else if (step === 2) {
-    const watchTarget = fixApprovals[step] || fixApprovals[0];
+    const watchTarget = fixApprovals[2] || fixApprovals[1] || fixApprovals[0];
     if (watchTarget?.spender) {
       try {
         const existing = JSON.parse(localStorage.getItem("cx_watchlist") || "[]");
-        const entry = { spender: watchTarget.spender, token: watchTarget.token,
-          symbol: watchTarget.symbol, addedAt: new Date().toISOString(), net: fwNet };
         const key = `${fwNet}:${watchTarget.spender}`;
-        if (!existing.find(x => `${x.net}:${x.spender}` === key)) existing.unshift(entry);
+        if (!existing.find(x => `${x.net}:${x.spender}` === key))
+          existing.unshift({ spender: watchTarget.spender, token: watchTarget.token,
+            symbol: watchTarget.symbol, addedAt: new Date().toISOString(), net: fwNet });
         localStorage.setItem("cx_watchlist", JSON.stringify(existing.slice(0, 50)));
       } catch {}
     }
     btn.textContent = "✓ Added to local watchlist";
-    btn.disabled = true;
-    el.classList.add("step-done");
-    fixDone[step] = true;
-
-    // Update score for step 3
-    fwCurrentScore = Math.min(100, fwCurrentScore + scoreIncrements[step]);
-    document.getElementById("scoreNum").textContent = fwCurrentScore;
-    const circumference = 226.2;
-    document.getElementById("gaugeFill").style.strokeDashoffset = circumference - (circumference * fwCurrentScore / 100);
-    const color3 = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
-    document.getElementById("gaugeFill").style.stroke = color3;
-    document.getElementById("scoreDot").style.background = color3;
-    document.getElementById("scoreLabel").textContent = fwCurrentScore >= 85 ? "Protected" : fwCurrentScore >= 70 ? "Exposed" : "Vulnerable";
-    const ppScore3 = document.getElementById("ppScore");
-    if (ppScore3) { ppScore3.textContent = fwCurrentScore; ppScore3.style.color = color3; }
-    if (fixDone.every(Boolean)) {
-      const fc = document.getElementById("fixComplete");
-      if (fc) fc.style.display = "flex";
-      const fs = document.getElementById("finalScore");
-      if (fs) fs.textContent = fwCurrentScore;
-    }
-    return; // already handled score update above
+    btn.disabled = true; el.classList.add("step-done"); fixDone[2] = true;
+    const undoBtn3 = document.getElementById("undoFix3");
+    if (undoBtn3) undoBtn3.style.display = "block";
+    fwUpdateScoreAfterFix(2);
+    return;
   }
 
   fixDone[step] = true;
-  btn.disabled = true;
-  btn.classList.add("done");
-  el.classList.add("step-done");
+  btn.disabled = true; btn.classList.add("done"); el.classList.add("step-done");
 
-  // Show undo button (steps 0 and 1 are real on-chain — undo makes sense)
+  // Show undo button
   const undoBtn = document.getElementById(`undoFix${step+1}`);
-  if (undoBtn && step < 3) {
+  if (undoBtn) {
     undoBtn.style.display = "block";
-    // Store undo data
     window.__fwUndoData = window.__fwUndoData || {};
-    window.__fwUndoData[step] = target
-      ? { spender: target.spender, token: target.token, decimals: Number(target.decimals)||18 }
-      : null;
+    if (!window.__fwUndoData[step])
+      window.__fwUndoData[step] = target
+        ? { spender: target.spender, token: target.token, decimals: Number(target.decimals)||18 }
+        : null;
   }
 
-  // Update score visually
-  fwCurrentScore = Math.min(100, fwCurrentScore + scoreIncrements[step]);
-  document.getElementById("scoreNum").textContent = fwCurrentScore;
-  const circumference = 226.2;
-  document.getElementById("gaugeFill").style.strokeDashoffset = circumference - (circumference * fwCurrentScore / 100);
-  const color = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
-  document.getElementById("gaugeFill").style.stroke = color;
-  document.getElementById("scoreDot").style.background = color;
-  document.getElementById("scoreLabel").textContent = fwCurrentScore >= 85 ? "Protected" : fwCurrentScore >= 70 ? "Exposed" : "Vulnerable";
-  const ppScore = document.getElementById("ppScore");
-  if (ppScore) { ppScore.textContent = fwCurrentScore; ppScore.style.color = color; }
-
-  if (fixDone.every(Boolean)) {
-    const fc = document.getElementById("fixComplete");
-    if (fc) fc.style.display = "flex";
-    const fs = document.getElementById("finalScore");
-    if (fs) fs.textContent = fwCurrentScore;
-  }
+  fwUpdateScoreAfterFix(step);
 }
 
 // ── UNDO FIX STEP ─────────────────────────────────────────────────
 async function undoFix(step) {
-  if (!window.wallet?.signer) { requestFullAccess(); return; }
   const undoBtn = document.getElementById(`undoFix${step+1}`);
   const fixBtn  = document.getElementById(`btnFix${step+1}`);
   const el      = document.getElementById(`fixStep${step+1}`);
-  const data    = window.__fwUndoData?.[step];
 
-  // Step 2 = localStorage watchlist undo (no wallet needed)
+  // Step 2 = localStorage — no wallet needed
   if (step === 2) {
     try { localStorage.removeItem("cx_watchlist"); } catch {}
-    undoBtn.style.display = "none";
+    if (undoBtn) undoBtn.style.display = "none";
     fixDone[2] = false;
     el?.classList.remove("step-done");
     if (fixBtn) { fixBtn.textContent = "Add to Watchlist"; fixBtn.disabled = false; fixBtn.classList.remove("done"); }
@@ -1601,47 +1591,51 @@ async function undoFix(step) {
     return;
   }
 
-  if (!data?.token || !data?.spender) {
-    showPassportMsg("⚠ No undo data stored for this step."); return;
-  }
-
+  if (!window.wallet?.signer) { requestFullAccess(); return; }
+  const data = window.__fwUndoData?.[step];
   const MAX_UINT = 2n**256n - 1n;
-  if (undoBtn) { undoBtn.disabled = true; undoBtn.textContent = "Sending…"; }
-  try {
-    const E = getE();
-    const c = new E.Contract(fwNorm(data.token), ERC20_APPROVE_ABI, window.wallet.signer);
-    const tx = await c.approve(fwNorm(data.spender), MAX_UINT);
-    if (undoBtn) undoBtn.textContent = "Pending…";
-    await tx.wait();
 
-    // Reset UI state
-    undoBtn.style.display = "none";
-    fixDone[step] = false;
-    el?.classList.remove("step-done");
-    if (fixBtn) {
-      fixBtn.textContent = step === 0 ? "Revoke Spender" : "Apply Cap";
-      fixBtn.disabled = false;
-      fixBtn.classList.remove("done");
-    }
-    // Subtract score
-    fwCurrentScore = Math.max(0, fwCurrentScore - scoreIncrements[step]);
-    document.getElementById("scoreNum").textContent = fwCurrentScore;
-    const c2 = 226.2;
-    document.getElementById("gaugeFill").style.strokeDashoffset = c2 - (c2 * fwCurrentScore / 100);
-    const col = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
-    document.getElementById("gaugeFill").style.stroke = col;
-    document.getElementById("scoreDot").style.background = col;
-    document.getElementById("scoreLabel").textContent = fwCurrentScore >= 85 ? "Protected" : fwCurrentScore >= 70 ? "Exposed" : "Vulnerable";
-    showPassportMsg(`↩ Undo complete. Approval for ${fwShort(data.spender)} restored to unlimited. Re-scan to verify.`);
-    delete window.__fwUndoData[step];
-  } catch(e) {
-    if (undoBtn) { undoBtn.disabled = false; undoBtn.textContent = "↩ Retry undo"; }
-    if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
-      showPassportMsg("↩ Undo cancelled.");
-    } else {
-      showPassportMsg(`⚠ Undo failed: ${e.message?.slice(0,80)}`);
+  // Build targets list: step 1 = all array, step 0 = single item
+  const targets = (step === 1 && data?.all?.length) ? data.all
+    : (data?.token && data?.spender) ? [data] : [];
+
+  if (!targets.length) { showPassportMsg("⚠ No undo data for this step."); return; }
+
+  if (undoBtn) { undoBtn.disabled = true; undoBtn.textContent = `Restoring ${targets.length === 1 ? "approval" : targets.length + " approvals"}…`; }
+  const E = getE();
+  let done = 0, failed = 0;
+
+  for (const t of targets) {
+    try {
+      if (undoBtn && targets.length > 1) undoBtn.textContent = `Restoring ${done+1}/${targets.length}…`;
+      const c = new E.Contract(fwNorm(t.token), ERC20_APPROVE_ABI, window.wallet.signer);
+      const tx = await c.approve(fwNorm(t.spender), MAX_UINT);
+      await tx.wait();
+      done++;
+    } catch(e) {
+      if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
+        if (undoBtn) { undoBtn.disabled = false; undoBtn.textContent = `↩ Retry undo (${done} done)`; }
+        showPassportMsg(`↩ Cancelled. ${done} approval(s) restored.`);
+        return;
+      }
+      failed++;
     }
   }
+
+  if (undoBtn) undoBtn.style.display = "none";
+  fixDone[step] = false;
+  el?.classList.remove("step-done");
+  if (fixBtn) {
+    fixBtn.textContent = step === 0 ? "Revoke Top Spender" : "Revoke All Unlimited";
+    fixBtn.disabled = false; fixBtn.classList.remove("done");
+  }
+  fwCurrentScore = Math.max(0, fwCurrentScore - scoreIncrements[step]);
+  document.getElementById("scoreNum").textContent = fwCurrentScore;
+  const col2 = fwCurrentScore < 45 ? "#ff4757" : fwCurrentScore < 70 ? "#ffd166" : "#3cffb0";
+  document.getElementById("gaugeFill").style.stroke = col2;
+  document.getElementById("scoreDot").style.background = col2;
+  delete window.__fwUndoData[step];
+  showPassportMsg(`↩ Undo: ${done} approval(s) restored to unlimited${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
 }
 
 async function revokeSpender(spender, token, btn) {
@@ -1658,7 +1652,8 @@ async function revokeSpender(spender, token, btn) {
   } catch(e) {
     btn.disabled = false;
     btn.textContent = "Retry ↗";
-    window.open("https://revoke.cash", "_blank");
+    showPassportMsg(`⚠ Revoke failed: ${e.message?.slice(0,80)}`);
+    // Note: revoke.cash line removed — all revokes happen on-chain via this site
   }
 }
 
@@ -1717,20 +1712,17 @@ Scan your wallet → https://cyclex.io/firewall
 const RULES = [
   {
     name:"🔒 Strict",
-    desc:"Revoke ALL unlimited approvals on your wallet — sends one on-chain tx per approval.",
-    shortDesc:"Revokes all unlimited",
+    desc:"No unlimited. Revoke all unlimited approvals on your wallet now.",
     action:"revoke_all_unlimited"
   },
   {
     name:"⚖ Balanced",
-    desc:"Cap unlimited approvals for unknown spenders to 200 tokens — sends one tx per approval.",
-    shortDesc:"Caps unknowns at 200",
+    desc:"Cap unlimited approvals for unknown spenders to 200 tokens.",
     action:"cap_unknown_200"
   },
   {
     name:"📈 Trader",
-    desc:"Saves a watchlist profile locally: flag new unknown spenders. No on-chain action.",
-    shortDesc:"Local watchlist profile",
+    desc:"Allow known DEX unlimited. Flag new unknown spenders to watchlist.",
     action:"watchlist_only"
   }
 ];
@@ -1741,10 +1733,7 @@ function renderRuleTemplates() {
   el.innerHTML = RULES.map((r, i) => `
     <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:16px 14px">
       <div style="font-size:14px;font-weight:800;margin-bottom:6px">${r.name}</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">${r.desc}</div>
-      <div style="font-size:10px;color:${r.action==='watchlist_only'?'#ffd166':'#5dffb2'};margin-bottom:10px;font-weight:700">
-        ${r.action==='watchlist_only'?'⚠ No on-chain tx — local profile only':'⛓ Sends real on-chain transaction(s)'}
-      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:12px">${r.desc}</div>
       <button class="btn-action" id="ruleBtn${i}" onclick="applyRule(${i})" style="font-size:10px">Apply Template</button>
     </div>
   `).join("");
