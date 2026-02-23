@@ -1393,12 +1393,14 @@ const _unlockFull_real = function(nonce) {
     return false;
   }
   _fwAccessVerified = true;
-  // Only now allow fwAccessTier to be set
-  try { 
-    // Re-set via setter which now allows it since _fwAccessVerified = true
+  // Set the lexical let variable directly — this is what ALL checks use.
+  // Object.defineProperty on window.fwAccessTier is a separate binding
+  // and does NOT update the let variable referenced inside the script.
+  fwAccessTier = "full";
+  // Also set window property for external code consistency
+  try {
     const desc = Object.getOwnPropertyDescriptor(window, "fwAccessTier");
     if (desc?.set) desc.set("full");
-    else { /* fallback — variable in local scope */ }
   } catch {}
   // Perform actual unlock UI
   _doUnlockUI();
@@ -2143,6 +2145,33 @@ function fwUpdateScoreAfterFix(step) {
   }
 }
 
+
+// ── WALLET MISMATCH CHECK ────────────────────────────────────────
+function fwCheckWalletMatch(btn) {
+  const connected = window.wallet?.address?.toLowerCase().trim();
+  const scanned   = fwWallet?.toLowerCase().trim();
+  if (!connected) return true; // no wallet connected yet — let normal gate handle it
+  if (!scanned || scanned === DEMO_WALLET.toLowerCase()) return true; // demo mode — ok
+  if (connected === scanned) return true; // same wallet — ok
+  // MISMATCH — show error
+  const connShort = window.wallet.address.slice(0,8)+"…"+window.wallet.address.slice(-5);
+  const scanShort = fwWallet.slice(0,8)+"…"+fwWallet.slice(-5);
+  if (btn) {
+    const origText = btn.textContent;
+    btn.textContent = `⚠ Connected: ${connShort} ≠ Scanned: ${scanShort}`;
+    btn.style.background = "rgba(255,71,87,.18)";
+    btn.style.borderColor = "rgba(255,71,87,.5)";
+    btn.style.color = "#ff7a8a";
+    setTimeout(() => {
+      btn.textContent = origText;
+      btn.style.background = "";
+      btn.style.borderColor = "";
+      btn.style.color = "";
+    }, 4000);
+  }
+  showPassportMsg(`⚠ Wallet mismatch: you're connected as ${connShort} but scanning ${scanShort}. Connect the scanned wallet to revoke.`);
+  return false;
+}
 async function applyFix(step) {
   if (fixDone[step]) return;
   if (fwAccessTier !== "full" || !_fwAccessVerified) { requestFullAccess(); return; }
@@ -2156,6 +2185,7 @@ async function applyFix(step) {
   // ── STEP 0: Revoke top spender on-chain (approve → 0) ────────────
   if (step === 0) {
     if (!window.wallet?.signer) { requestFullAccess(); return; }
+    if (!fwCheckWalletMatch(btn)) return;
     if (!target?.token || !target?.spender) {
       btn.textContent = "✓ No target found"; btn.disabled = true; el.classList.add("step-done");
       fixDone[0] = true; fwUpdateScoreAfterFix(0); return;
@@ -2180,6 +2210,7 @@ async function applyFix(step) {
   // ── STEP 1: Revoke ALL unlimited approvals (like DNA revokeAll) ───
   } else if (step === 1) {
     if (!window.wallet?.signer) { requestFullAccess(); return; }
+    if (!fwCheckWalletMatch(btn)) return;
     const rows = fwScanData?.rows || [];
     const unlimitedRows = rows.filter(r => isUnlimitedAllow(r.allow) && r.token && r.spender);
     if (!unlimitedRows.length) {
@@ -2329,6 +2360,7 @@ async function undoFix(step) {
 
 async function revokeSpender(spender, token, btn) {
   if (!window.wallet?.signer) { requestFullAccess(); return; }
+  if (!fwCheckWalletMatch(btn)) return;
   btn.disabled = true; btn.textContent = "Sending…";
   try {
     const E = getE();
