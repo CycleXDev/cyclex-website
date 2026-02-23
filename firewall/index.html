@@ -565,6 +565,45 @@
       cursor:pointer;transition:all .2s;box-shadow:0 8px 28px rgba(124,92,255,.35)
     }
     .rc-btn-confirm:hover{transform:translateY(-1px);box-shadow:0 14px 40px rgba(124,92,255,.5)}
+
+    /* ── SCAN HISTORY BANNER ─────────────────────────── */
+    #fwHistoryBanner{
+      display:none; /* shown by JS after scan */
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:16px;padding:14px 18px;margin-bottom:20px;
+      animation:dashIn .4s ease-out
+    }
+    #fwHistoryBanner.show{display:block}
+    .fwh-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .fwh-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap}
+    .fwh-delta{
+      display:inline-flex;align-items:center;gap:5px;
+      padding:4px 10px;border-radius:999px;font-size:12px;font-weight:900;
+      letter-spacing:.04em;white-space:nowrap
+    }
+    .fwh-delta.up  {background:rgba(93,255,178,.10);color:#5dffb2;border:1px solid rgba(93,255,178,.22)}
+    .fwh-delta.down{background:rgba(255,71,87,.10); color:#ff7a8a;border:1px solid rgba(255,71,87,.22)}
+    .fwh-delta.same{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.10)}
+    .fwh-detail{font-size:11px;color:var(--muted);line-height:1.6}
+    .fwh-detail strong{color:var(--text)}
+    .fwh-sparkline{display:flex;align-items:flex-end;gap:3px;height:28px;margin-left:auto}
+    .fwh-bar{
+      width:8px;border-radius:3px 3px 0 0;
+      background:rgba(0,229,255,.3);
+      transition:background .2s;cursor:default;position:relative
+    }
+    .fwh-bar.current{background:var(--cyan)}
+    .fwh-bar:hover{background:rgba(0,229,255,.7)}
+    .fwh-multi{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+    .fwh-wallet-chip{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:5px 10px;border-radius:10px;
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.10);
+      font-size:11px;cursor:pointer;transition:all .2s;font-family:var(--mono)
+    }
+    .fwh-wallet-chip:hover{border-color:rgba(0,229,255,.3);background:rgba(0,229,255,.06)}
+    .fwh-wallet-chip .fwh-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
   </style>
 </head>
 <body>
@@ -685,6 +724,17 @@
       </div>
 
       <!-- TOP 3 CARDS -->
+      <!-- ── SCAN HISTORY BANNER ── -->
+      <div id="fwHistoryBanner">
+        <div class="fwh-row">
+          <span class="fwh-label">📈 Scan History</span>
+          <div id="fwHistoryDelta"></div>
+          <div id="fwHistoryDetail" class="fwh-detail"></div>
+          <div class="fwh-sparkline" id="fwHistorySparkline"></div>
+        </div>
+        <div class="fwh-multi" id="fwHistoryWallets" style="display:none"></div>
+      </div>
+
       <div class="section-title">Firewall Status</div>
       <div class="top3">
 
@@ -1922,6 +1972,16 @@ async function runLoadSequence(walletAddr, net, isDemo) {
 
   renderDashboard(walletAddr, fwScanData, fwAccessTier);
 
+  // ── SCAN HISTORY ─────────────────────────────────────────────────
+  if (!isDemo) {
+    fwHistorySave(walletAddr, net, fwScanData);
+  }
+  fwRenderHistory(
+    walletAddr, net,
+    fwScanData.score,
+    fwScanData
+  );
+
   // ── WALLET RELATIONS (async, non-blocking) ────────────────────────
   fwUpdateExportVisibility();
   fwInitExport();
@@ -1954,6 +2014,176 @@ async function runLoadSequence(walletAddr, net, isDemo) {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// SCAN HISTORY ENGINE — localStorage, zero backend
+// ══════════════════════════════════════════════════════════════
+const FW_HISTORY_MAX  = 10;   // max entries per wallet+net
+const FW_HISTORY_KEY  = (w, n) => `cx_hist_${(w||"").toLowerCase()}_${n||"bsc"}`;
+const FW_WALLETS_KEY  = "cx_hist_wallets"; // index of all tracked wallets
+
+function fwHistorySave(wallet, net, d) {
+  if (!wallet || wallet === DEMO_WALLET) return; // never save demo
+  try {
+    const key   = FW_HISTORY_KEY(wallet, net);
+    const entry = {
+      ts:         Date.now(),
+      score:      d.score,
+      unlimited:  d.unlimitedCount,
+      highRisk:   d.highRiskCount,
+      unverified: d.unverifiedCount,
+      total:      d.totalApprovals
+    };
+    // Load existing + prepend new entry
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(key) || "[]"); } catch {}
+    if (!Array.isArray(history)) history = [];
+    history.unshift(entry);
+    history = history.slice(0, FW_HISTORY_MAX);
+    localStorage.setItem(key, JSON.stringify(history));
+
+    // Update wallet index
+    let wallets = [];
+    try { wallets = JSON.parse(localStorage.getItem(FW_WALLETS_KEY) || "[]"); } catch {}
+    if (!Array.isArray(wallets)) wallets = [];
+    const wEntry = { wallet, net, lastScore: d.score, lastTs: Date.now() };
+    const existIdx = wallets.findIndex(w => w.wallet.toLowerCase() === wallet.toLowerCase() && w.net === net);
+    if (existIdx >= 0) wallets[existIdx] = wEntry;
+    else wallets.unshift(wEntry);
+    wallets = wallets.slice(0, 20); // max 20 wallets tracked
+    localStorage.setItem(FW_WALLETS_KEY, JSON.stringify(wallets));
+  } catch(e) { /* localStorage can be blocked */ }
+}
+
+function fwHistoryLoad(wallet, net) {
+  if (!wallet) return [];
+  try {
+    const raw = localStorage.getItem(FW_HISTORY_KEY(wallet, net));
+    const h   = JSON.parse(raw || "[]");
+    return Array.isArray(h) ? h : [];
+  } catch { return []; }
+}
+
+function fwHistoryLoadAllWallets() {
+  try {
+    const raw = localStorage.getItem(FW_WALLETS_KEY);
+    const w   = JSON.parse(raw || "[]");
+    return Array.isArray(w) ? w : [];
+  } catch { return []; }
+}
+
+function fwRenderHistory(wallet, net, currentScore, currentData) {
+  const banner   = document.getElementById("fwHistoryBanner");
+  const deltaEl  = document.getElementById("fwHistoryDelta");
+  const detailEl = document.getElementById("fwHistoryDetail");
+  const sparkEl  = document.getElementById("fwHistorySparkline");
+  const walletsEl= document.getElementById("fwHistoryWallets");
+  if (!banner || !deltaEl) return;
+
+  const history = fwHistoryLoad(wallet, net);
+  // history[0] will be the CURRENT scan after save, so prev is [1]
+  const prev    = history.length > 1 ? history[1] : null;
+
+  // ── DELTA BADGE ───────────────────────────────────────────────
+  if (prev) {
+    const diff = currentScore - prev.score;
+    const absDiff = Math.abs(diff);
+    const prevDate = new Date(prev.ts).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+
+    let cls, arrow, label;
+    if (diff > 0)       { cls="up";   arrow="↑"; label=`+${absDiff} pts`; }
+    else if (diff < 0)  { cls="down"; arrow="↓"; label=`−${absDiff} pts`; }
+    else                { cls="same"; arrow="→"; label="No change"; }
+
+    deltaEl.innerHTML = `<span class="fwh-delta ${cls}">${arrow} ${label}</span>`;
+
+    // ── DETAIL LINE ───────────────────────────────────────────────
+    const changes = [];
+    const unlimitedDiff = currentData.unlimitedCount - prev.unlimited;
+    const highRiskDiff  = currentData.highRiskCount  - prev.highRisk;
+    const totalDiff     = currentData.totalApprovals - prev.total;
+    if (unlimitedDiff !== 0) {
+      const col = unlimitedDiff > 0 ? "#ff7a8a" : "#5dffb2";
+      const sign = unlimitedDiff > 0 ? "+" : "";
+      changes.push(`<strong style="color:${col}">${sign}${unlimitedDiff}</strong> unlimited`);
+    }
+    if (highRiskDiff !== 0) {
+      const col = highRiskDiff > 0 ? "#ff7a8a" : "#5dffb2";
+      const sign = highRiskDiff > 0 ? "+" : "";
+      changes.push(`<strong style="color:${col}">${sign}${highRiskDiff}</strong> high-risk`);
+    }
+    if (totalDiff !== 0) {
+      const col = totalDiff > 0 ? "#ffd166" : "#5dffb2";
+      const sign = totalDiff > 0 ? "+" : "";
+      changes.push(`<strong style="color:${col}">${sign}${totalDiff}</strong> approvals`);
+    }
+
+    const changeStr = changes.length
+      ? ` — ${changes.join(", ")} since last scan`
+      : " — no approval changes detected";
+    detailEl.innerHTML = `Last scan: <strong>${prevDate}</strong> · Score was <strong>${prev.score}</strong>${changeStr}`;
+  } else {
+    // First scan for this wallet
+    deltaEl.innerHTML  = `<span class="fwh-delta same">→ First scan</span>`;
+    detailEl.innerHTML = `No previous scans found for this wallet on <strong>${net.toUpperCase()}</strong>. Check back after your next scan to see changes.`;
+  }
+
+  // ── SPARKLINE ─────────────────────────────────────────────────
+  if (history.length > 1) {
+    const maxScore = Math.max(...history.map(h=>h.score), 1);
+    sparkEl.innerHTML = history.slice(0, 8).reverse().map((h, i, arr) => {
+      const isCurrent = i === arr.length - 1;
+      const pct = Math.max(10, Math.round((h.score / 100) * 100));
+      const color = h.score >= 70 ? "rgba(93,255,178,.5)" : h.score >= 45 ? "rgba(255,193,7,.5)" : "rgba(255,71,87,.5)";
+      const dateStr = new Date(h.ts).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+      return `<div class="fwh-bar${isCurrent?" current":""}"
+        style="height:${pct}%;${isCurrent?"":`background:${color}`}"
+        title="${dateStr}: ${h.score}/100"></div>`;
+    }).join("");
+    sparkEl.style.display = "flex";
+  } else {
+    sparkEl.style.display = "none";
+  }
+
+  // ── OTHER TRACKED WALLETS (show up to 4) ─────────────────────
+  const allWallets = fwHistoryLoadAllWallets()
+    .filter(w => !(w.wallet.toLowerCase() === wallet.toLowerCase() && w.net === net))
+    .slice(0, 4);
+
+  if (allWallets.length > 0) {
+    const chips = allWallets.map(w => {
+      const dotColor = w.lastScore >= 70 ? "#5dffb2" : w.lastScore >= 45 ? "#ffd166" : "#ff7a8a";
+      const date = w.lastTs ? new Date(w.lastTs).toLocaleDateString("en-US",{month:"short",day:"numeric"}) : "—";
+      return `<div class="fwh-wallet-chip" onclick="fwHistoryQuickScan('${esc(w.wallet)}','${esc(w.net)}')" title="Last score: ${w.lastScore}/100 · ${date}">
+        <span class="fwh-dot" style="background:${dotColor}"></span>
+        <span>${fwShort(w.wallet)}</span>
+        <span style="color:var(--muted)">${w.net.toUpperCase()}</span>
+        <span style="font-weight:900;color:${dotColor}">${w.lastScore}</span>
+      </div>`;
+    }).join("");
+    walletsEl.innerHTML = `<div style="font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:700;width:100%;margin-bottom:4px">Other tracked wallets</div>${chips}`;
+    walletsEl.style.display = "flex";
+    walletsEl.style.flexWrap = "wrap";
+  } else {
+    walletsEl.style.display = "none";
+  }
+
+  banner.classList.add("show");
+}
+
+// Quick-scan a previously tracked wallet
+window.fwHistoryQuickScan = function(wallet, net) {
+  const heroSection = document.getElementById("heroSection");
+  const dashboard   = document.getElementById("dashboard");
+  // If dashboard is showing, hide it and re-scan
+  if (dashboard && dashboard.style.display !== "none") {
+    dashboard.style.display = "none";
+  }
+  document.getElementById("walletInput").value = wallet;
+  const netSel = document.getElementById("netSelect");
+  if (netSel) netSel.value = net;
+  runLoadSequence(wallet, net, false);
+};
 // ── RENDER DASHBOARD ─────────────────────────────────────────────
 function renderDashboard(wallet, d, tier) {
   fwCurrentScore = d.score;
