@@ -527,6 +527,44 @@
       background:linear-gradient(135deg,rgba(124,92,255,.10),rgba(0,229,255,.07));
       border:1px solid rgba(124,92,255,.28);text-align:center
     }
+
+    /* ── RULE CONFIRM MODAL ──────────────────────────── */
+    #fwRuleConfirmModal{
+      position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:99990;
+      display:flex;align-items:center;justify-content:center;
+      backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)
+    }
+    #fwRuleConfirmModal .rc-box{
+      background:linear-gradient(145deg,rgba(12,14,28,.98),rgba(8,10,22,.98));
+      border:1px solid rgba(255,193,7,.28);border-radius:22px;padding:28px 28px 22px;
+      max-width:440px;width:calc(100%-32px);
+      box-shadow:0 24px 80px rgba(0,0,0,.7),0 0 40px rgba(255,193,7,.07)
+    }
+    .rc-warning{
+      background:rgba(255,193,7,.08);border:1px solid rgba(255,193,7,.25);
+      border-radius:12px;padding:12px 14px;font-size:12px;color:#ffd166;
+      line-height:1.65;margin-bottom:16px
+    }
+    .rc-tx-list{
+      background:rgba(0,0,0,.3);border-radius:10px;padding:10px 12px;
+      font-size:11px;color:var(--muted);line-height:1.8;
+      max-height:120px;overflow-y:auto;margin-bottom:16px;
+      font-family:var(--mono)
+    }
+    .rc-btns{display:flex;gap:10px;margin-top:4px}
+    .rc-btn-cancel{
+      flex:1;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.05);color:var(--text);font-size:12px;
+      font-weight:800;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:all .2s
+    }
+    .rc-btn-cancel:hover{background:rgba(255,255,255,.1)}
+    .rc-btn-confirm{
+      flex:2;padding:12px;border-radius:12px;border:none;
+      background:linear-gradient(135deg,#7c5cff,#a87eff);color:#fff;
+      font-size:12px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;
+      cursor:pointer;transition:all .2s;box-shadow:0 8px 28px rgba(124,92,255,.35)
+    }
+    .rc-btn-confirm:hover{transform:translateY(-1px);box-shadow:0 14px 40px rgba(124,92,255,.5)}
   </style>
 </head>
 <body>
@@ -2429,6 +2467,42 @@ Scan your wallet → https://cyclex.io/firewall
 #CycleX #WalletSecurity #DeFi`;
 }
 
+
+// ── RULE CONFIRMATION MODAL ──────────────────────────────────────
+function fwShowRuleConfirm(title, warning, txLines, note, onConfirm) {
+  const modal   = document.getElementById("fwRuleConfirmModal");
+  const titleEl = document.getElementById("rcTitle");
+  const warnEl  = document.getElementById("rcWarning");
+  const txEl    = document.getElementById("rcTxList");
+  const noteEl  = document.getElementById("rcNote");
+  const confirmBtn = document.getElementById("rcConfirmBtn");
+  const cancelBtn  = document.getElementById("rcCancelBtn");
+  if (!modal) { onConfirm(); return; } // fallback if HTML missing
+
+  titleEl.textContent = title;
+  warnEl.innerHTML    = warning;
+  txEl.innerHTML      = txLines.map(l => `<div>${esc(l)}</div>`).join("");
+  noteEl.innerHTML    = note;
+
+  modal.style.display = "flex";
+
+  // Remove old listeners
+  const newConfirm = confirmBtn.cloneNode(true);
+  const newCancel  = cancelBtn.cloneNode(true);
+  confirmBtn.replaceWith(newConfirm);
+  cancelBtn.replaceWith(newCancel);
+
+  newConfirm.addEventListener("click", () => {
+    modal.style.display = "none";
+    onConfirm();
+  });
+  newCancel.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+
+  // Close on backdrop
+  modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+}
 // ── RULE TEMPLATES ────────────────────────────────────────────────
 var RULES = [
   {
@@ -2503,12 +2577,10 @@ async function applyRule(i) {
     showPassportMsg("⚠ No approval data loaded. Run a scan first."); return;
   }
 
-  btn.disabled = true; btn.textContent = "Preparing…";
-  await fwEnsureBsc(window.wallet.providerRaw);
-  const E = getE();
+  // ── WALLET MISMATCH CHECK ─────────────────────────────────────────
+  if (!fwCheckWalletMatch(btn)) return;
 
-  // Strict: revoke all unlimited first, then cap unknowns at 50
-  // Balanced: cap unknowns at 200
+  const E = getE();
   const allUnlimited = fwScanData.rows.filter(r => isUnlimitedAllow(r.allow));
   const unknowns     = allUnlimited.filter(r => r.verified === false);
   const CAP_STRICT   = 50n;
@@ -2516,10 +2588,9 @@ async function applyRule(i) {
 
   let targets = [];
   if (rule.action === "strict") {
-    // revoke all unlimited (not just unknowns)
     targets = allUnlimited.map(r => ({ ...r, amount: 0n }));
   } else {
-    // balanced: cap unknowns to 200
+    // balanced: cap unknowns to 200 tokens (reduces from unlimited to capped)
     targets = unknowns.map(r => ({
       ...r, amount: CAP_BALANCED * (10n ** BigInt(Number(r.decimals)||18))
     }));
@@ -2531,33 +2602,52 @@ async function applyRule(i) {
     return;
   }
 
-  let done = 0, failed = 0;
-  for (let j = 0; j < targets.length; j++) {
-    const t = targets[j];
-    try {
-      btn.textContent = `${j+1}/${targets.length} sending…`;
-      const c = new E.Contract(fwNorm(t.token), ERC20_APPROVE_ABI, window.wallet.signer);
-      const tx = await c.approve(fwNorm(t.spender), t.amount);
-      btn.textContent = `${j+1}/${targets.length} pending…`;
-      await tx.wait();
-      done++;
-    } catch(e) {
-      if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
-        btn.disabled = false; btn.textContent = "Cancelled — retry";
-        showPassportMsg(`⚠ Cancelled after ${done} tx(s). Press Apply to continue.`);
-        return;
+  // ── SHOW CONFIRMATION DIALOG ──────────────────────────────────────
+  const actionVerb  = rule.action === "strict" ? "REVOKE (set to 0)" : "CAP TO 200 tokens";
+  const actionColor = rule.action === "strict" ? "#ff7a8a" : "#ffd166";
+  const txLines     = targets.map(t =>
+    `${actionVerb}: ${t.symbol||"TOKEN"} → ${fwShort(t.spender)}`
+  );
+
+  const warningText = rule.action === "strict"
+    ? `⚠️ <strong>Strict mode</strong> will REVOKE <strong>${targets.length}</strong> unlimited approval(s) to 0. Each approval requires a separate transaction costing a small gas fee (~$0.01 each). <br><br>MetaMask will show "<em>Spending cap: 0</em>" — this means you are <strong>removing</strong> the permission, not giving new access.`
+    : `⚠️ <strong>Balanced mode</strong> will cap <strong>${targets.length}</strong> unverified unlimited approval(s) to 200 tokens each. <br><br>MetaMask will show "<em>Spending cap: 200 [TOKEN]</em>" — this <strong>reduces</strong> an existing unlimited permission to 200. You are <strong>NOT</strong> granting new access to anyone.`;
+
+  const note = `ℹ The connected wallet <strong style="color:var(--cyan)">${fwShort(window.wallet.address)}</strong> will sign ${targets.length} transaction(s). This is the wallet whose approvals are being modified.`;
+
+  fwShowRuleConfirm(rule.name, warningText, txLines, note, async () => {
+    // ── EXECUTE ──────────────────────────────────────────────────────
+    btn.disabled = true; btn.textContent = "Preparing…";
+    await fwEnsureBsc(window.wallet.providerRaw);
+
+    let done = 0, failed = 0;
+    for (let j = 0; j < targets.length; j++) {
+      const t = targets[j];
+      try {
+        btn.textContent = `${j+1}/${targets.length} sending…`;
+        const c = new E.Contract(fwNorm(t.token), ERC20_APPROVE_ABI, window.wallet.signer);
+        const tx = await c.approve(fwNorm(t.spender), t.amount);
+        btn.textContent = `${j+1}/${targets.length} pending…`;
+        await tx.wait();
+        done++;
+      } catch(e) {
+        if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
+          btn.disabled = false; btn.textContent = "Cancelled — retry";
+          showPassportMsg(`⚠ Cancelled after ${done} tx(s). Press Apply to continue.`);
+          return;
+        }
+        failed++;
       }
-      failed++;
     }
-  }
 
-  // Store undo data (restore to MAX_UINT)
-  window.__fwRuleUndoData = window.__fwRuleUndoData || {};
-  window.__fwRuleUndoData[i] = targets;
+    // Store undo data (revoke back to 0 on deactivate, NOT unlimited)
+    window.__fwRuleUndoData = window.__fwRuleUndoData || {};
+    window.__fwRuleUndoData[i] = targets;
 
-  ruleActive[i] = true;
-  _refreshRuleCard(i);
-  showPassportMsg(`✅ "${rule.name}" active — ${done} approval(s) updated${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
+    ruleActive[i] = true;
+    _refreshRuleCard(i);
+    showPassportMsg(`✅ "${rule.name}" active — ${done} approval(s) updated${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
+  });
 }
 
 function _refreshRuleCard(i) {
@@ -2583,6 +2673,10 @@ async function undoRule(i) {
   }
 
   if (!window.wallet?.signer) { requestFullAccess(); return; }
+  if (!fwCheckWalletMatch(null)) {
+    showPassportMsg('⚠ Connect the scanned wallet to deactivate this rule.');
+    return;
+  }
   const targets = window.__fwRuleUndoData?.[i];
   if (!targets?.length) {
     // No stored data — just deactivate visually
@@ -2594,22 +2688,24 @@ async function undoRule(i) {
   const btn = document.getElementById(`ruleBtn${i}`);
   if (btn) { btn.disabled = true; btn.textContent = "Restoring…"; }
 
-  const MAX_UINT = 2n**256n - 1n;
+  // ⚠ Safety: deactivate sets approvals to 0 (REVOKE), NOT back to unlimited.
+  // Restoring unlimited would be MORE dangerous than the capped state.
   const E = getE();
   let done = 0, failed = 0;
 
   for (let j = 0; j < targets.length; j++) {
     const t = targets[j];
     try {
-      if (btn) btn.textContent = `${j+1}/${targets.length} restoring…`;
+      if (btn) btn.textContent = `${j+1}/${targets.length} revoking…`;
       const c = new E.Contract(fwNorm(t.token), ERC20_APPROVE_ABI, window.wallet.signer);
-      const tx = await c.approve(fwNorm(t.spender), MAX_UINT);
+      // Revoke to 0 — do NOT restore unlimited (that would increase risk)
+      const tx = await c.approve(fwNorm(t.spender), 0n);
       await tx.wait();
       done++;
     } catch(e) {
       if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
         if (btn) { btn.disabled = false; btn.textContent = "↩ Retry deactivate"; }
-        showPassportMsg(`⚠ Cancelled after ${done} restore(s).`);
+        showPassportMsg(`⚠ Cancelled after ${done} revoke(s).`);
         return;
       }
       failed++;
@@ -2618,7 +2714,7 @@ async function undoRule(i) {
 
   delete window.__fwRuleUndoData[i];
   ruleActive[i] = false; _refreshRuleCard(i);
-  showPassportMsg(`↩ "${rule.name}" deactivated — ${done} approval(s) restored${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
+  showPassportMsg(`↩ "${rule.name}" deactivated — ${done} approval(s) fully revoked to 0. Re-scan to verify.`);
 }
 
 window.undoFix    = undoFix;
@@ -3244,6 +3340,21 @@ window.requestFullAccess = async function() {
     <div style="margin-top:14px;text-align:center">
       <button onclick="document.getElementById('fwTimelineModal').style.display='none'"
         style="padding:10px 32px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.08em;text-transform:uppercase">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── RULE CONFIRMATION MODAL ── -->
+<div id="fwRuleConfirmModal" style="display:none">
+  <div class="rc-box">
+    <div style="font-size:18px;font-weight:900;margin-bottom:10px" id="rcTitle">Confirm Rule</div>
+    <div class="rc-warning" id="rcWarning"></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:700">What will happen (on-chain transactions):</div>
+    <div class="rc-tx-list" id="rcTxList"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px" id="rcNote"></div>
+    <div class="rc-btns">
+      <button class="rc-btn-cancel" id="rcCancelBtn">Cancel</button>
+      <button class="rc-btn-confirm" id="rcConfirmBtn">I Understand — Proceed</button>
     </div>
   </div>
 </div>
