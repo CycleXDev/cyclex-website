@@ -5059,17 +5059,38 @@ try {
     liqActivePools: active.length
   };
 
-  // USD estimate from stable side (assumes ~$1 per stable)
-  const stableUsdSide = (usdtAmt + usdcAmt + busdAmt + fdusdAmt);
-  const hasStableUsd = Number.isFinite(stableUsdSide) && stableUsdSide > 0;
+  // USD estimate (stable-side + wrapped-side)
+const stableUsdSide = (usdtAmt + usdcAmt + busdAmt + fdusdAmt);
 
-  // In AMM, total liquidity (TVL) ~= 2 * stable-side (rough but practical)
-  const liquidityUsdEst = hasStableUsd ? (stableUsdSide * 2) : NaN;
+// Fallback native prices (rough, but much closer than ignoring wrapped pools)
+// You can tune these anytime.
+const QS_NATIVE_USD_FALLBACK = {
+  bsc: 650,   // BNB
+  eth: 3000   // ETH
+};
 
-  rep.meta = {
-    ...(rep.meta || {}),
-    liquidityUsdEst: Number.isFinite(liquidityUsdEst) ? liquidityUsdEst : null
-  };
+// Optional override if you later inject a live price somewhere into rep.meta
+const nativeUsdPrice = Number(
+  rep?.meta?.nativeUsdPrice ?? QS_NATIVE_USD_FALLBACK[net] ?? NaN
+);
+
+// wrappedAmt is WBNB/WETH amount on the "wrapped side" across token-wrapped pools
+const wrappedUsdSide =
+  (Number.isFinite(wrappedAmt) && wrappedAmt > 0 && Number.isFinite(nativeUsdPrice) && nativeUsdPrice > 0)
+    ? (wrappedAmt * nativeUsdPrice)
+    : 0;
+
+// In AMM pools, token side value ~= quote side value, so TVL ~= 2 * one-side value
+const oneSideUsd = (Number.isFinite(stableUsdSide) ? stableUsdSide : 0) + wrappedUsdSide;
+const liquidityUsdEst = (oneSideUsd > 0) ? (oneSideUsd * 2) : NaN;
+
+rep.meta = {
+  ...(rep.meta || {}),
+  nativeUsdPrice: Number.isFinite(nativeUsdPrice) ? nativeUsdPrice : null,
+  stableUsdSide: Number.isFinite(stableUsdSide) ? stableUsdSide : 0,
+  wrappedUsdSide: Number.isFinite(wrappedUsdSide) ? wrappedUsdSide : 0,
+  liquidityUsdEst: Number.isFinite(liquidityUsdEst) ? liquidityUsdEst : null
+};
 
   // Tiers (edit these numbers freely)
   // tiny  : < 25k
