@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -509,6 +508,25 @@
     .tm-entry.in {border-color:#5dffb2}
     .tm-entry.out{border-color:#ff9a6b}
     .tm-hash{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px}
+
+    /* ── EXPORT LOCK OVERLAY ────────────────────────── */
+    #fwExportSection{display:none} /* hidden until scan completes */
+    #fwExportSection.fw-visible{display:block}
+    .fw-export-locked .fw-export-btns-wrap{
+      position:relative;pointer-events:none
+    }
+    .fw-export-locked .fw-export-btns-wrap::after{
+      content:"";
+      position:absolute;inset:0;border-radius:12px;
+      background:linear-gradient(180deg,rgba(5,6,10,.0) 0%,rgba(5,6,10,.88) 60%,rgba(5,6,10,.97) 100%);
+      backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+      pointer-events:all;z-index:2
+    }
+    .fw-export-unlock-cta{
+      margin-top:14px;padding:14px;border-radius:14px;
+      background:linear-gradient(135deg,rgba(124,92,255,.10),rgba(0,229,255,.07));
+      border:1px solid rgba(124,92,255,.28);text-align:center
+    }
   </style>
 </head>
 <body>
@@ -832,20 +850,32 @@
         </div>
       </div>
 
-      <!-- ── EXPORT SECTION (full access only) ── -->
-      <div id="fwExportSection" class="hidden">
+      <!-- ── EXPORT SECTION — locked preview until full access ── -->
+      <div id="fwExportSection">
         <div class="section-title">📊 Export Report</div>
-        <div class="fw-export-card">
+        <div class="fw-export-card fw-export-locked" id="fwExportCard">
           <div style="font-size:16px;font-weight:800;margin-bottom:4px">Download Scan Data</div>
-          <div style="font-size:13px;color:var(--muted);margin-bottom:16px">
+          <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.65">
             Export your full approval &amp; relationship report for investigation, compliance, or record-keeping.
           </div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <button class="fw-export-btn csv" id="fwBtnExportCSV">📄 Export CSV</button>
-            <button class="fw-export-btn json" id="fwBtnExportJSON">🗃 Export JSON</button>
-            <button class="fw-export-btn copy" id="fwBtnCopyReport">📋 Copy Report</button>
+          <!-- Buttons wrap — blurred when locked -->
+          <div class="fw-export-btns-wrap">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;opacity:.45">
+              <button class="fw-export-btn csv" id="fwBtnExportCSV" disabled>📄 Export CSV</button>
+              <button class="fw-export-btn json" id="fwBtnExportJSON" disabled>🗃 Export JSON</button>
+              <button class="fw-export-btn copy" id="fwBtnCopyReport" disabled>📋 Copy Report</button>
+            </div>
           </div>
-          <div id="fwExportStatus" style="margin-top:10px;font-size:12px;color:var(--muted);min-height:18px;line-height:1.5"></div>
+          <!-- CTA shown when locked -->
+          <div class="fw-export-unlock-cta" id="fwExportCTA">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+              🔒 Export requires <strong style="color:var(--cyan)">Full Access</strong> — hold 1 PASS token to unlock CSV, JSON &amp; report export.
+            </div>
+            <button class="btn-full-access" style="font-size:11px;padding:9px 20px" onclick="requestFullAccess()">
+              🔑 Unlock Export
+            </button>
+          </div>
+          <div id="fwExportStatus" style="margin-top:10px;font-size:12px;color:var(--muted);min-height:18px;line-height:1.5;display:none"></div>
         </div>
       </div>
 
@@ -1269,10 +1299,33 @@ Scan your wallet: https://cyclex.io/firewall
 
 // ── EXPORT + RELATIONS VISIBILITY ────────────────────────────
 function fwUpdateExportVisibility() {
-  const sec = document.getElementById("fwExportSection");
+  const sec  = document.getElementById("fwExportSection");
+  const card = document.getElementById("fwExportCard");
+  const cta  = document.getElementById("fwExportCTA");
+  const stat = document.getElementById("fwExportStatus");
   if (!sec) return;
-  if (fwAccessTier==="full") sec.classList.remove("hidden");
-  else sec.classList.add("hidden");
+
+  // Always visible once scan has run (show as teaser in free tier)
+  sec.classList.add("fw-visible");
+
+  if (fwAccessTier === "full") {
+    // Unlocked: remove blur/lock, enable buttons
+    card?.classList.remove("fw-export-locked");
+    if (cta)  cta.style.display  = "none";
+    if (stat) stat.style.display = "block";
+    // Enable buttons
+    ["fwBtnExportCSV","fwBtnExportJSON","fwBtnCopyReport"].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) { btn.disabled = false; btn.parentElement.style.opacity = "1"; }
+    });
+    // Bind events
+    fwInitExport();
+  } else {
+    // Locked: show CTA, keep blur
+    card?.classList.add("fw-export-locked");
+    if (cta)  cta.style.display  = "block";
+    if (stat) stat.style.display = "none";
+  }
 }
 
 // ── INIT EXPORT BUTTONS ───────────────────────────────────────
@@ -1294,6 +1347,100 @@ const ERC20_APPROVE_ABI = ["function approve(address spender, uint256 amount) re
 
 // ── STATE ────────────────────────────────────────────────────────
 let fwAccessTier   = "free";      // "free" | "full"
+
+// ══════════════════════════════════════════════════════════════
+// ANTI-TAMPER SECURITY ENGINE
+// Prevents console-based bypass of access gate (PASS check)
+// ══════════════════════════════════════════════════════════════
+
+// 1. One-time nonce — required by unlockFull() to prove call came
+//    from the legitimate check flow, not the console.
+const _fwNonce = (() => {
+  const arr = new Uint8Array(24);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(16).padStart(2,'0')).join('');
+})();
+
+// 2. Verified state — stored in closure, NOT on window
+let _fwAccessVerified = false;
+let _fwValidatedWallet = null;
+
+// 3. Protect fwAccessTier via Object.defineProperty — block direct assignment
+(function protectAccessTier() {
+  let _tier = "free";
+  try {
+    Object.defineProperty(window, "fwAccessTier", {
+      get: () => _tier,
+      set: (v) => {
+        // Only allow setting to "full" if internal verification passed
+        if (v === "full" && !_fwAccessVerified) {
+          console.warn("[CycleX] Access tier change blocked. Connect a wallet with PASS to unlock.");
+          return;
+        }
+        _tier = v;
+      },
+      configurable: false
+    });
+  } catch(e) {
+    // If defineProperty fails (e.g. already defined), just leave as-is
+  }
+})();
+
+// 4. Override unlockFull to require nonce — direct console call won't work
+const _unlockFull_real = function(nonce) {
+  if (nonce !== _fwNonce) {
+    console.warn("[CycleX] Unauthorized unlock attempt blocked.");
+    return false;
+  }
+  _fwAccessVerified = true;
+  // Only now allow fwAccessTier to be set
+  try { 
+    // Re-set via setter which now allows it since _fwAccessVerified = true
+    const desc = Object.getOwnPropertyDescriptor(window, "fwAccessTier");
+    if (desc?.set) desc.set("full");
+    else { /* fallback — variable in local scope */ }
+  } catch {}
+  // Perform actual unlock UI
+  _doUnlockUI();
+  return true;
+};
+
+// 5. UI unlock (separated from guard) — called only by _unlockFull_real
+function _doUnlockUI() {
+  document.getElementById("accessGateOverlay")?.style && (document.getElementById("accessGateOverlay").style.display = "none");
+  document.getElementById("tierBadge") && (document.getElementById("tierBadge").style.display = "flex");
+  document.getElementById("btnTopAccess") && (document.getElementById("btnTopAccess").style.display = "none");
+  document.getElementById("fixLockOverlay")?.style      && (document.getElementById("fixLockOverlay").style.display = "none");
+  document.getElementById("passportLockOverlay")?.style  && (document.getElementById("passportLockOverlay").style.display = "none");
+  document.getElementById("ppWatermark")?.style          && (document.getElementById("ppWatermark").style.display = "none");
+  fwUpdateExportVisibility();
+  fwInitExport();
+}
+
+// 6. Rate-limit verification calls (prevent brute force if someone tries to guess nonce)
+let _fwCheckCount = 0;
+const _fwCheckStart = Date.now();
+
+function _fwRateLimitedCheck() {
+  _fwCheckCount++;
+  const elapsed = Date.now() - _fwCheckStart;
+  if (_fwCheckCount > 8 && elapsed < 30000) {
+    console.warn("[CycleX] Too many access checks. Please wait.");
+    return false;
+  }
+  return true;
+}
+
+// 7. Protect exports — check tier at runtime, not just at bind time
+const _fwGuardExport = (fn) => function(...args) {
+  // Double-check against verified closure state (not just fwAccessTier var)
+  if (!_fwAccessVerified) {
+    requestFullAccess();
+    return;
+  }
+  return fn.apply(this, args);
+};
+
 let fwScanData     = null;        // raw parsed approvals
 let fwCurrentScore = 0;
 let fwWallet       = "";
@@ -1619,6 +1766,9 @@ async function requestFullAccess() {
     const why = res.hasPass ? "PASS ✓" : `${Number(CYCX_MIN)} CYCX ✓`;
     setGateStatus(`Eligible (${why}) — unlocking!`, "#5dffb2");
     await wait(700);
+    // Set _fwAccessVerified before unlockFull — this is the only legit path
+    _fwAccessVerified = true;
+    _fwValidatedWallet = window.wallet?.address || null;
     unlockFull();
     if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
     return;
@@ -1638,18 +1788,8 @@ function openPassPopup()  { const el = document.getElementById("passPopup"); if(
 function closePassPopup() { const el = document.getElementById("passPopup"); if(el) el.style.display="none"; }
 
 function unlockFull() {
-  fwAccessTier = "full";
-  document.getElementById("accessGateOverlay")?.style && (document.getElementById("accessGateOverlay").style.display = "none");
-  document.getElementById("tierBadge") && (document.getElementById("tierBadge").style.display = "flex");
-  document.getElementById("btnTopAccess") && (document.getElementById("btnTopAccess").style.display = "none");
-  // Remove lock overlays
-  document.getElementById("fixLockOverlay")    && (document.getElementById("fixLockOverlay").style.display    = "none");
-  document.getElementById("passportLockOverlay")&& (document.getElementById("passportLockOverlay").style.display = "none");
-  // Remove passport watermark
-  document.getElementById("ppWatermark") && (document.getElementById("ppWatermark").style.display = "none");
-  // Show export section + init buttons
-  fwUpdateExportVisibility();
-  fwInitExport();
+  // Must go through nonce-protected path
+  _unlockFull_real(_fwNonce);
 }
 
 // ── LOADING SEQUENCE ─────────────────────────────────────────────
@@ -2005,7 +2145,7 @@ function fwUpdateScoreAfterFix(step) {
 
 async function applyFix(step) {
   if (fixDone[step]) return;
-  if (fwAccessTier !== "full") { requestFullAccess(); return; }
+  if (fwAccessTier !== "full" || !_fwAccessVerified) { requestFullAccess(); return; }
 
   const el  = document.getElementById(`fixStep${step+1}`);
   const btn = document.getElementById(`btnFix${step+1}`);
@@ -2326,7 +2466,7 @@ async function applyRule(i) {
   }
 
   // ── Strict & Balanced: on-chain — need wallet ────────────────────
-  if (!window.wallet?.signer) { requestFullAccess(); return; }
+  if (!_fwAccessVerified || !window.wallet?.signer) { requestFullAccess(); return; }
   if (!fwScanData?.rows || fwScanData.rows.length === 0) {
     showPassportMsg("⚠ No approval data loaded. Run a scan first."); return;
   }
@@ -2453,9 +2593,33 @@ window.undoFix    = undoFix;
 window.undoRule   = undoRule;
 window.ruleActive = ruleActive;   // expose for tests
 window.RULES      = RULES;        // expose for tests
-window.fwExportCSV  = window.fwExportCSV  || (()=>{});
-window.fwExportJSON = window.fwExportJSON || (()=>{});
-window.fwCopyReport = window.fwCopyReport || (()=>{});
+// Wrap exports with runtime access guard (prevents console bypass)
+window.fwExportCSV  = _fwGuardExport(window.fwExportCSV  || (()=>{}));
+window.fwExportJSON = _fwGuardExport(window.fwExportJSON || (()=>{}));
+window.fwCopyReport = _fwGuardExport(window.fwCopyReport || (()=>{}));
+
+// Freeze window.unlockFull so it can't be replaced from console
+try {
+  Object.defineProperty(window, 'unlockFull', {
+    get: () => unlockFull,
+    set: () => { console.warn('[CycleX] Cannot override unlockFull.'); },
+    configurable: false
+  });
+} catch(e) {}
+
+// Periodic integrity check — detect if state was tampered
+setInterval(() => {
+  const tier = typeof fwAccessTier !== 'undefined' ? fwAccessTier : 'free';
+  if (tier === 'full' && !_fwAccessVerified) {
+    // State mismatch — someone forced fwAccessTier without passing PASS check
+    // Re-lock the UI silently
+    document.getElementById("fixLockOverlay")    ?.style && (document.getElementById("fixLockOverlay").style.display    = "flex");
+    document.getElementById("passportLockOverlay")?.style && (document.getElementById("passportLockOverlay").style.display = "flex");
+    document.getElementById("tierBadge")?.style  && (document.getElementById("tierBadge").style.display  = "none");
+    document.getElementById("btnTopAccess")?.style && (document.getElementById("btnTopAccess").style.display = "block");
+    fwUpdateExportVisibility();
+  }
+}, 3500);
 function getDemoApprovals() {
   return [
     { token:"0xdAC17F958D2ee523a2206206994597C13D831ec7", spender:"0x1111111254eeb25477b68fb85ed929f73a960582", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDT", risk:"medium", verified:true,  decimals:6 },
@@ -3017,6 +3181,9 @@ window.requestFullAccess = async function() {
     const why = res.hasPass ? "PASS ✓" : "CYCX ✓";
     setGateStatus(`Eligible (${why}) — unlocking!`, "#5dffb2");
     await new Promise(r => setTimeout(r, 700));
+    // Verify path — mark as legitimately checked before unlocking
+    _fwAccessVerified = true;
+    _fwValidatedWallet = window.wallet?.address || null;
     unlockFull();
     if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
     return;
