@@ -5255,14 +5255,14 @@ if (uiConfPoints >= 4) uiConfidence = "high";
 else if (uiConfPoints >= 2) uiConfidence = "medium";
 else uiConfidence = "low";
 
-// force market score to respect on-chain effective liquidity
+// force market score to respect on-chain effective liquidity (stricter)
 if (liqQuality === "tiny") {
-  marketScore = Math.min(marketScore, 35);
+  marketScore = Math.min(marketScore, 28);
 } else if (liqQuality === "low") {
-  marketScore = Math.min(marketScore, 68);
+  marketScore = Math.min(marketScore, 58);
 } else if (liqQuality === "medium") {
-  marketScore = Math.min(marketScore, 78);
-} 
+  marketScore = Math.min(marketScore, 75);
+}
 marketScore = qsClamp(Math.round(marketScore), 0, 100);
 if (
   liqQuality === "healthy" &&
@@ -5291,36 +5291,37 @@ if (mFlags.has("very_few_holders")) score -= 18;
 else if (mFlags.has("few_holders")) score -= 8;
 if (mFlags.has("holder_concentration_unknown")) score -= 8;
 
-// liquidity caps with coverage-awareness
+// liquidity caps with coverage-awareness (stricter + tier-aligned)
 if (liqQuality === "tiny") {
   if (rep.meta?.liqCoverageLow) {
-    score -= 10;
+    score -= 14; // coverage weak, but still harsh
+    if (score > 54) score = 54;
     if (!rep.redFlags.includes("Liquidity appears very low, but DEX coverage may be incomplete.")) {
       rep.redFlags.push("Liquidity appears very low, but DEX coverage may be incomplete.");
     }
   } else {
-    score -= 22;
-    if (score > 49) score = 49;
+    score -= 26;
+    if (score > 49) score = 49; // force High risk tier max
     if (!rep.redFlags.includes("Very low effective liquidity (thin market, high manipulation risk).")) {
       rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
     }
   }
 } else if (liqQuality === "low") {
-  // Low liquidity should heavily limit score (manipulation/slippage risk)
+  // low liquidity = red, should not look safe
   if (rep.meta?.liqCoverageLow) {
-    score -= 10;            // coverage weak: still penalize
-    if (score > 64) score = 64;
+    score -= 12;
+    if (score > 62) score = 62;
   } else {
-    score -= 18;
-    if (score > 58) score = 58; // hard cap when liquidity is low
+    score -= 20;
+    if (score > 58) score = 58; // strong cap inside Caution
   }
   if (!rep.redFlags.includes("Low effective liquidity detected.")) {
     rep.redFlags.push("Low effective liquidity detected.");
   }
 } else if (liqQuality === "medium") {
-  // Medium liquidity: still cap to prevent "too safe" scoring
-  score -= 6;
-  if (score > 75) score = 75;
+  // medium = yellow, mild cap (a bit stricter)
+  score -= 4;
+  if (score > 78) score = 78;
 }
 
 
@@ -5434,8 +5435,8 @@ rep.overallText = overallText;
   type:
     !rep.liq?.any ? "warn" :
     liqQuality === "tiny" ? "bad" :
-    liqQuality === "low" ? "warn" :
-    liqQuality === "medium" ? "ok" : "ok",
+    liqQuality === "low" ? "bad" :
+    liqQuality === "medium" ? "warn" : "ok",
   title: "Liquidity",
    value: (() => {
   if (!rep.liq?.any) return "No/Unknown";
