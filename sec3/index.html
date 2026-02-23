@@ -4582,23 +4582,23 @@ const read = _getRP ? _getRP(net) : null;
         const ok = (r0 > 0n || r1 > 0n);
         any = any || ok;
 
-        rows.push({
-          type: `V2 • ${vf.name || "V2"}`,
-          target: t.label,
-          addr: pair,
-          ok,
-          note: ok
-            ? `reserves: ${_qsFmtUnits(r0, m0.decimals, 2)} ${m0.symbol} / ${_qsFmtUnits(r1, m1.decimals, 2)} ${m1.symbol}`
-            : "reserves: 0",
-          token0: qsNormAddr(token0),
-          token1: qsNormAddr(token1),
-          symbol0: m0.symbol,
-          symbol1: m1.symbol,
-          decimals0: Number(m0.decimals ?? 18),
-          decimals1: Number(m1.decimals ?? 18),
-          raw0: r0.toString(),
-          raw1: r1.toString()
-        });
+       rows.push({
+  type: `V2${vf?.name ? " • " + vf.name : ""}`,
+  target: t.label,
+  addr: pair,
+  ok,
+
+  // display text (existing UI)
+  note: ok ? `reserves: ${a0} ${m0.symbol} / ${a1} ${m1.symbol}` : "reserves: 0",
+
+  // ✅ raw structured values for scoring (do NOT parse from note)
+  sym0: String(m0.symbol || ""),
+  sym1: String(m1.symbol || ""),
+  dec0: Number(m0.decimals ?? 18),
+  dec1: Number(m1.decimals ?? 18),
+  amt0: Number(E.formatUnits(r0, m0.decimals)),
+  amt1: Number(E.formatUnits(r1, m1.decimals))
+});
       } catch {
         rows.push({
           type: `V2 • ${vf.name || "V2"}`,
@@ -4659,22 +4659,22 @@ const read = _getRP ? _getRP(net) : null;
           any = any || ok;
 
           rows.push({
-            type: `V3 ${fee} • ${vf.name || "V3"}`,
-            target: t.label,
-            addr: pool,
-            ok,
-            note: ok
-              ? `balances: ${_qsFmtUnits(b0, m0.decimals, 2)} ${m0.symbol} / ${_qsFmtUnits(b1, m1.decimals, 2)} ${m1.symbol}`
-              : "balances: 0",
-            token0: qsNormAddr(token0),
-            token1: qsNormAddr(token1),
-            symbol0: m0.symbol,
-            symbol1: m1.symbol,
-            decimals0: Number(m0.decimals ?? 18),
-            decimals1: Number(m1.decimals ?? 18),
-            raw0: b0.toString(),
-            raw1: b1.toString()
-          });
+  type: `V3 ${fee}${vf?.name ? " • " + vf.name : ""}`,
+  target: t.label,
+  addr: pool,
+  ok,
+
+  // display text (existing UI)
+  note: ok ? `balances: ${fb0} ${m0.symbol} / ${fb1} ${m1.symbol}` : "balances: 0",
+
+  // ✅ raw structured values for scoring (do NOT parse from note)
+  sym0: String(m0.symbol || ""),
+  sym1: String(m1.symbol || ""),
+  dec0: Number(m0.decimals ?? 18),
+  dec1: Number(m1.decimals ?? 18),
+  amt0: Number(E.formatUnits(b0, m0.decimals)),
+  amt1: Number(E.formatUnits(b1, m1.decimals))
+});
         } catch {
           rows.push({
             type: `V3 ${fee} • ${vf.name || "V3"}`,
