@@ -183,8 +183,12 @@
 
     .section-title{
       font-size:11px;letter-spacing:.20em;text-transform:uppercase;
-      color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px
+      color:var(--muted);margin-bottom:14px;margin-top:28px;
+      display:flex;align-items:center;gap:10px
     }
+    /* First section-title in dashboard needs no top margin */
+    #dashboard > .section-title:first-of-type,
+    #dashboard > *:first-child > .section-title{margin-top:0}
     .section-title::after{content:"";flex:1;height:1px;background:rgba(255,255,255,.08)}
 
     /* Score bar (top 3) */
@@ -331,9 +335,13 @@
     .pp-score-big{font-size:40px;font-weight:950;letter-spacing:-.03em}
     .pp-score-label{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
     .pp-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-    .pp-stat{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:8px 10px}
-    .pp-stat-val{font-size:16px;font-weight:900}
-    .pp-stat-key{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+    .pp-stat{
+      background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+      border-radius:10px;padding:10px 10px 8px;
+      display:flex;flex-direction:column;justify-content:center;min-height:52px
+    }
+    .pp-stat-val{font-size:15px;font-weight:900;line-height:1.2;word-break:break-word}
+    .pp-stat-key{font-size:9px;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);margin-top:3px;line-height:1.2}
     .pp-status{
       display:inline-flex;align-items:center;gap:6px;padding:6px 12px;
       border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
@@ -930,7 +938,7 @@
 
       <!-- TOP 3 CARDS -->
       <!-- ── SCAN HISTORY BANNER ── -->
-      <div id="fwHistoryBanner">
+      <div id="fwHistoryBanner" style="margin-bottom:20px">
         <div class="fwh-row">
           <span class="fwh-label">📈 Scan History</span>
           <div id="fwHistoryDelta"></div>
@@ -940,7 +948,7 @@
         <div class="fwh-multi" id="fwHistoryWallets" style="display:none"></div>
       </div>
 
-      <div class="section-title">Firewall Status</div>
+      <div class="section-title" style="margin-top:0">Firewall Status</div>
       <div class="top3">
 
         <!-- Score -->
@@ -1886,6 +1894,11 @@ function _doUnlockUI() {
   document.getElementById("ppWatermark")?.style          && (document.getElementById("ppWatermark").style.display = "none");
   fwUpdateExportVisibility();
   fwInitExport();
+
+  // Re-render relations: removes the teaser banner and shows "View transactions" buttons
+  if (window.__fwRelations?.length && fwNet) {
+    fwRenderRelations(fwNet, window.__fwRelations);
+  }
 }
 
 // 6. Rate-limit verification calls (prevent brute force if someone tries to guess nonce)
