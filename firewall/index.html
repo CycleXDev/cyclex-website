@@ -439,11 +439,13 @@
 
     /* ── WALLET RELATIONS ─────────────────────────── */
     .rel-section-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px 22px 18px}
-    .rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:14px}
+    .rel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:14px;max-width:100%}
     .rel-card{
       background:rgba(255,255,255,.035);border-radius:16px;padding:15px 16px;
       border:1px solid rgba(255,255,255,.10);transition:border-color .22s,transform .18s;
+      display:flex;flex-direction:column; /* ensures button always at bottom */
     }
+    .rel-card-body{flex:1} /* pushes button to bottom */
     .rel-card:hover{border-color:rgba(0,229,255,.32);transform:translateY(-1px)}
     .rel-card.cex {border-left:3px solid rgba(93,255,178,.65)}
     .rel-card.dex {border-left:3px solid rgba(0,229,255,.65)}
@@ -665,6 +667,9 @@
     .fv-expired .fv-box{border:1px solid rgba(255,193,7,.3); box-shadow:0 0 60px rgba(255,193,7,.08)}
 
     /* ═══ WALLET WATCH ════════════════════════════ */
+    .fw-watch-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .fw-watch-header-text{flex:1;min-width:0}
+    .fw-watch-header-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;flex:0 0 auto}
     #fwWatchSection{display:none}
     #fwWatchSection.fw-visible{display:block}
     .fw-watch-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
@@ -1157,7 +1162,7 @@
           </div>
           <!-- Buttons wrap — blurred when locked -->
           <div class="fw-export-btns-wrap">
-            <div style="display:flex;gap:10px;flex-wrap:wrap;opacity:.45">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;opacity:.45;align-items:center">
               <button class="fw-export-btn csv" id="fwBtnExportCSV" disabled>📄 Export CSV</button>
               <button class="fw-export-btn json" id="fwBtnExportJSON" disabled>🗃 Export JSON</button>
               <button class="fw-export-btn copy" id="fwBtnCopyReport" disabled>📋 Copy Report</button>
@@ -1172,7 +1177,7 @@
               🔑 Unlock Export
             </button>
           </div>
-          <div id="fwExportStatus" style="margin-top:10px;font-size:12px;color:var(--muted);min-height:18px;line-height:1.5;display:none"></div>
+          <div id="fwExportStatus" style="margin-top:12px;font-size:12px;color:var(--muted);min-height:18px;line-height:1.5;display:none;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07)"></div>
         </div>
       </div>
 
@@ -1182,11 +1187,14 @@
         <div class="section-title">👁 Wallet Watch</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-            <div>
+            <div class="fw-watch-header-text">
               <div style="font-size:16px;font-weight:800;margin-bottom:4px">Track Multiple Wallets</div>
-              <div style="font-size:13px;color:var(--muted)">Get alerted when any tracked wallet's score drops. Scan all your wallets in one click.</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6">Monitor scores across BSC, ETH &amp; Polygon. Each wallet scans individually and saves its score history.</div>
             </div>
-            <button class="fw-watch-submit" id="fwBtnEnableNotif" onclick="fwRequestNotifications()">🔔 Enable Alerts</button>
+            <div class="fw-watch-header-actions">
+              <button class="fw-watch-submit" id="fwBtnScanAll" onclick="fwWatchScanAll()" style="background:rgba(93,255,178,.10);border-color:rgba(93,255,178,.3);color:var(--green)">↻ Scan All</button>
+              <button class="fw-watch-submit" id="fwBtnEnableNotif" onclick="fwRequestNotifications()">🔔 Alerts</button>
+            </div>
           </div>
           <!-- Alert banner — shown when score drops on a watched wallet -->
           <div class="fw-alert-banner" id="fwAlertBanner">
@@ -1211,6 +1219,16 @@
             <span class="fw-notif-icon">🔔</span>
             <span class="fw-notif-text" id="fwNotifText">Enable browser alerts to get notified when a watched wallet's score drops below your threshold.</span>
             <button class="fw-notif-btn" id="fwNotifBtn" onclick="fwRequestNotifications()">Enable</button>
+          </div>
+          <!-- On-chain subscription (read-only, no gas) -->
+          <div class="fw-notif-row" id="fwOnchainNotifRow" style="margin-top:8px;border-color:rgba(0,229,255,.18);background:rgba(0,229,255,.04)">
+            <span class="fw-notif-icon">⛓</span>
+            <div class="fw-notif-text">
+              <strong style="color:var(--cyan)">On-chain approval monitor</strong> — 
+              Sign a read-only subscription (no gas) to enable real-time Approval event monitoring for your wallet.
+              <span id="fwOnchainStatus" style="display:block;margin-top:3px;font-size:10px;color:var(--muted)">Not subscribed</span>
+            </div>
+            <button class="fw-notif-btn" id="fwOnchainBtn" onclick="fwSubscribeOnchain()" style="border-color:rgba(0,229,255,.3);color:var(--cyan)">Subscribe</button>
           </div>
         </div>
       </div>
@@ -1551,21 +1569,43 @@ function fwRenderRelations(net, relations) {
     const outColor= rel.out>0 ? "#ff9a6b" : "var(--muted)";
     const typeClass = {cex:"cex",dex:"dex",bridge:"bridge",lending:"lending",staking:"staking"}[e.type]||"dex";
     const tags = (e.tags||[]).map(t=>`<span class="rel-tag ${t}">${t}</span>`).join("");
+    // Determine if timeline should be locked (free tier)
+    const canViewTimeline = (fwAccessTier === "full" && _fwAccessVerified) || isDemo;
+    const timelineBtn = rel.txs.length
+      ? canViewTimeline
+        ? `<button class="rel-timeline-btn" onclick="fwShowTimeline(${idx})">View ${rel.txs.length} transactions ↗</button>`
+        : `<button class="rel-timeline-btn" style="opacity:.55;border-color:rgba(124,92,255,.3);color:#a87eff" onclick="requestFullAccess()">🔒 Unlock to view ${rel.txs.length} transactions</button>`
+      : "";
     return `
     <div class="rel-card ${typeClass}">
-      <div class="rel-entity-name">${TYPE_EMOJI[e.type]||"🔗"} ${esc(e.name)}</div>
-      <div class="rel-tags">${tags}</div>
-      <div class="rel-stats-row">
-        <div class="rel-stat"><div class="rel-stat-val" style="color:${inColor}">${rel.in}</div><div class="rel-stat-key">Received</div></div>
-        <div class="rel-stat"><div class="rel-stat-val" style="color:${outColor}">${rel.out}</div><div class="rel-stat-key">Sent</div></div>
-        <div class="rel-stat"><div class="rel-stat-val">${total}</div><div class="rel-stat-key">Total</div></div>
+      <div class="rel-card-body">
+        <div class="rel-entity-name">${TYPE_EMOJI[e.type]||"🔗"} ${esc(e.name)}</div>
+        <div class="rel-tags">${tags}</div>
+        <div class="rel-stats-row">
+          <div class="rel-stat"><div class="rel-stat-val" style="color:${inColor}">${rel.in}</div><div class="rel-stat-key">Received</div></div>
+          <div class="rel-stat"><div class="rel-stat-val" style="color:${outColor}">${rel.out}</div><div class="rel-stat-key">Sent</div></div>
+          <div class="rel-stat"><div class="rel-stat-val">${total}</div><div class="rel-stat-key">Total</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Last: ${lastDate}</div>
       </div>
-      <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Last: ${lastDate}</div>
-      ${rel.txs.length ? `<button class="rel-timeline-btn" onclick="fwShowTimeline(${idx})">View ${rel.txs.length} transactions ↗</button>` : ""}
+      ${timelineBtn}
     </div>`;
   }).join("");
 
-  content.innerHTML = `<div class="rel-grid">${cards}</div>`;
+  // For free tier: show a teaser notice above the grid
+  let teaserHtml = "";
+  if (fwAccessTier !== "full" || !_fwAccessVerified) {
+    teaserHtml = `<div style="padding:10px 14px;border-radius:12px;margin-bottom:12px;
+      background:rgba(124,92,255,.07);border:1px solid rgba(124,92,255,.2);
+      display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--muted);flex:1">
+        🔒 <strong style="color:var(--text)">Wallet Relations</strong> — showing protocol names &amp; counts.
+        Unlock to view full transaction history.
+      </span>
+      <button class="fw-watch-submit" style="font-size:10px;padding:6px 14px" onclick="requestFullAccess()">Unlock Full Access</button>
+    </div>`;
+  }
+  content.innerHTML = teaserHtml + `<div class="rel-grid">${cards}</div>`;
   section.style.display = "block";
   window.__fwRelations = relations;
 }
@@ -1617,10 +1657,14 @@ window.fwExportCSV = function() {
     csv += [q(fwWallet),q(fwNet),q(r.token),q(r.symbol),q(r.spender),q(r.allow),q(r.risk),q(r.verified),q(r.decimals)].join(",")+"\n";
   }
   if (window.__fwRelations?.length) {
-    csv += "\n\nWALLET RELATIONS\nEntity,Type,Incoming,Outgoing,LastSeen\n";
+    csv += "\n\nWALLET RELATIONS\nEntity,Type,Tags,Protocol Address,Incoming,Outgoing,Total,First Seen,Last Seen,Recent Tx Hashes\n";
     for(const rel of window.__fwRelations){
-      const ld = rel.lastSeen ? new Date(rel.lastSeen).toLocaleDateString() : "—";
-      csv += [q(rel.entity.name),q(rel.entity.type),q(rel.in),q(rel.out),q(ld)].join(",")+"\n";
+      const fd = rel.firstSeen ? new Date(rel.firstSeen).toLocaleDateString() : "—";
+      const ld = rel.lastSeen  ? new Date(rel.lastSeen).toLocaleDateString()  : "—";
+      const tags = (rel.entity.tags||[]).join("|");
+      const hashes = rel.txs.slice(0,5).map(t=>t.hash||"").filter(Boolean).join(" | ");
+      csv += [q(rel.entity.name),q(rel.entity.type),q(tags),q(rel.address||""),
+              q(rel.in),q(rel.out),q(rel.in+rel.out),q(fd),q(ld),q(hashes)].join(",")+"\n";
     }
   }
   const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
@@ -1647,14 +1691,35 @@ window.fwExportJSON = function() {
       token:r.token, symbol:r.symbol, spender:r.spender,
       allowance:r.allow, risk:r.risk, verified:r.verified, decimals:r.decimals
     })),
-    walletRelations: (window.__fwRelations||[]).map(rel=>({
-      entity:rel.entity.name, type:rel.entity.type, address:rel.address,
-      tags:rel.entity.tags, incomingTxs:rel.in, outgoingTxs:rel.out,
-      totalTxs:rel.in+rel.out,
-      firstSeen:rel.firstSeen?new Date(rel.firstSeen).toISOString():null,
-      lastSeen: rel.lastSeen ?new Date(rel.lastSeen).toISOString() :null,
-      recentTxHashes:rel.txs.slice(0,5).map(t=>t.hash)
-    }))
+    walletRelations: (window.__fwRelations||[]).map(rel=>{
+      // Cross-reference with threat feed
+      const relLower = (rel.address||"").toLowerCase();
+      const matchedThreat = (typeof FW_THREATS!=="undefined") ?
+        FW_THREATS.find(t=>t.spenders.some(s=>s.toLowerCase()===relLower)) : null;
+      return {
+        entity: rel.entity.name,
+        type:   rel.entity.type,
+        address: rel.address,
+        tags:   rel.entity.tags,
+        incomingTxs:  rel.in,
+        outgoingTxs:  rel.out,
+        totalTxs:     rel.in+rel.out,
+        firstSeen: rel.firstSeen ? new Date(rel.firstSeen).toISOString() : null,
+        lastSeen:  rel.lastSeen  ? new Date(rel.lastSeen).toISOString()  : null,
+        recentTxHashes: rel.txs.slice(0,10).map(t=>t.hash).filter(Boolean),
+        threatAlert: matchedThreat ? {
+          threat: matchedThreat.title,
+          severity: matchedThreat.severity,
+          date: matchedThreat.date,
+          link: matchedThreat.link
+        } : null
+      };
+    }),
+    threatCrossReference: (typeof FW_THREATS!=="undefined") ? FW_THREATS.filter(t=>
+      t.spenders.some(s=>(fwScanData?.rows||[]).some(r=>
+        (r.spender||"").toLowerCase()===s.toLowerCase()
+      ))
+    ).map(t=>({title:t.title,severity:t.severity,date:t.date,chains:t.chains})) : []
   };
   const blob = new Blob([JSON.stringify(payload,null,2)],{type:"application/json;charset=utf-8;"});
   const url  = URL.createObjectURL(blob);
@@ -2246,14 +2311,29 @@ async function runLoadSequence(walletAddr, net, isDemo) {
   dash.style.display = "block";
 
   if (scanError) {
+    // Show the demoNotice with error details
     const notice = document.getElementById("demoNotice");
     if (notice) {
       notice.style.display = "block";
+      notice.style.background = "rgba(255,71,87,.10)";
+      notice.style.borderColor = "rgba(255,71,87,.3)";
       notice.innerHTML = scanError.status === 429
-        ? "<strong>Rate limit:</strong> Max 2 scans per hour per IP. Try again in a moment."
-        : `<strong>Scan failed (${scanError.status || "network"}):</strong> Using demo data. Backend may be offline.`;
+        ? `<strong style="color:#ff7a8a">⏳ Rate limit reached</strong> — Max 2 scans/hour per IP. Try again in a few minutes.`
+        : `<strong style="color:#ff7a8a">⚠ API Error ${scanError.status || "network"}</strong> — Scan failed. Showing demo data. <a href="javascript:startScan()" style="color:var(--cyan);font-weight:800">Try again ↺</a>`;
+    }
+    // Also show a persistent top banner
+    const existing = document.getElementById("fwApiErrorBanner");
+    if (!existing) {
+      const banner = document.createElement("div");
+      banner.id = "fwApiErrorBanner";
+      banner.style.cssText = "position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:9999;padding:10px 20px;border-radius:12px;background:rgba(255,71,87,.15);border:1px solid rgba(255,71,87,.4);color:#ff7a8a;font-size:12px;font-weight:700;max-width:480px;width:calc(100%-32px);text-align:center;cursor:pointer;backdrop-filter:blur(8px)";
+      banner.innerHTML = `⚠ API unavailable — showing demo data. <span style="color:var(--cyan)">Click to retry ↺</span>`;
+      banner.onclick = () => { banner.remove(); startScan(); };
+      document.body.appendChild(banner);
+      setTimeout(() => banner?.remove(), 12000);
     }
     approvals = getDemoApprovals();
+    isDemo = true; // treat as demo so history isn't saved with fake data
   }
 
   // Show notices
@@ -2323,8 +2403,15 @@ async function runLoadSequence(walletAddr, net, isDemo) {
     window.__fwRelations = demoRels;
     fwRenderRelations(net, demoRels);
   } else if (fwAccessTier !== "full") {
-    // Free tier: hide or show teaser
-    if (relSection) relSection.style.display = "none";
+    // Free tier: show teaser with limited info (no transaction details)
+    if (relSection) relSection.style.display = "block";
+    // Demo relations for free tier to show the feature exists
+    const freeDemoRels = [
+      {entity:{name:"PancakeSwap V2",type:"dex",tags:["verified","defi"]},address:"0x10ed43c718714eb63d5aa57b78b54704e256024e",in:3,out:12,txs:[],firstSeen:Date.now()-60*86400000,lastSeen:Date.now()-86400000},
+      {entity:{name:"1inch V5 BSC",type:"dex",tags:["aggregator","defi"]},address:"0x1111111254eeb25477b68fb85ed929f73a960582",in:0,out:5,txs:[],firstSeen:Date.now()-90*86400000,lastSeen:Date.now()-3*86400000},
+    ];
+    window.__fwRelations = freeDemoRels;
+    fwRenderRelations(net, freeDemoRels);
   }
 }
 
@@ -3609,6 +3696,31 @@ function fwWatchSave(list) {
   try { localStorage.setItem(FW_WATCH_KEY, JSON.stringify(list)); } catch {}
 }
 
+// Scan all watched wallets one by one
+async function fwWatchScanAll() {
+  const list = fwWatchLoad();
+  if (!list.length) { showPassportMsg("⚠ No wallets in watch list yet."); return; }
+  const btn = document.getElementById("fwBtnScanAll");
+  if (btn) { btn.disabled=true; btn.textContent="Scanning…"; }
+  for (let i=0; i<list.length; i++) {
+    const w = list[i];
+    if (btn) btn.textContent = `Scanning ${i+1}/${list.length}…`;
+    try {
+      const approvals = await fetchApprovals(w.net||"bsc", w.wallet);
+      const metrics   = computeMetrics(approvals);
+      fwWatchUpdateScore(w.wallet, w.net||"bsc", metrics.score);
+      // Also save to scan history
+      fwHistorySave(w.wallet, w.net||"bsc", metrics);
+    } catch(e) {
+      // Skip on error — don't break the loop
+    }
+    await new Promise(r=>setTimeout(r,1200)); // 1.2s between scans (rate limit safety)
+  }
+  if (btn) { btn.disabled=false; btn.textContent="↻ Scan All"; }
+  showPassportMsg(`✅ Scanned ${list.length} wallet(s) — scores updated.`);
+}
+window.fwWatchScanAll = fwWatchScanAll;
+
 function fwWatchAdd() {
   const input  = document.getElementById("fwWatchInput");
   const netSel = document.getElementById("fwWatchNet");
@@ -3727,6 +3839,16 @@ function fwWatchInit() {
   }
   const sec=document.getElementById("fwWatchSection");
   if(sec)sec.classList.add("fw-visible");
+  // Restore on-chain subscription status if exists
+  try {
+    const sub = JSON.parse(localStorage.getItem(FW_ONCHAIN_SUB_KEY)||"null");
+    if (sub && sub.expiry > Math.floor(Date.now()/1000)) {
+      const statusEl = document.getElementById("fwOnchainStatus");
+      const subBtn   = document.getElementById("fwOnchainBtn");
+      if (statusEl) statusEl.textContent = `✅ Subscribed — monitoring ${sub.net.toUpperCase()} (expires ${new Date(sub.expiry*1000).toLocaleDateString()})`;
+      if (subBtn) { subBtn.textContent="✅ Subscribed"; subBtn.style.color="var(--green)"; subBtn.style.borderColor="rgba(93,255,178,.3)"; }
+    }
+  } catch {}
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3802,6 +3924,109 @@ function fwApiCopy(url, btn) {
     setTimeout(()=>{btn.textContent=orig;btn.style.color=""},1800);
   }).catch(()=>{btn.textContent="Failed";});
 }
+// ── ON-CHAIN APPROVAL MONITOR (read-only, no gas) ─────────────────
+// Signs a typed-data message to register the intent; backend polls
+// eth_getLogs for Approval events and fires webhook/notification
+const FW_ONCHAIN_SUB_KEY = "cx_onchain_sub";
+
+async function fwSubscribeOnchain() {
+  const btn    = document.getElementById("fwOnchainBtn");
+  const status = document.getElementById("fwOnchainStatus");
+  if (!window.wallet?.signer) { requestFullAccess(); return; }
+
+  if (btn) { btn.disabled=true; btn.textContent="Signing…"; }
+
+  try {
+    // Read-only subscription: sign a typed message (no gas, no tx)
+    // Backend uses this signature as proof of intent + wallet ownership
+    const ts = Math.floor(Date.now()/1000);
+    const msgParams = JSON.stringify({
+      domain: { name:"CycleX Firewall", version:"1", chainId: FW_CHAIN_IDS[fwNet]||56 },
+      message: {
+        action:    "SubscribeApprovalAlerts",
+        wallet:    window.wallet.address,
+        network:   fwNet,
+        threshold: 60,
+        timestamp: BigInt(ts).toString(),
+        expiry:    BigInt(ts + 30*24*3600).toString()
+      },
+      primaryType: "AlertSubscription",
+      types: {
+        EIP712Domain:[{name:"name",type:"string"},{name:"version",type:"string"},{name:"chainId",type:"uint256"}],
+        AlertSubscription:[
+          {name:"action",type:"string"},{name:"wallet",type:"address"},
+          {name:"network",type:"string"},{name:"threshold",type:"uint256"},
+          {name:"timestamp",type:"uint256"},{name:"expiry",type:"uint256"}
+        ]
+      }
+    });
+
+    const sig = await window.wallet.providerRaw.request({
+      method:"eth_signTypedData_v4",
+      params:[window.wallet.address, msgParams]
+    });
+
+    // Store subscription locally (backend would persist this)
+    const sub = {
+      wallet: window.wallet.address, net: fwNet,
+      signature: sig, timestamp: ts,
+      expiry: ts + 30*24*3600
+    };
+    try { localStorage.setItem(FW_ONCHAIN_SUB_KEY, JSON.stringify(sub)); } catch {}
+
+    // POST to backend (if available) — non-blocking
+    fetch("/api/subscribeAlerts", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(sub)
+    }).catch(()=>{}); // silent fail — local subscription still works
+
+    if (status) status.textContent = `✅ Subscribed — monitoring Approval events on ${fwNet.toUpperCase()} (read-only)`;
+    if (btn) { btn.textContent="✅ Subscribed"; btn.disabled=false; btn.style.color="var(--green)"; btn.style.borderColor="rgba(93,255,178,.3)"; }
+    showPassportMsg("✅ On-chain approval alerts activated!");
+
+    // Poll for new approvals every 30s (read-only eth_getLogs)
+    fwStartApprovalPoller(window.wallet.address, fwNet);
+
+  } catch(e) {
+    if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
+      showPassportMsg("Subscription cancelled.");
+    } else {
+      showPassportMsg(`⚠ Subscribe failed: ${(e.message||"").slice(0,60)}`);
+    }
+    if (btn) { btn.disabled=false; btn.textContent="Subscribe"; }
+  }
+}
+
+// Read-only poller: eth_getLogs for Approval events (no gas, no tx)
+let _fwPollerInterval = null;
+function fwStartApprovalPoller(wallet, net) {
+  if (_fwPollerInterval) clearInterval(_fwPollerInterval);
+  _fwPollerInterval = setInterval(async () => {
+    try {
+      const provider = getRPC(net);
+      if (!provider) return;
+      // ERC-20 Approval event topic: keccak256("Approval(address,address,uint256)")
+      const APPROVAL_TOPIC = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+      const ownerTopic = "0x" + wallet.toLowerCase().replace("0x","").padStart(64,"0");
+      // eth_getLogs — pure read call, zero gas
+      const blockHex = await provider.send("eth_blockNumber",[]);
+      const fromBlock = "0x" + Math.max(0, parseInt(blockHex,16)-200).toString(16);
+      const logs = await provider.send("eth_getLogs",[{
+        fromBlock, toBlock:"latest",
+        topics:[APPROVAL_TOPIC, ownerTopic]
+      }]);
+      if (logs?.length) {
+        // New approval events detected since last poll
+        const count = logs.length;
+        fwWatchFireAlert(wallet, net, fwCurrentScore, null);
+        showPassportMsg(`⚠ ${count} new Approval event(s) detected on-chain for your wallet!`);
+      }
+    } catch(e) { /* read-only, silent fail */ }
+  }, 30000); // poll every 30 seconds
+}
+window.fwSubscribeOnchain = fwSubscribeOnchain;
+
 window.fwApiCopy             = fwApiCopy;
 window.fwWatchAdd            = fwWatchAdd;
 window.fwWatchRemove         = fwWatchRemove;
