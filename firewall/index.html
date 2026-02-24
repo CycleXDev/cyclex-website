@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1541,17 +1542,20 @@ function fwRenderRelations(net, relations) {
 
   if (netLabel) netLabel.textContent = FW_CHAINS[net]?.name || net.toUpperCase();
 
+  // Always reset summary first — prevents stale data from previous scans
+  if (summary) summary.innerHTML = "";
+
   if (!relations.length) {
     content.innerHTML = `<div class="rel-empty">No tagged protocol interactions found for this wallet on ${FW_CHAINS[net]?.name||net.toUpperCase()}. This could mean the wallet is new or activity is on other networks.</div>`;
-    section.style.display="block";
+    section.style.display = "block";
     return;
   }
 
   // Summary stats
-  const cexCount  = relations.filter(r=>r.entity.type==="cex").length;
-  const dexCount  = relations.filter(r=>r.entity.type==="dex").length;
-  const brCount   = relations.filter(r=>r.entity.type==="bridge").length;
-  const totalTxs  = relations.reduce((s,r)=>s+r.in+r.out,0);
+  const cexCount = relations.filter(r=>r.entity.type==="cex").length;
+  const dexCount = relations.filter(r=>r.entity.type==="dex").length;
+  const brCount  = relations.filter(r=>r.entity.type==="bridge").length;
+  const totalTxs = relations.reduce((s,r)=>s+r.in+r.out, 0);
   if (summary) summary.innerHTML = `
     <span style="color:var(--green)">🏦 ${cexCount} exchanges</span> &nbsp;·&nbsp;
     <span style="color:var(--cyan)">⚡ ${dexCount} DEXes</span> &nbsp;·&nbsp;
@@ -1561,21 +1565,26 @@ function fwRenderRelations(net, relations) {
 
   const TYPE_EMOJI = {cex:"🏦",dex:"⚡",bridge:"🌉",lending:"💰",staking:"🥩",oracle:"🔮",util:"🔧"};
 
+  // isDemo check based on current wallet — isDemo is only in runLoadSequence scope
+  const _isRelDemo = fwWallet === DEMO_WALLET;
+  // Full access: can view timeline. Free tier: sees locked button
+  const _canTimeline = (fwAccessTier === "full" && _fwAccessVerified) || _isRelDemo;
+
   const cards = relations.map((rel, idx) => {
     const e = rel.entity;
-    const total = rel.in + rel.out;
+    const total    = rel.in + rel.out;
     const lastDate = rel.lastSeen ? new Date(rel.lastSeen).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
-    const inColor = rel.in>0  ? "#5dffb2" : "var(--muted)";
-    const outColor= rel.out>0 ? "#ff9a6b" : "var(--muted)";
-    const typeClass = {cex:"cex",dex:"dex",bridge:"bridge",lending:"lending",staking:"staking"}[e.type]||"dex";
-    const tags = (e.tags||[]).map(t=>`<span class="rel-tag ${t}">${t}</span>`).join("");
-    // Determine if timeline should be locked (free tier)
-    const canViewTimeline = (fwAccessTier === "full" && _fwAccessVerified) || isDemo;
+    const inColor  = rel.in  > 0 ? "#5dffb2"    : "var(--muted)";
+    const outColor = rel.out > 0 ? "#ff9a6b"    : "var(--muted)";
+    const typeClass= {cex:"cex",dex:"dex",bridge:"bridge",lending:"lending",staking:"staking"}[e.type]||"dex";
+    const tags     = (e.tags||[]).map(t=>`<span class="rel-tag ${t}">${t}</span>`).join("");
+
     const timelineBtn = rel.txs.length
-      ? canViewTimeline
+      ? _canTimeline
         ? `<button class="rel-timeline-btn" onclick="fwShowTimeline(${idx})">View ${rel.txs.length} transactions ↗</button>`
-        : `<button class="rel-timeline-btn" style="opacity:.55;border-color:rgba(124,92,255,.3);color:#a87eff" onclick="requestFullAccess()">🔒 Unlock to view ${rel.txs.length} transactions</button>`
+        : `<button class="rel-timeline-btn" style="opacity:.6;border-color:rgba(124,92,255,.3);color:#a87eff" onclick="requestFullAccess()">🔒 Unlock to view transactions</button>`
       : "";
+
     return `
     <div class="rel-card ${typeClass}">
       <div class="rel-card-body">
@@ -1592,22 +1601,23 @@ function fwRenderRelations(net, relations) {
     </div>`;
   }).join("");
 
-  // For free tier: show a teaser notice above the grid
+  // Free tier teaser (show names/counts, lock transactions)
   let teaserHtml = "";
-  if (fwAccessTier !== "full" || !_fwAccessVerified) {
+  if (!_canTimeline && !_isRelDemo) {
     teaserHtml = `<div style="padding:10px 14px;border-radius:12px;margin-bottom:12px;
       background:rgba(124,92,255,.07);border:1px solid rgba(124,92,255,.2);
       display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:12px;color:var(--muted);flex:1">
-        🔒 <strong style="color:var(--text)">Wallet Relations</strong> — showing protocol names &amp; counts.
-        Unlock to view full transaction history.
+        🔒 <strong style="color:var(--text)">Wallet Relations</strong> — protocol names &amp; counts visible.
+        Unlock Full Access to view transaction history.
       </span>
-      <button class="fw-watch-submit" style="font-size:10px;padding:6px 14px" onclick="requestFullAccess()">Unlock Full Access</button>
+      <button class="fw-watch-submit" style="font-size:10px;padding:6px 14px" onclick="requestFullAccess()">Unlock</button>
     </div>`;
   }
+
   content.innerHTML = teaserHtml + `<div class="rel-grid">${cards}</div>`;
   section.style.display = "block";
-  window.__fwRelations = relations;
+  window.__fwRelations  = relations;
 }
 
 // ── TIMELINE VIEWER ───────────────────────────────────────────
@@ -2385,6 +2395,9 @@ async function runLoadSequence(walletAddr, net, isDemo) {
 
   if (!isDemo && fwAccessTier === "full") {
     if (relSection) relSection.style.display = "block";
+    // Reset summary before async fetch — prevents stale data flash
+    const relSummaryEl = document.getElementById("fwRelSummary");
+    if (relSummaryEl) relSummaryEl.innerHTML = "";
     if (relContent) relContent.innerHTML = '<div class="rel-loading">🔍 Analyzing wallet relationships…</div>';
     fwFetchWalletTxs(net, walletAddr).then(txs => {
       const relations = fwAnalyzeRelations(net, walletAddr, txs);
