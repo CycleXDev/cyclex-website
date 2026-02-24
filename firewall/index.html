@@ -349,9 +349,9 @@
     }
     .pp-date{font-size:10px;color:var(--muted);margin-top:10px;font-family:var(--mono)}
 
-    .passport-actions{display:flex;flex-direction:column;gap:12px}
-    .passport-actions h3{font-size:16px;font-weight:800;margin-bottom:4px}
-    .passport-actions p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:8px}
+    .passport-actions{display:flex;flex-direction:column;gap:10px;padding-top:2px}
+    .passport-actions h3{font-size:16px;font-weight:800;margin:0 0 2px}
+    .passport-actions p{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 6px}
     .btn-passport{
       padding:12px 18px;border-radius:999px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
       cursor:pointer;transition:all .2s ease;width:100%;text-align:center;
@@ -1587,11 +1587,14 @@ function fwRenderRelations(net, relations) {
     const typeClass= {cex:"cex",dex:"dex",bridge:"bridge",lending:"lending",staking:"staking"}[e.type]||"dex";
     const tags     = (e.tags||[]).map(t=>`<span class="rel-tag ${t}">${t}</span>`).join("");
 
-    const timelineBtn = rel.txs.length
-      ? _canTimeline
-        ? `<button class="rel-timeline-btn" onclick="fwShowTimeline(${idx})">View ${rel.txs.length} transactions ↗</button>`
-        : `<button class="rel-timeline-btn" style="opacity:.6;border-color:rgba(124,92,255,.3);color:#a87eff" onclick="requestFullAccess()">🔒 Unlock to view transactions</button>`
-      : "";
+    // Full access + has txs → show "View N transactions"
+    // Free tier (any card)  → always show locked button to tease the feature
+    // Full access + no txs  → show nothing
+    const timelineBtn = _canTimeline
+      ? (rel.txs.length
+          ? `<button class="rel-timeline-btn" onclick="fwShowTimeline(${idx})">View ${rel.txs.length} transactions ↗</button>`
+          : "")
+      : `<button class="rel-timeline-btn" style="opacity:.65;border-color:rgba(124,92,255,.3);color:#a87eff" onclick="requestFullAccess()">🔒 Unlock to view transactions</button>`;
 
     return `
     <div class="rel-card ${typeClass}">
@@ -1895,8 +1898,24 @@ function _doUnlockUI() {
   fwUpdateExportVisibility();
   fwInitExport();
 
-  // Re-render relations: removes the teaser banner and shows "View transactions" buttons
-  if (window.__fwRelations?.length && fwNet) {
+  // After unlock: fetch REAL wallet relations (not freeDemoRels which have txs:[])
+  if (fwWallet && fwWallet !== DEMO_WALLET && fwNet) {
+    const relSection = document.getElementById("fwRelSection");
+    const relContent = document.getElementById("fwRelContent");
+    if (relSection) relSection.style.display = "block";
+    const relSumEl = document.getElementById("fwRelSummary");
+    if (relSumEl) relSumEl.innerHTML = "";
+    if (relContent) relContent.innerHTML = '<div class="rel-loading">🔍 Loading wallet relationships…</div>';
+    fwFetchWalletTxs(fwNet, fwWallet).then(txs => {
+      const relations = fwAnalyzeRelations(fwNet, fwWallet, txs);
+      window.__fwRelations = relations;
+      fwRenderRelations(fwNet, relations);
+    }).catch(() => {
+      // Fallback: re-render whatever we have (removes teaser banner at minimum)
+      if (window.__fwRelations?.length) fwRenderRelations(fwNet, window.__fwRelations);
+    });
+  } else if (window.__fwRelations?.length && fwNet) {
+    // Demo or existing data — just re-render to remove teaser
     fwRenderRelations(fwNet, window.__fwRelations);
   }
 }
