@@ -88,6 +88,17 @@
     .brand-title{font-weight:950;letter-spacing:.10em;font-size:13px;text-transform:uppercase;white-space:nowrap}
     .brand-sub{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(244,246,255,.56);white-space:nowrap}
     .top-right{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+    .lang-switch{display:inline-flex;align-items:center;padding:4px;border-radius:999px;
+      background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);
+      backdrop-filter:blur(12px);gap:2px;flex:0 0 auto}
+    .lang-btn{border:none;background:transparent;color:rgba(244,246,255,.56);
+      font-size:11px;padding:5px 9px;border-radius:999px;cursor:pointer;
+      transition:background .18s,color .18s,transform .18s;white-space:nowrap}
+    .lang-btn:hover{transform:translateY(-1px)}
+    .lang-btn.active{background:rgba(0,229,255,.14);color:rgba(0,229,255,.95)}
+    body.lang-rtl{direction:rtl}
+    body.lang-switching{animation:langFade .24s ease}
+    @keyframes langFade{from{opacity:.5;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
     .back-link{
       font-size:11px;letter-spacing:.16em;text-transform:uppercase;
       color:rgba(244,246,255,.72);padding:8px 14px;border-radius:999px;
@@ -409,6 +420,85 @@
     @media (max-width:780px){.main-grid{grid-template-columns:1fr}.fix-steps{grid-template-columns:1fr}.passport-inner{grid-template-columns:1fr}.top3{grid-template-columns:1fr}}
     @media (max-width:640px){.scan-bar{flex-wrap:wrap;border-radius:20px;padding:12px 14px}.scan-bar input{width:100%;flex:1 1 100%}.scan-net,.btn-scan{flex:1 1 calc(50% - 5px)}}
     @media (min-width:901px){html{zoom:1.10}}
+
+    /* ── MOBILE (≤600px) ─────────────────────────── */
+    @media (max-width:600px) {
+      html { zoom: 1 !important; }
+      body { font-size: 14px; }
+
+      /* Topbar: stack vertically */
+      .top-bar {
+        flex-wrap: wrap;
+        padding: 10px 12px;
+        border-radius: 18px;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+      .brand-sub { display: none; }
+      .top-right { gap: 6px; flex-wrap: wrap; }
+      .back-link { display: none; }
+      .firewall-badge { font-size: 9px; padding: 4px 8px; }
+      .lang-switch { order: -1; }
+      .btn-full-access-top { font-size: 10px; padding: 6px 10px; }
+
+      /* Hero */
+      .hero { padding: 6px 0 16px; }
+      .hero-title { font-size: 24px !important; line-height: 1.2; }
+      .hero-sub { font-size: 12px; }
+      .scan-bar { gap: 8px; }
+
+      /* Dashboard sections */
+      #dashboard { padding: 0 2px; }
+      .section-title { font-size: 12px; letter-spacing: .14em; }
+      .top3, .main-grid, .fix-steps, .passport-inner { grid-template-columns: 1fr !important; }
+      .score-card { padding: 18px; }
+      .card-score .score-ring { width: 100px; height: 100px; }
+      .card-num { font-size: 36px; }
+
+      /* Threat cards */
+      .threat-item { padding: 12px; }
+      .threat-name { font-size: 12px; }
+      .threat-meta { flex-wrap: wrap; gap: 4px; }
+
+      /* Relations */
+      .rel-grid { grid-template-columns: 1fr !important; }
+      .rel-card { padding: 14px; }
+
+      /* Wallet Watch grid */
+      .fw-watch-grid { grid-template-columns: 1fr !important; }
+      .fw-watch-row { flex-wrap: wrap; gap: 6px; }
+
+      /* Fix steps */
+      .fix-step { padding: 14px; }
+
+      /* Export section */
+      #fwExportSection .export-btns { flex-direction: column; }
+
+      /* Access gate overlay */
+      .access-gate { padding: 24px 16px !important; }
+      .access-gate-title { font-size: 18px !important; }
+
+      /* Passport */
+      #fwPassportSection .passport-inner > div { padding: 16px; }
+      #ppWallet { font-size: 11px; }
+
+      /* Popup — already compact, just ensure fits */
+      #passPopup > div { padding: 18px 16px !important; border-radius: 18px !important; }
+
+      /* ThreatFeed */
+      .tfd-item { flex-direction: column; gap: 8px; }
+
+      /* Timeline modal */
+      #fwTimelineModal > div { width: calc(100% - 16px) !important; max-height: 85vh !important; }
+    }
+
+    /* ── SMALL TABLET (601-900px) ──────────────────── */
+    @media (max-width: 900px) and (min-width: 601px) {
+      html { zoom: 1 !important; }
+      .rel-grid { grid-template-columns: 1fr 1fr; }
+      .fw-watch-grid { grid-template-columns: 1fr 1fr !important; }
+      .top-bar { border-radius: 20px; }
+    }
 
     /* ── NOTICE ─────────────────────────────────── */
     .notice{
@@ -848,10 +938,17 @@
       </div>
     </a>
     <div class="top-right">
+      <!-- Language switcher -->
+      <div class="lang-switch" aria-label="Language selector">
+        <button class="lang-btn active" data-lang="en" type="button">🇺🇸 EN</button>
+        <button class="lang-btn" data-lang="zh" type="button">🇨🇳 中文</button>
+        <button class="lang-btn" data-lang="ar" type="button">🇸🇦 عربي</button>
+        <button class="lang-btn" data-lang="ru" type="button">🇷🇺 RU</button>
+      </div>
       <div id="tierBadge" style="display:none;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:6px 12px;border-radius:999px;border:1px solid rgba(93,255,178,.3);background:rgba(93,255,178,.08);color:var(--green);font-weight:800">✓ FULL ACCESS</div>
-      <div class="firewall-badge"><span class="dot"></span>FIREWALL</div>
-      <button class="btn-full-access-top" id="btnTopAccess" title="Unlock full features">🔑 Full Access</button>
-      <a class="back-link" href="/">← Back to Hub</a>
+      <div class="firewall-badge"><span class="dot"></span><span data-i18n="fw_badge">FIREWALL</span></div>
+      <button class="btn-full-access-top" id="btnTopAccess" title="Unlock full features" data-i18n="btn_full_access">🔑 Full Access</button>
+      <a class="back-link" href="/" data-i18n="btn_back">← Back to Hub</a>
     </div>
   </header>
 
@@ -859,9 +956,9 @@
 
     <!-- ── HERO / LANDING ── -->
     <section class="hero" id="heroSection">
-      <div class="hero-kicker">🔥 Wallet Firewall</div>
-      <h1 class="hero-title">Turn any wallet into<br>a protected wallet.</h1>
-      <p class="hero-sub">
+      <div class="hero-kicker" data-i18n="hero_kicker">🔥 Wallet Firewall</div>
+      <h1 class="hero-title" data-i18n="hero_title">Turn any wallet into<br>a protected wallet.</h1>
+      <p class="hero-sub" data-i18n="hero_sub">
         Scan your approvals, reveal your Blast Radius, get a guided Fix Plan —
         and generate a shareable Proof Passport. In 60 seconds.
       </p>
@@ -1211,7 +1308,7 @@
           <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
             <div class="fw-watch-header-text">
               <div style="font-size:16px;font-weight:800;margin-bottom:4px">Track Multiple Wallets</div>
-              <div style="font-size:13px;color:var(--muted);line-height:1.6">Monitor scores across BSC, ETH &amp; Polygon. Each wallet scans individually and saves its score history.</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6">Monitor scores across BSC, ETH &amp; Polygon. Each wallet scans individually and saves its score history. <span id="watchLimitLabel" style="color:var(--muted);font-size:11px">(Free: 2 wallets max — Unlock for up to 10)</span></div>
             </div>
             <div class="fw-watch-header-actions">
               <button class="fw-watch-submit" id="fwBtnScanAll" onclick="fwWatchScanAll()" style="background:rgba(93,255,178,.10);border-color:rgba(93,255,178,.3);color:var(--green)">↻ Scan All</button>
@@ -1242,7 +1339,7 @@
             <span class="fw-notif-text" id="fwNotifText">Enable browser alerts to get notified when a watched wallet's score drops below your threshold.</span>
             <button class="fw-notif-btn" id="fwNotifBtn" onclick="fwRequestNotifications()">Enable</button>
           </div>
-          <!-- On-chain subscription (read-only, no gas) -->
+          <!-- On-chain subscription — FULL ACCESS ONLY -->
           <div class="fw-notif-row" id="fwOnchainNotifRow" style="margin-top:8px;border-color:rgba(0,229,255,.18);background:rgba(0,229,255,.04)">
             <span class="fw-notif-icon">⛓</span>
             <div class="fw-notif-text">
@@ -1250,7 +1347,9 @@
               Sign a read-only subscription (no gas) to enable real-time Approval event monitoring for your wallet.
               <span id="fwOnchainStatus" style="display:block;margin-top:3px;font-size:10px;color:var(--muted)">Not subscribed</span>
             </div>
-            <button class="fw-notif-btn" id="fwOnchainBtn" onclick="fwSubscribeOnchain()" style="border-color:rgba(0,229,255,.3);color:var(--cyan)">Subscribe</button>
+            <!-- shown/hidden by JS based on tier -->
+            <button class="fw-notif-btn" id="fwOnchainBtn" onclick="fwSubscribeOnchain()" style="border-color:rgba(0,229,255,.3);color:var(--cyan);display:none">Subscribe</button>
+            <button class="fw-notif-btn" id="fwOnchainLockBtn" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.3);color:#a87eff">🔒 Full Access</button>
           </div>
         </div>
       </div>
@@ -1881,6 +1980,11 @@ function _doUnlockUI() {
   document.getElementById("fixLockOverlay")?.style      && (document.getElementById("fixLockOverlay").style.display = "none");
   document.getElementById("passportLockOverlay")?.style  && (document.getElementById("passportLockOverlay").style.display = "none");
   document.getElementById("ppWatermark")?.style          && (document.getElementById("ppWatermark").style.display = "none");
+  // On-chain monitor: show Subscribe, hide lock button
+  const onchainBtn  = document.getElementById("fwOnchainBtn");
+  const onchainLock = document.getElementById("fwOnchainLockBtn");
+  if (onchainBtn)  onchainBtn.style.display  = "inline-flex";
+  if (onchainLock) onchainLock.style.display = "none";
   fwUpdateExportVisibility();
   fwInitExport();
 
@@ -1889,19 +1993,38 @@ function _doUnlockUI() {
     const relSection = document.getElementById("fwRelSection");
     const relContent = document.getElementById("fwRelContent");
     if (relSection) relSection.style.display = "block";
-    const relSumEl = document.getElementById("fwRelSummary");
-    if (relSumEl) relSumEl.innerHTML = "";
-    if (relContent) relContent.innerHTML = '<div class="rel-loading">🔍 Loading wallet relationships…</div>';
+    // Show a subtle "loading" bar without wiping existing cards
+    const relLoadRow = document.getElementById("fwRelLoadBar");
+    if (!relLoadRow) {
+      const bar = document.createElement("div");
+      bar.id = "fwRelLoadBar";
+      bar.style.cssText = "font-size:11px;color:var(--cyan);padding:4px 0 8px;";
+      bar.textContent = "🔍 Fetching real transaction data…";
+      relContent?.parentNode?.insertBefore(bar, relContent);
+    }
     fwFetchWalletTxs(fwNet, fwWallet).then(txs => {
       const relations = fwAnalyzeRelations(fwNet, fwWallet, txs);
-      window.__fwRelations = relations;
-      fwRenderRelations(fwNet, relations);
+      document.getElementById("fwRelLoadBar")?.remove();
+      if (relations.length > 0) {
+        window.__fwRelations = relations;
+        fwRenderRelations(fwNet, relations);
+      } else {
+        // Real API returned 0 relations — keep showing whatever we have
+        // but re-render to swap locked → real buttons (if relations exist)
+        document.getElementById("fwRelLoadBar")?.remove();
+        if (window.__fwRelations?.length) {
+          fwRenderRelations(fwNet, window.__fwRelations);
+        }
+      }
     }).catch(() => {
-      // Fallback: re-render whatever we have (removes teaser banner at minimum)
-      if (window.__fwRelations?.length) fwRenderRelations(fwNet, window.__fwRelations);
+      document.getElementById("fwRelLoadBar")?.remove();
+      // API failed — keep existing cards, just re-render to show full-tier buttons
+      if (window.__fwRelations?.length) {
+        fwRenderRelations(fwNet, window.__fwRelations);
+      }
     });
   } else if (window.__fwRelations?.length && fwNet) {
-    // Demo or existing data — just re-render to remove teaser
+    // Re-render to remove teaser + show real buttons
     fwRenderRelations(fwNet, window.__fwRelations);
   }
 }
@@ -2418,33 +2541,8 @@ async function requestFullAccess() {
     unlockFull();
     // Re-fetch with full approvals (preview had no addresses / stripped rows)
     if (fwWallet && fwWallet !== DEMO_WALLET && fwNet) {
-      // Show loading state immediately
-      const scoreRing = document.getElementById("scoreVal");
-      if (scoreRing) scoreRing.textContent = "…";
-      // Show a loading banner in the threats list
-      const tlEl = document.getElementById("threatsList");
-      if (tlEl) tlEl.innerHTML = `<div style="text-align:center;color:var(--cyan);padding:20px;font-size:13px">🔍 Loading full approval data…</div>`;
-
-      fetchApprovals(fwNet, fwWallet).then(approvals => {
-        const metrics  = computeMetrics(approvals);
-        fwScanData     = metrics;
-        fwCurrentScore = metrics.score;
-        fixApprovals   = metrics.fixTargets || [];
-        renderDashboard(fwWallet, metrics, "full");
-        renderFixMode(metrics);
-        fwInitExport();
-      }).catch(err => {
-        console.warn("[CycleX] Full refetch failed:", err?.message);
-        // Fallback: render existing data as full tier — at least Fix Mode + Export unlock
-        // Revoke buttons will show "Rescan ↺" via the canRevoke=false path
-        if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
-        const tlElF = document.getElementById("threatsList");
-        if (tlElF && fwScanData?.threats) {
-          const tl2 = document.getElementById("threatsList");
-          if (tl2) tl2.insertAdjacentHTML("afterbegin",
-            `<div style="color:#ffd166;font-size:11px;padding:8px 0">⚠ Could not load full data. Press Rescan ↺ to retry.</div>`);
-        }
-      });
+      // Auto-rescan immediately — user should not need to press anything
+      fwRescanFull();
     } else if (fwScanData) {
       renderDashboard(fwWallet, fwScanData, "full");
     }
@@ -2630,11 +2728,12 @@ async function runLoadSequence(walletAddr, net, isDemo) {
       if (relContent) relContent.innerHTML = '<div class="rel-empty">⚠ Could not fetch transaction history from API.</div>';
     });
   } else if (!isDemo && fwAccessTier !== "full") {
-    // Free tier: show section with teaser (names/counts only, locked tx buttons)
+    // Free tier: show section with teaser cards (locked tx buttons)
+    // Use a set that looks plausible — will be replaced with real data after unlock
     if (relSection) relSection.style.display = "block";
     const freeDemoRels = [
-      {entity:{name:"PancakeSwap V2",type:"dex",tags:["verified","defi"]},address:"0x10ed43c718714eb63d5aa57b78b54704e256024e",in:3,out:12,txs:[],firstSeen:Date.now()-60*86400000,lastSeen:Date.now()-86400000},
-      {entity:{name:"1inch V5 BSC",type:"dex",tags:["aggregator","defi"]},address:"0x1111111254eeb25477b68fb85ed929f73a960582",in:0,out:5,txs:[],firstSeen:Date.now()-90*86400000,lastSeen:Date.now()-3*86400000},
+      {entity:{name:"PancakeSwap V2",type:"dex",tags:["verified","defi"]},address:"0x10ed43c718714eb63d5aa57b78b54704e256024e",in:3,out:12,txs:[{hash:"0xabc",dir:"out",ts:Date.now()-86400000},{hash:"0xdef",dir:"in",ts:Date.now()-2*86400000}],firstSeen:Date.now()-60*86400000,lastSeen:Date.now()-86400000},
+      {entity:{name:"1inch V5 BSC",type:"dex",tags:["aggregator","defi"]},address:"0x1111111254eeb25477b68fb85ed929f73a960582",in:0,out:5,txs:[{hash:"0x123",dir:"out",ts:Date.now()-3*86400000}],firstSeen:Date.now()-90*86400000,lastSeen:Date.now()-3*86400000},
     ];
     window.__fwRelations = freeDemoRels;
     fwRenderRelations(net, freeDemoRels);
@@ -3280,10 +3379,7 @@ function renderThreats(threats, tier) {
     // Action button
     const actionBtn = (tier === "full" && t.canRevoke)
       ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`
-      : (tier === "full" && t.hasApproval && !t.canRevoke)
-        // Full tier but no address data yet (preview rows) — offer rescan
-        ? `<button class="btn-fix-small" onclick="fwRescanFull()" style="border-color:rgba(0,229,255,.4);color:#00e5ff">Rescan ↺</button>`
-        : (tier === "free" && t.hasApproval
+      : (tier === "free" && t.hasApproval
             ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`
             : "");
 
@@ -3573,13 +3669,15 @@ async function undoFix(step) {
   showPassportMsg(`↩ Undo: ${done} approval(s) restored to unlimited${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
 }
 
-// Re-fetch full approvals for already-unlocked users
+// Re-fetch full approvals for already-unlocked users (called automatically on unlock)
 async function fwRescanFull() {
   if (!fwWallet || !fwNet || fwAccessTier !== "full" || !_fwAccessVerified) return;
   if (fwWallet === DEMO_WALLET) return;
   const scoreRing = document.getElementById("scoreVal");
   if (scoreRing) scoreRing.textContent = "…";
-  showPassportMsg("🔍 Loading full approval data…");
+  // Show loading in threats list
+  const tlEl = document.getElementById("threatsList");
+  if (tlEl) tlEl.innerHTML = `<div style="text-align:center;color:var(--cyan);padding:20px;font-size:13px">🔍 Loading full approval data…</div>`;
   try {
     const approvals = await fetchApprovals(fwNet, fwWallet);
     const metrics   = computeMetrics(approvals);
@@ -3589,10 +3687,22 @@ async function fwRescanFull() {
     renderDashboard(fwWallet, metrics, "full");
     renderFixMode(metrics);
     fwInitExport();
-    showPassportMsg("✅ Full data loaded. Revoke buttons ready.");
+    showPassportMsg("✅ Full data loaded — revoke buttons are ready.");
   } catch(e) {
-    showPassportMsg("⚠ Could not load full data: " + (e.message||"network error"));
+    // On failure: show one prominent retry banner, don't clutter per-card
     if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
+    const tlEl2 = document.getElementById("threatsList");
+    if (tlEl2) tlEl2.insertAdjacentHTML("afterbegin", `
+      <div style="padding:10px 14px;border-radius:10px;background:rgba(255,193,7,.07);
+           border:1px solid rgba(255,193,7,.25);margin-bottom:10px;
+           display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span style="font-size:12px;color:#ffd166">⚠ Could not load full approval data.</span>
+        <button onclick="fwRescanFull()" style="padding:5px 12px;border-radius:8px;
+          border:1px solid rgba(255,193,7,.4);background:rgba(255,193,7,.08);
+          color:#ffd166;font-size:11px;font-weight:700;cursor:pointer">
+          Retry ↺
+        </button>
+      </div>`);
   }
 }
 
@@ -4035,7 +4145,18 @@ function fwWatchAdd() {
     if(input){input.style.borderColor="rgba(255,71,87,.5)";setTimeout(()=>{input.style.borderColor=""},1500);}
     return;
   }
-  const list   = fwWatchLoad();
+  const list     = fwWatchLoad();
+  const isFull   = fwAccessTier === "full" && _fwAccessVerified;
+  const maxWatch = isFull ? 10 : 2;
+  if (list.length >= maxWatch) {
+    if (isFull) {
+      showPassportMsg(`⚠ Maximum ${maxWatch} wallets reached.`);
+    } else {
+      showPassportMsg("⚠ Free tier: max 2 wallets. Unlock Full Access to track up to 10.");
+      requestFullAccess();
+    }
+    return;
+  }
   if (list.some(w=>w.wallet.toLowerCase()===wallet.toLowerCase()&&w.net===net)) {
     showPassportMsg("⚠ Already watching this wallet."); return;
   }
@@ -4045,7 +4166,7 @@ function fwWatchAdd() {
   fwWatchSave(list);
   if(input)input.value="";
   fwWatchRender();
-  showPassportMsg(`✅ Now watching ${fwShort(wallet)} on ${net.toUpperCase()}`);
+  showPassportMsg(`✅ Now watching ${fwShort(wallet)} on ${net.toUpperCase()} (${list.length}/${maxWatch})`);
 }
 
 function fwWatchRemove(wallet, net) {
@@ -4345,6 +4466,87 @@ function fwStartApprovalPoller(wallet, net) {
 window.fwSubscribeOnchain = fwSubscribeOnchain;
 
 window.fwApiCopy             = fwApiCopy;
+// ══════════════════════════════════════════════════════════════
+// LANGUAGE SWITCHER
+// ══════════════════════════════════════════════════════════════
+const FW_TRANSLATIONS = {
+  en: {
+    fw_badge: "FIREWALL",
+    btn_full_access: "🔑 Full Access",
+    btn_back: "← Back to Hub",
+    hero_kicker: "🔥 Wallet Firewall",
+    hero_title: "Turn any wallet into<br>a protected wallet.",
+    hero_sub: "Scan your approvals, reveal your Blast Radius, get a guided Fix Plan — and generate a shareable Proof Passport. In 60 seconds.",
+    scan_placeholder: "0x... wallet address",
+    btn_run: "Run Firewall",
+  },
+  zh: {
+    fw_badge: "防火墙",
+    btn_full_access: "🔑 完整访问",
+    btn_back: "← 返回主页",
+    hero_kicker: "🔥 钱包防火墙",
+    hero_title: "让每个钱包都安全。",
+    hero_sub: "扫描您的授权、揭示爆炸半径、获得修复计划，60秒内生成可分享的安全护照。",
+    scan_placeholder: "0x... 钱包地址",
+    btn_run: "运行防火墙",
+  },
+  ar: {
+    fw_badge: "جدار الحماية",
+    btn_full_access: "🔑 وصول كامل",
+    btn_back: "→ العودة للرئيسية",
+    hero_kicker: "🔥 جدار حماية المحفظة",
+    hero_title: "حوّل أي محفظة إلى محفظة محمية.",
+    hero_sub: "افحص الموافقات، اكشف نطاق الضرر، واحصل على خطة إصلاح موجّهة خلال 60 ثانية.",
+    scan_placeholder: "عنوان المحفظة 0x...",
+    btn_run: "تشغيل الجدار",
+  },
+  ru: {
+    fw_badge: "ФАЙРВОЛ",
+    btn_full_access: "🔑 Полный Доступ",
+    btn_back: "← Назад",
+    hero_kicker: "🔥 Файрвол Кошелька",
+    hero_title: "Защити любой кошелёк за секунды.",
+    hero_sub: "Сканируй одобрения, узнай зону риска, получи план исправления — и сгенерируй паспорт безопасности. За 60 секунд.",
+    scan_placeholder: "0x... адрес кошелька",
+    btn_run: "Запустить",
+  }
+};
+
+function fwSetLanguage(lang) {
+  const dict = FW_TRANSLATIONS[lang] || FW_TRANSLATIONS.en;
+  document.body.classList.add("lang-switching");
+  // Apply RTL for Arabic
+  document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
+  document.body.classList.toggle("lang-rtl", lang === "ar");
+  // Apply translations
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    if (dict[key] !== undefined) el.innerHTML = dict[key];
+  });
+  // Apply placeholder
+  const walletInput = document.getElementById("walletInput");
+  if (walletInput && dict.scan_placeholder) walletInput.placeholder = dict.scan_placeholder;
+  const btnRun = document.getElementById("btnRunFirewall");
+  if (btnRun && dict.btn_run) btnRun.textContent = dict.btn_run;
+  // Mark active button
+  document.querySelectorAll(".lang-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
+  });
+  // Store preference
+  try { localStorage.setItem("cx_lang", lang); } catch {}
+  setTimeout(() => document.body.classList.remove("lang-switching"), 280);
+}
+
+// Init language switcher
+document.querySelectorAll(".lang-btn").forEach(btn => {
+  btn.addEventListener("click", () => fwSetLanguage(btn.getAttribute("data-lang")));
+});
+// Restore saved language
+try {
+  const savedLang = localStorage.getItem("cx_lang");
+  if (savedLang && FW_TRANSLATIONS[savedLang]) fwSetLanguage(savedLang);
+} catch {}
+
 window.fwWatchAdd            = fwWatchAdd;
 window.fwWatchRemove         = fwWatchRemove;
 window.fwRequestNotifications= fwRequestNotifications;
@@ -4441,70 +4643,70 @@ window.applyFix          = applyFix;
 <div id="passPopup" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);align-items:center;justify-content:center">
   <div style="
     background:linear-gradient(135deg,rgba(12,14,28,.98),rgba(18,10,40,.98));
-    border:1px solid rgba(0,229,255,.3);border-radius:24px;padding:32px;
-    max-width:440px;width:calc(100% - 32px);position:relative;max-height:90vh;overflow-y:auto;
+    border:1px solid rgba(0,229,255,.3);border-radius:22px;padding:24px 22px;
+    max-width:440px;width:calc(100% - 24px);position:relative;
     box-shadow:0 24px 80px rgba(0,0,0,.8),0 0 50px rgba(0,229,255,.12);
     animation:dashIn .3s ease-out
   ">
-    <button id="closePassPopup" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(244,246,255,.55);font-size:22px;cursor:pointer;line-height:1;z-index:1" aria-label="Close">✕</button>
+    <button id="closePassPopup" style="position:absolute;top:12px;right:14px;background:none;border:none;color:rgba(244,246,255,.55);font-size:20px;cursor:pointer;line-height:1;z-index:1" aria-label="Close">✕</button>
 
-    <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;font-weight:800">🎫 CycleX Access Pass</div>
-    <div style="font-size:21px;font-weight:950;margin-bottom:8px;line-height:1.25">Unlock firewall tools<br>in seconds.</div>
-    <div style="font-size:13px;color:var(--muted);line-height:1.75;margin-bottom:20px">
-      Your access pass is <strong style="color:var(--cyan)">non-tradable (soulbound)</strong>. Later you can convert it to CYCX when the public sale begins.
+    <!-- Header -->
+    <div style="font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--cyan);margin-bottom:7px;font-weight:800">🎫 CycleX Access Pass</div>
+    <div style="font-size:19px;font-weight:950;margin-bottom:5px;line-height:1.2">Unlock full firewall in seconds.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+      Pass is <strong style="color:var(--cyan)">non-tradable (soulbound)</strong> · convertible to CYCX at public sale.
     </div>
 
-    <!-- What's included -->
-    <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:14px;margin-bottom:20px">
-      <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">What's included</div>
-      <div style="display:flex;flex-direction:column;gap:7px">
-        <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> Firewall Fix Mode + real on-chain revoke</div>
-        <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> Full Blast Radius breakdown</div>
-        <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> Wallet Passport (verified, no watermark)</div>
-        <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> DNA Scanner + export</div>
-        <div style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--green)">✓</span> All future premium features</div>
+    <!-- Features grid — compact 2 columns -->
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:13px;padding:12px;margin-bottom:14px">
+      <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">What's included</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 10px">
+        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>Fix Mode + on-chain revoke</span></div>
+        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>Full Blast Radius details</span></div>
+        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>Passport (no watermark)</span></div>
+        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>CSV/JSON export</span></div>
+        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>Wallet Relations + txs</span></div>
+        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>Watch up to 10 wallets</span></div>
+        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>On-chain alert monitor</span></div>
+        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>All future premium features</span></div>
       </div>
     </div>
 
-    <!-- Price -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 16px;border-radius:14px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18)">
-      <span style="font-size:13px;color:var(--muted)">Price</span>
-      <span style="font-size:18px;font-weight:950;color:var(--cyan)">$9 <span style="font-size:12px;font-weight:600;opacity:.75">USDT or ~BNB equiv</span></span>
+    <!-- Price row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:10px 14px;border-radius:12px;background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18)">
+      <span style="font-size:12px;color:var(--muted)">One-time price</span>
+      <span style="font-size:17px;font-weight:950;color:var(--cyan)">$9 <span style="font-size:11px;font-weight:600;opacity:.75">USDT or ~BNB</span></span>
     </div>
 
-    <!-- Payment buttons -->
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+    <!-- Payment buttons row -->
+    <div style="display:flex;gap:8px;margin-bottom:10px">
       <button id="passBtnBnb" style="
-        display:flex;align-items:center;justify-content:center;gap:10px;
-        padding:14px;border-radius:999px;
+        flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+        padding:12px;border-radius:999px;
         background:linear-gradient(135deg,#f3a01a,#f0c040);color:#0a0500;
-        font-weight:900;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+        font-weight:900;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
         border:none;cursor:pointer;transition:transform .2s,box-shadow .2s;
-        box-shadow:0 12px 40px rgba(243,160,26,.35)
-      ">
-        🟡 Pay with BNB
-      </button>
+        box-shadow:0 8px 28px rgba(243,160,26,.35)
+      ">🟡 BNB</button>
       <button id="passBtnUsdt" style="
-        display:flex;align-items:center;justify-content:center;gap:10px;
-        padding:14px;border-radius:999px;
+        flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+        padding:12px;border-radius:999px;
         background:rgba(255,255,255,.06);color:var(--text);
-        font-weight:900;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+        font-weight:900;font-size:12px;letter-spacing:.06em;text-transform:uppercase;
         border:1px solid rgba(255,255,255,.18);cursor:pointer;transition:all .2s ease
-      ">
-        💲 Pay with USDT
-      </button>
+      ">💲 USDT</button>
     </div>
 
     <!-- Status -->
-    <div id="passPayStatus" style="font-size:12px;color:var(--muted);text-align:center;min-height:18px;margin-bottom:10px;line-height:1.5"></div>
+    <div id="passPayStatus" style="font-size:12px;color:var(--muted);text-align:center;min-height:16px;margin-bottom:8px;line-height:1.5"></div>
 
-    <!-- Contract info -->
-    <div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:10px 14px">
-      <span style="font-size:10px;color:var(--muted);white-space:nowrap">PASS Contract (BSC):</span>
-      <span style="font-family:var(--mono);font-size:10px;color:var(--cyan);flex:1;word-break:break-all">0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e</span>
-      <button id="btnCopyPassAddr" style="background:none;border:1px solid rgba(255,255,255,.12);color:var(--muted);font-size:11px;cursor:pointer;flex:0 0 auto;padding:3px 8px;border-radius:6px">Copy</button>
+    <!-- Contract info compact -->
+    <div style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:8px 12px">
+      <span style="font-size:10px;color:var(--muted);white-space:nowrap;flex:0 0 auto">PASS:</span>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--cyan);flex:1;word-break:break-all;letter-spacing:0">0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e</span>
+      <button id="btnCopyPassAddr" style="background:none;border:1px solid rgba(255,255,255,.12);color:var(--muted);font-size:10px;cursor:pointer;flex:0 0 auto;padding:2px 7px;border-radius:6px">Copy</button>
     </div>
-    <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:10px;opacity:.6">BSC network only · Verify contract on BscScan before buying</div>
+    <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:7px;opacity:.55">BSC network only · Verify on BscScan before buying</div>
   </div>
 </div>
 
