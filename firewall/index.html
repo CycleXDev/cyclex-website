@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -252,14 +251,27 @@
       padding:20px;box-shadow:0 20px 55px rgba(0,0,0,.55)
     }
     .threat-item{
-      padding:12px 0;border-bottom:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:8px
+      padding:13px 14px;border-radius:12px;margin-bottom:8px;
+      background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);
+      display:flex;flex-direction:column;gap:7px;transition:border-color .2s
     }
-    .threat-item:last-child{border-bottom:none;padding-bottom:0}
-    .threat-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .threat-name{font-size:13px;font-weight:800;font-family:var(--mono)}
-    .threat-damage{font-size:12px;font-weight:900;color:#ff6b6b}
-    .threat-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-    .threat-why{font-size:11px;color:var(--muted);flex:1 1 100%}
+    .threat-item:last-child{margin-bottom:0}
+    .threat-item.t-critical{background:rgba(255,71,87,.06);border-color:rgba(255,71,87,.2)}
+    .threat-item.t-high{background:rgba(255,150,50,.04);border-color:rgba(255,150,50,.18)}
+    .threat-item.t-info{background:rgba(255,255,255,.015);border-color:rgba(255,255,255,.06)}
+    .threat-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .threat-name{font-size:12px;font-weight:800;font-family:var(--mono);color:var(--text)}
+    .threat-damage{font-size:11px;font-weight:900;color:#ff6b6b;white-space:nowrap}
+    .threat-meta{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+    .threat-why{font-size:11px;color:var(--muted);line-height:1.55}
+    .threat-drain{
+      font-size:10px;padding:3px 9px;border-radius:999px;font-weight:700;display:inline-block
+    }
+    .threat-drain.bad{background:rgba(255,71,87,.12);color:#ff7a8a;border:1px solid rgba(255,71,87,.25)}
+    .threat-drain.warn{background:rgba(255,193,7,.10);color:#ffd166;border:1px solid rgba(255,193,7,.22)}
+    .threat-drain.ok{background:rgba(93,255,178,.07);color:#5dffb2;border:1px solid rgba(93,255,178,.18)}
+    .threat-info-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .threat-chip{font-size:10px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.05);color:var(--muted);font-family:var(--mono)}
     .btn-fix-small{
       padding:5px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
       border:1px solid rgba(255,193,7,.4);background:rgba(255,193,7,.10);color:#ffd166;
@@ -1945,6 +1957,7 @@ const _fwGuardExport = (fn) => function(...args) {
 };
 
 let fwScanData     = null;        // raw parsed approvals
+let fwPreviewMeta  = null;        // preview-only data (free tier, no addresses)
 let fwCurrentScore = 0;
 let fwWallet       = "";
 let fwNet          = "bsc";
@@ -2004,72 +2017,198 @@ function fmtUSD(n) {
 }
 
 // ── API FETCH ─────────────────────────────────────────────────────
+// Privacy model:
+//   /api/preview      → returns {score, counts} only — no addresses, no spenders
+//   /api/getApprovals → returns full approval list — only called after full access granted
+
+async function _fwApiFetch(url, timeoutMs=18000) {
+  const ctrl = new AbortController();
+  const t    = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { method:"GET", signal:ctrl.signal });
+    if (res.status === 429) { const e=new Error("RATE_LIMIT"); e.status=429; throw e; }
+    if (!res.ok)            { const e=new Error(`API_${res.status}`); e.status=res.status; throw e; }
+    return await res.json();
+  } finally { clearTimeout(t); }
+}
+
+// Preview: only score + counts — safe to call for free tier
+async function fetchPreview(net, address) {
+  const u = new URL("/api/preview", API_BASE);
+  u.searchParams.set("net", net);
+  u.searchParams.set("address", address);
+  const data = await _fwApiFetch(u.toString());
+  // Expected: { score, totalApprovals, unlimitedCount, highRiskCount, unverifiedCount }
+  // If backend returns full approvals, strip spenders before returning
+  if (Array.isArray(data) || Array.isArray(data?.approvals)) {
+    // Backend doesn't have /api/preview yet — fall back to getApprovals but strip addresses
+    const rows = Array.isArray(data) ? data : (data.approvals || data.result || data.data || []);
+    return rows.map(r => ({
+      allowance: r?.allowance ?? r?.value ?? "0",
+      symbol:    r?.symbol || "TOKEN",
+      risk:      r?.risk || "",
+      verified:  r?.verified,
+      decimals:  r?.decimals ?? 18
+      // NOTE: token address and spender address intentionally omitted
+    }));
+  }
+  return data;
+}
+
+// Full approvals: called only after full access granted
 async function fetchApprovals(net, address) {
   const u = new URL("/api/getApprovals", API_BASE);
   u.searchParams.set("net", net);
   u.searchParams.set("address", address);
-
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 18000);
-
-  try {
-    const res = await fetch(u.toString(), { method:"GET", signal:ctrl.signal });
-    if (res.status === 429) {
-      const e = new Error("RATE_LIMIT"); e.status = 429; throw e;
-    }
-    if (!res.ok) {
-      const e = new Error(`API_${res.status}`); e.status = res.status; throw e;
-    }
-    const data = await res.json();
-    return Array.isArray(data) ? data
-      : Array.isArray(data?.approvals) ? data.approvals
-      : Array.isArray(data?.result)    ? data.result
-      : Array.isArray(data?.data)      ? data.data
-      : [];
-  } finally { clearTimeout(t); }
+  const data = await _fwApiFetch(u.toString());
+  return Array.isArray(data) ? data
+    : Array.isArray(data?.approvals) ? data.approvals
+    : Array.isArray(data?.result)    ? data.result
+    : Array.isArray(data?.data)      ? data.data
+    : [];
 }
 
 // ── METRICS COMPUTATION ───────────────────────────────────────────
 function computeMetrics(approvals) {
+  // ══════════════════════════════════════════════════════
+  // CycleX Risk Classification Model v1
+  // 4 Layers: Contract Risk × Approval Risk × Exposure × TTD
+  // ══════════════════════════════════════════════════════
+
+  // ── Normalise raw approval rows ─────────────────────
   const rows = approvals.map(r => {
-    const allow  = String(r?.allowance ?? r?.value ?? r?.approved_amount ?? "0");
-    const symbol = String(r?.symbol || r?.token_symbol || r?.tokenSymbol || "TOKEN");
-    const token  = String(r?.token || r?.token_address || r?.tokenAddress || "");
-    const spender= String(r?.spender || r?.spender_address || "");
-    const risk   = String(r?.risk || "—").toLowerCase();
+    const allow    = String(r?.allowance ?? r?.value ?? r?.approved_amount ?? "0");
+    const symbol   = String(r?.symbol || r?.token_symbol || r?.tokenSymbol || "TOKEN");
+    const token    = String(r?.token  || r?.token_address || r?.tokenAddress || "");
+    const spender  = String(r?.spender || r?.spender_address || "");
+    const risk     = String(r?.risk || "").toLowerCase();
     const verified = (r?.verified === true) ? true : (r?.verified === false) ? false : null;
     const decimals = Number(r?.decimals ?? r?.token_decimals ?? 18) || 18;
-    return { allow, symbol, token, spender, risk, verified, decimals, raw:r };
+
+    // ── LAYER 1: Contract Risk ──────────────────────────
+    // Weight 1-10 based on what we know about the spender
+    let contractRisk, contractLabel, contractClass;
+    if (risk === "high" || risk === "malicious" || risk === "flagged") {
+      contractRisk = 9; contractLabel = "Flagged / Malicious"; contractClass = "critical";
+    } else if (verified === false) {
+      contractRisk = 5; contractLabel = "Unverified Contract";  contractClass = "unverified";
+    } else if (risk === "medium") {
+      contractRisk = 3; contractLabel = "Verified — Privileged"; contractClass = "privileged";
+    } else if (verified === true) {
+      contractRisk = 1; contractLabel = "Verified & Known";     contractClass = "safe";
+    } else {
+      contractRisk = 4; contractLabel = "Unknown Contract";     contractClass = "unknown";
+    }
+
+    // ── LAYER 2: Approval Risk ──────────────────────────
+    // Only real risk if approval > 0
+    const isUnlimited  = isUnlimitedAllow(allow);
+    const allowBigNum  = (() => { try { return BigInt(allow); } catch { return 0n; } })();
+    const hasApproval  = allowBigNum > 0n;
+
+    let approvalRisk, approvalLabel, approvalClass;
+    if (!hasApproval) {
+      approvalRisk = 0; approvalLabel = "No Active Approval"; approvalClass = "none";
+    } else if (isUnlimited) {
+      approvalRisk = 10; approvalLabel = "Unlimited Approval"; approvalClass = "unlimited";
+    } else {
+      approvalRisk = 3;  approvalLabel = "Capped Approval";    approvalClass = "capped";
+    }
+
+    // ── LAYER 3: Composite Risk Score ──────────────────
+    // Contract × Approval (approval=0 means no real risk regardless of contract)
+    const compositeRisk = approvalRisk === 0 ? 0 : contractRisk * approvalRisk;
+
+    // ── Drain Potential description ─────────────────────
+    let drainLabel, drainClass;
+    if (!hasApproval) {
+      drainLabel = "No drain risk — no active approval";
+      drainClass = "ok";
+    } else if (isUnlimited) {
+      drainLabel = "100% of " + symbol + " balance drainable";
+      drainClass = "bad";
+    } else {
+      drainLabel = "Partial — capped allowance";
+      drainClass = "warn";
+    }
+
+    // ── Human-readable risk reason ──────────────────────
+    let riskReason;
+    if (!hasApproval) {
+      riskReason = contractRisk >= 5
+        ? `⚠ High-risk contract detected — No active spending permission`
+        : `ℹ ${contractLabel} — No active spending permission`;
+    } else if (isUnlimited && contractRisk >= 5) {
+      riskReason = `🔴 Unlimited approval to ${contractLabel.toLowerCase()} — ${drainLabel}`;
+    } else if (isUnlimited) {
+      riskReason = `🟡 Unlimited approval to ${contractLabel.toLowerCase()} — ${drainLabel}`;
+    } else {
+      riskReason = `🟢 Capped approval (${contractLabel}) — ${drainLabel}`;
+    }
+
+    // ── Risk Classification (for display badge) ─────────
+    // CRITICAL: only show "High Risk" if there IS an active approval
+    let displayRisk;
+    if (!hasApproval) {
+      displayRisk = contractRisk >= 5 ? "informational" : "safe";
+    } else if (compositeRisk >= 40) {
+      displayRisk = "critical";
+    } else if (compositeRisk >= 20 || isUnlimited) {
+      displayRisk = "high";
+    } else if (compositeRisk >= 6) {
+      displayRisk = "medium";
+    } else {
+      displayRisk = "low";
+    }
+
+    return {
+      allow, symbol, token, spender, verified, decimals, risk,
+      // Layer 1
+      contractRisk, contractLabel, contractClass,
+      // Layer 2
+      approvalRisk, approvalLabel, approvalClass,
+      isUnlimited, hasApproval, allowBigNum,
+      // Layer 3
+      compositeRisk,
+      // Display
+      displayRisk, riskReason, drainLabel, drainClass,
+      raw: r
+    };
   });
 
-  const unlimited = rows.filter(r => isUnlimitedAllow(r.allow));
-  const risky     = rows.filter(r => r.risk === "high" || isUnlimitedAllow(r.allow));
-  const highRisk  = rows.filter(r => r.risk === "high");
-  const unverified= rows.filter(r => r.verified === false);
+  // ── Active threats (have an approval AND high composite risk) ─
+  const activeThreats  = rows.filter(r => r.hasApproval && r.compositeRisk > 0);
+  const unlimited      = rows.filter(r => r.isUnlimited);
+  const unlimitedActive= rows.filter(r => r.isUnlimited && r.hasApproval);
+  const highRisk       = rows.filter(r => r.hasApproval && r.contractRisk >= 5);
+  const unverified     = rows.filter(r => r.verified === false);
+  const unverifiedActive= rows.filter(r => r.verified === false && r.hasApproval);
+  const noApproval     = rows.filter(r => !r.hasApproval);
 
-  // Score: start at 100, penalize
+  // ── SCORE: penalise only ACTIVE threats ────────────────
   let score = 100;
-  score -= unlimited.length  * 14;
-  score -= highRisk.length   * 18;
-  score -= unverified.length * 8;
+  score -= unlimitedActive.length  * 14;  // unlimited + active
+  score -= highRisk.length         * 18;  // flagged/malicious + active
+  score -= unverifiedActive.length * 8;   // unverified + active
   score = Math.max(5, Math.min(100, score));
 
-  // Blast Radius: rough heuristic (unlimited × token balance placeholder)
-  // We expose the count; USD requires prices (shown as "?" if unavailable)
-  const blastCount  = unlimited.length;
-  const blastLabel  = blastCount === 0 ? "$0 exposed" : blastCount <= 2 ? "Limited exposure" : blastCount <= 6 ? "Moderate exposure" : "High exposure";
-  const blastSuffix = blastCount > 0 ? ` (${blastCount} unlimited)` : "";
-  const blastDisplay= `${blastLabel}${blastSuffix}`;
+  // ── Blast Radius ────────────────────────────────────────
+  const blastCount   = unlimitedActive.length;
+  const blastLabel   = blastCount === 0 ? "$0 exposed"
+                     : blastCount <= 2  ? "Limited exposure"
+                     : blastCount <= 6  ? "Moderate exposure"
+                     : "High exposure";
+  const blastDisplay = blastCount > 0 ? `${blastLabel} (${blastCount} unlimited)` : blastLabel;
 
-  // Time-to-Drain heuristic
+  // ── Time-to-Drain: ONLY when there is an active unlimited approval
   let drainTime, drainFast = false;
-  if (unlimited.length === 0) {
-    drainTime = "Safe (no unlimited)";
+  if (unlimitedActive.length === 0) {
+    drainTime = "N/A — no unlimited approvals";
     drainFast = false;
-  } else if (unlimited.length <= 2) {
+  } else if (unlimitedActive.length <= 2) {
     drainTime = "~5 min";
     drainFast = false;
-  } else if (unlimited.length <= 6) {
+  } else if (unlimitedActive.length <= 6) {
     drainTime = "~90 sec";
     drainFast = true;
   } else {
@@ -2077,62 +2216,79 @@ function computeMetrics(approvals) {
     drainFast = true;
   }
 
-  const scoreLabel = score >= 85 ? "Protected" : score >= 70 ? "Exposed" : score >= 50 ? "Vulnerable" : "Critical";
+  const scoreLabel = score >= 85 ? "Protected"
+                   : score >= 70 ? "Exposed"
+                   : score >= 50 ? "Vulnerable"
+                   : "Critical";
 
-  // Threats list (top 5, worst first)
+  // ── Top Threats: sort by compositeRisk desc, active first
   const sorted = [...rows].sort((a, b) => {
-    const rA = a.risk === "high" ? 3 : a.risk === "medium" ? 2 : 1;
-    const rB = b.risk === "high" ? 3 : b.risk === "medium" ? 2 : 1;
-    const uA = isUnlimitedAllow(a.allow) ? 1 : 0;
-    const uB = isUnlimitedAllow(b.allow) ? 1 : 0;
-    return (rB + uB) - (rA + uA);
+    if (a.hasApproval !== b.hasApproval) return a.hasApproval ? -1 : 1;
+    return b.compositeRisk - a.compositeRisk;
   });
+
+  // ── Threat items (top 5) ────────────────────────────────
   const threats = sorted.slice(0, 5).map(r => ({
-    name: r.spender ? fwShort(r.spender) : "Unknown",
+    name:        r.spender ? fwShort(r.spender) : "Unknown",
     fullSpender: r.spender,
-    token: r.token,
-    label: r.risk === "high" ? "High Risk" : r.verified === false ? "Unverified" : isUnlimitedAllow(r.allow) ? "Unlimited" : "Capped",
-    damage: isUnlimitedAllow(r.allow) ? "Max exposure" : "Capped",
-    risk: r.risk === "high" ? "bad" : isUnlimitedAllow(r.allow) ? "warn" : "ok",
-    why: r.risk === "high" ? "High-risk spender. Revoke recommended."
-       : r.verified === false ? "Unverified contract. Review before trusting."
-       : isUnlimitedAllow(r.allow) ? "Unlimited approval. Consider revoking or capping."
-       : "Capped approval. Lower risk.",
-    tokens: [r.symbol || "TOKEN"],
-    isUnlimited: isUnlimitedAllow(r.allow),
-    canRevoke: !!(r.token && r.spender)
+    token:       r.token,
+    symbol:      r.symbol,
+    // Badge label: ONLY show High Risk if there's an active approval
+    label:       !r.hasApproval
+                   ? (r.contractRisk >= 5 ? "High-risk contract — no approval" : "No approval")
+                   : r.displayRisk === "critical" ? "Critical"
+                   : r.displayRisk === "high"     ? "High Risk"
+                   : r.displayRisk === "medium"   ? "Medium Risk"
+                   : "Low Risk",
+    risk:        !r.hasApproval ? "ok"
+                   : r.compositeRisk >= 40 ? "bad"
+                   : r.compositeRisk >= 6  ? "warn" : "ok",
+    why:         r.riskReason,
+    drainLabel:  r.drainLabel,
+    approvalLabel: r.approvalLabel,
+    contractLabel: r.contractLabel,
+    isUnlimited: r.isUnlimited,
+    hasApproval: r.hasApproval,
+    canRevoke:   r.hasApproval && !!(r.token && r.spender),
+    compositeRisk: r.compositeRisk
   }));
 
-  // Fix targets (top 3 revocable)
-  const fixTargets = sorted.filter(r => r.canRevoke !== false && r.token && r.spender).slice(0, 3);
+  // Fix targets: only rows with ACTIVE approvals, sorted by composite risk
+  const fixTargets = rows
+    .filter(r => r.hasApproval && r.token && r.spender)
+    .sort((a,b) => b.compositeRisk - a.compositeRisk)
+    .slice(0, 3);
 
   return {
     score, scoreLabel,
     blastDisplay,
     drainTime, drainFast,
-    riskyApprovals: risky.length,
-    unlimitedCount: unlimited.length,
-    highRiskCount: highRisk.length,
+    riskyApprovals:  activeThreats.length,
+    unlimitedCount:  unlimited.length,        // total unlimited approvals
+    unlimitedActive: unlimitedActive.length,  // unlimited WITH approval > 0
+    highRiskCount:   highRisk.length,
     unverifiedCount: unverified.length,
-    totalApprovals: rows.length,
-    rows,          // ← full normalized rows array (needed by Rule Templates & Revoke All)
+    totalApprovals:  rows.length,
+    noApprovalCount: noApproval.length,
+    rows,
     threats,
     fixTargets,
     scoreMeta: [
-      ...(unlimited.length  ? [{ label: `${unlimited.length} unlimited`,  cls:"bad" }] : []),
-      ...(highRisk.length   ? [{ label: `${highRisk.length} high-risk`,   cls:"bad" }] : []),
-      ...(unverified.length ? [{ label: `${unverified.length} unverified`,cls:"warn"}] : []),
-      ...(!unlimited.length && !highRisk.length ? [{ label:"No unlimited detected", cls:"ok" }] : [])
+      ...(unlimitedActive.length  ? [{ label: `${unlimitedActive.length} unlimited active`,  cls:"bad"  }] : []),
+      ...(highRisk.length         ? [{ label: `${highRisk.length} high-risk contracts`,       cls:"bad"  }] : []),
+      ...(unverifiedActive.length ? [{ label: `${unverifiedActive.length} unverified active`, cls:"warn" }] : []),
+      ...(!unlimitedActive.length && !highRisk.length ? [{ label:"No active unlimited detected", cls:"ok" }] : [])
     ],
     blastMeta: blastCount > 0 ? [
-      { label: `${blastCount} unlimited spenders`, cls:"bad" },
-      { label: "Revoke to reduce exposure", cls:"warn" }
-    ] : [{ label: "No unlimited approvals ✓", cls:"ok" }],
+      { label: `${blastCount} unlimited active spenders`, cls:"bad"  },
+      { label: "Revoke to reduce exposure",               cls:"warn" }
+    ] : [{ label: "No active unlimited approvals ✓", cls:"ok" }],
     drainMeta: drainFast ? [
       { label: "Unlimited + active spenders", cls:"bad" }
     ] : [{ label: "Low drain risk", cls:"ok" }]
   };
 }
+
 
 // ── APPKIT INTEGRATION ───────────────────────────────────────────
 const APPKIT_PROJECT_ID = "7886bcb95105e9e47337cec481d5de75";
@@ -2326,7 +2482,21 @@ async function runLoadSequence(walletAddr, net, isDemo) {
 
   if (!isDemo) {
     try {
-      approvals = await fetchApprovals(net, walletAddr);
+      // Privacy: free tier gets preview only (no addresses in network tab)
+      // Full access tier gets complete approval data
+      if (fwAccessTier === "full" && _fwAccessVerified) {
+        approvals = await fetchApprovals(net, walletAddr);
+      } else {
+        const previewData = await fetchPreview(net, walletAddr);
+        // previewData may be array (stripped rows) or {score,counts} object
+        if (Array.isArray(previewData)) {
+          approvals = previewData; // stripped rows — no addresses
+        } else {
+          // Pure preview object — synthesise minimal rows for computeMetrics
+          approvals = [];
+          fwPreviewMeta = previewData; // store for dashboard display
+        }
+      }
     } catch(e) {
       scanError = e;
       // fall through with empty array — will show error
@@ -3053,22 +3223,55 @@ function renderThreats(threats, tier) {
   }
   el.innerHTML = threats.map((t, i) => {
     const isLocked = tier === "free" && i >= 3;
+    // Style class based on severity
+    const itemClass = !t.hasApproval ? "t-info"
+                    : t.compositeRisk >= 40 ? "t-critical"
+                    : t.compositeRisk >= 10 ? "t-high" : "";
+
+    // Approval status badge
+    const approvalBadge = t.hasApproval
+      ? (t.isUnlimited
+          ? `<span class="sig bad"><span class="sig-dot"></span>∞ Unlimited</span>`
+          : `<span class="sig warn"><span class="sig-dot"></span>Capped</span>`)
+      : `<span class="sig ok"><span class="sig-dot"></span>No Approval</span>`;
+
+    // Contract badge
+    const contractBadge = `<span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.contractLabel||t.label)}</span>`;
+
+    // Drain row — only show if has approval
+    const drainRow = t.hasApproval
+      ? `<span class="threat-drain ${t.risk==="bad"?"bad":t.isUnlimited?"warn":"ok"}">${esc(t.drainLabel||"—")}</span>`
+      : `<span class="threat-drain ok">No drain risk — no active approval</span>`;
+
+    // Token chip
+    const tokenChip = t.symbol ? `<span class="threat-chip">Token: ${esc(t.symbol)}</span>` : "";
+
+    // Action button
+    const actionBtn = (tier === "full" && t.canRevoke)
+      ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`
+      : (tier === "free" && t.hasApproval
+          ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`
+          : "");
+
     return `
-    <div class="threat-item" style="${isLocked ? "filter:blur(5px);pointer-events:none;user-select:none" : ""}">
+    <div class="threat-item ${itemClass}" style="${isLocked ? "filter:blur(5px);pointer-events:none;user-select:none" : ""}">
       <div class="threat-top">
-        <div>
+        <div style="flex:1;min-width:0">
           <div class="threat-name">${esc(t.name)}</div>
-          <div class="threat-meta">
-            <span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.label)}</span>
-            ${t.tokens.map(tk=>`<span class="meta-chip" style="font-size:10px;padding:3px 7px">${esc(tk)}</span>`).join("")}
+          <div class="threat-meta" style="margin-top:5px">
+            ${approvalBadge}
+            ${contractBadge}
+            ${tokenChip}
           </div>
         </div>
-        <div style="text-align:right;flex:0 0 auto">
-          <div class="threat-damage">${t.isUnlimited ? "∞ Unlimited" : "Capped"}</div>
-          ${(tier === "full" && t.canRevoke) ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>` : (tier === "free" ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>` : "")}
+        <div style="text-align:right;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          ${actionBtn}
         </div>
       </div>
       <div class="threat-why">${esc(t.why)}</div>
+      <div class="threat-info-row">
+        ${drainRow}
+      </div>
     </div>`;
   }).join("");
 }
