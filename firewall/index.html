@@ -270,7 +270,9 @@
     .threat-item:last-child{margin-bottom:0}
     .threat-item.t-critical{background:rgba(255,71,87,.06);border-color:rgba(255,71,87,.2)}
     .threat-item.t-high{background:rgba(255,150,50,.04);border-color:rgba(255,150,50,.18)}
-    .threat-item.t-info{background:rgba(255,255,255,.015);border-color:rgba(255,255,255,.06)}
+    .threat-item.t-info{
+    .threat-item.locked-card{opacity:.35;pointer-events:none;user-select:none;position:relative}
+    .threat-item.locked-card::after{content:'🔒';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px}background:rgba(255,255,255,.015);border-color:rgba(255,255,255,.06)}
     .threat-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
     .threat-name{font-size:12px;font-weight:800;font-family:var(--mono);color:var(--text)}
     .threat-damage{font-size:11px;font-weight:900;color:#ff6b6b;white-space:nowrap}
@@ -3195,7 +3197,12 @@ async function fwVerifyPassport(encoded) {
   }
 })();
 // ── RENDER DASHBOARD ─────────────────────────────────────────────
+let _rdTimers = []; // track all renderDashboard timers
 function renderDashboard(wallet, d, tier) {
+  // Cancel any pending deferred renders from previous calls
+  _rdTimers.forEach(clearTimeout);
+  _rdTimers = [];
+
   fwCurrentScore = d.score;
   fixDone = [false, false, false];
 
@@ -3210,23 +3217,24 @@ function renderDashboard(wallet, d, tier) {
   document.getElementById("blastAmt").textContent = d.blastDisplay;
   renderMeta("blastMeta", d.blastMeta);
 
-  // Time-to-Drain (always visible)
-  setTimeout(() => {
+  // Time-to-Drain
+  _rdTimers.push(setTimeout(() => {
     const el = document.getElementById("drainTime");
+    if (!el) return;
     el.textContent = d.drainTime;
     el.classList.toggle("drain-fast", !!d.drainFast);
     renderMeta("drainMeta", d.drainMeta);
-  }, 600);
+  }, 300));
 
   // Exposure Map
-  setTimeout(() => renderExposureMap(wallet, d.threats, tier), 400);
+  _rdTimers.push(setTimeout(() => renderExposureMap(wallet, d.threats, tier), 350));
 
-  // Threats
-  setTimeout(() => renderThreats(d.threats, tier), 600);
+  // Threats — deferred so DOM is free
+  _rdTimers.push(setTimeout(() => renderThreats(d.threats, tier), 500));
 
   // Fix Mode
   if (tier === "full") {
-    setTimeout(() => renderFixMode(d), 300);
+    _rdTimers.push(setTimeout(() => renderFixMode(d), 250));
   } else {
     renderFixGainPreview(d.score);
   }
@@ -3239,6 +3247,7 @@ function renderDashboard(wallet, d, tier) {
 }
 
 // ── SCORE GAUGE ───────────────────────────────────────────────────
+let _scoreAnimTimer = null; // track to cancel on re-render
 function animateScore(target, label, meta) {
   const circumference = 226.2;
   const fill  = document.getElementById("gaugeFill");
@@ -3250,14 +3259,18 @@ function animateScore(target, label, meta) {
   fill.style.stroke = color;
   dotEl.style.background = color;
 
+  // Cancel any previous animation to prevent multiple intervals
+  if (_scoreAnimTimer) { clearInterval(_scoreAnimTimer); _scoreAnimTimer = null; }
+
   let cur = 0;
   const step = target / 35;
-  const timer = setInterval(() => {
+  _scoreAnimTimer = setInterval(() => {
     cur = Math.min(cur + step, target);
     numEl.textContent = Math.round(cur);
     fill.style.strokeDashoffset = circumference - (circumference * cur / 100);
     if (cur >= target) {
-      clearInterval(timer);
+      clearInterval(_scoreAnimTimer);
+      _scoreAnimTimer = null;
       labEl.textContent = label;
       renderMeta("scoreMeta", meta);
     }
@@ -3276,8 +3289,8 @@ function renderExposureMap(wallet, threats, tier) {
   const W = 480, H = 260, cx = W/2, cy = H/2;
   const riskColor = { bad:"#ff4757", warn:"#ffd166", ok:"#3cffb0" };
 
-  // In free tier, show max 3 threats; full shows all 5
-  const visible = tier === "free" ? threats.slice(0, 3) : threats;
+  // Cap nodes: free=3, full=max 8 (more than 8 nodes in SVG is unreadable and slow)
+  const visible = tier === "free" ? threats.slice(0, 3) : threats.slice(0, 8);
   const n = visible.length;
   if (!n) { svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="rgba(244,246,255,.35)" font-size="13" font-family="system-ui">No spenders detected</text>`; return; }
 
@@ -3344,66 +3357,89 @@ function renderExposureMap(wallet, threats, tier) {
 }
 
 // ── THREATS LIST ──────────────────────────────────────────────────
+// Paginated: render PAGE_SIZE at a time to avoid DOM overload
+const THREATS_PAGE = 10;
+let _threatsAll = [], _threatsTier = "free", _threatsShown = 0;
+
 function renderThreats(threats, tier) {
+  _threatsAll   = threats;
+  _threatsTier  = tier;
+  _threatsShown = 0;
   const el = document.getElementById("threatsList");
   if (!el) return;
   if (!threats.length) {
     el.innerHTML = `<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">✅ No significant threats detected.</div>`;
     return;
   }
-  el.innerHTML = threats.map((t, i) => {
-    const isLocked = tier === "free" && i >= 3;
-    // Style class based on severity
-    const itemClass = !t.hasApproval ? "t-info"
-                    : t.compositeRisk >= 40 ? "t-critical"
-                    : t.compositeRisk >= 10 ? "t-high" : "";
+  el.innerHTML = "";
+  _threatsAppendPage();
+}
 
-    // Approval status badge
-    const approvalBadge = t.hasApproval
-      ? (t.isUnlimited
-          ? `<span class="sig bad"><span class="sig-dot"></span>∞ Unlimited</span>`
-          : `<span class="sig warn"><span class="sig-dot"></span>Capped</span>`)
-      : `<span class="sig ok"><span class="sig-dot"></span>No Approval</span>`;
-
-    // Contract badge
-    const contractBadge = `<span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.contractLabel||t.label)}</span>`;
-
-    // Drain row — only show if has approval
-    const drainRow = t.hasApproval
-      ? `<span class="threat-drain ${t.risk==="bad"?"bad":t.isUnlimited?"warn":"ok"}">${esc(t.drainLabel||"—")}</span>`
-      : `<span class="threat-drain ok">No drain risk — no active approval</span>`;
-
-    // Token chip
-    const tokenChip = t.symbol ? `<span class="threat-chip">Token: ${esc(t.symbol)}</span>` : "";
-
-    // Action button
-    const actionBtn = (tier === "full" && t.canRevoke)
-      ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`
-      : (tier === "free" && t.hasApproval
-            ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`
-            : "");
-
-    return `
-    <div class="threat-item ${itemClass}" style="${isLocked ? "filter:blur(5px);pointer-events:none;user-select:none" : ""}">
-      <div class="threat-top">
-        <div style="flex:1;min-width:0">
-          <div class="threat-name">${esc(t.name)}</div>
-          <div class="threat-meta" style="margin-top:5px">
-            ${approvalBadge}
-            ${contractBadge}
-            ${tokenChip}
-          </div>
-        </div>
-        <div style="text-align:right;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          ${actionBtn}
+function _buildThreatCard(t, i, tier) {
+  const isLocked = tier === "free" && i >= 3;
+  const itemClass = !t.hasApproval ? "t-info"
+                  : t.compositeRisk >= 40 ? "t-critical"
+                  : t.compositeRisk >= 10 ? "t-high" : "";
+  const approvalBadge = t.hasApproval
+    ? (t.isUnlimited
+        ? `<span class="sig bad"><span class="sig-dot"></span>∞ Unlimited</span>`
+        : `<span class="sig warn"><span class="sig-dot"></span>Capped</span>`)
+    : `<span class="sig ok"><span class="sig-dot"></span>No Approval</span>`;
+  const contractBadge = `<span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.contractLabel||t.label)}</span>`;
+  const drainRow = t.hasApproval
+    ? `<span class="threat-drain ${t.risk==="bad"?"bad":t.isUnlimited?"warn":"ok"}">${esc(t.drainLabel||"—")}</span>`
+    : `<span class="threat-drain ok">No drain risk — no active approval</span>`;
+  const tokenChip = t.symbol ? `<span class="threat-chip">Token: ${esc(t.symbol)}</span>` : "";
+  const actionBtn = (tier === "full" && t.canRevoke)
+    ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`
+    : (tier === "free" && t.hasApproval
+          ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`
+          : "");
+  // Locked: use CSS class instead of filter:blur (GPU-safe)
+  const lockedAttr = isLocked ? ' data-locked="1"' : '';
+  return `<div class="threat-item ${itemClass}${isLocked?" locked-card":""}"${lockedAttr}>
+    <div class="threat-top">
+      <div style="flex:1;min-width:0">
+        <div class="threat-name">${esc(t.name)}</div>
+        <div class="threat-meta" style="margin-top:5px">
+          ${approvalBadge}${contractBadge}${tokenChip}
         </div>
       </div>
-      <div class="threat-why">${esc(t.why)}</div>
-      <div class="threat-info-row">
-        ${drainRow}
+      <div style="text-align:right;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        ${actionBtn}
       </div>
-    </div>`;
-  }).join("");
+    </div>
+    <div class="threat-why">${esc(t.why)}</div>
+    <div class="threat-info-row">${drainRow}</div>
+  </div>`;
+}
+
+function _threatsAppendPage() {
+  const el = document.getElementById("threatsList");
+  if (!el) return;
+  // Remove old "Show More" button if present
+  document.getElementById("threatsShowMoreBtn")?.remove();
+
+  const end = Math.min(_threatsShown + THREATS_PAGE, _threatsAll.length);
+  const frag = document.createDocumentFragment();
+  for (let i = _threatsShown; i < end; i++) {
+    const div = document.createElement("div");
+    div.innerHTML = _buildThreatCard(_threatsAll[i], i, _threatsTier);
+    frag.appendChild(div.firstElementChild);
+  }
+  el.appendChild(frag);
+  _threatsShown = end;
+
+  if (_threatsShown < _threatsAll.length) {
+    const remaining = _threatsAll.length - _threatsShown;
+    const btn = document.createElement("button");
+    btn.id = "threatsShowMoreBtn";
+    btn.className = "btn-fix-small";
+    btn.style.cssText = "display:block;width:100%;margin-top:10px;padding:10px;border-color:rgba(255,255,255,.15);color:var(--muted)";
+    btn.textContent = `Show ${Math.min(remaining, THREATS_PAGE)} more of ${remaining} remaining ↓`;
+    btn.onclick = _threatsAppendPage;
+    el.appendChild(btn);
+  }
 }
 
 // ── FIX MODE ──────────────────────────────────────────────────────
@@ -4046,18 +4082,24 @@ try {
 } catch(e) {}
 
 // Periodic integrity check — detect if state was tampered
-setInterval(() => {
-  const tier = typeof fwAccessTier !== 'undefined' ? fwAccessTier : 'free';
-  if (tier === 'full' && !_fwAccessVerified) {
-    // State mismatch — someone forced fwAccessTier without passing PASS check
-    // Re-lock the UI silently
-    document.getElementById("fixLockOverlay")    ?.style && (document.getElementById("fixLockOverlay").style.display    = "flex");
-    document.getElementById("passportLockOverlay")?.style && (document.getElementById("passportLockOverlay").style.display = "flex");
-    document.getElementById("tierBadge")?.style  && (document.getElementById("tierBadge").style.display  = "none");
-    document.getElementById("btnTopAccess")?.style && (document.getElementById("btnTopAccess").style.display = "block");
-    fwUpdateExportVisibility();
-  }
-}, 3500);
+// Security anti-tamper check — only runs when dashboard is visible
+let _secCheckInterval = null;
+function _startSecCheck() {
+  if (_secCheckInterval) return;
+  _secCheckInterval = setInterval(() => {
+    const dash = document.getElementById("dashboard");
+    if (!dash || dash.style.display === "none") return; // skip when hidden
+    const tier = typeof fwAccessTier !== 'undefined' ? fwAccessTier : 'free';
+    if (tier === 'full' && !_fwAccessVerified) {
+      document.getElementById("fixLockOverlay")    ?.style && (document.getElementById("fixLockOverlay").style.display    = "flex");
+      document.getElementById("passportLockOverlay")?.style && (document.getElementById("passportLockOverlay").style.display = "flex");
+      document.getElementById("tierBadge")?.style  && (document.getElementById("tierBadge").style.display  = "none");
+      document.getElementById("btnTopAccess")?.style && (document.getElementById("btnTopAccess").style.display = "block");
+      fwUpdateExportVisibility();
+    }
+  }, 5000); // every 5s instead of 3.5s — less CPU
+}
+_startSecCheck();
 function getDemoApprovals() {
   return [
     { token:"0xdAC17F958D2ee523a2206206994597C13D831ec7", spender:"0x1111111254eeb25477b68fb85ed929f73a960582", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDT", risk:"medium", verified:true,  decimals:6 },
