@@ -1273,42 +1273,11 @@
       <!-- ═══ PUBLIC API ═══════════════════════════════════════════ -->
       <div id="fwApiSection">
         <div class="section-title">🔌 Developer API</div>
-        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px">
-          <div style="font-size:16px;font-weight:800;margin-bottom:4px">CycleX Firewall Public API</div>
-          <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.65">
-            Free to use. No API key required. Rate limit: 60 req/min. Use it in your dApp, bot, or Discord server to verify wallets before interaction.
-          </div>
-
-          <div class="api-endpoint">
-            <button class="api-copy-btn" onclick="fwApiCopy('https://cyclex.io/api/score?wallet=0x...&net=bsc',this)">Copy</button>
-            <span class="api-method get">GET</span>
-            <span class="api-endpoint-url">/api/score?wallet={address}&net={bsc|eth|polygon}</span>
-            <div class="api-endpoint-desc">Returns the Firewall Score, risk summary, and approval count for any wallet.</div>
-            <div class="api-response">{"wallet":"0x70ec...9d4a0","net":"bsc","score":42,"label":"Critical","unlimited":10,"highRisk":10,"totalApprovals":14,"scannedAt":"2026-02-23T21:00:00Z"}</div>
-          </div>
-
-          <div class="api-endpoint">
-            <button class="api-copy-btn" onclick="fwApiCopy('https://cyclex.io/api/approvals?wallet=0x...&net=bsc',this)">Copy</button>
-            <span class="api-method get">GET</span>
-            <span class="api-endpoint-url">/api/approvals?wallet={address}&net={bsc|eth|polygon}</span>
-            <div class="api-endpoint-desc">Returns the full list of active token approvals with risk labels for a wallet.</div>
-            <div class="api-response">{"wallet":"0x70ec...","approvals":[{"token":"0xMYX","symbol":"MYX","spender":"0x000...","unlimited":true,"risk":"high","verified":false}]}</div>
-          </div>
-
-          <div class="api-endpoint">
-            <button class="api-copy-btn" onclick="fwApiCopy('https://cyclex.io/api/verify?sig=<base64>',this)">Copy</button>
-            <span class="api-method get">GET</span>
-            <span class="api-endpoint-url">/api/verify?sig={base64_passport}</span>
-            <div class="api-endpoint-desc">Verify a signed passport. Returns signer address, validity status, score, and expiry. Use this in Discord bots or gating logic.</div>
-            <div class="api-response">{"valid":true,"wallet":"0x70ec...","score":94,"network":"bsc","expiry":"2026-03-23","signer_matches":true}</div>
-          </div>
-
-          <div style="margin-top:16px;padding:12px 16px;border-radius:12px;background:rgba(124,92,255,.06);border:1px solid rgba(124,92,255,.18)">
-            <div style="font-size:11px;font-weight:800;color:#a87eff;margin-bottom:4px">📖 Discord Bot Example</div>
-            <div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.8">
-              !checkscore 0x70ec...9d4a0<br>
-              → 🛡 CycleX Score: 42/100 🧨 Critical — 10 unlimited approvals
-            </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px 22px;margin-bottom:16px;text-align:center">
+          <div style="font-size:28px;margin-bottom:10px">🚧</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px">Coming Soon</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;max-width:360px;margin:0 auto">
+            The CycleX Public API is under development — score lookups, approval lists, and passport verification will be available soon. Stay tuned.
           </div>
         </div>
       </div>
@@ -2449,20 +2418,32 @@ async function requestFullAccess() {
     unlockFull();
     // Re-fetch with full approvals (preview had no addresses / stripped rows)
     if (fwWallet && fwWallet !== DEMO_WALLET && fwNet) {
-      // Show loading indicator on score ring
+      // Show loading state immediately
       const scoreRing = document.getElementById("scoreVal");
       if (scoreRing) scoreRing.textContent = "…";
+      // Show a loading banner in the threats list
+      const tlEl = document.getElementById("threatsList");
+      if (tlEl) tlEl.innerHTML = `<div style="text-align:center;color:var(--cyan);padding:20px;font-size:13px">🔍 Loading full approval data…</div>`;
+
       fetchApprovals(fwNet, fwWallet).then(approvals => {
-        const metrics = computeMetrics(approvals);
-        fwScanData = metrics;
+        const metrics  = computeMetrics(approvals);
+        fwScanData     = metrics;
         fwCurrentScore = metrics.score;
+        fixApprovals   = metrics.fixTargets || [];
         renderDashboard(fwWallet, metrics, "full");
+        renderFixMode(metrics);
         fwInitExport();
-        if (fwScanData?.rows) fixApprovals = fwScanData.fixTargets || [];
-        renderFixMode(fwScanData);
-      }).catch(() => {
-        // Fallback: re-render existing data with full tier (shows revoke buttons at least)
+      }).catch(err => {
+        console.warn("[CycleX] Full refetch failed:", err?.message);
+        // Fallback: render existing data as full tier — at least Fix Mode + Export unlock
+        // Revoke buttons will show "Rescan ↺" via the canRevoke=false path
         if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
+        const tlElF = document.getElementById("threatsList");
+        if (tlElF && fwScanData?.threats) {
+          const tl2 = document.getElementById("threatsList");
+          if (tl2) tl2.insertAdjacentHTML("afterbegin",
+            `<div style="color:#ffd166;font-size:11px;padding:8px 0">⚠ Could not load full data. Press Rescan ↺ to retry.</div>`);
+        }
       });
     } else if (fwScanData) {
       renderDashboard(fwWallet, fwScanData, "full");
@@ -2636,17 +2617,27 @@ async function runLoadSequence(walletAddr, net, isDemo) {
   const relContent = document.getElementById("fwRelContent");
 
   if (!isDemo && fwAccessTier === "full") {
+    // Full access: show section + fetch real tx data
     if (relSection) relSection.style.display = "block";
-    // Reset summary before async fetch — prevents stale data flash
     const relSummaryEl = document.getElementById("fwRelSummary");
     if (relSummaryEl) relSummaryEl.innerHTML = "";
     if (relContent) relContent.innerHTML = '<div class="rel-loading">🔍 Analyzing wallet relationships…</div>';
     fwFetchWalletTxs(net, walletAddr).then(txs => {
       const relations = fwAnalyzeRelations(net, walletAddr, txs);
+      window.__fwRelations = relations;
       fwRenderRelations(net, relations);
     }).catch(() => {
       if (relContent) relContent.innerHTML = '<div class="rel-empty">⚠ Could not fetch transaction history from API.</div>';
     });
+  } else if (!isDemo && fwAccessTier !== "full") {
+    // Free tier: show section with teaser (names/counts only, locked tx buttons)
+    if (relSection) relSection.style.display = "block";
+    const freeDemoRels = [
+      {entity:{name:"PancakeSwap V2",type:"dex",tags:["verified","defi"]},address:"0x10ed43c718714eb63d5aa57b78b54704e256024e",in:3,out:12,txs:[],firstSeen:Date.now()-60*86400000,lastSeen:Date.now()-86400000},
+      {entity:{name:"1inch V5 BSC",type:"dex",tags:["aggregator","defi"]},address:"0x1111111254eeb25477b68fb85ed929f73a960582",in:0,out:5,txs:[],firstSeen:Date.now()-90*86400000,lastSeen:Date.now()-3*86400000},
+    ];
+    window.__fwRelations = freeDemoRels;
+    fwRenderRelations(net, freeDemoRels);
   } else if (isDemo) {
     // Show demo relations to illustrate the feature
     const demoRels = [
@@ -3289,9 +3280,12 @@ function renderThreats(threats, tier) {
     // Action button
     const actionBtn = (tier === "full" && t.canRevoke)
       ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`
-      : (tier === "free" && t.hasApproval
-          ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`
-          : "");
+      : (tier === "full" && t.hasApproval && !t.canRevoke)
+        // Full tier but no address data yet (preview rows) — offer rescan
+        ? `<button class="btn-fix-small" onclick="fwRescanFull()" style="border-color:rgba(0,229,255,.4);color:#00e5ff">Rescan ↺</button>`
+        : (tier === "free" && t.hasApproval
+            ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`
+            : "");
 
     return `
     <div class="threat-item ${itemClass}" style="${isLocked ? "filter:blur(5px);pointer-events:none;user-select:none" : ""}">
@@ -3577,6 +3571,29 @@ async function undoFix(step) {
   document.getElementById("scoreDot").style.background = col2;
   delete window.__fwUndoData[step];
   showPassportMsg(`↩ Undo: ${done} approval(s) restored to unlimited${failed>0?`, ${failed} failed`:""}. Re-scan to verify.`);
+}
+
+// Re-fetch full approvals for already-unlocked users
+async function fwRescanFull() {
+  if (!fwWallet || !fwNet || fwAccessTier !== "full" || !_fwAccessVerified) return;
+  if (fwWallet === DEMO_WALLET) return;
+  const scoreRing = document.getElementById("scoreVal");
+  if (scoreRing) scoreRing.textContent = "…";
+  showPassportMsg("🔍 Loading full approval data…");
+  try {
+    const approvals = await fetchApprovals(fwNet, fwWallet);
+    const metrics   = computeMetrics(approvals);
+    fwScanData      = metrics;
+    fwCurrentScore  = metrics.score;
+    fixApprovals    = metrics.fixTargets || [];
+    renderDashboard(fwWallet, metrics, "full");
+    renderFixMode(metrics);
+    fwInitExport();
+    showPassportMsg("✅ Full data loaded. Revoke buttons ready.");
+  } catch(e) {
+    showPassportMsg("⚠ Could not load full data: " + (e.message||"network error"));
+    if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
+  }
 }
 
 async function revokeSpender(spender, token, btn) {
@@ -4166,6 +4183,18 @@ const FW_THREATS = [
   {id:"unverified-surge-2025",title:"Unverified Contract Approval Surge",
    desc:"BSC wallets increasingly approving unverified contracts. Pattern matches drain-on-approval schemes. Revoke all approvals to contracts without a verified badge.",
    severity:"medium",icon:"⚠️",date:"2025",chains:["bsc"],
+   spenders:[],link:null},
+  {id:"pancakebunny-2021",title:"PancakeBunny Flash Loan Attack",
+   desc:"$45M exploit via flash loan price manipulation. Contracts 0x4188…c100 and the Bunny minter remain on-chain with active approval paths. Legacy approvals should be revoked.",
+   severity:"critical",icon:"🐰",date:"May 2021",chains:["bsc"],
+   spenders:["0x4188e09f4a5a39e7d0e306ea7e8de9b80cb32d5c"],link:"https://rekt.news/pancakebunny-rekt/"},
+  {id:"mevbot-approval-drain-2024",title:"MEV Bot Approval Drain Campaign",
+   desc:"Series of MEV bots on BSC draining wallets via pre-approved ERC-20 allowances. Bots monitor the mempool for unlimited approvals and front-run legitimate txs to drain tokens.",
+   severity:"high",icon:"🤖",date:"2024",chains:["bsc","eth"],
+   spenders:[],link:null},
+  {id:"bsc-fake-usdt-2025",title:"Fake USDT / BUSD Contract Approvals",
+   desc:"Scammers deploy contracts with USDT/BUSD ticker symbols on BSC. Users approve them via phishing sites thinking they're interacting with real stablecoins. Check token contract addresses carefully.",
+   severity:"high",icon:"💵",date:"2025",chains:["bsc"],
    spenders:[],link:null}
 ];
 
