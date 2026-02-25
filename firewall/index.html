@@ -1599,10 +1599,10 @@ function fwRenderRelations(net, relations) {
     const typeClass= {cex:"cex",dex:"dex",bridge:"bridge",lending:"lending",staking:"staking"}[e.type]||"dex";
     const tags     = (e.tags||[]).map(t=>`<span class="rel-tag ${t}">${t}</span>`).join("");
 
-    // Full access + has txs → show "View N transactions"
-    // Free tier (any card)  → always show locked button to tease the feature
-    // Full access + no txs  → show nothing
-    const timelineBtn = _canTimeline
+    // Full access + has txs → "View N transactions"
+    // Full access + no txs  → nothing (e.g. demo wallet with real full access)
+    // Free tier or demo     → locked button on every card (teases the feature)
+    const timelineBtn = (_canTimeline && !_isRelDemo)
       ? (rel.txs.length
           ? `<button class="rel-timeline-btn" onclick="fwShowTimeline(${idx})">View ${rel.txs.length} transactions ↗</button>`
           : "")
@@ -1624,15 +1624,19 @@ function fwRenderRelations(net, relations) {
     </div>`;
   }).join("");
 
-  // Free tier teaser (show names/counts, lock transactions)
+  // Show teaser banner for: free tier with real wallet, OR demo mode
+  // Both cases: user cannot view real transaction history
   let teaserHtml = "";
-  if (!_canTimeline && !_isRelDemo) {
+  const _showTeaser = _isRelDemo || (!_canTimeline);
+  if (_showTeaser) {
+    const teaserMsg = _isRelDemo
+      ? "Connect your wallet &amp; unlock Full Access to see your real protocol interactions."
+      : "Protocol names &amp; counts visible. Unlock Full Access to view transaction history.";
     teaserHtml = `<div style="padding:10px 14px;border-radius:12px;margin-bottom:12px;
       background:rgba(124,92,255,.07);border:1px solid rgba(124,92,255,.2);
       display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:12px;color:var(--muted);flex:1">
-        🔒 <strong style="color:var(--text)">Wallet Relations</strong> — protocol names &amp; counts visible.
-        Unlock Full Access to view transaction history.
+        🔒 <strong style="color:var(--text)">Wallet Relations</strong> — ${teaserMsg}
       </span>
       <button class="fw-watch-submit" style="font-size:10px;padding:6px 14px" onclick="requestFullAccess()">Unlock</button>
     </div>`;
@@ -2250,7 +2254,8 @@ function computeMetrics(approvals) {
     isUnlimited: r.isUnlimited,
     hasApproval: r.hasApproval,
     canRevoke:   r.hasApproval && !!(r.token && r.spender),
-    compositeRisk: r.compositeRisk
+    compositeRisk: r.compositeRisk,
+    tokens:      [r.symbol || "TOKEN"]   // kept for renderExposureMap compatibility
   }));
 
   // Fix targets: only rows with ACTIVE approvals, sorted by composite risk
