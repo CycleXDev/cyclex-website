@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2042,20 +2043,31 @@ async function fetchPreview(net, address) {
   u.searchParams.set("net", net);
   u.searchParams.set("address", address);
   const data = await _fwApiFetch(u.toString());
-  // Expected: { score, totalApprovals, unlimitedCount, highRiskCount, unverifiedCount }
-  // If backend returns full approvals, strip spenders before returning
-  if (Array.isArray(data) || Array.isArray(data?.approvals)) {
-    // Backend doesn't have /api/preview yet — fall back to getApprovals but strip addresses
-    const rows = Array.isArray(data) ? data : (data.approvals || data.result || data.data || []);
-    return rows.map(r => ({
+
+  // Worker /api/preview returns: { score, riskLevel, rows: [...stripped] }
+  // rows have: allowance, symbol, risk, verified, decimals — NO token/spender addresses
+  if (data?.rows && Array.isArray(data.rows)) {
+    return data; // pass full object — runLoadSequence extracts rows + meta
+  }
+
+  // Fallback: backend returns /api/getApprovals full format — strip addresses
+  const rawArr = Array.isArray(data)          ? data
+               : Array.isArray(data?.approvals) ? data.approvals
+               : Array.isArray(data?.result)    ? data.result
+               : Array.isArray(data?.data)      ? data.data
+               : null;
+
+  if (rawArr) {
+    return rawArr.map(r => ({
       allowance: r?.allowance ?? r?.value ?? "0",
       symbol:    r?.symbol || "TOKEN",
       risk:      r?.risk || "",
       verified:  r?.verified,
       decimals:  r?.decimals ?? 18
-      // NOTE: token address and spender address intentionally omitted
+      // token, spender intentionally omitted
     }));
   }
+
   return data;
 }
 
@@ -2513,13 +2525,16 @@ async function runLoadSequence(walletAddr, net, isDemo) {
         approvals = await fetchApprovals(net, walletAddr);
       } else {
         const previewData = await fetchPreview(net, walletAddr);
-        // previewData may be array (stripped rows) or {score,counts} object
         if (Array.isArray(previewData)) {
-          approvals = previewData; // stripped rows — no addresses
+          // Fallback: already-stripped array of rows
+          approvals = previewData;
+        } else if (previewData?.rows && Array.isArray(previewData.rows)) {
+          // Normal: /api/preview returned { rows, score, ... }
+          approvals = previewData.rows;   // ← stripped rows, no addresses
+          fwPreviewMeta = previewData;    // keep meta for potential display
         } else {
-          // Pure preview object — synthesise minimal rows for computeMetrics
           approvals = [];
-          fwPreviewMeta = previewData; // store for dashboard display
+          fwPreviewMeta = previewData;
         }
       }
     } catch(e) {
