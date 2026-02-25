@@ -2108,7 +2108,8 @@ function computeMetrics(approvals) {
     // Only real risk if approval > 0
     const isUnlimited  = isUnlimitedAllow(allow);
     const allowBigNum  = (() => { try { return BigInt(allow); } catch { return 0n; } })();
-    const hasApproval  = allowBigNum > 0n;
+    // isUnlimited covers "infinite" string (BigInt throws on it → 0n)
+    const hasApproval  = isUnlimited || allowBigNum > 0n;
 
     let approvalRisk, approvalLabel, approvalClass;
     if (!hasApproval) {
@@ -2434,7 +2435,26 @@ async function requestFullAccess() {
     _fwAccessVerified = true;
     _fwValidatedWallet = window.wallet?.address || null;
     unlockFull();
-    if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
+    // Re-fetch with full approvals (preview had no addresses / stripped rows)
+    if (fwWallet && fwWallet !== DEMO_WALLET && fwNet) {
+      // Show loading indicator on score ring
+      const scoreRing = document.getElementById("scoreVal");
+      if (scoreRing) scoreRing.textContent = "…";
+      fetchApprovals(fwNet, fwWallet).then(approvals => {
+        const metrics = computeMetrics(approvals);
+        fwScanData = metrics;
+        fwCurrentScore = metrics.score;
+        renderDashboard(fwWallet, metrics, "full");
+        fwInitExport();
+        if (fwScanData?.rows) fixApprovals = fwScanData.fixTargets || [];
+        renderFixMode(fwScanData);
+      }).catch(() => {
+        // Fallback: re-render existing data with full tier (shows revoke buttons at least)
+        if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
+      });
+    } else if (fwScanData) {
+      renderDashboard(fwWallet, fwScanData, "full");
+    }
     return;
   }
 
