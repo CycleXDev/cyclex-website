@@ -2195,16 +2195,16 @@ async function fetchApprovals(net, address) {
     : Array.isArray(data?.items)                 ? data.items
     : [];
   if (arr.length > 0) {
-    // Debug: show field names of first row to help diagnose field mapping
     const sample = arr[0];
-    const keys = Object.keys(sample || {});
-    console.info("[CycleX] fetchApprovals:", arr.length, "rows. Fields:", keys.join(", "));
-    const hasAddr = arr.some(r =>
-      r?.token || r?.token_address || r?.tokenAddress || r?.contract_address ||
-      r?.spender || r?.spender_address || r?.spenderAddress || r?.approved_to
-    );
-    if (!hasAddr) {
-      console.warn("[CycleX] fetchApprovals: NO addresses found — rows may lack token/spender fields");
+    // Log the FULL first row so we can see every field name from the backend
+    console.info("[CycleX] fetchApprovals:", arr.length, "rows. First row:", JSON.stringify(sample));
+    const hasSpender = !!(sample?.spender || sample?.spender_address || sample?.spenderAddress ||
+      sample?.approved_to || sample?.approvedTo || sample?.operator || sample?.to);
+    const hasToken   = !!(sample?.token || sample?.token_address || sample?.tokenAddress ||
+      sample?.contract_address || sample?.contractAddress);
+    console.info("[CycleX] hasSpender:", hasSpender, "hasToken:", hasToken);
+    if (!hasSpender || !hasToken) {
+      console.warn("[CycleX] MISSING ADDRESS FIELDS — canRevoke will be false. Fields present:", Object.keys(sample||{}).join(", "));
     }
   } else {
     console.info("[CycleX] fetchApprovals: empty response");
@@ -2221,15 +2221,25 @@ function computeMetrics(approvals) {
 
   // ── Normalise raw approval rows ─────────────────────
   const rows = approvals.map(r => {
-    const allow    = String(r?.allowance ?? r?.value ?? r?.approved_amount ?? r?.amount ?? r?.data ?? "0");
-    const symbol   = String(r?.symbol || r?.token_symbol || r?.tokenSymbol || r?.token_name || r?.tokenName || "TOKEN");
-    const token    = String(r?.token  || r?.token_address || r?.tokenAddress || r?.contract_address || r?.contractAddress || "");
-    // Spender: try every known field name including raw log formats (topics[2] decoded)
-    const spenderRaw = String(
-      r?.spender || r?.spender_address || r?.spenderAddress ||
-      r?.approved_to || r?.approvedTo || r?.operator ||
-      r?.to || r?.toAddress || ""   // raw Etherscan event: 'to' field
+    const allow    = String(r?.allowance ?? r?.value ?? r?.approved_amount ?? r?.amount ?? r?.data ?? r?.raw_amount ?? "0");
+    const symbol   = String(r?.symbol || r?.token_symbol || r?.tokenSymbol || r?.token_name || r?.tokenName || r?.name || "TOKEN");
+    // Token address: try every known field format
+    const token    = String(
+      r?.token         || r?.token_address   || r?.tokenAddress  ||
+      r?.contract      || r?.contract_address|| r?.contractAddress||
+      r?.token_contract|| r?.asset_address   || r?.address       || ""
     );
+    // Spender address: try every known field format across providers
+    const spenderRaw = String(
+      r?.spender         || r?.spender_address  || r?.spenderAddress  ||
+      r?.approved_to     || r?.approvedTo       || r?.approved_address ||
+      r?.operator        || r?.operator_address ||
+      r?.to              || r?.toAddress        || r?.recipient        || ""
+    );
+    // Always log when we have a row — helps diagnose field mapping issues
+    if (r && !token && !spenderRaw) {
+      console.warn("[CycleX] Row has no token/spender. Keys:", Object.keys(r).join(", "), "| Values:", JSON.stringify(r).slice(0, 200));
+    }
     // Treat zero address as "no spender" (burned/revoked)
     const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
     const spender  = spenderRaw.toLowerCase() === ZERO_ADDR.toLowerCase() ? "" : spenderRaw;
@@ -2407,10 +2417,9 @@ function computeMetrics(approvals) {
     contractLabel: r.contractLabel,
     isUnlimited: r.isUnlimited,
     hasApproval: r.hasApproval,
-    // canRevoke: need BOTH addresses present (accept any 0x-prefixed, length ≥ 10)
-    canRevoke:   r.hasApproval
-                 && r.token   && /^0x[0-9a-fA-F]{10,}/.test(r.token)
-                 && r.spender && /^0x[0-9a-fA-F]{10,}/.test(r.spender),
+    // canRevoke: need BOTH addresses present — simple non-empty check
+    // fwNorm() handles address format normalization at revoke time
+    canRevoke:   !!(r.hasApproval && r.token && r.token.length > 5 && r.spender && r.spender.length > 5),
     compositeRisk: r.compositeRisk,
     tokens:      [r.symbol || "TOKEN"]
   }));
@@ -3488,17 +3497,13 @@ function _buildThreatCard(t, i, tier) {
   const tokenChip = t.symbol ? `<span class="threat-chip">Token: ${esc(t.symbol)}</span>` : "";
   let actionBtn = "";
   if (tier === "full" && t.canRevoke) {
+    // Have both addresses — real on-chain revoke
     actionBtn = `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`;
-  } else if (tier === "full" && t.hasApproval && !t.canRevoke) {
-    // Has approval but no spender address from API — link to BSCScan approval checker
-    const explorerBase = (fwNet === "eth") ? "https://etherscan.io" : (fwNet === "polygon") ? "https://polygonscan.com" : "https://bscscan.com";
-    const tokenLink = t.token ? `${explorerBase}/token/${t.token}#tokenApprovalChecked` : `${explorerBase}/tokenapprovalchecker`;
-    actionBtn = `<a href="${tokenLink}" target="_blank" rel="noopener"
-      class="btn-fix-small" style="text-decoration:none;border-color:rgba(0,229,255,.3);color:var(--cyan)">
-      Check ↗</a>`;
   } else if (tier === "free" && t.hasApproval) {
+    // Not unlocked yet — prompt upgrade
     actionBtn = `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`;
   }
+  // tier=full + hasApproval + !canRevoke → no button here; handled by fwRescanBanner above
   const lockedAttr = isLocked ? ' data-locked="1"' : '';
   return `<div class="threat-item ${itemClass}${isLocked?" locked-card":""}"${lockedAttr}>
     <div class="threat-top">
@@ -3831,7 +3836,12 @@ async function fwRescanFull() {
     fwCurrentScore  = metrics.score;
     fixApprovals    = metrics.fixTargets || [];
     const revokable = metrics.threats?.filter(t=>t.canRevoke).length || 0;
-    console.info("[CycleX] metrics: score="+metrics.score, "revokable="+revokable);
+    const noAddr    = metrics.threats?.filter(t=>t.hasApproval && !t.canRevoke).length || 0;
+    console.info("[CycleX] metrics: score="+metrics.score, "revokable="+revokable, "no-addr="+noAddr);
+    if (noAddr > 0 && revokable === 0) {
+      // API returned rows but without usable spender/token — surface this clearly
+      console.warn("[CycleX] All", noAddr, "threats have approval but no revokable address. Check API response fields.");
+    }
     renderDashboard(fwWallet, metrics, "full");
     renderFixMode(metrics);
     fwInitExport();
@@ -3842,7 +3852,9 @@ async function fwRescanFull() {
     } catch {}
     showPassportMsg(revokable > 0
       ? `✅ Full data loaded — ${revokable} approval(s) ready to revoke.`
-      : "✅ Full data loaded.");
+      : noAddr > 0
+        ? "⚠ Approvals found but addresses missing from API. Open DevTools > Console for details."
+        : "✅ Full data loaded.");
   } catch(e) {
     // On failure: show retry banner ONLY — never re-render with preview (no-address) data
     // Re-rendering with old fwScanData would show canRevoke=false since it has no addresses
