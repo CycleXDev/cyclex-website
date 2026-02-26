@@ -129,9 +129,12 @@
       margin-bottom:14px;
       background:linear-gradient(110deg,rgba(244,246,255,1) 0%,rgba(255,150,100,.95) 35%,rgba(255,80,80,.90) 65%,rgba(124,92,255,.88) 100%);
       -webkit-background-clip:text;background-clip:text;color:transparent;
-      background-size:200% 200%;animation:titleSheen 6s ease-in-out infinite
+      background-size:200% 200%;animation:titleSheen 10s ease-in-out infinite
     }
     @keyframes titleSheen{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+    @media (prefers-reduced-motion: reduce) {
+      .hero-title, .firewall-badge .dot, .drain-fast, .load-step.active .step-icon { animation: none !important; }
+    }
     .hero-sub{max-width:68ch;margin:0 auto 28px;font-size:16px;line-height:1.75;color:var(--muted)}
 
     /* ── WALLET INPUT BAR ───────────────────────── */
@@ -270,7 +273,9 @@
     .threat-item:last-child{margin-bottom:0}
     .threat-item.t-critical{background:rgba(255,71,87,.06);border-color:rgba(255,71,87,.2)}
     .threat-item.t-high{background:rgba(255,150,50,.04);border-color:rgba(255,150,50,.18)}
-    .threat-item.t-info{background:rgba(255,255,255,.015);border-color:rgba(255,255,255,.06)}
+    .threat-item.t-info{
+    .threat-item.locked-card{opacity:.35;pointer-events:none;user-select:none;position:relative}
+    .threat-item.locked-card::after{content:'🔒';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px}background:rgba(255,255,255,.015);border-color:rgba(255,255,255,.06)}
     .threat-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
     .threat-name{font-size:12px;font-weight:800;font-family:var(--mono);color:var(--text)}
     .threat-damage{font-size:11px;font-weight:900;color:#ff6b6b;white-space:nowrap}
@@ -420,6 +425,16 @@
     @media (max-width:780px){.main-grid{grid-template-columns:1fr}.fix-steps{grid-template-columns:1fr}.passport-inner{grid-template-columns:1fr}.top3{grid-template-columns:1fr}}
     @media (max-width:640px){.scan-bar{flex-wrap:wrap;border-radius:20px;padding:12px 14px}.scan-bar input{width:100%;flex:1 1 100%}.scan-net,.btn-scan{flex:1 1 calc(50% - 5px)}}
     @media (min-width:901px){html{zoom:1.10}}
+
+    /* ── PERF: contain layout on heavy sections ─── */
+    #dashboard .score-card,
+    #dashboard .exp-card,
+    #dashboard .threats-card,
+    #fwRelSection,
+    #fwWatchSection,
+    #fwThreatFeedSection { contain: layout style; }
+    #dashboard .exp-card svg { contain: strict; }
+    .firewall-badge .dot { will-change: opacity, transform; }
 
     /* ── MOBILE (≤600px) ─────────────────────────── */
     @media (max-width:600px) {
@@ -970,7 +985,7 @@
           <option value="eth">ETH</option>
           <option value="polygon">POLYGON</option>
         </select>
-        <button class="btn-scan" id="btnRunFirewall">Run Firewall</button>
+        <button class="btn-scan" id="btnRunFirewall" data-i18n="btn_run">Run Firewall</button>
       </div>
 
       <span class="demo-hint" id="demoHint">↗ Try with demo wallet</span>
@@ -990,10 +1005,10 @@
     <div id="loadWrap">
       <div class="load-label" id="loadLabel">Initializing Firewall Scan…</div>
       <div class="load-steps">
-        <div class="load-step" id="step1"><div class="step-icon">⟳</div><span>Fetching approval logs</span></div>
-        <div class="load-step" id="step2"><div class="step-icon">⟳</div><span>Analyzing spender risk</span></div>
-        <div class="load-step" id="step3"><div class="step-icon">⟳</div><span>Calculating Blast Radius</span></div>
-        <div class="load-step" id="step4"><div class="step-icon">⟳</div><span>Building Fix Plan</span></div>
+        <div class="load-step" id="step1"><div class="step-icon">⟳</div data-i18n="step1"><span data-i18n="step1">Fetching approval logs</span></div>
+        <div class="load-step" id="step2"><div class="step-icon">⟳</div data-i18n="step2"><span data-i18n="step2">Analyzing spender risk</span></div>
+        <div class="load-step" id="step3"><div class="step-icon">⟳</div data-i18n="step3"><span data-i18n="step3">Calculating Blast Radius</span></div>
+        <div class="load-step" id="step4"><div class="step-icon">⟳</div data-i18n="step4"><span data-i18n="step4">Building Fix Plan</span></div>
       </div>
       <div class="load-bar"><div class="load-bar-fill" id="loadBarFill"></div></div>
     </div>
@@ -1002,10 +1017,10 @@
     <div id="dashboard">
 
       <div class="notice" id="scanNotice" style="display:none">
-        <strong>Live scan.</strong> Read-only on-chain data. No transactions made.
+        <strong data-i18n="notice_live_title">Live scan.</strong> <span data-i18n="notice_live_body">Read-only on-chain data. No transactions made.</span>
       </div>
       <div class="notice" id="demoNotice">
-        <strong>Demo mode:</strong> Showing sample data. Enter a real wallet address and click "Run Firewall" to scan live.
+        <strong data-i18n="notice_demo_title">Demo mode:</strong> <span data-i18n="notice_demo_body">Showing sample data. Enter a real wallet address and click "Run Firewall" to scan live.</span>
       </div>
 
       <!-- ACCESS GATE OVERLAY -->
@@ -1018,7 +1033,7 @@
           <div style="font-size:32px;margin-bottom:12px">🔒</div>
           <div style="font-size:18px;font-weight:900;margin-bottom:8px">Full Access Required</div>
           <div style="font-size:13px;color:var(--muted);line-height:1.7;max-width:52ch;margin:0 auto 20px">
-            Hold <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.
+            <span data-i18n="gate_msg">Hold <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.</span>
           </div>
           <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
             <!-- Connect & Check — triggers AppKit modal -->
@@ -1058,12 +1073,12 @@
         <div class="fwh-multi" id="fwHistoryWallets" style="display:none"></div>
       </div>
 
-      <div class="section-title" style="margin-top:0">Firewall Status</div>
+      <div class="section-title" style="margin-top:0" data-i18n="sec_status">Firewall Status</div>
       <div class="top3">
 
         <!-- Score -->
         <div class="score-card card-score">
-          <div class="sc-kicker">Firewall Score</div>
+          <div class="sc-kicker" data-i18n="kicker_score">Firewall Score</div>
           <div class="gauge-wrap">
             <svg class="gauge-svg" width="90" height="90" viewBox="0 0 90 90">
               <circle class="gauge-track" cx="45" cy="45" r="36"/>
@@ -1086,17 +1101,17 @@
 
         <!-- Blast Radius -->
         <div class="score-card card-blast">
-          <div class="sc-kicker">💥 Blast Radius</div>
+          <div class="sc-kicker" data-i18n="kicker_blast">💥 Blast Radius</div>
           <div class="blast-amount" id="blastAmt">—</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:6px">max drainable if top spender exploited</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px" data-i18n="blast_sub">max drainable if top spender exploited</div>
           <div class="card-meta" id="blastMeta"></div>
         </div>
 
         <!-- Time to Drain -->
         <div class="score-card card-drain">
-          <div class="sc-kicker">⏱ Time-to-Drain</div>
+          <div class="sc-kicker" data-i18n="kicker_drain">⏱ Time-to-Drain</div>
           <div class="drain-time" id="drainTime">—</div>
-          <div style="font-size:12px;color:var(--muted);margin-top:6px">estimated drain time for exposed assets</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px" data-i18n="drain_sub">estimated drain time for exposed assets</div>
           <div class="card-meta" id="drainMeta"></div>
         </div>
 
@@ -1107,8 +1122,8 @@
 
         <!-- Exposure Map -->
         <div class="exp-card">
-          <div class="exp-title">🗺 Exposure Map</div>
-          <div class="exp-sub">Wallet → Spenders → Tokens. Node size = risk weight.</div>
+          <div class="exp-title" data-i18n="title_map">🗺 Exposure Map</div>
+          <div class="exp-sub" data-i18n="map_sub">Wallet → Spenders → Tokens. Node size = risk weight.</div>
           <svg id="exposureMap" viewBox="0 0 480 260" xmlns="http://www.w3.org/2000/svg">
             <!-- rendered by JS -->
           </svg>
@@ -1116,27 +1131,27 @@
 
         <!-- Top Threats -->
         <div class="threats-card">
-          <div class="exp-title" style="margin-bottom:14px">🎯 Top Threats</div>
+          <div class="exp-title" style="margin-bottom:14px" data-i18n="title_threats">🎯 Top Threats</div>
           <div id="threatsList"></div>
         </div>
 
       </div>
 
       <!-- FIX MODE -->
-      <div class="section-title">Fix Mode</div>
+      <div class="section-title" data-i18n="sec_fix">Fix Mode</div>
       <div class="fix-card locked-section" id="fixCard">
         <!-- Lock overlay (shown in free tier) -->
         <div class="lock-overlay" id="fixLockOverlay">
           <div class="lock-overlay-inner">
             <div class="lock-icon">🔒</div>
-            <p>Fix Mode requires Full Access<br>(hold 1 PASS token)</p>
-            <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:11px;padding:10px 18px">Unlock Fix Mode</button>
+            <p data-i18n="fix_lock_msg">Fix Mode requires Full Access<br>(hold 1 PASS token)</p>
+            <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:11px;padding:10px 18px" data-i18n="btn_unlock_fix">Unlock Fix Mode</button>
           </div>
         </div>
         <div class="fix-header">
           <div>
-            <div style="font-size:16px;font-weight:800;margin-bottom:4px">🛠 3-Step Fix Plan</div>
-            <div style="font-size:13px;color:var(--muted)">Complete these actions to improve your Firewall Score.</div>
+            <div style="font-size:16px;font-weight:800;margin-bottom:4px" data-i18n="fix_title">🛠 3-Step Fix Plan</div>
+            <div style="font-size:13px;color:var(--muted)" data-i18n="fix_sub">Complete these actions to improve your Firewall Score.</div>
           </div>
           <div class="fix-score-gain" id="fixGain" style="display:none">
             After fix: <strong id="fixNewScore">—</strong>/100 <span style="opacity:.7;font-size:12px">(+<span id="fixDelta">—</span> pts)</span>
@@ -1146,21 +1161,21 @@
         <div class="fix-steps">
           <div class="fix-step" id="fixStep1">
             <div class="fix-step-num">1</div>
-            <div class="fix-step-title">Revoke Top Spender</div>
+            <div class="fix-step-title" data-i18n="fix1_title">Revoke Top Spender</div>
             <div class="fix-step-desc">Remove unlimited allowance from the highest-risk spender detected on your wallet.</div>
             <button class="btn-action" id="btnFix1" onclick="applyFix(0)">Revoke Top Spender</button>
             <button class="btn-action btn-undo" id="undoFix1" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(0)">↩ Undo — Restore approval</button>
           </div>
           <div class="fix-step" id="fixStep2">
             <div class="fix-step-num">2</div>
-            <div class="fix-step-title">Revoke All Unlimited</div>
+            <div class="fix-step-title" data-i18n="fix2_title">Revoke All Unlimited</div>
             <div class="fix-step-desc">Revoke every unlimited approval on your wallet in one go — one on-chain tx per spender.</div>
             <button class="btn-action" id="btnFix2" onclick="applyFix(1)">Revoke All Unlimited</button>
             <button class="btn-action btn-undo" id="undoFix2" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(1)">↩ Undo — Restore all unlimited</button>
           </div>
           <div class="fix-step" id="fixStep3">
             <div class="fix-step-num">3</div>
-            <div class="fix-step-title">Lock Risky dApp</div>
+            <div class="fix-step-title" data-i18n="fix3_title">Lock Risky dApp</div>
             <div class="fix-step-desc">Flag and monitor the unverified spender contract to receive alerts on new activity.</div>
             <button class="btn-action" id="btnFix3" onclick="applyFix(2)">Add to Watchlist</button>
             <button class="btn-action btn-undo" id="undoFix3" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(2)">↩ Undo — Remove from watchlist</button>
@@ -1173,12 +1188,12 @@
       </div>
 
       <!-- WALLET PASSPORT -->
-      <div class="section-title">Wallet Passport</div>
+      <div class="section-title" data-i18n="sec_passport">Wallet Passport</div>
       <div class="passport-wrap locked-section" id="passportWrap">
         <div class="lock-overlay" id="passportLockOverlay">
           <div class="lock-overlay-inner">
             <div class="lock-icon">🔒</div>
-            <p>Wallet Passport requires Full Access</p>
+            <p data-i18n="passport_lock_msg">Wallet Passport requires Full Access</p>
             <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:11px;padding:10px 18px">Unlock Passport</button>
           </div>
         </div>
@@ -1224,7 +1239,7 @@
 
           <!-- Actions -->
           <div class="passport-actions">
-            <h3>Share your Wallet Passport</h3>
+            <h3 data-i18n="passport_share_title">Share your Wallet Passport</h3>
             <p>Sign a cryptographic proof of your wallet's security state — verifiable by anyone, no KYC, no gas.</p>
             <button class="btn-passport sign" id="btnSignPassport">✍ Sign Passport (EIP-712)</button>
             <div class="pp-signed-badge" id="ppSignedBadge">
@@ -1244,7 +1259,7 @@
       </div>
 
       <!-- SPEND RULES TEMPLATES -->
-      <div class="section-title">Firewall Rules</div>
+      <div class="section-title" data-i18n="sec_rules">Firewall Rules</div>
       <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px">
         <div style="font-size:16px;font-weight:800;margin-bottom:4px">🔒 Spend Limit Templates</div>
         <div style="font-size:13px;color:var(--muted);margin-bottom:18px">Apply a spending rule profile to minimize future exposure.</div>
@@ -1256,11 +1271,11 @@
 
       <!-- ── WALLET RELATIONS SECTION ── -->
       <div id="fwRelSection" style="display:none">
-        <div class="section-title">🔗 Wallet Relations</div>
+        <div class="section-title" data-i18n="sec_relations">🔗 Wallet Relations</div>
         <div class="rel-section-wrap">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:4px">
             <div>
-              <div style="font-size:16px;font-weight:800;margin-bottom:4px">Protocol &amp; Exchange Relationships</div>
+              <div style="font-size:16px;font-weight:800;margin-bottom:4px" data-i18n="rel_title">Protocol &amp; Exchange Relationships</div>
               <div style="font-size:13px;color:var(--muted)">
                 Detected interactions with known DEXes, CEXes, bridges &amp; protocols on <span id="fwRelNetLabel" style="color:var(--cyan);font-weight:700">—</span>.
               </div>
@@ -1273,7 +1288,7 @@
 
       <!-- ── EXPORT SECTION — locked preview until full access ── -->
       <div id="fwExportSection">
-        <div class="section-title">📊 Export Report</div>
+        <div class="section-title" data-i18n="sec_export">📊 Export Report</div>
         <div class="fw-export-card fw-export-locked" id="fwExportCard">
           <div style="font-size:16px;font-weight:800;margin-bottom:4px">Download Scan Data</div>
           <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.65">
@@ -1303,12 +1318,12 @@
 
       <!-- ═══ WALLET WATCH ═══════════════════════════════════════ -->
       <div id="fwWatchSection">
-        <div class="section-title">👁 Wallet Watch</div>
+        <div class="section-title" data-i18n="sec_watch">👁 Wallet Watch</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
             <div class="fw-watch-header-text">
-              <div style="font-size:16px;font-weight:800;margin-bottom:4px">Track Multiple Wallets</div>
-              <div style="font-size:13px;color:var(--muted);line-height:1.6">Monitor scores across BSC, ETH &amp; Polygon. Each wallet scans individually and saves its score history. <span id="watchLimitLabel" style="color:var(--muted);font-size:11px">(Free: 2 wallets max — Unlock for up to 10)</span></div>
+              <div style="font-size:16px;font-weight:800;margin-bottom:4px" data-i18n="watch_title">Track Multiple Wallets</div>
+              <div style="font-size:13px;color:var(--muted);line-height:1.6">Monitor scores across BSC, ETH &amp; Polygon. Each wallet scans individually and saves its score history. <span id="watchLimitLabel" data-i18n="watch_limit_label" style="color:var(--muted);font-size:11px">(Free: 2 wallets max — Unlock for up to 10)</span></div>
             </div>
             <div class="fw-watch-header-actions">
               <button class="fw-watch-submit" id="fwBtnScanAll" onclick="fwWatchScanAll()" style="background:rgba(93,255,178,.10);border-color:rgba(93,255,178,.3);color:var(--green)">↻ Scan All</button>
@@ -1356,7 +1371,7 @@
 
       <!-- ═══ THREAT FEED ══════════════════════════════════════════ -->
       <div id="fwThreatFeedSection">
-        <div class="section-title">🚨 Threat Feed</div>
+        <div class="section-title" data-i18n="sec_threats">🚨 Threat Feed</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
             <div>
@@ -1371,7 +1386,7 @@
 
       <!-- ═══ PUBLIC API ═══════════════════════════════════════════ -->
       <div id="fwApiSection">
-        <div class="section-title">🔌 Developer API</div>
+        <div class="section-title" data-i18n="sec_api">🔌 Developer API</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px 22px;margin-bottom:16px;text-align:center">
           <div style="font-size:28px;margin-bottom:10px">🚧</div>
           <div style="font-size:16px;font-weight:800;margin-bottom:6px">Coming Soon</div>
@@ -1671,9 +1686,12 @@ function fwRenderRelations(net, relations) {
     // Full access + has txs → "View N transactions"
     // Full access + no txs  → nothing (e.g. demo wallet with real full access)
     // Free tier or demo     → locked button on every card (teases the feature)
+    // Only count real tx hashes (66-char hex) — ignore demo placeholders
+    const isRealHash = h => typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
+    const realTxCount = (rel.txs || []).filter(tx => isRealHash(tx.hash)).length;
     const timelineBtn = (_canTimeline && !_isRelDemo)
-      ? (rel.txs.length
-          ? `<button class="rel-timeline-btn" onclick="fwShowTimeline(${idx})">View ${rel.txs.length} transactions ↗</button>`
+      ? (realTxCount > 0
+          ? `<button class="rel-timeline-btn" onclick="fwShowTimeline(${idx})">View ${realTxCount} transactions ↗</button>`
           : "")
       : `<button class="rel-timeline-btn" style="opacity:.65;border-color:rgba(124,92,255,.3);color:#a87eff" onclick="requestFullAccess()">🔒 Unlock to view transactions</button>`;
 
@@ -1725,22 +1743,25 @@ window.fwShowTimeline = function(idx) {
   const body  = document.getElementById("fwTmBody");
   if (!modal) return;
   const explorer = FW_CHAINS[fwNet]?.explorerTx || (h=>`#`);
-  title.textContent = `${rel.entity.name} — ${rel.in+rel.out} transactions`;
-  body.innerHTML = rel.txs.length ? rel.txs.map(tx=>{
+  // Only show real tx hashes (must be 66-char 0x-prefixed hex)
+  const isRealHash = h => typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
+  const realTxs = (rel.txs || []).filter(tx => isRealHash(tx.hash));
+  title.textContent = `${rel.entity.name} — ${rel.in+rel.out} interactions`;
+  body.innerHTML = realTxs.length ? realTxs.map(tx=>{
     const d = tx.ts ? new Date(tx.ts).toLocaleString() : "—";
     const dirLabel = tx.dir==="in"?"⬅ INCOMING":"➡ OUTGOING";
     const dirColor = tx.dir==="in"?"#5dffb2":"#ff9a6b";
-    const shortHash = tx.hash ? tx.hash.slice(0,10)+"…"+tx.hash.slice(-8) : "—";
+    const shortHash = tx.hash.slice(0,10)+"…"+tx.hash.slice(-8);
     return `<div class="tm-entry ${tx.dir}">
       <div style="display:flex;justify-content:space-between;margin-bottom:3px">
         <strong style="color:${dirColor}">${dirLabel}</strong>
         <span style="font-size:10px;color:var(--muted)">${d}</span>
       </div>
       <div class="tm-hash">
-        ${tx.hash ? `<a href="${explorer(tx.hash)}" target="_blank" rel="noopener" style="color:var(--cyan);text-decoration:none">${shortHash}</a>` : "—"}
+        <a href="${explorer(tx.hash)}" target="_blank" rel="noopener" style="color:var(--cyan);text-decoration:none">${shortHash}</a>
       </div>
     </div>`;
-  }).join("") : `<div class="rel-empty">No transaction details available.</div>`;
+  }).join("") : `<div class="rel-empty">Transaction details not available for this wallet.</div>`;
   modal.style.display="flex";
 };
 
@@ -2003,25 +2024,21 @@ function _doUnlockUI() {
       relContent?.parentNode?.insertBefore(bar, relContent);
     }
     fwFetchWalletTxs(fwNet, fwWallet).then(txs => {
-      const relations = fwAnalyzeRelations(fwNet, fwWallet, txs);
       document.getElementById("fwRelLoadBar")?.remove();
-      if (relations.length > 0) {
-        window.__fwRelations = relations;
-        fwRenderRelations(fwNet, relations);
-      } else {
-        // Real API returned 0 relations — keep showing whatever we have
-        // but re-render to swap locked → real buttons (if relations exist)
-        document.getElementById("fwRelLoadBar")?.remove();
-        if (window.__fwRelations?.length) {
-          fwRenderRelations(fwNet, window.__fwRelations);
-        }
-      }
+      const relations = fwAnalyzeRelations(fwNet, fwWallet, txs);
+      // Always use real results — never show demo/fake data to a real wallet
+      window.__fwRelations = relations;
+      fwRenderRelations(fwNet, relations);
     }).catch(() => {
       document.getElementById("fwRelLoadBar")?.remove();
-      // API failed — keep existing cards, just re-render to show full-tier buttons
-      if (window.__fwRelations?.length) {
-        fwRenderRelations(fwNet, window.__fwRelations);
-      }
+      // API failed — clear demo data, show error state
+      window.__fwRelations = [];
+      const relContent = document.getElementById("fwRelContent");
+      if (relContent) relContent.innerHTML = `
+        <div style="padding:14px 16px;border-radius:12px;background:rgba(255,193,7,.06);
+             border:1px solid rgba(255,193,7,.2);font-size:12px;color:var(--muted)">
+          ⚠ Could not fetch transaction history. Check your connection and try again.
+        </div>`;
     });
   } else if (window.__fwRelations?.length && fwNet) {
     // Re-render to remove teaser + show real buttons
@@ -2169,11 +2186,30 @@ async function fetchApprovals(net, address) {
   u.searchParams.set("net", net);
   u.searchParams.set("address", address);
   const data = await _fwApiFetch(u.toString());
-  return Array.isArray(data) ? data
-    : Array.isArray(data?.approvals) ? data.approvals
-    : Array.isArray(data?.result)    ? data.result
-    : Array.isArray(data?.data)      ? data.data
+  const arr = Array.isArray(data)                ? data
+    : Array.isArray(data?.approvals)             ? data.approvals
+    : Array.isArray(data?.result)                ? data.result
+    : Array.isArray(data?.data)                  ? data.data
+    : Array.isArray(data?.rows)                  ? data.rows
+    : Array.isArray(data?.list)                  ? data.list
+    : Array.isArray(data?.items)                 ? data.items
     : [];
+  if (arr.length > 0) {
+    // Debug: show field names of first row to help diagnose field mapping
+    const sample = arr[0];
+    const keys = Object.keys(sample || {});
+    console.info("[CycleX] fetchApprovals:", arr.length, "rows. Fields:", keys.join(", "));
+    const hasAddr = arr.some(r =>
+      r?.token || r?.token_address || r?.tokenAddress || r?.contract_address ||
+      r?.spender || r?.spender_address || r?.spenderAddress || r?.approved_to
+    );
+    if (!hasAddr) {
+      console.warn("[CycleX] fetchApprovals: NO addresses found — rows may lack token/spender fields");
+    }
+  } else {
+    console.info("[CycleX] fetchApprovals: empty response");
+  }
+  return arr;
 }
 
 // ── METRICS COMPUTATION ───────────────────────────────────────────
@@ -2185,10 +2221,18 @@ function computeMetrics(approvals) {
 
   // ── Normalise raw approval rows ─────────────────────
   const rows = approvals.map(r => {
-    const allow    = String(r?.allowance ?? r?.value ?? r?.approved_amount ?? "0");
-    const symbol   = String(r?.symbol || r?.token_symbol || r?.tokenSymbol || "TOKEN");
-    const token    = String(r?.token  || r?.token_address || r?.tokenAddress || "");
-    const spender  = String(r?.spender || r?.spender_address || "");
+    const allow    = String(r?.allowance ?? r?.value ?? r?.approved_amount ?? r?.amount ?? r?.data ?? "0");
+    const symbol   = String(r?.symbol || r?.token_symbol || r?.tokenSymbol || r?.token_name || r?.tokenName || "TOKEN");
+    const token    = String(r?.token  || r?.token_address || r?.tokenAddress || r?.contract_address || r?.contractAddress || "");
+    // Spender: try every known field name including raw log formats (topics[2] decoded)
+    const spenderRaw = String(
+      r?.spender || r?.spender_address || r?.spenderAddress ||
+      r?.approved_to || r?.approvedTo || r?.operator ||
+      r?.to || r?.toAddress || ""   // raw Etherscan event: 'to' field
+    );
+    // Treat zero address as "no spender" (burned/revoked)
+    const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+    const spender  = spenderRaw.toLowerCase() === ZERO_ADDR.toLowerCase() ? "" : spenderRaw;
     const risk     = String(r?.risk || "").toLowerCase();
     const verified = (r?.verified === true) ? true : (r?.verified === false) ? false : null;
     const decimals = Number(r?.decimals ?? r?.token_decimals ?? 18) || 18;
@@ -2241,18 +2285,20 @@ function computeMetrics(approvals) {
       drainClass = "warn";
     }
 
-    // ── Human-readable risk reason ──────────────────────
+    // ── Human-readable risk reason (no drainLabel — shown separately in badge) ──
     let riskReason;
     if (!hasApproval) {
       riskReason = contractRisk >= 5
-        ? `⚠ High-risk contract detected — No active spending permission`
-        : `ℹ ${contractLabel} — No active spending permission`;
+        ? `⚠ High-risk contract — no active spending permission`
+        : `✅ No active approval`;
+    } else if (isUnlimited && contractRisk >= 9) {
+      riskReason = `🔴 Unlimited approval granted to flagged / malicious contract`;
     } else if (isUnlimited && contractRisk >= 5) {
-      riskReason = `🔴 Unlimited approval to ${contractLabel.toLowerCase()} — ${drainLabel}`;
+      riskReason = `🟠 Unlimited approval to unverified contract`;
     } else if (isUnlimited) {
-      riskReason = `🟡 Unlimited approval to ${contractLabel.toLowerCase()} — ${drainLabel}`;
+      riskReason = `🟡 Unlimited approval to ${contractLabel.toLowerCase()}`;
     } else {
-      riskReason = `🟢 Capped approval (${contractLabel}) — ${drainLabel}`;
+      riskReason = `🟢 Capped approval — ${contractLabel.toLowerCase()}`;
     }
 
     // ── Risk Classification (for display badge) ─────────
@@ -2325,10 +2371,12 @@ function computeMetrics(approvals) {
     drainFast = true;
   }
 
-  const scoreLabel = score >= 85 ? "Protected"
-                   : score >= 70 ? "Exposed"
-                   : score >= 50 ? "Vulnerable"
-                   : "Critical";
+  // Score labels — translated via _t() at render time
+  const _scoreLabelKey = score >= 85 ? "score_protected"
+                       : score >= 70 ? "score_exposed"
+                       : score >= 50 ? "score_vulnerable"
+                       : "score_critical";
+  const scoreLabel = _scoreLabelKey; // key resolved at render time via fwGetScoreLabel()
 
   // ── Top Threats: sort by compositeRisk desc, active first
   const sorted = [...rows].sort((a, b) => {
@@ -2336,13 +2384,14 @@ function computeMetrics(approvals) {
     return b.compositeRisk - a.compositeRisk;
   });
 
-  // ── Threat items (top 5) ────────────────────────────────
-  const threats = sorted.slice(0, 5).map(r => ({
-    name:        r.spender ? fwShort(r.spender) : "Unknown",
+  // ── Threat items: sorted by risk, hard cap 50 for DOM perf ─
+  // Paginated in UI (10/page). canRevoke requires real 0x addresses.
+  const threats = sorted.slice(0, 50).map(r => ({
+    name:        (r.spender && r.spender.length > 5) ? fwShort(r.spender)
+                   : (r.symbol ? r.symbol + " Spender" : "Unknown Spender"),
     fullSpender: r.spender,
     token:       r.token,
     symbol:      r.symbol,
-    // Badge label: ONLY show High Risk if there's an active approval
     label:       !r.hasApproval
                    ? (r.contractRisk >= 5 ? "High-risk contract — no approval" : "No approval")
                    : r.displayRisk === "critical" ? "Critical"
@@ -2358,9 +2407,12 @@ function computeMetrics(approvals) {
     contractLabel: r.contractLabel,
     isUnlimited: r.isUnlimited,
     hasApproval: r.hasApproval,
-    canRevoke:   r.hasApproval && !!(r.token && r.spender),
+    // canRevoke: need BOTH addresses present (accept any 0x-prefixed, length ≥ 10)
+    canRevoke:   r.hasApproval
+                 && r.token   && /^0x[0-9a-fA-F]{10,}/.test(r.token)
+                 && r.spender && /^0x[0-9a-fA-F]{10,}/.test(r.spender),
     compositeRisk: r.compositeRisk,
-    tokens:      [r.symbol || "TOKEN"]   // kept for renderExposureMap compatibility
+    tokens:      [r.symbol || "TOKEN"]
   }));
 
   // Fix targets: only rows with ACTIVE approvals, sorted by composite risk
@@ -2715,7 +2767,7 @@ async function runLoadSequence(walletAddr, net, isDemo) {
   const relContent = document.getElementById("fwRelContent");
 
   if (!isDemo && fwAccessTier === "full") {
-    // Full access: show section + fetch real tx data
+    // Full access + real wallet: fetch and show REAL data only
     if (relSection) relSection.style.display = "block";
     const relSummaryEl = document.getElementById("fwRelSummary");
     if (relSummaryEl) relSummaryEl.innerHTML = "";
@@ -2725,20 +2777,10 @@ async function runLoadSequence(walletAddr, net, isDemo) {
       window.__fwRelations = relations;
       fwRenderRelations(net, relations);
     }).catch(() => {
-      if (relContent) relContent.innerHTML = '<div class="rel-empty">⚠ Could not fetch transaction history from API.</div>';
+      if (relContent) relContent.innerHTML = '<div class="rel-empty">⚠ Could not fetch transaction history. Check your connection and try again.</div>';
     });
-  } else if (!isDemo && fwAccessTier !== "full") {
-    // Free tier: show section with teaser cards (locked tx buttons)
-    // Use a set that looks plausible — will be replaced with real data after unlock
-    if (relSection) relSection.style.display = "block";
-    const freeDemoRels = [
-      {entity:{name:"PancakeSwap V2",type:"dex",tags:["verified","defi"]},address:"0x10ed43c718714eb63d5aa57b78b54704e256024e",in:3,out:12,txs:[{hash:"0xabc",dir:"out",ts:Date.now()-86400000},{hash:"0xdef",dir:"in",ts:Date.now()-2*86400000}],firstSeen:Date.now()-60*86400000,lastSeen:Date.now()-86400000},
-      {entity:{name:"1inch V5 BSC",type:"dex",tags:["aggregator","defi"]},address:"0x1111111254eeb25477b68fb85ed929f73a960582",in:0,out:5,txs:[{hash:"0x123",dir:"out",ts:Date.now()-3*86400000}],firstSeen:Date.now()-90*86400000,lastSeen:Date.now()-3*86400000},
-    ];
-    window.__fwRelations = freeDemoRels;
-    fwRenderRelations(net, freeDemoRels);
   } else if (isDemo) {
-    // Show demo relations to illustrate the feature
+    // Demo mode: show example relations with clearly-marked demo badge
     const demoRels = [
       {entity:{name:"PancakeSwap V2",type:"dex",tags:["verified","defi"]}, address:"0x10ed43c718714eb63d5aa57b78b54704e256024e", in:3, out:12, txs:[], firstSeen:Date.now()-60*86400000, lastSeen:Date.now()-86400000},
       {entity:{name:"1inch V5 BSC", type:"dex",tags:["aggregator","defi"]},address:"0x1111111254eeb25477b68fb85ed929f73a960582", in:0,  out:5,  txs:[], firstSeen:Date.now()-90*86400000, lastSeen:Date.now()-3*86400000},
@@ -2747,16 +2789,22 @@ async function runLoadSequence(walletAddr, net, isDemo) {
     ];
     window.__fwRelations = demoRels;
     fwRenderRelations(net, demoRels);
-  } else if (fwAccessTier !== "full") {
-    // Free tier: show teaser with limited info (no transaction details)
+  } else {
+    // Free tier + real wallet: show teaser only — NO fabricated data
     if (relSection) relSection.style.display = "block";
-    // Demo relations for free tier to show the feature exists
-    const freeDemoRels = [
-      {entity:{name:"PancakeSwap V2",type:"dex",tags:["verified","defi"]},address:"0x10ed43c718714eb63d5aa57b78b54704e256024e",in:3,out:12,txs:[],firstSeen:Date.now()-60*86400000,lastSeen:Date.now()-86400000},
-      {entity:{name:"1inch V5 BSC",type:"dex",tags:["aggregator","defi"]},address:"0x1111111254eeb25477b68fb85ed929f73a960582",in:0,out:5,txs:[],firstSeen:Date.now()-90*86400000,lastSeen:Date.now()-3*86400000},
-    ];
-    window.__fwRelations = freeDemoRels;
-    fwRenderRelations(net, freeDemoRels);
+    window.__fwRelations = [];
+    if (relContent) relContent.innerHTML = `
+      <div style="padding:20px 16px;text-align:center">
+        <div style="font-size:32px;margin-bottom:10px">🔗</div>
+        <div style="font-weight:800;font-size:15px;margin-bottom:6px">Wallet Relations</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+          Unlock Full Access to see which DEXes, CEXes, bridges and protocols<br>
+          your wallet has interacted with — including full transaction history.
+        </div>
+        <button class="fw-watch-submit" onclick="requestFullAccess()" style="font-size:11px;padding:8px 20px">
+          🔑 Unlock Full Access
+        </button>
+      </div>`;
   }
 }
 
@@ -3195,9 +3243,20 @@ async function fwVerifyPassport(encoded) {
   }
 })();
 // ── RENDER DASHBOARD ─────────────────────────────────────────────
+let _rdTimers = []; // track all renderDashboard timers
 function renderDashboard(wallet, d, tier) {
+  // Cancel any pending deferred renders from previous calls
+  _rdTimers.forEach(clearTimeout);
+  _rdTimers = [];
+
   fwCurrentScore = d.score;
   fixDone = [false, false, false];
+
+  // Clear previous threats immediately to release DOM nodes
+  const tlPrev = document.getElementById("threatsList");
+  if (tlPrev) tlPrev.innerHTML = "";
+  // Reset pagination state
+  _threatsAll = []; _threatsTier = tier; _threatsShown = 0;
 
   // Wallet badge
   document.getElementById("walletBadge").textContent = fwShort(wallet);
@@ -3210,23 +3269,24 @@ function renderDashboard(wallet, d, tier) {
   document.getElementById("blastAmt").textContent = d.blastDisplay;
   renderMeta("blastMeta", d.blastMeta);
 
-  // Time-to-Drain (always visible)
-  setTimeout(() => {
+  // Time-to-Drain
+  _rdTimers.push(setTimeout(() => {
     const el = document.getElementById("drainTime");
+    if (!el) return;
     el.textContent = d.drainTime;
     el.classList.toggle("drain-fast", !!d.drainFast);
     renderMeta("drainMeta", d.drainMeta);
-  }, 600);
+  }, 300));
 
   // Exposure Map
-  setTimeout(() => renderExposureMap(wallet, d.threats, tier), 400);
+  _rdTimers.push(setTimeout(() => renderExposureMap(wallet, d.threats, tier), 350));
 
-  // Threats
-  setTimeout(() => renderThreats(d.threats, tier), 600);
+  // Threats — deferred so DOM is free
+  _rdTimers.push(setTimeout(() => renderThreats(d.threats, tier), 500));
 
   // Fix Mode
   if (tier === "full") {
-    setTimeout(() => renderFixMode(d), 300);
+    _rdTimers.push(setTimeout(() => renderFixMode(d), 250));
   } else {
     renderFixGainPreview(d.score);
   }
@@ -3236,9 +3296,16 @@ function renderDashboard(wallet, d, tier) {
 
   // Rules
   renderRuleTemplates();
+
+  // Re-apply language translations to freshly-rendered dashboard elements
+  try {
+    const activeLang = document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
+    if (activeLang !== "en") fwSetLanguage(activeLang);
+  } catch {}
 }
 
 // ── SCORE GAUGE ───────────────────────────────────────────────────
+let _scoreAnimTimer = null; // track to cancel on re-render
 function animateScore(target, label, meta) {
   const circumference = 226.2;
   const fill  = document.getElementById("gaugeFill");
@@ -3250,15 +3317,19 @@ function animateScore(target, label, meta) {
   fill.style.stroke = color;
   dotEl.style.background = color;
 
+  // Cancel any previous animation to prevent multiple intervals
+  if (_scoreAnimTimer) { clearInterval(_scoreAnimTimer); _scoreAnimTimer = null; }
+
   let cur = 0;
   const step = target / 35;
-  const timer = setInterval(() => {
+  _scoreAnimTimer = setInterval(() => {
     cur = Math.min(cur + step, target);
     numEl.textContent = Math.round(cur);
     fill.style.strokeDashoffset = circumference - (circumference * cur / 100);
     if (cur >= target) {
-      clearInterval(timer);
-      labEl.textContent = label;
+      clearInterval(_scoreAnimTimer);
+      _scoreAnimTimer = null;
+      labEl.textContent = fwGetScoreLabel(label);
       renderMeta("scoreMeta", meta);
     }
   }, 28);
@@ -3276,8 +3347,8 @@ function renderExposureMap(wallet, threats, tier) {
   const W = 480, H = 260, cx = W/2, cy = H/2;
   const riskColor = { bad:"#ff4757", warn:"#ffd166", ok:"#3cffb0" };
 
-  // In free tier, show max 3 threats; full shows all 5
-  const visible = tier === "free" ? threats.slice(0, 3) : threats;
+  // Cap nodes: free=3, full=max 8 (more than 8 nodes in SVG is unreadable and slow)
+  const visible = tier === "free" ? threats.slice(0, 3) : threats.slice(0, 8);
   const n = visible.length;
   if (!n) { svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="rgba(244,246,255,.35)" font-size="13" font-family="system-ui">No spenders detected</text>`; return; }
 
@@ -3299,7 +3370,6 @@ function renderExposureMap(wallet, threats, tier) {
       <stop offset="0%" stop-color="rgba(0,229,255,.4)"/>
       <stop offset="100%" stop-color="rgba(0,229,255,.05)"/>
     </radialGradient>
-    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>`;
 
   visible.forEach((t, i) => {
@@ -3321,7 +3391,7 @@ function renderExposureMap(wallet, threats, tier) {
     const col = riskColor[t.risk] || "#888";
     const r   = t.risk === "bad" ? 22 : 17;
     h += `<circle cx="${p.x}" cy="${p.y}" r="${r+8}" fill="${col}" fill-opacity=".06"/>
-      <circle cx="${p.x}" cy="${p.y}" r="${r}" fill="rgba(5,6,10,.9)" stroke="${col}" stroke-width="1.5" filter="url(#glow)"/>
+      <circle cx="${p.x}" cy="${p.y}" r="${r}" fill="rgba(5,6,10,.9)" stroke="${col}" stroke-width="1.5"/>
       <text x="${p.x}" y="${p.y}" text-anchor="middle" dominant-baseline="middle" fill="${col}" font-size="8" font-family="system-ui" font-weight="800">${esc(t.label).split(" ").map(w=>w[0]).join("").slice(0,4)}</text>`;
   });
 
@@ -3344,66 +3414,95 @@ function renderExposureMap(wallet, threats, tier) {
 }
 
 // ── THREATS LIST ──────────────────────────────────────────────────
+// Paginated: render PAGE_SIZE at a time to avoid DOM overload
+const THREATS_PAGE = 10;
+let _threatsAll = [], _threatsTier = "free", _threatsShown = 0;
+
 function renderThreats(threats, tier) {
+  _threatsAll   = threats;
+  _threatsTier  = tier;
+  _threatsShown = 0;
   const el = document.getElementById("threatsList");
   if (!el) return;
   if (!threats.length) {
     el.innerHTML = `<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">✅ No significant threats detected.</div>`;
     return;
   }
-  el.innerHTML = threats.map((t, i) => {
-    const isLocked = tier === "free" && i >= 3;
-    // Style class based on severity
-    const itemClass = !t.hasApproval ? "t-info"
-                    : t.compositeRisk >= 40 ? "t-critical"
-                    : t.compositeRisk >= 10 ? "t-high" : "";
+  el.innerHTML = "";
+  _threatsAppendPage();
+}
 
-    // Approval status badge
-    const approvalBadge = t.hasApproval
-      ? (t.isUnlimited
-          ? `<span class="sig bad"><span class="sig-dot"></span>∞ Unlimited</span>`
-          : `<span class="sig warn"><span class="sig-dot"></span>Capped</span>`)
-      : `<span class="sig ok"><span class="sig-dot"></span>No Approval</span>`;
-
-    // Contract badge
-    const contractBadge = `<span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.contractLabel||t.label)}</span>`;
-
-    // Drain row — only show if has approval
-    const drainRow = t.hasApproval
-      ? `<span class="threat-drain ${t.risk==="bad"?"bad":t.isUnlimited?"warn":"ok"}">${esc(t.drainLabel||"—")}</span>`
-      : `<span class="threat-drain ok">No drain risk — no active approval</span>`;
-
-    // Token chip
-    const tokenChip = t.symbol ? `<span class="threat-chip">Token: ${esc(t.symbol)}</span>` : "";
-
-    // Action button
-    const actionBtn = (tier === "full" && t.canRevoke)
-      ? `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`
-      : (tier === "free" && t.hasApproval
-            ? `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`
-            : "");
-
-    return `
-    <div class="threat-item ${itemClass}" style="${isLocked ? "filter:blur(5px);pointer-events:none;user-select:none" : ""}">
-      <div class="threat-top">
-        <div style="flex:1;min-width:0">
-          <div class="threat-name">${esc(t.name)}</div>
-          <div class="threat-meta" style="margin-top:5px">
-            ${approvalBadge}
-            ${contractBadge}
-            ${tokenChip}
-          </div>
-        </div>
-        <div style="text-align:right;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          ${actionBtn}
+function _buildThreatCard(t, i, tier) {
+  const isLocked = tier !== "full" && i >= 3;
+  const itemClass = !t.hasApproval ? "t-info"
+                  : t.compositeRisk >= 40 ? "t-critical"
+                  : t.compositeRisk >= 10 ? "t-high" : "";
+  const approvalBadge = t.hasApproval
+    ? (t.isUnlimited
+        ? `<span class="sig bad"><span class="sig-dot"></span>∞ Unlimited</span>`
+        : `<span class="sig warn"><span class="sig-dot"></span>Capped</span>`)
+    : `<span class="sig ok"><span class="sig-dot"></span>No Approval</span>`;
+  const contractBadge = `<span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.contractLabel||t.label)}</span>`;
+  const drainRow = t.hasApproval
+    ? `<span class="threat-drain ${t.risk==="bad"?"bad":t.isUnlimited?"warn":"ok"}">${esc(t.drainLabel||"—")}</span>`
+    : `<span class="threat-drain ok">No drain risk — no active approval</span>`;
+  const tokenChip = t.symbol ? `<span class="threat-chip">Token: ${esc(t.symbol)}</span>` : "";
+  let actionBtn = "";
+  if (tier === "full" && t.canRevoke) {
+    actionBtn = `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`;
+  } else if (tier === "full" && t.hasApproval && !t.canRevoke) {
+    // Has approval but no spender address from API — link to BSCScan approval checker
+    const explorerBase = (fwNet === "eth") ? "https://etherscan.io" : (fwNet === "polygon") ? "https://polygonscan.com" : "https://bscscan.com";
+    const tokenLink = t.token ? `${explorerBase}/token/${t.token}#tokenApprovalChecked` : `${explorerBase}/tokenapprovalchecker`;
+    actionBtn = `<a href="${tokenLink}" target="_blank" rel="noopener"
+      class="btn-fix-small" style="text-decoration:none;border-color:rgba(0,229,255,.3);color:var(--cyan)">
+      Check ↗</a>`;
+  } else if (tier === "free" && t.hasApproval) {
+    actionBtn = `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`;
+  }
+  const lockedAttr = isLocked ? ' data-locked="1"' : '';
+  return `<div class="threat-item ${itemClass}${isLocked?" locked-card":""}"${lockedAttr}>
+    <div class="threat-top">
+      <div style="flex:1;min-width:0">
+        <div class="threat-name">${esc(t.name)}</div>
+        <div class="threat-meta" style="margin-top:5px">
+          ${approvalBadge}${contractBadge}${tokenChip}
         </div>
       </div>
-      <div class="threat-why">${esc(t.why)}</div>
-      <div class="threat-info-row">
-        ${drainRow}
+      <div style="text-align:right;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        ${actionBtn}
       </div>
-    </div>`;
-  }).join("");
+    </div>
+    <div class="threat-info-row">${drainRow}</div>
+  </div>`;
+}
+
+function _threatsAppendPage() {
+  const el = document.getElementById("threatsList");
+  if (!el) return;
+  // Remove old "Show More" button if present
+  document.getElementById("threatsShowMoreBtn")?.remove();
+
+  const end = Math.min(_threatsShown + THREATS_PAGE, _threatsAll.length);
+  const frag = document.createDocumentFragment();
+  for (let i = _threatsShown; i < end; i++) {
+    const div = document.createElement("div");
+    div.innerHTML = _buildThreatCard(_threatsAll[i], i, _threatsTier);
+    frag.appendChild(div.firstElementChild);
+  }
+  el.appendChild(frag);
+  _threatsShown = end;
+
+  if (_threatsShown < _threatsAll.length) {
+    const remaining = _threatsAll.length - _threatsShown;
+    const btn = document.createElement("button");
+    btn.id = "threatsShowMoreBtn";
+    btn.className = "btn-fix-small";
+    btn.style.cssText = "display:block;width:100%;margin-top:10px;padding:10px;border-color:rgba(255,255,255,.15);color:var(--muted)";
+    btn.textContent = `Show ${Math.min(remaining, THREATS_PAGE)} more of ${remaining} remaining ↓`;
+    btn.onclick = _threatsAppendPage;
+    el.appendChild(btn);
+  }
 }
 
 // ── FIX MODE ──────────────────────────────────────────────────────
@@ -3671,7 +3770,9 @@ async function undoFix(step) {
 
 // Re-fetch full approvals for already-unlocked users (called automatically on unlock)
 async function fwRescanFull() {
-  if (!fwWallet || !fwNet || fwAccessTier !== "full" || !_fwAccessVerified) return;
+  // Primary guard: _fwAccessVerified (closure var, tamper-proof)
+  // fwAccessTier check is secondary — may lag if let binding quirk
+  if (!fwWallet || !fwNet || !_fwAccessVerified) return;
   if (fwWallet === DEMO_WALLET) return;
   const scoreRing = document.getElementById("scoreVal");
   if (scoreRing) scoreRing.textContent = "…";
@@ -3687,22 +3788,30 @@ async function fwRescanFull() {
     renderDashboard(fwWallet, metrics, "full");
     renderFixMode(metrics);
     fwInitExport();
+    // Re-apply language after fresh render
+    try {
+      const al = document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
+      if (al !== "en") fwSetLanguage(al);
+    } catch {}
     showPassportMsg("✅ Full data loaded — revoke buttons are ready.");
   } catch(e) {
-    // On failure: show one prominent retry banner, don't clutter per-card
-    if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
+    // On failure: show retry banner ONLY — never re-render with preview (no-address) data
+    // Re-rendering with old fwScanData would show canRevoke=false since it has no addresses
     const tlEl2 = document.getElementById("threatsList");
-    if (tlEl2) tlEl2.insertAdjacentHTML("afterbegin", `
-      <div style="padding:10px 14px;border-radius:10px;background:rgba(255,193,7,.07);
-           border:1px solid rgba(255,193,7,.25);margin-bottom:10px;
+    if (tlEl2) tlEl2.innerHTML = `
+      <div style="padding:14px 16px;border-radius:12px;background:rgba(255,193,7,.07);
+           border:1px solid rgba(255,193,7,.25);
            display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <span style="font-size:12px;color:#ffd166">⚠ Could not load full approval data.</span>
-        <button onclick="fwRescanFull()" style="padding:5px 12px;border-radius:8px;
+        <span style="font-size:13px;color:#ffd166">⚠ Could not load full approval data. Check your connection.</span>
+        <button onclick="fwRescanFull()" style="padding:6px 14px;border-radius:8px;
           border:1px solid rgba(255,193,7,.4);background:rgba(255,193,7,.08);
-          color:#ffd166;font-size:11px;font-weight:700;cursor:pointer">
+          color:#ffd166;font-size:12px;font-weight:700;cursor:pointer;flex:0 0 auto">
           Retry ↺
         </button>
-      </div>`);
+      </div>`;
+    // Still update UI chrome (score ring etc) without affecting threats
+    const scoreRing2 = document.getElementById("scoreVal");
+    if (scoreRing2) scoreRing2.textContent = fwScanData?.score ?? "—";
   }
 }
 
@@ -4046,18 +4155,24 @@ try {
 } catch(e) {}
 
 // Periodic integrity check — detect if state was tampered
-setInterval(() => {
-  const tier = typeof fwAccessTier !== 'undefined' ? fwAccessTier : 'free';
-  if (tier === 'full' && !_fwAccessVerified) {
-    // State mismatch — someone forced fwAccessTier without passing PASS check
-    // Re-lock the UI silently
-    document.getElementById("fixLockOverlay")    ?.style && (document.getElementById("fixLockOverlay").style.display    = "flex");
-    document.getElementById("passportLockOverlay")?.style && (document.getElementById("passportLockOverlay").style.display = "flex");
-    document.getElementById("tierBadge")?.style  && (document.getElementById("tierBadge").style.display  = "none");
-    document.getElementById("btnTopAccess")?.style && (document.getElementById("btnTopAccess").style.display = "block");
-    fwUpdateExportVisibility();
-  }
-}, 3500);
+// Security anti-tamper check — only runs when dashboard is visible
+let _secCheckInterval = null;
+function _startSecCheck() {
+  if (_secCheckInterval) return;
+  _secCheckInterval = setInterval(() => {
+    const dash = document.getElementById("dashboard");
+    if (!dash || dash.style.display === "none") return; // skip when hidden
+    const tier = typeof fwAccessTier !== 'undefined' ? fwAccessTier : 'free';
+    if (tier === 'full' && !_fwAccessVerified) {
+      document.getElementById("fixLockOverlay")    ?.style && (document.getElementById("fixLockOverlay").style.display    = "flex");
+      document.getElementById("passportLockOverlay")?.style && (document.getElementById("passportLockOverlay").style.display = "flex");
+      document.getElementById("tierBadge")?.style  && (document.getElementById("tierBadge").style.display  = "none");
+      document.getElementById("btnTopAccess")?.style && (document.getElementById("btnTopAccess").style.display = "block");
+      fwUpdateExportVisibility();
+    }
+  }, 5000); // every 5s instead of 3.5s — less CPU
+}
+_startSecCheck();
 function getDemoApprovals() {
   return [
     { token:"0xdAC17F958D2ee523a2206206994597C13D831ec7", spender:"0x1111111254eeb25477b68fb85ed929f73a960582", allowance:"115792089237316195423570985008687907853269984665640564039457584007913129639935", symbol:"USDT", risk:"medium", verified:true,  decimals:6 },
@@ -4471,70 +4586,259 @@ window.fwApiCopy             = fwApiCopy;
 // ══════════════════════════════════════════════════════════════
 const FW_TRANSLATIONS = {
   en: {
-    fw_badge: "FIREWALL",
-    btn_full_access: "🔑 Full Access",
-    btn_back: "← Back to Hub",
-    hero_kicker: "🔥 Wallet Firewall",
-    hero_title: "Turn any wallet into<br>a protected wallet.",
-    hero_sub: "Scan your approvals, reveal your Blast Radius, get a guided Fix Plan — and generate a shareable Proof Passport. In 60 seconds.",
-    scan_placeholder: "0x... wallet address",
-    btn_run: "Run Firewall",
+    // topbar
+    fw_badge:"FIREWALL", btn_full_access:"🔑 Full Access", btn_back:"← Back to Hub",
+    // hero
+    hero_kicker:"🔥 Wallet Firewall",
+    hero_title:"Turn any wallet into<br>a protected wallet.",
+    hero_sub:"Scan your approvals, reveal your Blast Radius, get a guided Fix Plan — and generate a shareable Proof Passport. In 60 seconds.",
+    scan_placeholder:"0x... wallet address", btn_run:"Run Firewall",
+    // loading
+    step1:"Fetching approval logs", step2:"Analyzing spender risk",
+    step3:"Calculating Blast Radius", step4:"Building Fix Plan",
+    // notices
+    notice_live_title:"Live scan.", notice_live_body:"Read-only on-chain data. No transactions made.",
+    notice_demo_title:"Demo mode:", notice_demo_body:'Showing sample data. Enter a real wallet address and click "Run Firewall" to scan live.',
+    // section titles
+    sec_status:"Firewall Status", sec_fix:"Fix Mode", sec_passport:"Wallet Passport",
+    sec_rules:"Firewall Rules", sec_relations:"🔗 Wallet Relations", sec_export:"📊 Export Report",
+    sec_watch:"👁 Wallet Watch", sec_threats:"🚨 Threat Feed", sec_api:"🔌 Developer API",
+    // status cards
+    kicker_score:"Firewall Score", kicker_blast:"💥 Blast Radius", kicker_drain:"⏱ Time-to-Drain",
+    blast_sub:"max drainable if top spender exploited",
+    drain_sub:"estimated drain time for exposed assets",
+    // map / threats
+    title_map:"🗺 Exposure Map", map_sub:"Wallet → Spenders → Tokens. Node size = risk weight.",
+    title_threats:"🎯 Top Threats",
+    // fix mode
+    fix_lock_msg:"Fix Mode requires Full Access<br>(hold 1 PASS token)",
+    btn_unlock_fix:"Unlock Fix Mode",
+    fix_title:"🛠 3-Step Fix Plan",
+    fix_sub:"Complete these actions to improve your Firewall Score.",
+    fix1_title:"Revoke Top Spender", fix2_title:"Revoke All Unlimited", fix3_title:"Lock Risky dApp",
+    // passport
+    passport_lock_msg:"Wallet Passport requires Full Access",
+    passport_share_title:"Share your Wallet Passport",
+    // watch
+    watch_title:"Track Multiple Wallets",
+    // Score labels
+    score_protected:"Protected", score_exposed:"Exposed",
+    score_vulnerable:"Vulnerable", score_critical:"Critical",
+    // Scan notice
+    scan_running:"Scanning wallet…",
+    // access gate
+    gate_msg:'Hold <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.',
+    btn_rescan:"Scan another wallet",
+    fix_impact:"The 3 most impactful actions to secure your wallet.",
+    passport_copy_sub:"Your cryptographic proof of security. Share to prove you've secured your wallet.",
+    export_sub:"Download your complete scan as CSV or JSON, or copy a shareable report.",
+    rel_title:"Protocol & Exchange Relationships",
+    watch_limit_label:"(Free: 2 wallets max — Unlock for up to 10)",
+    tier_badge:"✓ FULL ACCESS",
   },
   zh: {
-    fw_badge: "防火墙",
-    btn_full_access: "🔑 完整访问",
-    btn_back: "← 返回主页",
-    hero_kicker: "🔥 钱包防火墙",
-    hero_title: "让每个钱包都安全。",
-    hero_sub: "扫描您的授权、揭示爆炸半径、获得修复计划，60秒内生成可分享的安全护照。",
-    scan_placeholder: "0x... 钱包地址",
-    btn_run: "运行防火墙",
+    fw_badge:"防火墙", btn_full_access:"🔑 完整访问", btn_back:"← 返回主页",
+    hero_kicker:"🔥 钱包防火墙", hero_title:"让每个钱包都安全。",
+    hero_sub:"扫描您的授权、揭示爆炸半径、获得修复计划，60秒内生成可分享的安全护照。",
+    scan_placeholder:"0x... 钱包地址", btn_run:"运行防火墙",
+    step1:"获取授权日志", step2:"分析风险合约", step3:"计算爆炸半径", step4:"生成修复计划",
+    notice_live_title:"实时扫描。", notice_live_body:"只读链上数据，不产生任何交易。",
+    notice_demo_title:"演示模式：", notice_demo_body:"显示示例数据。输入真实钱包地址并点击「运行防火墙」进行实时扫描。",
+    sec_status:"防火墙状态", sec_fix:"修复模式", sec_passport:"钱包护照",
+    sec_rules:"防火墙规则", sec_relations:"🔗 钱包关联", sec_export:"📊 导出报告",
+    sec_watch:"👁 钱包监控", sec_threats:"🚨 威胁动态", sec_api:"🔌 开发者API",
+    kicker_score:"防火墙评分", kicker_blast:"💥 爆炸半径", kicker_drain:"⏱ 清空时间",
+    blast_sub:"顶级授权方被利用时的最大可清空金额",
+    drain_sub:"暴露资产的预估清空时间",
+    title_map:"🗺 风险地图", map_sub:"钱包 → 授权方 → 代币。节点大小 = 风险权重。",
+    title_threats:"🎯 主要威胁",
+    fix_lock_msg:"修复模式需要完整访问权限<br>（持有1个PASS代币）",
+    btn_unlock_fix:"解锁修复模式",
+    fix_title:"🛠 三步修复计划",
+    fix_sub:"完成以下操作以提升您的防火墙评分。",
+    fix1_title:"撤销顶级授权方", fix2_title:"撤销所有无限授权", fix3_title:"锁定高风险DApp",
+    passport_lock_msg:"钱包护照需要完整访问权限",
+    passport_share_title:"分享您的钱包护照",
+    watch_title:"追踪多个钱包",
+    score_protected:"受保护", score_exposed:"已暴露", score_vulnerable:"存在漏洞", score_critical:"危急",
+    gate_msg:'持有 <strong style="color:var(--cyan)">1个PASS代币</strong> 以解锁修复模式、完整爆炸半径、钱包护照和真实撤销操作。',
+    btn_rescan:"扫描其他钱包",
+    fix_impact:"以下3项操作将显著提升您的安全评分。",
+    passport_copy_sub:"您的安全加密证明。分享以证明您已保护好钱包。",
+    export_sub:"下载CSV或JSON格式的完整扫描报告，或复制可分享的摘要。",
+    rel_title:"协议和交易所关系",
+    watch_limit_label:"（免费: 最多2个钱包 — 解锁可追踪10个）",
+    tier_badge:"✓ 完整访问",
   },
   ar: {
-    fw_badge: "جدار الحماية",
-    btn_full_access: "🔑 وصول كامل",
-    btn_back: "→ العودة للرئيسية",
-    hero_kicker: "🔥 جدار حماية المحفظة",
-    hero_title: "حوّل أي محفظة إلى محفظة محمية.",
-    hero_sub: "افحص الموافقات، اكشف نطاق الضرر، واحصل على خطة إصلاح موجّهة خلال 60 ثانية.",
-    scan_placeholder: "عنوان المحفظة 0x...",
-    btn_run: "تشغيل الجدار",
+    fw_badge:"جدار الحماية", btn_full_access:"🔑 وصول كامل", btn_back:"→ العودة للرئيسية",
+    hero_kicker:"🔥 جدار حماية المحفظة", hero_title:"حوّل أي محفظة إلى محفظة محمية.",
+    hero_sub:"افحص الموافقات، اكشف نطاق الضرر، واحصل على خطة إصلاح موجّهة خلال 60 ثانية.",
+    scan_placeholder:"عنوان المحفظة 0x...", btn_run:"تشغيل الجدار",
+    step1:"جلب سجلات الموافقات", step2:"تحليل مخاطر العقود", step3:"حساب نطاق الضرر", step4:"بناء خطة الإصلاح",
+    notice_live_title:"فحص مباشر.", notice_live_body:"بيانات للقراءة فقط. لا معاملات.",
+    notice_demo_title:"وضع العرض التجريبي:", notice_demo_body:'بيانات نموذجية. أدخل عنوان محفظة حقيقية واضغط "تشغيل الجدار" للفحص الفعلي.',
+    sec_status:"حالة الجدار", sec_fix:"وضع الإصلاح", sec_passport:"جواز المحفظة",
+    sec_rules:"قواعد الجدار", sec_relations:"🔗 علاقات المحفظة", sec_export:"📊 تصدير التقرير",
+    sec_watch:"👁 مراقبة المحافظ", sec_threats:"🚨 خلاصة التهديدات", sec_api:"🔌 واجهة المطورين",
+    kicker_score:"نقاط الجدار", kicker_blast:"💥 نطاق الضرر", kicker_drain:"⏱ وقت التصفية",
+    blast_sub:"أقصى مبلغ قابل للسحب عند استغلال أكبر مفوَّض",
+    drain_sub:"الوقت المقدر لتصفية الأصول المكشوفة",
+    title_map:"🗺 خريطة التعرض", map_sub:"المحفظة ← المفوَّضون ← الرموز. حجم العقدة = وزن المخاطر.",
+    title_threats:"🎯 أبرز التهديدات",
+    fix_lock_msg:"وضع الإصلاح يتطلب وصولاً كاملاً<br>（امتلك رمز PASS واحداً）",
+    btn_unlock_fix:"فتح وضع الإصلاح",
+    fix_title:"🛠 خطة إصلاح من 3 خطوات",
+    fix_sub:"أكمل هذه الإجراءات لتحسين نقاط الجدار.",
+    fix1_title:"إلغاء أكبر مفوَّض", fix2_title:"إلغاء كل الموافقات غير المحدودة", fix3_title:"حظر DApp عالي الخطورة",
+    passport_lock_msg:"جواز المحفظة يتطلب وصولاً كاملاً",
+    passport_share_title:"شارك جواز محفظتك",
+    watch_title:"تتبع محافظ متعددة",
+    score_protected:"محمي", score_exposed:"مكشوف", score_vulnerable:"ضعيف", score_critical:"حرج",
+    gate_msg:'امتلك <strong style="color:var(--cyan)">رمز PASS واحداً</strong> لفتح وضع الإصلاح ونطاق الضرر الكامل وجواز المحفظة وإجراءات الإلغاء الحقيقية.',
+    btn_rescan:"فحص محفظة أخرى",
+    fix_impact:"الإجراءات الثلاثة الأكثر تأثيراً لتأمين محفظتك.",
+    passport_copy_sub:"إثباتك التشفيري على الأمان. شاركه لإثبات أنك أمّنت محفظتك.",
+    export_sub:"حمّل الفحص كاملاً بصيغة CSV أو JSON، أو انسخ تقريراً قابلاً للمشاركة.",
+    rel_title:"علاقات البروتوكولات والبورصات",
+    watch_limit_label:"(مجاني: 2 محافظ كحد أقصى — الفتح يتيح 10)",
+    tier_badge:"✓ وصول كامل",
   },
   ru: {
-    fw_badge: "ФАЙРВОЛ",
-    btn_full_access: "🔑 Полный Доступ",
-    btn_back: "← Назад",
-    hero_kicker: "🔥 Файрвол Кошелька",
-    hero_title: "Защити любой кошелёк за секунды.",
-    hero_sub: "Сканируй одобрения, узнай зону риска, получи план исправления — и сгенерируй паспорт безопасности. За 60 секунд.",
-    scan_placeholder: "0x... адрес кошелька",
-    btn_run: "Запустить",
+    fw_badge:"ФАЙРВОЛ", btn_full_access:"🔑 Полный Доступ", btn_back:"← Назад",
+    hero_kicker:"🔥 Файрвол Кошелька", hero_title:"Защити любой кошелёк за секунды.",
+    hero_sub:"Сканируй одобрения, узнай зону риска, получи план исправления — и сгенерируй паспорт безопасности. За 60 секунд.",
+    scan_placeholder:"0x... адрес кошелька", btn_run:"Запустить",
+    step1:"Загрузка данных об одобрениях", step2:"Анализ рисков контрактов",
+    step3:"Расчёт зоны поражения", step4:"Формирование плана защиты",
+    notice_live_title:"Живое сканирование.", notice_live_body:"Только чтение. Транзакции не создаются.",
+    notice_demo_title:"Демо-режим:", notice_demo_body:'Тестовые данные. Введи адрес кошелька и нажми "Запустить" для реального сканирования.',
+    sec_status:"Статус Файрвола", sec_fix:"Режим Исправления", sec_passport:"Паспорт Кошелька",
+    sec_rules:"Правила Файрвола", sec_relations:"🔗 Связи Кошелька", sec_export:"📊 Экспорт Отчёта",
+    sec_watch:"👁 Слежение", sec_threats:"🚨 Лента Угроз", sec_api:"🔌 API Разработчика",
+    kicker_score:"Оценка Файрвола", kicker_blast:"💥 Зона Поражения", kicker_drain:"⏱ Время Опустошения",
+    blast_sub:"максимум потерь при атаке главного получателя одобрения",
+    drain_sub:"расчётное время опустошения открытых активов",
+    title_map:"🗺 Карта Рисков", map_sub:"Кошелёк → Получатели → Токены. Размер узла = вес риска.",
+    title_threats:"🎯 Топ Угроз",
+    fix_lock_msg:"Режим исправления требует полного доступа<br>（нужен 1 PASS-токен）",
+    btn_unlock_fix:"Разблокировать Режим",
+    fix_title:"🛠 3-шаговый план защиты",
+    fix_sub:"Выполни эти действия, чтобы улучшить оценку файрвола.",
+    fix1_title:"Отозвать главный доступ", fix2_title:"Отозвать все безлимитные доступы", fix3_title:"Заблокировать опасный dApp",
+    passport_lock_msg:"Паспорт кошелька требует полного доступа",
+    passport_share_title:"Поделиться паспортом кошелька",
+    watch_title:"Отслеживать несколько кошельков",
+    score_protected:"Защищён", score_exposed:"Уязвим", score_vulnerable:"Критический", score_critical:"Опасность",
+    gate_msg:'Держи <strong style="color:var(--cyan)">1 PASS-токен</strong>, чтобы разблокировать Режим исправления, полную зону риска, Паспорт кошелька и реальный отзыв.',
+    btn_rescan:"Сканировать другой кошелёк",
+    fix_impact:"3 наиболее важных действия для защиты кошелька.",
+    passport_copy_sub:"Твоё криптографическое доказательство безопасности. Поделись, чтобы подтвердить, что кошелёк защищён.",
+    export_sub:"Скачай полный отчёт в CSV или JSON, или скопируй краткое резюме.",
+    rel_title:"Связи протоколов и бирж",
+    watch_limit_label:"(Бесплатно: макс 2 кошелька — разблокируй до 10)",
+    tier_badge:"✓ ПОЛНЫЙ ДОСТУП",
   }
 };
 
+// Score label lookup (translated)
+function fwGetScoreLabel(key) {
+  const dict = FW_TRANSLATIONS[_fwActiveLang] || FW_TRANSLATIONS.en;
+  return dict[key] || dict["score_" + key.toLowerCase()] || key;
+}
+
+// Store active language for dynamic content
+let _fwActiveLang = "en";
 function fwSetLanguage(lang) {
+  _fwActiveLang = lang;
   const dict = FW_TRANSLATIONS[lang] || FW_TRANSLATIONS.en;
   document.body.classList.add("lang-switching");
-  // Apply RTL for Arabic
   document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   document.body.classList.toggle("lang-rtl", lang === "ar");
-  // Apply translations
+  // Static elements
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     if (dict[key] !== undefined) el.innerHTML = dict[key];
   });
-  // Apply placeholder
+  // Input placeholder + Run button
   const walletInput = document.getElementById("walletInput");
   if (walletInput && dict.scan_placeholder) walletInput.placeholder = dict.scan_placeholder;
   const btnRun = document.getElementById("btnRunFirewall");
   if (btnRun && dict.btn_run) btnRun.textContent = dict.btn_run;
+  // Tier badge
+  const tierBadge = document.getElementById("tierBadge");
+  if (tierBadge && dict.tier_badge) tierBadge.textContent = dict.tier_badge;
+  // Re-render threats if dashboard is visible (so badge labels update)
+  if (document.getElementById("dashboard")?.style.display !== "none") {
+    if (_threatsAll?.length) _rebuildThreatsForLang();
+  }
   // Mark active button
   document.querySelectorAll(".lang-btn").forEach(btn => {
     btn.classList.toggle("active", btn.getAttribute("data-lang") === lang);
   });
-  // Store preference
   try { localStorage.setItem("cx_lang", lang); } catch {}
   setTimeout(() => document.body.classList.remove("lang-switching"), 280);
+}
+
+// Translate dynamic threat card strings using current language
+function _t(key) {
+  return (FW_TRANSLATIONS[_fwActiveLang] || FW_TRANSLATIONS.en)[key] || (FW_TRANSLATIONS.en[key] || key);
+}
+
+// Re-render threat cards after language change (updates badge strings)
+function _rebuildThreatsForLang() {
+  // Rebuild threats array with translated strings
+  const retranslated = _threatsAll.map(t => ({
+    ...t,
+    why: _translateRiskReason(t.why, t),
+    drainLabel: _translateDrainLabel(t.drainLabel, t),
+  }));
+  _threatsAll = retranslated;
+  const el = document.getElementById("threatsList");
+  if (el) { el.innerHTML = ""; _threatsShown = 0; _threatsAppendPage(); }
+}
+
+function _translateRiskReason(en_reason, t) {
+  const lang = _fwActiveLang;
+  if (lang === "en") return en_reason;
+  if (!t.hasApproval) {
+    const labels = {
+      zh: t.compositeRisk >= 5 ? "⚠ 检测到高风险合约 — 无活跃支出权限" : `ℹ ${t.contractLabel} — 无活跃支出权限`,
+      ar: t.compositeRisk >= 5 ? "⚠ تم اكتشاف عقد عالي المخاطر — لا توجد صلاحية إنفاق نشطة" : `ℹ ${t.contractLabel} — لا موافقة نشطة`,
+      ru: t.compositeRisk >= 5 ? "⚠ Обнаружен высокорискованный контракт — нет активного разрешения" : `ℹ ${t.contractLabel} — нет активного разрешения`,
+    };
+    return labels[lang] || en_reason;
+  }
+  if (t.isUnlimited && t.compositeRisk >= 40) {
+    const labels = {
+      zh: `🔴 无限授权给恶意/标记合约 — ${t.symbol}余额100%可被清空`,
+      ar: `🔴 موافقة غير محدودة لعقد خطير — 100% من رصيد ${t.symbol} قابل للسحب`,
+      ru: `🔴 Безлимитное одобрение вредоносному контракту — 100% баланса ${t.symbol} могут быть слиты`,
+    };
+    return labels[lang] || en_reason;
+  }
+  if (t.isUnlimited) {
+    const labels = {
+      zh: `⚠ 无限授权 — ${t.symbol}余额100%可被清空`,
+      ar: `⚠ موافقة غير محدودة — 100% من رصيد ${t.symbol} في خطر`,
+      ru: `⚠ Безлимитное одобрение — 100% баланса ${t.symbol} под угрозой`,
+    };
+    return labels[lang] || en_reason;
+  }
+  return en_reason;
+}
+
+function _translateDrainLabel(en_label, t) {
+  const lang = _fwActiveLang;
+  if (lang === "en" || !t) return en_label;
+  if (!t.hasApproval) {
+    return { zh: "无清空风险 — 无活跃授权", ar: "لا خطر تصفية — لا موافقة نشطة", ru: "Риска слива нет — нет активного разрешения" }[lang] || en_label;
+  }
+  if (t.isUnlimited) {
+    const sym = t.symbol || "TOKEN";
+    return { zh: `${sym}余额100%可被清空`, ar: `100% من رصيد ${sym} قابل للتصفية`, ru: `100% баланса ${sym} могут быть слиты` }[lang] || en_label;
+  }
+  return { zh: "部分 — 有限额授权", ar: "جزئي — حد محدد للموافقة", ru: "Частично — ограниченное разрешение" }[lang] || en_label;
 }
 
 // Init language switcher
