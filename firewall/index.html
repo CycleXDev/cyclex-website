@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1533,7 +1532,6 @@ polygon: {
     explorerTx: h=>`https://polygonscan.com/tx/${h}`
   }
 };
-
 // ── ENSURE CHAIN (multi-network aware) ───────────────────────
 async function fwEnsureChain(net, provider) {
   const chain = FW_CHAINS[net];
@@ -1565,107 +1563,45 @@ async function fwFetchWalletTxs(net, address) {
     const u = new URL("/api/getWalletTxs", API_BASE);
     u.searchParams.set("net", net);
     u.searchParams.set("address", address);
-
     const ctrl = new AbortController();
-    const timer = setTimeout(()=>ctrl.abort(), 12000);
-
+    const timer = setTimeout(()=>ctrl.abort(), 14000);
     try {
-      const res = await fetch(u.toString(), { method:"GET", signal:ctrl.signal });
+      const res = await fetch(u.toString(), {method:"GET", signal:ctrl.signal});
       if (!res.ok) return [];
       const data = await res.json();
-
-      const arr = Array.isArray(data) ? data : (data?.result || data?.data || []);
-      // ✅ HARD CAP: prevent browser death
-      return arr.slice(0, 2500);
+      return Array.isArray(data) ? data : (data?.result || data?.data || []);
     } finally { clearTimeout(timer); }
   } catch { return []; }
 }
 
 // ── ANALYSE RELATIONSHIPS ─────────────────────────────────────
-async function fwAnalyzeRelations(net, walletAddr, txs) {
-  const tagged = FW_TAGGED_ENTITIES?.[net] || {};
+function fwAnalyzeRelations(net, walletAddr, txs) {
+  const tagged = FW_TAGGED_ENTITIES[net] || {};
   const map = {};
   const walletNorm = (walletAddr||"").toLowerCase().trim();
 
-  const list = Array.isArray(txs) ? txs : [];
-  const CHUNK = 400; // tune
-  const MAX = Math.min(list.length, 2500);
-
-  for (let i=0; i<MAX; i++) {
-    const tx = list[i];
+  for (const tx of txs) {
     const from = (tx.from||"").toLowerCase().trim();
     const to   = (tx.to||"").toLowerCase().trim();
     const ts   = Number(tx.timeStamp||tx.timestamp||0) * 1000;
     if (!from || !to) continue;
 
     let addr=null, dir=null;
-    if (from===walletNorm && tagged[to]) { addr=to; dir="out"; }
-    else if (to===walletNorm && tagged[from]) { addr=from; dir="in"; }
+    if (from===walletNorm && tagged[to])   { addr=to;   dir="out"; }
+    else if (to===walletNorm && tagged[from]) { addr=from; dir="in";  }
     if (!addr) continue;
 
-    if (!map[addr]) map[addr] = {
-      entity: tagged[addr], address: addr, in:0, out:0, txs:[],
-      firstSeen: ts || Date.now(), lastSeen: ts || Date.now()
+    if (!map[addr]) map[addr]={
+      entity:tagged[addr], address:addr, in:0, out:0, txs:[],
+      firstSeen:ts||Date.now(), lastSeen:ts||Date.now()
     };
-
-    const r = map[addr];
+    const r=map[addr];
     r[dir]++;
-    if (ts){ r.firstSeen=Math.min(r.firstSeen,ts); r.lastSeen=Math.max(r.lastSeen,ts); }
-    if (r.txs.length < 25) r.txs.push({ hash: tx.hash, dir, ts, value: tx.value || "0" });
-
-    // ✅ yield to UI thread
-    if (i % CHUNK === 0) await new Promise(r => setTimeout(r, 0));
+    if (ts){r.firstSeen=Math.min(r.firstSeen,ts);r.lastSeen=Math.max(r.lastSeen,ts);}
+    if (r.txs.length<25) r.txs.push({hash:tx.hash,dir,ts,value:tx.value||"0"});
   }
-
   return Object.values(map).sort((a,b)=>(b.in+b.out)-(a.in+a.out));
 }
-// ── SAFE HELPERS (prevents render crashes) ────────────────────
-function fwEsc(s){
-  return String(s ?? "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[m]));
-}
-
-// Full access flag — make it tolerant to your existing system
-function fwHasFullAccess(){
-  // try common globals / flags you might already have
-  const w = window;
-  if (w._fwAccessVerified === true) return true;
-  if (w.fwAccessTier === "full") return true;
-  if (w.__FW_ACCESS === "full" || w.__FW_ACCESS === true) return true;
-
-  // optional LS fallback (only if you use it)
-  try {
-    const v = localStorage.getItem("FW_ACCESS_TIER");
-    if (v === "full") return true;
-  } catch {}
-
-  return false;
-}
-
-function fwIsDemoWallet(){
-  const w = window;
-  const a = String(w.fwWallet || w.wallet?.address || "").toLowerCase();
-  const d = String(w.DEMO_WALLET || "").toLowerCase();
-  return !!(a && d && a === d);
-}
-
-// call this after unlock to refresh the UI immediately
-window.fwRefreshRelationsUI = function(){
-  try{
-    if (window.__fwRelations && window.__fwRelationsNet) {
-      fwRenderRelations(window.__fwRelationsNet, window.__fwRelations);
-    }
-  } catch(e){
-    console.warn("fwRefreshRelationsUI failed:", e);
-  }
-};
-
-// fallback if your requestFullAccess isn't defined
-window.requestFullAccess = window.requestFullAccess || function(){
-  console.log("requestFullAccess() not wired");
-  // open your access modal here if needed
-};
 
 // ── RENDER RELATIONS ──────────────────────────────────────────
 function fwRenderRelations(net, relations) {
@@ -1673,38 +1609,31 @@ function fwRenderRelations(net, relations) {
   const content  = document.getElementById("fwRelContent");
   const netLabel = document.getElementById("fwRelNetLabel");
   const summary  = document.getElementById("fwRelSummary");
-  if (!section || !content) return;
+  if (!section||!content) return;
 
-  // store for refresh after unlock
-  window.__fwRelations = Array.isArray(relations) ? relations : [];
-  window.__fwRelationsNet = net;
+  if (netLabel) netLabel.textContent = FW_CHAINS[net]?.name || net.toUpperCase();
 
-  if (netLabel) netLabel.textContent = FW_CHAINS?.[net]?.name || String(net || "").toUpperCase();
+  // Always reset summary first — prevents stale data from previous scans
   if (summary) summary.innerHTML = "";
 
-  const rels = window.__fwRelations;
-
-  // always show section once render called
-  section.style.display = "block";
-
-  if (!rels.length) {
+  if (!relations.length) {
     content.innerHTML = `
       <div class="rel-empty" style="padding:20px;text-align:center">
         <div style="font-size:28px;margin-bottom:10px">🔍</div>
         <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:6px">No protocol interactions detected</div>
         <div style="font-size:12px;color:var(--muted);line-height:1.6">
-          No interactions found with known DEXes, CEXes or bridges on ${FW_CHAINS?.[net]?.name || String(net||"").toUpperCase()}.
+          No interactions found with known DEXes, CEXes or bridges on ${FW_CHAINS[net]?.name||net.toUpperCase()}.
         </div>
       </div>`;
+    section.style.display = "block";
     return;
   }
 
   // Summary stats
-  const cexCount = rels.filter(r=>r?.entity?.type==="cex").length;
-  const dexCount = rels.filter(r=>r?.entity?.type==="dex").length;
-  const brCount  = rels.filter(r=>r?.entity?.type==="bridge").length;
-  const totalTxs = rels.reduce((s,r)=>s + (r?.in||0) + (r?.out||0), 0);
-
+  const cexCount = relations.filter(r=>r.entity.type==="cex").length;
+  const dexCount = relations.filter(r=>r.entity.type==="dex").length;
+  const brCount  = relations.filter(r=>r.entity.type==="bridge").length;
+  const totalTxs = relations.reduce((s,r)=>s+r.in+r.out, 0);
   if (summary) summary.innerHTML = `
     <span style="color:var(--green)">🏦 ${cexCount} exchanges</span> &nbsp;·&nbsp;
     <span style="color:var(--cyan)">⚡ ${dexCount} DEXes</span> &nbsp;·&nbsp;
@@ -1714,37 +1643,40 @@ function fwRenderRelations(net, relations) {
 
   const TYPE_EMOJI = {cex:"🏦",dex:"⚡",bridge:"🌉",lending:"💰",staking:"🥩",oracle:"🔮",util:"🔧"};
 
-  const isDemo = fwIsDemoWallet();
-  const canTimeline = fwHasFullAccess(); // <-- key: FULL ACCESS really unlocks timeline
-  const isRealHash = h => typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
+  // isDemo check based on current wallet — isDemo is only in runLoadSequence scope
+  const _isRelDemo = fwWallet === DEMO_WALLET;
+  // Full access: can view timeline. Free tier: sees locked button
+  const _canTimeline = (fwAccessTier === "full" && _fwAccessVerified) || _isRelDemo;
 
-  const cards = rels.map((rel, idx) => {
-    const e = rel?.entity || {name:"Unknown", type:"dex", tags:[]};
-    const total    = (rel?.in||0) + (rel?.out||0);
-    const lastDate = rel?.lastSeen ? new Date(rel.lastSeen).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
-    const inColor  = (rel?.in||0)  > 0 ? "#5dffb2" : "var(--muted)";
-    const outColor = (rel?.out||0) > 0 ? "#ff9a6b" : "var(--muted)";
-    const typeClass= {cex:"cex",dex:"dex",bridge:"bridge",lending:"lending",staking:"staking"}[e.type] || "dex";
-    const tags     = (e.tags||[]).map(t=>`<span class="rel-tag ${fwEsc(t)}">${fwEsc(t)}</span>`).join("");
+  const cards = relations.map((rel, idx) => {
+    const e = rel.entity;
+    const total    = rel.in + rel.out;
+    const lastDate = rel.lastSeen ? new Date(rel.lastSeen).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
+    const inColor  = rel.in  > 0 ? "#5dffb2"    : "var(--muted)";
+    const outColor = rel.out > 0 ? "#ff9a6b"    : "var(--muted)";
+    const typeClass= {cex:"cex",dex:"dex",bridge:"bridge",lending:"lending",staking:"staking"}[e.type]||"dex";
+    const tags     = (e.tags||[]).map(t=>`<span class="rel-tag ${t}">${t}</span>`).join("");
 
-    const realTxCount = (rel?.txs || []).filter(tx => isRealHash(tx?.hash)).length;
-
-    // Full access: show "View transactions" if we have hashes
-    // No access: show locked CTA
-    const timelineBtn = (canTimeline && !isDemo)
+    // Full access + has txs → "View N transactions"
+    // Full access + no txs  → nothing (e.g. demo wallet with real full access)
+    // Free tier or demo     → locked button on every card (teases the feature)
+    // Only count real tx hashes (66-char hex) — ignore demo placeholders
+    const isRealHash = h => typeof h === "string" && /^0x[0-9a-fA-F]{64}$/.test(h);
+    const realTxCount = (rel.txs || []).filter(tx => isRealHash(tx.hash)).length;
+    const timelineBtn = (_canTimeline && !_isRelDemo)
       ? (realTxCount > 0
           ? `<button class="rel-timeline-btn" onclick="fwShowTimeline(${idx})">View ${realTxCount} transactions ↗</button>`
-          : `<button class="rel-timeline-btn" style="opacity:.55;cursor:default" disabled>Transactions unavailable</button>`)
+          : "")
       : `<button class="rel-timeline-btn" style="opacity:.65;border-color:rgba(124,92,255,.3);color:#a87eff" onclick="requestFullAccess()">🔒 Unlock to view transactions</button>`;
 
     return `
     <div class="rel-card ${typeClass}">
       <div class="rel-card-body">
-        <div class="rel-entity-name">${TYPE_EMOJI[e.type]||"🔗"} ${fwEsc(e.name)}</div>
+        <div class="rel-entity-name">${TYPE_EMOJI[e.type]||"🔗"} ${esc(e.name)}</div>
         <div class="rel-tags">${tags}</div>
         <div class="rel-stats-row">
-          <div class="rel-stat"><div class="rel-stat-val" style="color:${inColor}">${rel?.in||0}</div><div class="rel-stat-key">Received</div></div>
-          <div class="rel-stat"><div class="rel-stat-val" style="color:${outColor}">${rel?.out||0}</div><div class="rel-stat-key">Sent</div></div>
+          <div class="rel-stat"><div class="rel-stat-val" style="color:${inColor}">${rel.in}</div><div class="rel-stat-key">Received</div></div>
+          <div class="rel-stat"><div class="rel-stat-val" style="color:${outColor}">${rel.out}</div><div class="rel-stat-key">Sent</div></div>
           <div class="rel-stat"><div class="rel-stat-val">${total}</div><div class="rel-stat-key">Total</div></div>
         </div>
         <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Last: ${lastDate}</div>
@@ -1753,17 +1685,23 @@ function fwRenderRelations(net, relations) {
     </div>`;
   }).join("");
 
-  // teaser only for locked (or demo)
-  const showTeaser = isDemo || !canTimeline;
-  const teaserHtml = showTeaser ? `
-    <div style="padding:10px 14px;border-radius:12px;margin-bottom:12px;
+  // Show teaser banner for: free tier with real wallet, OR demo mode
+  // Both cases: user cannot view real transaction history
+  let teaserHtml = "";
+  const _showTeaser = _isRelDemo || (!_canTimeline);
+  if (_showTeaser) {
+    const teaserMsg = _isRelDemo
+      ? "Connect your wallet &amp; unlock Full Access to see your real protocol interactions."
+      : "Protocol names &amp; counts visible. Unlock Full Access to view transaction history.";
+    teaserHtml = `<div style="padding:10px 14px;border-radius:12px;margin-bottom:12px;
       background:rgba(124,92,255,.07);border:1px solid rgba(124,92,255,.2);
       display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span style="font-size:12px;color:var(--muted);flex:1">
-        🔒 <strong style="color:var(--text)">Wallet Relations</strong> — Unlock Full Access to view transaction history.
+        🔒 <strong style="color:var(--text)">Wallet Relations</strong> — ${teaserMsg}
       </span>
       <button class="fw-watch-submit" style="font-size:10px;padding:6px 14px" onclick="requestFullAccess()">Unlock</button>
-    </div>` : "";
+    </div>`;
+  }
 
   content.innerHTML = teaserHtml + `<div class="rel-grid">${cards}</div>`;
   section.style.display = "block";
@@ -4662,7 +4600,6 @@ function fwStartApprovalPoller(wallet, net) {
 window.fwSubscribeOnchain = fwSubscribeOnchain;
 
 window.fwApiCopy             = fwApiCopy;
-  window.fwRefreshRelationsUI?.();
 // ══════════════════════════════════════════════════════════════
 // LANGUAGE SWITCHER
 // ══════════════════════════════════════════════════════════════
