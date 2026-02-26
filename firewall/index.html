@@ -1650,7 +1650,14 @@ function fwRenderRelations(net, relations) {
   if (summary) summary.innerHTML = "";
 
   if (!relations.length) {
-    content.innerHTML = `<div class="rel-empty">No tagged protocol interactions found for this wallet on ${FW_CHAINS[net]?.name||net.toUpperCase()}. This could mean the wallet is new or activity is on other networks.</div>`;
+    content.innerHTML = `
+      <div class="rel-empty" style="padding:20px;text-align:center">
+        <div style="font-size:28px;margin-bottom:10px">🔍</div>
+        <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:6px">No protocol interactions detected</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">
+          No interactions found with known DEXes, CEXes or bridges on ${FW_CHAINS[net]?.name||net.toUpperCase()}.
+        </div>
+      </div>`;
     section.style.display = "block";
     return;
   }
@@ -2031,13 +2038,18 @@ function _doUnlockUI() {
       fwRenderRelations(fwNet, relations);
     }).catch(() => {
       document.getElementById("fwRelLoadBar")?.remove();
-      // API failed — clear demo data, show error state
       window.__fwRelations = [];
-      const relContent = document.getElementById("fwRelContent");
-      if (relContent) relContent.innerHTML = `
+      const rc2 = document.getElementById("fwRelContent");
+      if (rc2) rc2.innerHTML = `
         <div style="padding:14px 16px;border-radius:12px;background:rgba(255,193,7,.06);
-             border:1px solid rgba(255,193,7,.2);font-size:12px;color:var(--muted)">
-          ⚠ Could not fetch transaction history. Check your connection and try again.
+             border:1px solid rgba(255,193,7,.2);
+             display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span style="font-size:12px;color:var(--muted)">⚠ Could not fetch transaction history.</span>
+          <button onclick="fwFetchWalletTxs(fwNet,fwWallet).then(t=>fwRenderRelations(fwNet,fwAnalyzeRelations(fwNet,fwWallet,t)))"
+            style="padding:5px 12px;border-radius:8px;border:1px solid rgba(255,193,7,.35);
+            background:rgba(255,193,7,.06);color:#ffd166;font-size:11px;font-weight:700;cursor:pointer">
+            Retry ↺
+          </button>
         </div>`;
     });
   } else if (window.__fwRelations?.length && fwNet) {
@@ -2194,21 +2206,6 @@ async function fetchApprovals(net, address) {
     : Array.isArray(data?.list)                  ? data.list
     : Array.isArray(data?.items)                 ? data.items
     : [];
-  if (arr.length > 0) {
-    const sample = arr[0];
-    // Log the FULL first row so we can see every field name from the backend
-    console.info("[CycleX] fetchApprovals:", arr.length, "rows. First row:", JSON.stringify(sample));
-    const hasSpender = !!(sample?.spender || sample?.spender_address || sample?.spenderAddress ||
-      sample?.approved_to || sample?.approvedTo || sample?.operator || sample?.to);
-    const hasToken   = !!(sample?.token || sample?.token_address || sample?.tokenAddress ||
-      sample?.contract_address || sample?.contractAddress);
-    console.info("[CycleX] hasSpender:", hasSpender, "hasToken:", hasToken);
-    if (!hasSpender || !hasToken) {
-      console.warn("[CycleX] MISSING ADDRESS FIELDS — canRevoke will be false. Fields present:", Object.keys(sample||{}).join(", "));
-    }
-  } else {
-    console.info("[CycleX] fetchApprovals: empty response");
-  }
   return arr;
 }
 
@@ -2236,10 +2233,7 @@ function computeMetrics(approvals) {
       r?.operator        || r?.operator_address ||
       r?.to              || r?.toAddress        || r?.recipient        || ""
     );
-    // Always log when we have a row — helps diagnose field mapping issues
-    if (r && !token && !spenderRaw) {
-      console.warn("[CycleX] Row has no token/spender. Keys:", Object.keys(r).join(", "), "| Values:", JSON.stringify(r).slice(0, 200));
-    }
+
     // Treat zero address as "no spender" (burned/revoked)
     const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
     const spender  = spenderRaw.toLowerCase() === ZERO_ADDR.toLowerCase() ? "" : spenderRaw;
@@ -3825,23 +3819,13 @@ async function fwRescanFull() {
   if (tlEl) tlEl.innerHTML = `<div style="text-align:center;color:var(--cyan);padding:20px;font-size:13px">🔍 Loading full approval data…</div>`;
   try {
     const approvals = await fetchApprovals(fwNet, fwWallet);
-    console.info("[CycleX] fwRescanFull: got", approvals.length, "approvals");
-    if (approvals.length > 0) {
-      const sample = approvals[0];
-      const hasSpender = !!(sample?.spender || sample?.spender_address || sample?.approved_to || sample?.to);
-      console.info("[CycleX] sample fields:", Object.keys(sample||{}).join(", "), "hasSpender:", hasSpender);
-    }
+
     const metrics   = computeMetrics(approvals);
     fwScanData      = metrics;
     fwCurrentScore  = metrics.score;
     fixApprovals    = metrics.fixTargets || [];
     const revokable = metrics.threats?.filter(t=>t.canRevoke).length || 0;
     const noAddr    = metrics.threats?.filter(t=>t.hasApproval && !t.canRevoke).length || 0;
-    console.info("[CycleX] metrics: score="+metrics.score, "revokable="+revokable, "no-addr="+noAddr);
-    if (noAddr > 0 && revokable === 0) {
-      // API returned rows but without usable spender/token — surface this clearly
-      console.warn("[CycleX] All", noAddr, "threats have approval but no revokable address. Check API response fields.");
-    }
     renderDashboard(fwWallet, metrics, "full");
     renderFixMode(metrics);
     fwInitExport();
@@ -3856,21 +3840,28 @@ async function fwRescanFull() {
         ? "⚠ Approvals found but addresses missing from API. Open DevTools > Console for details."
         : "✅ Full data loaded.");
   } catch(e) {
-    // On failure: show retry banner ONLY — never re-render with preview (no-address) data
-    // Re-rendering with old fwScanData would show canRevoke=false since it has no addresses
+    const is500 = e?.message?.includes("500") || e?.status === 500 || String(e).includes("500");
+
     const tlEl2 = document.getElementById("threatsList");
     if (tlEl2) tlEl2.innerHTML = `
-      <div style="padding:14px 16px;border-radius:12px;background:rgba(255,193,7,.07);
-           border:1px solid rgba(255,193,7,.25);
-           display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <span style="font-size:13px;color:#ffd166">⚠ Could not load full approval data. Check your connection.</span>
-        <button onclick="fwRescanFull()" style="padding:6px 14px;border-radius:8px;
-          border:1px solid rgba(255,193,7,.4);background:rgba(255,193,7,.08);
-          color:#ffd166;font-size:12px;font-weight:700;cursor:pointer;flex:0 0 auto">
-          Retry ↺
-        </button>
+      <div style="padding:16px;border-radius:12px;background:rgba(255,100,80,.06);
+           border:1px solid rgba(255,100,80,.2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:${is500?'10px':'0'}">
+          <span style="font-size:13px;color:#ff9a6b">
+            ${is500 ? '⚠ Server error (500) — /api/getApprovals is down.' : '⚠ Could not load full approval data.'}
+          </span>
+          <button onclick="fwRescanFull()" style="padding:6px 14px;border-radius:8px;
+            border:1px solid rgba(255,150,100,.4);background:rgba(255,150,100,.08);
+            color:#ff9a6b;font-size:12px;font-weight:700;cursor:pointer;flex:0 0 auto;white-space:nowrap">
+            Retry ↺
+          </button>
+        </div>
+        ${is500 ? `<div style="font-size:11px;color:var(--muted);line-height:1.5">
+          The backend Worker returned a 500 error on <code style="color:var(--cyan)">/api/getApprovals</code>.<br>
+          The approval data exists (preview loaded correctly) but the full endpoint has a server-side bug.<br>
+          This must be fixed in the Worker — not the frontend.
+        </div>` : ''}
       </div>`;
-    // Still update UI chrome (score ring etc) without affecting threats
     const scoreRing2 = document.getElementById("scoreVal");
     if (scoreRing2) scoreRing2.textContent = fwScanData?.score ?? "—";
   }
