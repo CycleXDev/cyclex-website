@@ -2386,7 +2386,7 @@ function computeMetrics(approvals) {
 
   // ── Threat items: sorted by risk, hard cap 50 for DOM perf ─
   // Paginated in UI (10/page). canRevoke requires real 0x addresses.
-  const threats = sorted.slice(0, 50).map(r => ({
+  const threats = sorted.slice(0, 15).map(r => ({
     name:        (r.spender && r.spender.length > 5) ? fwShort(r.spender)
                    : (r.symbol ? r.symbol + " Spender" : "Unknown Spender"),
     fullSpender: r.spender,
@@ -3278,11 +3278,17 @@ function renderDashboard(wallet, d, tier) {
     renderMeta("drainMeta", d.drainMeta);
   }, 300));
 
-  // Exposure Map
+  // Exposure Map — only render if not already showing (debounced inside function)
   _rdTimers.push(setTimeout(() => renderExposureMap(wallet, d.threats, tier), 350));
 
   // Threats — deferred so DOM is free
-  _rdTimers.push(setTimeout(() => renderThreats(d.threats, tier), 500));
+  _rdTimers.push(setTimeout(() => {
+    renderThreats(d.threats, tier);
+    // Remove the rescan banner if revoke buttons are now available
+    if (tier === "full" && d.threats.some(t => t.canRevoke)) {
+      document.getElementById("fwRescanBanner")?.remove();
+    }
+  }, 500));
 
   // Fix Mode
   if (tier === "full") {
@@ -3342,13 +3348,20 @@ function renderMeta(id, items) {
 }
 
 // ── EXPOSURE MAP ──────────────────────────────────────────────────
+let _lastExposureHash = "";  // debounce exposure map re-renders
 function renderExposureMap(wallet, threats, tier) {
   const svg = document.getElementById("exposureMap");
+  if (!svg) return;
   const W = 480, H = 260, cx = W/2, cy = H/2;
   const riskColor = { bad:"#ff4757", warn:"#ffd166", ok:"#3cffb0" };
 
-  // Cap nodes: free=3, full=max 8 (more than 8 nodes in SVG is unreadable and slow)
+  // Cap nodes: free=3, full=max 8
   const visible = tier === "free" ? threats.slice(0, 3) : threats.slice(0, 8);
+
+  // Debounce: don't re-render if data hasn't changed (prevents crash on rapid re-renders)
+  const hash = wallet + tier + visible.map(t=>t.risk+t.label).join(",");
+  if (hash === _lastExposureHash) return;
+  _lastExposureHash = hash;
   const n = visible.length;
   if (!n) { svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="rgba(244,246,255,.35)" font-size="13" font-family="system-ui">No spenders detected</text>`; return; }
 
@@ -3429,6 +3442,32 @@ function renderThreats(threats, tier) {
     return;
   }
   el.innerHTML = "";
+
+  // For full-tier: if ALL threats lack a spender address (canRevoke=false),
+  // the API returned preview-style data. Show a prominent Rescan button
+  // so the user can manually trigger fetchApprovals (this is known to work).
+  const hasRevokable = threats.some(t => t.canRevoke);
+  const hasApproval  = threats.some(t => t.hasApproval);
+  if (tier === "full" && !hasRevokable && hasApproval) {
+    const banner = document.createElement("div");
+    banner.id = "fwRescanBanner";
+    banner.style.cssText = `
+      padding:12px 16px;border-radius:12px;margin-bottom:12px;
+      background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.2);
+      display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap`;
+    banner.innerHTML = `
+      <span style="font-size:12px;color:var(--muted)">
+        🔄 <strong style="color:var(--text)">Full data needed</strong> —
+        Click to load addresses and enable Revoke buttons.
+      </span>
+      <button onclick="fwRescanFull()" style="padding:6px 16px;border-radius:8px;
+        border:1px solid rgba(0,229,255,.35);background:rgba(0,229,255,.08);
+        color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+        Load Data ↺
+      </button>`;
+    el.appendChild(banner);
+  }
+
   _threatsAppendPage();
 }
 
@@ -3781,10 +3820,18 @@ async function fwRescanFull() {
   if (tlEl) tlEl.innerHTML = `<div style="text-align:center;color:var(--cyan);padding:20px;font-size:13px">🔍 Loading full approval data…</div>`;
   try {
     const approvals = await fetchApprovals(fwNet, fwWallet);
+    console.info("[CycleX] fwRescanFull: got", approvals.length, "approvals");
+    if (approvals.length > 0) {
+      const sample = approvals[0];
+      const hasSpender = !!(sample?.spender || sample?.spender_address || sample?.approved_to || sample?.to);
+      console.info("[CycleX] sample fields:", Object.keys(sample||{}).join(", "), "hasSpender:", hasSpender);
+    }
     const metrics   = computeMetrics(approvals);
     fwScanData      = metrics;
     fwCurrentScore  = metrics.score;
     fixApprovals    = metrics.fixTargets || [];
+    const revokable = metrics.threats?.filter(t=>t.canRevoke).length || 0;
+    console.info("[CycleX] metrics: score="+metrics.score, "revokable="+revokable);
     renderDashboard(fwWallet, metrics, "full");
     renderFixMode(metrics);
     fwInitExport();
@@ -3793,7 +3840,9 @@ async function fwRescanFull() {
       const al = document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
       if (al !== "en") fwSetLanguage(al);
     } catch {}
-    showPassportMsg("✅ Full data loaded — revoke buttons are ready.");
+    showPassportMsg(revokable > 0
+      ? `✅ Full data loaded — ${revokable} approval(s) ready to revoke.`
+      : "✅ Full data loaded.");
   } catch(e) {
     // On failure: show retry banner ONLY — never re-render with preview (no-address) data
     // Re-rendering with old fwScanData would show canRevoke=false since it has no addresses
