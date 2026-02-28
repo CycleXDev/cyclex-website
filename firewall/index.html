@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1983,44 +1984,40 @@ function _doUnlockUI() {
   fwUpdateExportVisibility();
   fwInitExport();
 
-  // After unlock: fetch REAL wallet relations (not freeDemoRels which have txs:[])
+  // After unlock: re-render relations with unlocked timeline buttons
   if (fwWallet && fwWallet !== DEMO_WALLET && fwNet) {
     const relSection = document.getElementById("fwRelSection");
     const relContent = document.getElementById("fwRelContent");
     if (relSection) relSection.style.display = "block";
-    // Show a subtle "loading" bar without wiping existing cards
-    const relLoadRow = document.getElementById("fwRelLoadBar");
-    if (!relLoadRow) {
-      const bar = document.createElement("div");
-      bar.id = "fwRelLoadBar";
-      bar.style.cssText = "font-size:11px;color:var(--cyan);padding:4px 0 8px;";
-      bar.textContent = "🔍 Fetching real transaction data…";
-      relContent?.parentNode?.insertBefore(bar, relContent);
+
+    // If free tier already fetched relations → just re-render (buttons now unlocked)
+    if (Array.isArray(window.__fwRelations)) {
+      fwRenderRelations(fwNet, window.__fwRelations);
+    } else {
+      // Still fetching in background (null) or never fetched — fetch now
+      if (relContent) relContent.innerHTML = '<div class="rel-loading">🔍 Fetching transaction data…</div>';
+      fwFetchWalletTxs(fwNet, fwWallet).then(txs => {
+        const relations = fwAnalyzeRelations(fwNet, fwWallet, txs);
+        window.__fwRelations = relations;
+        fwRenderRelations(fwNet, relations);
+      }).catch(() => {
+        window.__fwRelations = [];
+        const rc2 = document.getElementById("fwRelContent");
+        if (rc2) rc2.innerHTML = `
+          <div style="padding:14px 16px;border-radius:12px;background:rgba(255,193,7,.06);
+               border:1px solid rgba(255,193,7,.2);
+               display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <span style="font-size:12px;color:var(--muted)">⚠ Could not fetch transaction history.</span>
+            <button onclick="fwFetchWalletTxs(fwNet,fwWallet).then(t=>{window.__fwRelations=fwAnalyzeRelations(fwNet,fwWallet,t);fwRenderRelations(fwNet,window.__fwRelations);})"
+              style="padding:5px 12px;border-radius:8px;border:1px solid rgba(255,193,7,.35);
+              background:rgba(255,193,7,.06);color:#ffd166;font-size:11px;font-weight:700;cursor:pointer">
+              Retry ↺
+            </button>
+          </div>`;
+      });
     }
-    fwFetchWalletTxs(fwNet, fwWallet).then(txs => {
-      document.getElementById("fwRelLoadBar")?.remove();
-      const relations = fwAnalyzeRelations(fwNet, fwWallet, txs);
-      // Always use real results — never show demo/fake data to a real wallet
-      window.__fwRelations = relations;
-      fwRenderRelations(fwNet, relations);
-    }).catch(() => {
-      document.getElementById("fwRelLoadBar")?.remove();
-      window.__fwRelations = [];
-      const rc2 = document.getElementById("fwRelContent");
-      if (rc2) rc2.innerHTML = `
-        <div style="padding:14px 16px;border-radius:12px;background:rgba(255,193,7,.06);
-             border:1px solid rgba(255,193,7,.2);
-             display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <span style="font-size:12px;color:var(--muted)">⚠ Could not fetch transaction history.</span>
-          <button onclick="fwFetchWalletTxs(fwNet,fwWallet).then(t=>fwRenderRelations(fwNet,fwAnalyzeRelations(fwNet,fwWallet,t)))"
-            style="padding:5px 12px;border-radius:8px;border:1px solid rgba(255,193,7,.35);
-            background:rgba(255,193,7,.06);color:#ffd166;font-size:11px;font-weight:700;cursor:pointer">
-            Retry ↺
-          </button>
-        </div>`;
-    });
-  } else if (window.__fwRelations?.length && fwNet) {
-    // Re-render to remove teaser + show real buttons
+  } else if (Array.isArray(window.__fwRelations) && window.__fwRelations.length && fwNet) {
+    // Demo or other case — re-render with current tier buttons
     fwRenderRelations(fwNet, window.__fwRelations);
   }
 }
@@ -2760,21 +2757,23 @@ async function runLoadSequence(walletAddr, net, isDemo) {
     window.__fwRelations = demoRels;
     fwRenderRelations(net, demoRels);
   } else {
-    // Free tier + real wallet: show teaser only — NO fabricated data
+    // Free tier + real wallet: fetch relations and show cards — timeline buttons stay locked
     if (relSection) relSection.style.display = "block";
-    window.__fwRelations = [];
-    if (relContent) relContent.innerHTML = `
-      <div style="padding:20px 16px;text-align:center">
-        <div style="font-size:32px;margin-bottom:10px">🔗</div>
-        <div style="font-weight:800;font-size:15px;margin-bottom:6px">Wallet Relations</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6">
-          Unlock Full Access to see which DEXes, CEXes, bridges and protocols<br>
-          your wallet has interacted with — including full transaction history.
-        </div>
-        <button class="fw-watch-submit" onclick="requestFullAccess()" style="font-size:11px;padding:8px 20px">
-          🔑 Unlock Full Access
-        </button>
-      </div>`;
+    window.__fwRelations = null; // null = fetch in progress, [] = fetched but empty
+    if (relContent) relContent.innerHTML = '<div class="rel-loading">🔍 Analyzing wallet relationships…</div>';
+    fwFetchWalletTxs(net, walletAddr).then(txs => {
+      const relations = fwAnalyzeRelations(net, walletAddr, txs);
+      window.__fwRelations = relations;
+      fwRenderRelations(net, relations);
+      // Cards show with locked "🔒 Unlock to view transactions" buttons (handled inside fwRenderRelations)
+    }).catch(() => {
+      window.__fwRelations = [];
+      if (relContent) relContent.innerHTML = `
+        <div style="padding:14px 16px;border-radius:12px;background:rgba(255,193,7,.06);
+             border:1px solid rgba(255,193,7,.2);font-size:12px;color:var(--muted)">
+          ⚠ Could not fetch transaction history. Unlock Full Access to retry.
+        </div>`;
+    });
   }
 }
 
