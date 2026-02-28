@@ -5279,10 +5279,19 @@ async function passBuyFlow(kind) {
     if (!window.wallet?.address) {
       setPassStatus("Opening wallet connect…", "#a87eff");
       try {
+        // Temporarily hide passPopup backdrop — backdrop-filter creates stacking context
+        // that blocks AppKit modal even at higher z-index values
+        const popup = document.getElementById("passPopup");
+        if (popup) popup.style.opacity = "0";
         await appkit.open();
         const addr = await fwWaitForWallet(20000);
+        if (popup) popup.style.opacity = "1";
         if (!addr) { setPassStatus("Wallet not connected. Try again.", "#ff9a6b"); return; }
-      } catch { setPassStatus("Connect cancelled.", "#ff9a6b"); return; }
+      } catch {
+        const popup = document.getElementById("passPopup");
+        if (popup) popup.style.opacity = "1";
+        setPassStatus("Connect cancelled.", "#ff9a6b"); return;
+      }
     }
 
     // Get raw provider
