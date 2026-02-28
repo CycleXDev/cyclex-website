@@ -5282,14 +5282,14 @@ async function passBuyFlow(kind) {
         // Temporarily hide passPopup backdrop — backdrop-filter creates stacking context
         // that blocks AppKit modal even at higher z-index values
         const popup = document.getElementById("passPopup");
-        if (popup) popup.style.opacity = "0";
+        if (popup) { popup.style.opacity = "0"; popup.style.pointerEvents = "none"; }
         await appkit.open();
         const addr = await fwWaitForWallet(20000);
-        if (popup) popup.style.opacity = "1";
+        if (popup) { popup.style.opacity = "1"; popup.style.pointerEvents = ""; }
         if (!addr) { setPassStatus("Wallet not connected. Try again.", "#ff9a6b"); return; }
       } catch {
         const popup = document.getElementById("passPopup");
-        if (popup) popup.style.opacity = "1";
+        if (popup) { popup.style.opacity = "1"; popup.style.pointerEvents = ""; }
         setPassStatus("Connect cancelled.", "#ff9a6b"); return;
       }
     }
