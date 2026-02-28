@@ -51,11 +51,11 @@
     background:
       radial-gradient(740px 640px at 20% 14%,rgba(0,229,255,.10),transparent 60%),
       radial-gradient(940px 780px at 78% 18%,rgba(124,92,255,.09),transparent 62%),
-      radial-gradient(820px 700px at 52% 78%,rgba(93,255,178,.06),transparent 64%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
-    background-size:auto,auto,auto,260px 260px;
-    background-repeat:no-repeat,no-repeat,no-repeat,repeat;
-    opacity:.10;mix-blend-mode:overlay;z-index:0
+      radial-gradient(820px 700px at 52% 78%,rgba(93,255,178,.06),transparent 64%);
+    background-size:auto,auto,auto;
+    background-repeat:no-repeat,no-repeat,no-repeat;
+    opacity:.10;z-index:0
+    /* feTurbulence SVG removed — caused Chrome GPU process crash */
   }
   a{color:inherit;text-decoration:none}
 
@@ -2586,8 +2586,41 @@ function unlockFull() {
   _unlockFull_real(_fwNonce);
 }
 
+// ── MEMORY CLEANUP — called before each new scan to prevent Chrome memory accumulation ──
+function fwCleanupBeforeScan() {
+  // 1. Cancel all pending render timers
+  _rdTimers.forEach(clearTimeout);
+  _rdTimers = [];
+
+  // 2. Cancel score animation
+  if (_scoreAnimTimer) { clearInterval(_scoreAnimTimer); _scoreAnimTimer = null; }
+
+  // 3. Clear exposure map SVG to free GPU memory
+  const svg = document.getElementById("exposureMap");
+  if (svg) svg.innerHTML = "";
+  _lastExposureHash = ""; // reset debounce
+
+  // 4. Clear threats list DOM
+  const tl = document.getElementById("threatsList");
+  if (tl) tl.innerHTML = "";
+
+  // 5. Reset pagination
+  _threatsAll = []; _threatsShown = 0;
+
+  // 6. Clear relations content (not the section)
+  const relContent = document.getElementById("fwRelContent");
+  if (relContent) relContent.innerHTML = "";
+  window.__fwRelations = null;
+
+  // 7. Stop approval poller if running (saves memory + network)
+  if (_fwPollerInterval) { clearInterval(_fwPollerInterval); _fwPollerInterval = null; }
+}
+
 // ── LOADING SEQUENCE ─────────────────────────────────────────────
 async function runLoadSequence(walletAddr, net, isDemo) {
+  // Cleanup previous scan to prevent Chrome memory accumulation
+  fwCleanupBeforeScan();
+
   fwWallet = walletAddr;
   fwNet    = net;
 
