@@ -5443,57 +5443,94 @@ function safeLower(s){
       el.innerHTML = t(currentLang, "bm_help_html") || "";
     }
 
-    function bmGenerate(){
-      const base = ($("#bm-base")?.value || location.href.split("?")[0]).trim();
-      const js = `
-(function(){
-  try{
-    var href=location.href,u=new URL(href),host=u.host.toLowerCase();
-    var hub=new URL("${base}");
-    /* CoinMarketCap */
-    if(/coinmarketcap\.com/.test(host)&&/\/currencies\//.test(u.pathname)){
-      var addr=null;
-      var tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false);
-      while(tw.nextNode()&&!addr){var m=tw.currentNode.nodeValue.match(/(0x[0-9a-fA-F]{40})/);if(m)addr=m[1];}
-      if(!addr){var els=document.querySelectorAll("[href*='0x'],[data-address],[data-contract-address]");for(var i=0;i<els.length&&!addr;i++){var a=els[i].getAttribute('href')||els[i].getAttribute('data-address')||els[i].getAttribute('data-contract-address')||'';var m2=a.match(/(0x[0-9a-fA-F]{40})/);if(m2)addr=m2[1];}}
-      if(!addr){alert('CycleX: No contract address found on this CMC page.');return;}
-      var pt=(document.body.innerText||'').slice(0,8000);
-      var net=/\\bBNB\\b|\\bBSC\\b|Binance Smart Chain/i.test(pt)?'bsc':'eth';
-      hub.searchParams.set('tool','quick');hub.searchParams.set('net',net);
-      hub.searchParams.set('token',addr);hub.searchParams.set('autorun','1');
-      var _w=window.open(hub.toString(),'_blank');if(!_w)window.location.href=hub.toString();return;
-    }
-    /* CoinGecko */
-    if(/coingecko\.com/.test(host)&&/\/en\/coins\//.test(u.pathname)){
-      var addr=null;
-      var nodes=document.querySelectorAll('p,span,td,div,li,a');
-      for(var i=0;i<nodes.length&&!addr;i++){var m=(nodes[i].childNodes[0]?.nodeValue||nodes[i].textContent||'').match(/(0x[0-9a-fA-F]{40})/);if(m)addr=m[1];}
-      if(addr){var pt=(document.body.innerText||'').slice(0,6000);var net=/\\bBNB\\b|\\bBSC\\b/i.test(pt)?'bsc':'eth';hub.searchParams.set('tool','quick');hub.searchParams.set('net',net);hub.searchParams.set('token',addr);hub.searchParams.set('autorun','1');var _w=window.open(hub.toString(),'_blank');if(!_w)window.location.href=hub.toString();return;}
-    }
-    /* BscScan / Etherscan */
-    var isTx=/\/tx\//i.test(u.pathname);
-    var v=href.split('/').pop().split('?')[0].split('#')[0];
-    var net=/etherscan\.io/i.test(host)?'eth':'bsc';
-    hub.searchParams.set('tool',isTx?'tx':'quick');hub.searchParams.set('net',net);
-    if(isTx)hub.searchParams.set('tx',v);else hub.searchParams.set('token',v);
-    hub.searchParams.set('autorun','1');
-    var _w=window.open(hub.toString(),'_blank');if(!_w)window.location.href=hub.toString();
-  }catch(e){alert('CycleX Hub error: '+e.message);}
-})();`.trim();
+   function bmGenerate(){
+  const base = ($("#bm-base")?.value || location.href.split("?")[0]).trim();
 
-      const b64 = btoa(unescape(encodeURIComponent(js)));
-const bm = `javascript:(function(){try{eval(decodeURIComponent(escape(atob('${b64}'))));}catch(e){alert('CycleX Hub error: '+e.message);}})();`;
-      setStatus($("#bm-out"), "ok", `Bookmarklet generated. <span class="mono">(copy it)</span>`);
-      $("#bm-out").dataset.bm = bm;
-      const drag = $("#bm-drag");
-if (drag) {
-  drag.href = bm;                 
-  drag.classList.remove("hidden");
-  drag.setAttribute("data-ready", "1");
-}
-      renderBmHelp();
-      gtagEvent("sec_bm_generate");
+  const js = `(function(){
+    try{
+      var href=location.href,u=new URL(href),host=(u.host||"").toLowerCase();
+      var hub=new URL("${base}");
+
+      // ---------- CoinMarketCap (currencies + dexscan) ----------
+      if(host.endsWith("coinmarketcap.com")){
+        var addr=null;
+
+        // 1) Try URL patterns first
+        // dex.coinmarketcap.com/dexscan/bsc/<0x...> OR .../eth/<0x...>
+        var mPath=u.pathname.match(/\\b(0x[0-9a-fA-F]{40})\\b/);
+        if(mPath) addr=mPath[1];
+
+        // 2) Try DOM text scan (fast)
+        if(!addr){
+          var tw=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null,false);
+          while(tw.nextNode() && !addr){
+            var t=tw.currentNode.nodeValue;
+            if(!t) continue;
+            var m=t.match(/\\b0x[0-9a-fA-F]{40}\\b/);
+            if(m) addr=m[0];
+          }
+        }
+
+        // 3) Try attributes that often contain addresses
+        if(!addr){
+          var els=document.querySelectorAll("[href*='0x'],[data-address],[data-contract-address]");
+          for(var i=0;i<els.length && !addr;i++){
+            var a=els[i].getAttribute("href")||els[i].getAttribute("data-address")||els[i].getAttribute("data-contract-address")||"";
+            var m2=a.match(/\\b0x[0-9a-fA-F]{40}\\b/);
+            if(m2) addr=m2[0];
+          }
+        }
+
+        if(!addr){ alert("CycleX: No contract address found on this CMC page."); return; }
+
+        // net guess: dexscan path contains /bsc/ or /eth/ often
+        var net="eth";
+        if(/\\/bsc\\//i.test(u.pathname) || /\\bBNB\\b|\\bBSC\\b|Binance Smart Chain/i.test((document.body.innerText||"").slice(0,6000))) net="bsc";
+
+        hub.searchParams.set("tool","quick");
+        hub.searchParams.set("net",net);
+        hub.searchParams.set("token",addr);
+        hub.searchParams.set("autorun","1");
+        hub.hash="#panel-quick";
+        var w=window.open(hub.toString(),"_blank");
+        if(!w) window.location.href=hub.toString();
+        return;
+      }
+
+      // ---------- BscScan / Etherscan ----------
+      var isTx=/\\/tx\\//i.test(u.pathname);
+      var v=href.split("/").pop().split("?")[0].split("#")[0];
+      var net=/etherscan\\.io/i.test(host) ? "eth" : "bsc";
+
+      hub.searchParams.set("tool", isTx ? "tx" : "quick");
+      hub.searchParams.set("net", net);
+      if(isTx) hub.searchParams.set("tx", v);
+      else hub.searchParams.set("token", v);
+      hub.searchParams.set("autorun","1");
+      hub.hash = isTx ? "#panel-tx" : "#panel-quick";
+
+      var w=window.open(hub.toString(),"_blank");
+      if(!w) window.location.href=hub.toString();
+    }catch(e){
+      alert("CycleX Hub error: " + (e && e.message ? e.message : e));
     }
+  })();`;
+
+  const bm = `javascript:${encodeURIComponent(js)}`;
+
+  setStatus($("#bm-out"), "ok", `Bookmarklet generated. <span class="mono">(copy it)</span>`);
+  $("#bm-out").dataset.bm = bm;
+
+  const drag = $("#bm-drag");
+  if (drag) {
+    drag.href = bm;
+    drag.classList.remove("hidden");
+    drag.setAttribute("data-ready", "1");
+  }
+
+  renderBmHelp();
+  gtagEvent("sec_bm_generate");
+}
 
     async function bmCopy(){
       const bm = $("#bm-out")?.dataset?.bm || "";
