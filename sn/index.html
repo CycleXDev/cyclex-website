@@ -965,7 +965,7 @@
           </div>
           <div id="mon-status" class="status info"></div>
           <div id="mon-table" class="table" style="margin-top:12px;">
-            <div class="trow head" style="grid-template-columns:2fr 0.9fr 1.2fr 1.5fr auto">
+            <div class="trow head" style="grid-template-columns:2fr 1fr 1.2fr 1.5fr auto">
               <div class="cell" data-i18n="th_contract">Contract</div>
               <div class="cell" data-i18n="th_network">Network</div>
               <div class="cell hide-sm" data-i18n="th_last_seen">Last seen</div>
@@ -5458,14 +5458,14 @@ try {
       var net=/\bBNB\b|\bBSC\b|Binance Smart Chain/i.test(pt)?'bsc':'eth';
       hub.searchParams.set('tool','quick');hub.searchParams.set('net',net);
       hub.searchParams.set('token',addr);hub.searchParams.set('autorun','1');
-      window.open(hub.toString(),'_blank');return;
+      var _w=window.open(hub.toString(),'_blank');if(!_w)window.location.href=hub.toString();return;
     }
     /* CoinGecko */
     if(/coingecko\.com/.test(host)&&/\/en\/coins\//.test(u.pathname)){
       var addr=null;
       var nodes=document.querySelectorAll('p,span,td,div,li,a');
       for(var i=0;i<nodes.length&&!addr;i++){var m=(nodes[i].childNodes[0]?.nodeValue||nodes[i].textContent||'').match(/(0x[0-9a-fA-F]{40})/);if(m)addr=m[1];}
-      if(addr){var pt=(document.body.innerText||'').slice(0,6000);var net=/\bBNB\b|\bBSC\b/i.test(pt)?'bsc':'eth';hub.searchParams.set('tool','quick');hub.searchParams.set('net',net);hub.searchParams.set('token',addr);hub.searchParams.set('autorun','1');window.open(hub.toString(),'_blank');return;}
+      if(addr){var pt=(document.body.innerText||'').slice(0,6000);var net=/\bBNB\b|\bBSC\b/i.test(pt)?'bsc':'eth';hub.searchParams.set('tool','quick');hub.searchParams.set('net',net);hub.searchParams.set('token',addr);hub.searchParams.set('autorun','1');var _w=window.open(hub.toString(),'_blank');if(!_w)window.location.href=hub.toString();return;}
     }
     /* BscScan / Etherscan */
     var isTx=/\/tx\//i.test(u.pathname);
@@ -5474,7 +5474,7 @@ try {
     hub.searchParams.set('tool',isTx?'tx':'quick');hub.searchParams.set('net',net);
     if(isTx)hub.searchParams.set('tx',v);else hub.searchParams.set('token',v);
     hub.searchParams.set('autorun','1');
-    window.open(hub.toString(),'_blank');
+    var _w=window.open(hub.toString(),'_blank');if(!_w)window.location.href=hub.toString();
   }catch(e){alert('CycleX Hub error: '+e.message);}
 })();`.trim();
 
@@ -5529,7 +5529,7 @@ if (drag) {
       for (const item of list) {
         const chain = CHAINS[item.net];
         table.insertAdjacentHTML("beforeend", `
-  <div class="trow" style="grid-template-columns:2fr 0.9fr 1.2fr 1.5fr auto">
+  <div class="trow" style="grid-template-columns:2fr 1fr 1.2fr 1.5fr auto">
     <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
     <div class="cell">${String(item.net || "").toUpperCase()}</div>
     <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen*1000).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : "—"}</div>
@@ -5605,19 +5605,6 @@ if (drag) {
       gtagEvent("sec_mon_remove", { net: netLower });
     }
 
-    function bindMonRemove(){
-      const table = $("#mon-table");
-      if (!table || table.__cxBoundRemove) return;
-      table.__cxBoundRemove = true;
-      table.addEventListener("click", (e) => {
-        const btn = e.target.closest('button[data-action="mon-remove"]');
-        if (!btn) return;
-        e.preventDefault();
-        monRemove(btn.getAttribute("data-addr"), btn.getAttribute("data-net"));
-      });
-    }
-
-
     function initDevUi(){
       const base = location.href.split("?")[0];
       const el = $("#bm-base");
@@ -5632,13 +5619,41 @@ if (drag) {
 
       renderBmHelp();
       renderMonitorTable();
-      bindMonRemove();
-      // Always enable the "drag to bookmarks" link (default bookmarklet)
-      // Auto-set drag link with full bookmarklet on init
-      setTimeout(bmGenerate, 0);
 
+      const monTable = $("#mon-table");
+      if (monTable && !monTable.__cxBoundRemove) {
+        monTable.__cxBoundRemove = true;
+        monTable.addEventListener("click", (e) => {
+          const btn = e.target.closest('button[data-action="mon-remove"]');
+          if (!btn) return;
+          e.preventDefault();
+          monRemove(btn.getAttribute("data-addr"), btn.getAttribute("data-net"));
+        });
+      }
+
+      setTimeout(bmGenerate, 50);
     }
 
+    // =========================
+// DNA — exports disabled (DNA features live in Firewall app)
+// =========================
+// try {
+//   window.dnaScan = window.dnaScan || dnaScan;
+//   window.dnaConnectWallet = window.dnaConnectWallet || dnaConnectWallet;
+//   window.dnaRequestFullAccess = window.dnaRequestFullAccess || dnaRequestFullAccess;
+//   window.dnaCheckCycxEligibility_BSC = window.dnaCheckCycxEligibility_BSC || dnaCheckCycxEligibility_BSC;
+//   window.initWalletSecurityDNAUi = window.initWalletSecurityDNAUi || initWalletSecurityDNAUi;
+//   window.initDnaCycxGate = window.initDnaCycxGate || initDnaCycxGate;
+//   window.withRpcFallback = window.withRpcFallback || withRpcFallback;
+//   window.E = window.E || E;
+// } catch (e) { console.warn("DNA exports failed:", e); }
+
+    // =========================
+    // Boot
+    // =========================
+// =========================
+// Boot
+// =========================
 function parseQuery() {
   const u = new URL(location.href);
   return {
