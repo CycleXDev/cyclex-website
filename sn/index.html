@@ -965,7 +965,7 @@
           </div>
           <div id="mon-status" class="status info"></div>
           <div id="mon-table" class="table" style="margin-top:12px;">
-            <div class="trow head" style="grid-template-columns:2fr 1fr 1.4fr 1fr auto">
+            <div class="trow head" style="grid-template-columns:2fr 0.9fr 1.2fr 1.5fr auto">
               <div class="cell" data-i18n="th_contract">Contract</div>
               <div class="cell" data-i18n="th_network">Network</div>
               <div class="cell hide-sm" data-i18n="th_last_seen">Last seen</div>
@@ -5529,7 +5529,7 @@ if (drag) {
       for (const item of list) {
         const chain = CHAINS[item.net];
         table.insertAdjacentHTML("beforeend", `
-  <div class="trow" style="grid-template-columns:2fr 1fr 1.4fr 1fr auto">
+  <div class="trow" style="grid-template-columns:2fr 0.9fr 1.2fr 1.5fr auto">
     <div class="cell mono"><a href="${chain.addressUrl(item.addr)}" target="_blank" rel="noopener">${shortAddr(item.addr)}</a></div>
     <div class="cell">${String(item.net || "").toUpperCase()}</div>
     <div class="cell hide-sm">${item.lastSeen ? new Date(item.lastSeen*1000).toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : "—"}</div>
@@ -5592,33 +5592,30 @@ if (drag) {
       setStatus($("#mon-status"), ok ? "ok" : "warn", ok ? "Copied JSON." : "Copy failed.");
     }
     function monRemove(addr, net){
-  const st = $("#mon-status");
-  const addrLower = safeLower(String(addr || "").trim());
-  const netLower  = safeLower(String(net || "").trim());
+      const st = $("#mon-status");
+      const addrLower = safeLower(String(addr || "").trim());
+      const netLower  = safeLower(String(net || "").trim());
+      const list = loadMonitor();
+      const next = list.filter(it =>
+        !(safeLower(it.net) === netLower && safeLower(it.addr) === addrLower)
+      );
+      saveMonitor(next);
+      renderMonitorTable();
+      setStatus(st, "ok", "Removed.");
+      gtagEvent("sec_mon_remove", { net: netLower });
+    }
 
-  const list = loadMonitor();
-  const next = list.filter(it =>
-    !(safeLower(it.net) === netLower && safeLower(it.addr) === addrLower)
-  );
-
-  saveMonitor(next);
-  renderMonitorTable();
-  setStatus(st, "ok", "Removed.");
-  gtagEvent("sec_mon_remove", { net: netLower });
-}
-
-function bindMonRemove(){
-  const table = $("#mon-table");
-  if (!table || table.__cxBoundRemove) return;
-  table.__cxBoundRemove = true;
-
-  table.addEventListener("click", (e) => {
-    const btn = e.target.closest('button[data-action="mon-remove"]');
-    if (!btn) return;
-    e.preventDefault();
-    monRemove(btn.getAttribute("data-addr"), btn.getAttribute("data-net"));
-  });
-}
+    function bindMonRemove(){
+      const table = $("#mon-table");
+      if (!table || table.__cxBoundRemove) return;
+      table.__cxBoundRemove = true;
+      table.addEventListener("click", (e) => {
+        const btn = e.target.closest('button[data-action="mon-remove"]');
+        if (!btn) return;
+        e.preventDefault();
+        monRemove(btn.getAttribute("data-addr"), btn.getAttribute("data-net"));
+      });
+    }
 
 
     function initDevUi(){
@@ -5637,54 +5634,11 @@ function bindMonRemove(){
       renderMonitorTable();
       bindMonRemove();
       // Always enable the "drag to bookmarks" link (default bookmarklet)
-try {
-  const hubBase = ($("#bm-base")?.value || location.href.split("?")[0]).trim();
-  const js = `
-(function(){
-  try{
-    var href = location.href;
-    var u = new URL(href);
-    var isTx = /\\/tx\\//i.test(u.pathname);
-    var v = href.split("/").pop().split("?")[0].split("#")[0];
-    var net = /etherscan\\.io/i.test(u.host) ? "eth" : "bsc";
-    var hub = new URL("${hubBase}");
-    hub.searchParams.set("tool", isTx ? "tx" : "quick");
-    hub.searchParams.set("net", net);
-    if (isTx) hub.searchParams.set("tx", v);
-    else hub.searchParams.set("token", v);
-    hub.hash = isTx ? "#panel-tx" : "#panel-quick";
-    window.open(hub.toString(), "_blank");
-  }catch(e){ alert("CycleX Hub bookmarklet error"); }
-})();`.trim();
-
-  const bmDefault = `javascript:${encodeURIComponent(js)}`;
-
-  const drag = $("#bm-drag");
-  if (drag) drag.href = bmDefault;
-} catch {}
+      // Auto-set drag link with full bookmarklet on init
+      setTimeout(bmGenerate, 0);
 
     }
 
-    // =========================
-// DNA — exports disabled (DNA features live in Firewall app)
-// =========================
-// try {
-//   window.dnaScan = window.dnaScan || dnaScan;
-//   window.dnaConnectWallet = window.dnaConnectWallet || dnaConnectWallet;
-//   window.dnaRequestFullAccess = window.dnaRequestFullAccess || dnaRequestFullAccess;
-//   window.dnaCheckCycxEligibility_BSC = window.dnaCheckCycxEligibility_BSC || dnaCheckCycxEligibility_BSC;
-//   window.initWalletSecurityDNAUi = window.initWalletSecurityDNAUi || initWalletSecurityDNAUi;
-//   window.initDnaCycxGate = window.initDnaCycxGate || initDnaCycxGate;
-//   window.withRpcFallback = window.withRpcFallback || withRpcFallback;
-//   window.E = window.E || E;
-// } catch (e) { console.warn("DNA exports failed:", e); }
-
-    // =========================
-    // Boot
-    // =========================
-// =========================
-// Boot
-// =========================
 function parseQuery() {
   const u = new URL(location.href);
   return {
