@@ -5481,7 +5481,8 @@ function safeLower(s){
   }catch(e){alert('CycleX Hub error: '+e.message);}
 })();`.trim();
 
-      const bm = `javascript:${encodeURIComponent(js)}`;
+      const b64 = btoa(unescape(encodeURIComponent(js)));
+const bm = `javascript:(function(){try{eval(decodeURIComponent(escape(atob('${b64}'))));}catch(e){alert('CycleX Hub error: '+e.message);}})();`;
       setStatus($("#bm-out"), "ok", `Bookmarklet generated. <span class="mono">(copy it)</span>`);
       $("#bm-out").dataset.bm = bm;
       const drag = $("#bm-drag");
