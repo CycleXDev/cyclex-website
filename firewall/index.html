@@ -1,16 +1,6 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-BXDFXJWCNQ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-BXDFXJWCNQ');
-</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>CycleX Firewall — Wallet Protection</title>
@@ -444,13 +434,31 @@
   @media (max-width:600px) {
     html { zoom: 1 !important; }
     body { font-size: 14px; }
-    .top-bar { flex-wrap: wrap; padding: 10px 12px; border-radius: 18px; gap: 8px; margin-bottom: 18px; }
+
+    /* ── TOP BAR: 3-row layout on mobile ── */
+    .top-bar {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 10px 12px;
+      border-radius: 18px;
+      gap: 8px;
+      margin-bottom: 18px;
+      top: 8px;
+    }
+    .brand { justify-content: flex-start; }
     .brand-sub { display: none; }
-    .top-right { gap: 6px; flex-wrap: wrap; }
+    .top-right {
+      gap: 6px;
+      flex-wrap: wrap;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .lang-switch { flex: 1 1 100%; justify-content: space-between; }
+    .lang-btn { flex: 1; text-align: center; padding: 6px 4px; }
+    .firewall-badge { font-size: 10px; padding: 6px 12px; flex: 1; justify-content: center; }
+    .btn-full-access-top { flex: 1; text-align: center; font-size: 10px; padding: 7px 10px; }
     .back-link { display: none; }
-    .firewall-badge { font-size: 9px; padding: 4px 8px; }
-    .lang-switch { order: -1; }
-    .btn-full-access-top { font-size: 10px; padding: 6px 10px; }
     .hero { padding: 6px 0 16px; }
     .hero-title { font-size: 24px !important; line-height: 1.2; }
     .hero-sub { font-size: 12px; }
@@ -468,6 +476,38 @@
     .rel-card { padding: 14px; }
     .fw-watch-grid { grid-template-columns: 1fr !important; }
     .fw-watch-row { flex-wrap: wrap; gap: 6px; }
+
+    /* ── WALLET WATCH: buttons above text on mobile ── */
+    .fw-watch-header-actions {
+      order: -1;
+      flex-direction: row;
+      width: 100%;
+    }
+    .fw-watch-header-actions .fw-watch-submit {
+      flex: 1;
+      text-align: center;
+    }
+
+    /* ── SPEND LIMIT TEMPLATES: 1 column on mobile ── */
+    #ruleTemplates {
+      grid-template-columns: 1fr !important;
+    }
+
+    /* ── WALLET WATCH top: stack buttons above text ── */
+    .fw-watch-top {
+      flex-direction: column !important;
+      align-items: stretch !important;
+    }
+    .fw-watch-top .fw-watch-header-actions {
+      order: 1 !important;
+      width: 100%;
+    }
+    .fw-watch-top .fw-watch-header-actions .fw-watch-submit {
+      flex: 1;
+    }
+    .fw-watch-top .fw-watch-header-text {
+      order: 2 !important;
+    }
     .fix-step { padding: 14px; }
     #fwExportSection .export-btns { flex-direction: column; }
     .access-gate { padding: 24px 16px !important; }
@@ -1294,12 +1334,12 @@
       <div id="fwWatchSection">
         <div class="section-title" data-i18n="sec_watch">👁 Wallet Watch</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:16px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-            <div class="fw-watch-header-text">
+          <div class="fw-watch-top" style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+            <div class="fw-watch-header-text" style="order:2;">
               <div style="font-size:16px;font-weight:800;margin-bottom:4px" data-i18n="watch_title">Track Multiple Wallets</div>
               <div style="font-size:13px;color:var(--muted);line-height:1.6">Monitor scores across BSC, ETH &amp; Polygon. Each wallet scans individually and saves its score history. <span id="watchLimitLabel" data-i18n="watch_limit_label" style="color:var(--muted);font-size:11px">(Free: 2 wallets max — Unlock for up to 10)</span></div>
             </div>
-            <div class="fw-watch-header-actions">
+            <div class="fw-watch-header-actions" style="order:1;">
               <button class="fw-watch-submit" id="fwBtnScanAll" onclick="fwWatchScanAll()" style="background:rgba(93,255,178,.10);border-color:rgba(93,255,178,.3);color:var(--green)">↻ Scan All</button>
               <button class="fw-watch-submit" id="fwBtnEnableNotif" onclick="fwRequestNotifications()">🔔 Alerts</button>
             </div>
