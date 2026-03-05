@@ -3281,15 +3281,20 @@ async function fwVerifyPassport(encoded) {
       const expiryMs = issuedAt + TTL;
       const expired  = now > expiryMs;
 
-      // Verify via Worker endpoint
+      // Verify via Worker endpoint — send full passport as POST JSON
+      // (avoids btoa/atob Unicode mismatch with em-dash chars in stats)
       let valid = false;
       try {
-        const res = await fetch(`${API_BASE}/api/verifyPassport?data=${encodeURIComponent(encoded)}`);
+        const res = await fetch(`${API_BASE}/api/verifyPassport`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ passport: data })
+        });
         const json = await res.json().catch(() => null);
         valid = json?.valid === true;
       } catch {
-        // Worker unreachable — fall back to UI-only check (no HMAC recheck)
-        valid = !!sig && !!wallet; // shows as "unconfirmed" below
+        // Worker unreachable — fall back to basic presence check
+        valid = !!sig && !!wallet;
       }
 
       _fvPopulate(
@@ -4143,14 +4148,37 @@ function fwDownloadShareCard() {
   const origTransform = card.style.transform;
   const origWidth     = card.style.width;
 
+  // html2canvas bug: letter-spacing + text-transform:uppercase adds extra space after last char.
+  // Fix: temporarily zero out letter-spacing on all card elements, restore after capture.
+  const allEls = card.querySelectorAll("*");
+  const savedLS = [];
+  allEls.forEach(el => {
+    const cs = getComputedStyle(el);
+    const ls = cs.letterSpacing;
+    savedLS.push(ls);
+    if (ls && ls !== "normal" && ls !== "0px") {
+      el.style.letterSpacing = "0px";
+    }
+  });
+
   html2canvas(card, {
-    scale: 3,           // 3× pixel ratio = retina+
+    scale: 2,           // 2× = good retina quality without huge file
     useCORS: true,
     allowTaint: true,
-    backgroundColor: null,  // preserve card's own background
+    backgroundColor: null,
     logging: false,
     removeContainer: true,
+    onclone: (doc) => {
+      // Also zero letter-spacing in the cloned document
+      doc.querySelectorAll("#passportCard *").forEach(el => {
+        el.style.letterSpacing = "0px";
+      });
+    }
   }).then(canvas => {
+    // Restore letter-spacing
+    allEls.forEach((el, i) => {
+      el.style.letterSpacing = "";
+    });
     try {
       const a = document.createElement("a");
       a.download = `cyclex-passport-${fwShort(fwWallet).replace(/\./g,"")}.png`;
@@ -4161,6 +4189,8 @@ function fwDownloadShareCard() {
       showPassportMsg("⚠ Download failed — try a different browser.");
     }
   }).catch(e => {
+    // Restore even on error
+    allEls.forEach(el => { el.style.letterSpacing = ""; });
     showPassportMsg(`⚠ Screenshot failed: ${(e.message||"unknown").slice(0,60)}`);
   });
 }
