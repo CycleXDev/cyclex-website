@@ -3205,8 +3205,9 @@ function _fwShowSignedState(signature, verifyURL) {
   const shareXBtn = document.getElementById("btnShareXSigned");
   if (shareXBtn && !shareXBtn.__fwBound) {
     shareXBtn.addEventListener("click", () => {
-      const score = fwScanData?.score || "—";
-      const text  = `🛡 My CycleX Firewall Score: ${score}/100\n\nCryptographically signed & verifiable 👇\n${verifyURL}\n\n#CycleX #WalletSecurity #DeFi`;
+      const score   = fwScanData?.score || "—";
+      const riskLvl = score >= 85 ? "✅ Protected" : score >= 60 ? "⚠️ Exposed" : "🚨 Critical";
+      const text = `🛡️ CycleX Firewall Score: ${score}/100 ${riskLvl}\n\nVerifiable on-chain proof 👇\n${verifyURL}\n\n#CycleX #WalletSecurity #DeFi`;
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
     });
     shareXBtn.__fwBound = true;
@@ -4073,78 +4074,218 @@ async function fwGetWorkerPassport() {
 // ── SHARE CARD PNG DOWNLOAD ───────────────────────────────────────
 function fwDownloadShareCard() {
   if (!fwScanData || !fwWallet) { showPassportMsg("⚠ Run a scan first."); return; }
-  const W = 1200, H = 630;
+
+  // Draw at 2× for retina, export at 800×420 logical
+  const SCALE = 2;
+  const W = 800 * SCALE, H = 420 * SCALE;
+  const s = SCALE; // shorthand multiplier
+
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
+  ctx.scale(s, s); // all coords in logical px (800×420)
+
+  const LW = 800, LH = 420; // logical dimensions
+
   const score   = fwScanData.score || 0;
-  const riskLvl = score >= 85 ? "Low Risk"    : score >= 60 ? "Medium Risk" : "High Risk";
-  const riskCol = score >= 85 ? "#3cffb0"     : score >= 60 ? "#ffd166"     : "#ff4757";
-  const blast   = document.getElementById("ppBlast")?.textContent  || "—";
-  const drain   = document.getElementById("ppDrain")?.textContent  || "—";
-  const risky   = document.getElementById("ppApprovals")?.textContent || "—";
+  const riskLvl = score >= 85 ? "Protected"   : score >= 60 ? "Exposed"    : "Critical";
+  const riskCol = score >= 85 ? "#3cffb0"     : score >= 60 ? "#ffd166"    : "#ff4757";
+  const riskBg  = score >= 85 ? "rgba(61,255,178,.10)" : score >= 60 ? "rgba(255,209,102,.10)" : "rgba(255,71,87,.10)";
+  const blastRaw= document.getElementById("ppBlast")?.textContent  || "—";
+  const drainRaw= document.getElementById("ppDrain")?.textContent  || "—";
+  const risky   = document.getElementById("ppApprovals")?.textContent || "0";
   const net     = fwNet.toUpperCase();
   const isVerif = fwAccessTier === "full" && _fwAccessVerified;
-  // Background
-  const bg = ctx.createLinearGradient(0,0,W,H);
-  bg.addColorStop(0,"#08071a"); bg.addColorStop(0.5,"#0b0e20"); bg.addColorStop(1,"#061018");
-  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
-  const g1 = ctx.createRadialGradient(220,160,0,220,160,520);
-  g1.addColorStop(0,"rgba(124,92,255,0.22)"); g1.addColorStop(1,"transparent");
-  ctx.fillStyle = g1; ctx.fillRect(0,0,W,H);
-  const g2 = ctx.createRadialGradient(980,100,0,980,100,480);
-  g2.addColorStop(0,"rgba(0,229,255,0.18)"); g2.addColorStop(1,"transparent");
-  ctx.fillStyle = g2; ctx.fillRect(0,0,W,H);
-  // Top badge
-  ctx.fillStyle = "rgba(0,229,255,0.10)";
-  _cxRoundRect(ctx,52,48,220,34,17); ctx.fill();
-  ctx.strokeStyle = "rgba(0,229,255,0.28)"; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = "rgba(0,229,255,0.90)";
-  ctx.font = "700 11px system-ui"; ctx.fillText("🛡  CYCLEX FIREWALL",76,70);
-  // Wallet
-  ctx.fillStyle = "rgba(244,246,255,0.95)";
-  ctx.font = "800 22px ui-monospace,monospace";
-  ctx.fillText(fwShort(fwWallet) + "  ·  " + net, 52, 130);
-  // Score circle
-  const scx = 160, scy = 320, sr = 110;
-  ctx.beginPath(); ctx.arc(scx,scy,sr,0,Math.PI*2);
-  ctx.fillStyle = "rgba(255,255,255,0.04)"; ctx.fill();
-  ctx.strokeStyle = riskCol; ctx.lineWidth = 3; ctx.stroke();
-  ctx.fillStyle = riskCol; ctx.font = "900 72px system-ui";
-  ctx.textAlign = "center"; ctx.fillText(String(score), scx, scy+22);
-  ctx.fillStyle = "rgba(244,246,255,0.55)"; ctx.font = "600 16px system-ui";
-  ctx.fillText("/ 100", scx, scy+50);
-  ctx.fillStyle = riskCol; ctx.font = "800 15px system-ui";
-  ctx.fillText(riskLvl, scx, scy-sr-16);
-  ctx.textAlign = "left";
-  // Stats grid
-  [[blast,"💥 Blast Radius",360,210],[drain,"⏱ Time-to-Drain",720,210],
-   [risky,"🎯 Risky Approvals",360,340],[today(),"📅 Scanned",720,340]].forEach(([val,label,col,row])=>{
-    ctx.fillStyle = "rgba(255,255,255,0.04)";
-    _cxRoundRect(ctx,col,row,310,100,14); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = "rgba(244,246,255,0.52)"; ctx.font = "500 13px system-ui";
-    ctx.fillText(label, col+16, row+30);
-    ctx.fillStyle = "rgba(244,246,255,0.95)"; ctx.font = "800 24px system-ui";
-    ctx.fillText(String(val), col+16, row+68);
-  });
-  // Watermark / Verified
-  ctx.textAlign = "center";
-  if (!isVerif) {
-    ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.font = "600 12px system-ui";
-    ctx.fillText("Preview • Fix Mode requires PASS", W/2, H-28);
-  } else {
-    ctx.fillStyle = "rgba(93,255,178,0.85)"; ctx.font = "700 13px system-ui";
-    ctx.fillText("✅ Verified by CycleX", W/2, H-28);
+
+  // Clip long drain text
+  const drain = drainRaw.replace(" — no unlimited approvals","").replace(" — ","—");
+  const blast = blastRaw;
+
+  // ── Background ──────────────────────────────────────────────
+  const bg = ctx.createLinearGradient(0, 0, LW, LH);
+  bg.addColorStop(0, "#070616");
+  bg.addColorStop(1, "#060e18");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, LW, LH);
+
+  // Purple glow top-left
+  const g1 = ctx.createRadialGradient(0, 0, 0, 0, 0, 380);
+  g1.addColorStop(0, "rgba(124,92,255,0.28)");
+  g1.addColorStop(1, "transparent");
+  ctx.fillStyle = g1; ctx.fillRect(0, 0, LW, LH);
+
+  // Cyan glow top-right
+  const g2 = ctx.createRadialGradient(LW, 0, 0, LW, 0, 340);
+  g2.addColorStop(0, "rgba(0,229,255,0.20)");
+  g2.addColorStop(1, "transparent");
+  ctx.fillStyle = g2; ctx.fillRect(0, 0, LW, LH);
+
+  // ── Outer border ────────────────────────────────────────────
+  ctx.strokeStyle = "rgba(255,255,255,0.10)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, LW-1, LH-1);
+
+  // ── Logo + Brand (top-left) ──────────────────────────────────
+  const lx = 36, ly = 32;
+  // Shield shape drawn with path
+  function drawShield(ctx, x, y, size, fill, stroke) {
+    const w = size * 0.78, h = size;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w, y);
+    ctx.lineTo(x + w, y + h * 0.55);
+    ctx.quadraticCurveTo(x + w, y + h, x + w/2, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h * 0.55);
+    ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
   }
-  ctx.fillStyle = "rgba(244,246,255,0.28)"; ctx.font = "500 12px system-ui";
-  ctx.textAlign = "right"; ctx.fillText("cyclex.network/firewall", W-44, H-28);
+  const shSize = 28;
+  drawShield(ctx, lx, ly, shSize, "rgba(0,229,255,0.15)", "rgba(0,229,255,0.50)");
+  // "C" inside shield
+  ctx.fillStyle = "rgba(0,229,255,0.95)";
+  ctx.font = "900 13px system-ui";
+  ctx.textAlign = "center";
+  ctx.fillText("C", lx + shSize*0.78/2, ly + shSize*0.60);
   ctx.textAlign = "left";
-  // Download
+
+  // Brand text
+  ctx.fillStyle = "rgba(244,246,255,0.95)";
+  ctx.font = "900 13px system-ui";
+  ctx.letterSpacing = "0.12em";
+  ctx.fillText("CYCLEX", lx + shSize*0.78 + 9, ly + 13);
+  ctx.fillStyle = "rgba(0,229,255,0.75)";
+  ctx.font = "500 10px system-ui";
+  ctx.letterSpacing = "0.20em";
+  ctx.fillText("FIREWALL", lx + shSize*0.78 + 9, ly + 26);
+  ctx.letterSpacing = "0";
+
+  // ── Verified badge (top-right) or Preview ───────────────────
+  if (isVerif) {
+    const bw = 154, bh = 26, bx = LW - bw - 32, by = ly;
+    _cxRoundRect(ctx, bx, by, bw, bh, 13);
+    ctx.fillStyle = "rgba(61,255,178,0.12)"; ctx.fill();
+    ctx.strokeStyle = "rgba(61,255,178,0.40)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "#3cffb0"; ctx.font = "700 11px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("✅  Verified by CycleX", bx + bw/2, by + 17);
+    ctx.textAlign = "left";
+  } else {
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.font = "500 10px system-ui";
+    ctx.textAlign = "right";
+    ctx.fillText("Preview • PASS unlocks Fix Mode", LW - 32, ly + 18);
+    ctx.textAlign = "left";
+  }
+
+  // ── Divider line ─────────────────────────────────────────────
+  ctx.strokeStyle = "rgba(255,255,255,0.07)";
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(32, 78); ctx.lineTo(LW - 32, 78); ctx.stroke();
+
+  // ── Wallet address ───────────────────────────────────────────
+  ctx.fillStyle = "rgba(244,246,255,0.70)";
+  ctx.font = "500 12px ui-monospace,monospace";
+  ctx.fillText(fwWallet ? (fwWallet.slice(0,10) + "..." + fwWallet.slice(-8)) : "—", 36, 102);
+  ctx.fillStyle = "rgba(0,229,255,0.60)";
+  ctx.font = "700 11px system-ui";
+  ctx.fillText("·  " + net, 36 + 190, 102);
+
+  // ── Score arc (left column) ──────────────────────────────────
+  const scx = 140, scy = 252, sr = 88;
+
+  // Background circle
+  ctx.beginPath(); ctx.arc(scx, scy, sr, 0, Math.PI*2);
+  ctx.fillStyle = "rgba(255,255,255,0.03)"; ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 2; ctx.stroke();
+
+  // Colored progress arc
+  const pct = score / 100;
+  const startAngle = -Math.PI/2;
+  const endAngle   = startAngle + pct * Math.PI * 2;
+  ctx.beginPath();
+  ctx.arc(scx, scy, sr, startAngle, endAngle);
+  ctx.strokeStyle = riskCol; ctx.lineWidth = 5; ctx.lineCap = "round";
+  ctx.stroke();
+
+  // Score number
+  ctx.fillStyle = riskCol;
+  ctx.font = "900 64px system-ui";
+  ctx.textAlign = "center";
+  ctx.fillText(String(score), scx, scy + 20);
+
+  ctx.fillStyle = "rgba(244,246,255,0.40)";
+  ctx.font = "500 14px system-ui";
+  ctx.fillText("/ 100", scx, scy + 44);
+
+  // Risk badge under arc
+  _cxRoundRect(ctx, scx - 52, scy + sr + 10, 104, 26, 13);
+  ctx.fillStyle = riskBg; ctx.fill();
+  ctx.strokeStyle = riskCol + "66"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = riskCol; ctx.font = "700 11px system-ui";
+  ctx.fillText(riskLvl, scx - 52 + 52 - ctx.measureText(riskLvl).width/2, scy + sr + 28);
+  ctx.textAlign = "left";
+
+  // ── Stats grid (right column) ────────────────────────────────
+  // 2×2 grid: x from 272 to LW-32, row heights even
+  const gx = 272, gy = 118, gw = LW - gx - 32, gh = LH - gy - 52;
+  const cw = (gw - 12) / 2, ch = (gh - 12) / 2;
+
+  const stats = [
+    { label: "Blast Radius",   val: blast,        icon: "💥" },
+    { label: "Time-to-Drain",  val: drain,         icon: "⏱" },
+    { label: "Risky Approvals",val: risky,         icon: "🎯" },
+    { label: "Scanned",        val: today(),       icon: "📅" },
+  ];
+
+  // Wrap long text helper
+  function fitText(ctx, text, maxW, sizes) {
+    for (const sz of sizes) {
+      ctx.font = `700 ${sz}px system-ui`;
+      if (ctx.measureText(text).width <= maxW) return sz;
+    }
+    return sizes[sizes.length - 1];
+  }
+
+  stats.forEach(({label, val, icon}, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const bx = gx + col * (cw + 12);
+    const by = gy + row * (ch + 12);
+
+    // Card background
+    _cxRoundRect(ctx, bx, by, cw, ch, 12);
+    ctx.fillStyle = "rgba(255,255,255,0.04)"; ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1; ctx.stroke();
+
+    // Label
+    ctx.fillStyle = "rgba(244,246,255,0.45)";
+    ctx.font = "500 11px system-ui";
+    ctx.fillText(icon + "  " + label, bx + 14, by + 22);
+
+    // Value — auto-size to fit
+    const valStr = String(val);
+    const maxValW = cw - 28;
+    const valSize = fitText(ctx, valStr, maxValW, [22, 18, 15, 13]);
+    ctx.fillStyle = "rgba(244,246,255,0.95)";
+    ctx.font = `700 ${valSize}px system-ui`;
+    // vertical center in remaining space
+    ctx.fillText(valStr, bx + 14, by + ch - 16);
+  });
+
+  // ── Bottom bar ───────────────────────────────────────────────
+  ctx.fillStyle = "rgba(255,255,255,0.22)";
+  ctx.font = "500 11px system-ui";
+  ctx.textAlign = "right";
+  ctx.fillText("cyclex.network/firewall", LW - 32, LH - 14);
+  ctx.textAlign = "left";
+
+  // ── Download ─────────────────────────────────────────────────
   try {
     const a = document.createElement("a");
-    a.download = `cyclex-${fwShort(fwWallet).replace(/\./g,"")}.png`;
-    a.href = canvas.toDataURL("image/png"); a.click();
+    a.download = `cyclex-${(fwWallet||"wallet").slice(0,10).replace("0x","")}.png`;
+    a.href = canvas.toDataURL("image/png", 1.0);
+    a.click();
     showPassportMsg("✅ Share card downloaded!");
   } catch { showPassportMsg("⚠ Download failed — try a different browser."); }
 }
@@ -5136,8 +5277,12 @@ document.getElementById("btnFix2").addEventListener("click", () => applyFix(1));
 document.getElementById("btnFix3").addEventListener("click", () => applyFix(2));
 
 document.getElementById("btnShareX").addEventListener("click", () => {
-  if (fwAccessTier !== "full") { requestFullAccess(); return; }
-  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getPassportText())}`, "_blank");
+  const score   = fwScanData?.score ?? "—";
+  const riskLvl = Number(score) >= 85 ? "Protected ✅" : Number(score) >= 60 ? "Exposed ⚠️" : "Critical 🚨";
+  const wallet  = fwWallet ? fwShort(fwWallet) : "";
+  const wmark   = fwAccessTier !== "full" ? "\n\nGet Fix Mode → cyclex.network/firewall" : "";
+  const text = `🛡️ My CycleX Firewall Score: ${score}/100 — ${riskLvl}\n\nScanned ${wallet} for approval threats 🔍${wmark}\n\n#CycleX #WalletSecurity #DeFi`;
+  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
 });
 
 document.getElementById("btnCopyPassport").addEventListener("click", () => {
