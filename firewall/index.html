@@ -4159,16 +4159,14 @@ function fwDownloadShareCard() {
     backgroundColor: null,
     logging: false,
     removeContainer: true,
-    onclone: (doc) => {
-      // Inject override style — highest specificity, no side effects on live page
-      const st = doc.createElement("style");
-      st.textContent = `
-        #passportCard, #passportCard * {
-          letter-spacing: 0 !important;
-          word-spacing: 0 !important;
-        }
-      `;
-      doc.head.appendChild(st);
+    onclone: (doc, clonedCard) => {
+      // html2canvas reads getComputedStyle — must set inline style directly on each element
+      // A <style> tag is too late; inline style overrides everything immediately.
+      clonedCard.querySelectorAll("*").forEach(el => {
+        el.style.setProperty("letter-spacing", "0px", "important");
+        el.style.setProperty("word-spacing",   "0px", "important");
+      });
+      clonedCard.style.setProperty("letter-spacing", "0px", "important");
     }
   }).then(canvas => {
     try {
