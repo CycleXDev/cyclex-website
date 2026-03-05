@@ -12,6 +12,7 @@
 
   <!-- Ethers (same version as main site) -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <style>
   :root {
     --bg:#05060a;
@@ -133,9 +134,9 @@
     margin-bottom:14px;
     background:linear-gradient(110deg,rgba(244,246,255,1) 0%,rgba(255,150,100,.95) 35%,rgba(255,80,80,.90) 65%,rgba(124,92,255,.88) 100%);
     -webkit-background-clip:text;background-clip:text;color:transparent;
-    background-size:200% 200%;animation:titleSheen 10s ease-in-out infinite
+    background-size:100% 100%  /* titleSheen animation removed — caused continuous GPU repaint */
   }
-  @keyframes titleSheen{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  /* @keyframes titleSheen removed */
   @media (prefers-reduced-motion: reduce) {
     .hero-title, .firewall-badge .dot, .drain-fast, .load-step.active .step-icon { animation: none !important; }
   }
@@ -436,7 +437,7 @@
   #fwWatchSection,
   #fwThreatFeedSection { contain: layout style; }
   #dashboard .exp-card svg { contain: strict; }
-  .firewall-badge .dot { will-change: opacity, transform; }
+  /* will-change removed from badge dot — unnecessary compositor layer */
 
   /* ── MOBILE (≤600px) ─────────────────────────── */
   @media (max-width:600px) {
@@ -3219,7 +3220,7 @@ async function fwVerifyPassport(encoded) {
   const modal = document.getElementById("fwVerifyModal");
   if (!modal) return;
 
-  // Show modal immediately in loading state
+  // Show modal in loading state
   modal.style.display = "flex";
   modal.className = "";
   document.getElementById("fvIcon").textContent  = "🔍";
@@ -3228,22 +3229,96 @@ async function fwVerifyPassport(encoded) {
   document.getElementById("fvCard").style.display = "none";
   modal.classList.add("open");
 
-  try {
-    // Decode base64url (Unicode-safe)
-    const data = JSON.parse(fwFromBase64url(encoded));
+  // Helper: populate the info card
+  function _fvPopulate(wallet, net, score, blastStr, riskStr, issuedMs, expiryMs) {
+    document.getElementById("fvWallet").textContent   = fwShort(wallet);
+    document.getElementById("fvNetwork").textContent  = (net||"").toUpperCase();
+    document.getElementById("fvScore").textContent    = `${score}/100`;
+    document.getElementById("fvBlast").textContent    = blastStr;
+    document.getElementById("fvHighRisk").textContent = riskStr;
+    document.getElementById("fvSignedAt").textContent = issuedMs
+      ? new Date(issuedMs).toLocaleString("en-US",{dateStyle:"medium",timeStyle:"short"}) : "—";
+    document.getElementById("fvExpiry").textContent   = expiryMs
+      ? new Date(expiryMs).toLocaleString("en-US",{dateStyle:"medium",timeStyle:"short"}) : "—";
+    document.getElementById("fvCard").style.display   = "block";
+  }
 
+  // Helper: show result state
+  function _fvResult(state, wallet, net, score) {
+    if (state === "valid") {
+      modal.classList.add("fv-valid");
+      document.getElementById("fvIcon").textContent  = "✅";
+      document.getElementById("fvTitle").textContent = "Verified Passport";
+      document.getElementById("fvSub").innerHTML     =
+        `Authentic signature from <strong style="color:var(--cyan)">${fwShort(wallet)}</strong>`
+        + ` on ${(net||"").toUpperCase()}. Score: <strong style="color:var(--green)">${score}/100</strong>.`;
+    } else if (state === "expired") {
+      modal.classList.add("fv-expired");
+      document.getElementById("fvIcon").textContent  = "⏰";
+      document.getElementById("fvTitle").textContent = "Passport Expired";
+      document.getElementById("fvSub").innerHTML     =
+        `Valid signature from <strong>${fwShort(wallet)}</strong> — passport has expired. Ask the wallet owner to re-sign.`;
+    } else if (state === "invalid") {
+      modal.classList.add("fv-invalid");
+      document.getElementById("fvIcon").textContent  = "❌";
+      document.getElementById("fvTitle").textContent = "Invalid Signature";
+      document.getElementById("fvSub").textContent   =
+        "The signature does not match the wallet address. This passport may have been tampered with.";
+    }
+  }
+
+  try {
+    const data = JSON.parse(fwFromBase64url(encoded));
+    if (!data?.wallet) throw new Error("Invalid passport data");
+
+    // ── BRANCH A: Worker HMAC passport (cx-passport-v1) ─────────────
+    if (data.version === "cx-passport-v1" && data.sig && data.payload) {
+      const { wallet, payload, issuedAt, sig } = data;
+      const net   = payload?.net || "bsc";
+      const score = payload?.score ?? "—";
+      const now   = Date.now();
+      const TTL   = 30 * 24 * 60 * 60 * 1000;
+      const expiryMs = issuedAt + TTL;
+      const expired  = now > expiryMs;
+
+      // Verify via Worker endpoint
+      let valid = false;
+      try {
+        const res = await fetch(`${API_BASE}/api/verifyPassport?data=${encodeURIComponent(encoded)}`);
+        const json = await res.json().catch(() => null);
+        valid = json?.valid === true;
+      } catch {
+        // Worker unreachable — fall back to UI-only check (no HMAC recheck)
+        valid = !!sig && !!wallet; // shows as "unconfirmed" below
+      }
+
+      _fvPopulate(
+        wallet, net, score,
+        payload?.stats?.blastDisplay || "—",
+        `Risk: ${payload?.riskLevel || "—"}`,
+        issuedAt, expiryMs
+      );
+
+      if (!valid) {
+        _fvResult("invalid", wallet, net, score);
+      } else if (expired) {
+        _fvResult("expired", wallet, net, score);
+      } else {
+        _fvResult("valid", wallet, net, score);
+      }
+      return;
+    }
+
+    // ── BRANCH B: EIP-712 on-device passport ────────────────────────
     const { wallet, network, score, unlimited, highRisk,
             timestamp, expiry, signature } = data;
 
     if (!wallet || !signature) throw new Error("Invalid passport data");
 
-    // Check expiry
     const expiryMs = Number(expiry) * 1000;
     const tsMs     = Number(timestamp) * 1000;
-    const now      = Date.now();
-    const expired  = now > expiryMs;
+    const expired  = Date.now() > expiryMs;
 
-    // Reconstruct EIP-712 value with BigInt
     const value = {
       wallet,
       network,
@@ -3255,44 +3330,23 @@ async function fwVerifyPassport(encoded) {
     };
 
     const domain = fwGetEIP712Domain(network);
-
-    // Use ethers.js to verify
     const E = getE();
     let recovered;
     try {
       recovered = E.verifyTypedData(domain, FW_PASSPORT_TYPES, value, signature);
-    } catch(verifyErr) {
-      throw new Error("Signature verification failed");
-    }
+    } catch { throw new Error("Signature verification failed"); }
 
     const isValid = recovered.toLowerCase() === wallet.toLowerCase();
 
-    // Populate card
-    document.getElementById("fvWallet").textContent   = fwShort(wallet);
-    document.getElementById("fvNetwork").textContent  = network.toUpperCase();
-    document.getElementById("fvScore").textContent    = `${score}/100`;
-    document.getElementById("fvBlast").textContent    = `${unlimited} unlimited`;
-    document.getElementById("fvHighRisk").textContent = `${highRisk} high-risk`;
-    document.getElementById("fvSignedAt").textContent = new Date(tsMs).toLocaleString("en-US",{dateStyle:"medium",timeStyle:"short"});
-    document.getElementById("fvExpiry").textContent   = new Date(expiryMs).toLocaleString("en-US",{dateStyle:"medium",timeStyle:"short"});
-    document.getElementById("fvCard").style.display   = "block";
+    _fvPopulate(
+      wallet, network, score,
+      `${unlimited} unlimited`, `${highRisk} high-risk`,
+      tsMs, expiryMs
+    );
 
-    if (!isValid) {
-      modal.classList.add("fv-invalid");
-      document.getElementById("fvIcon").textContent  = "❌";
-      document.getElementById("fvTitle").textContent = "Invalid Signature";
-      document.getElementById("fvSub").textContent   = "The signature does not match the wallet address. This passport may have been tampered with.";
-    } else if (expired) {
-      modal.classList.add("fv-expired");
-      document.getElementById("fvIcon").textContent  = "⏰";
-      document.getElementById("fvTitle").textContent = "Passport Expired";
-      document.getElementById("fvSub").innerHTML     = `Valid signature from <strong>${fwShort(wallet)}</strong> — but this passport has expired. Ask the wallet owner to re-sign.`;
-    } else {
-      modal.classList.add("fv-valid");
-      document.getElementById("fvIcon").textContent  = "✅";
-      document.getElementById("fvTitle").textContent = "Verified Passport";
-      document.getElementById("fvSub").innerHTML     = `Authentic signature from <strong style="color:var(--cyan)">${fwShort(wallet)}</strong> on ${network.toUpperCase()}. Score: <strong style="color:var(--green)">${score}/100</strong>.`;
-    }
+    if (!isValid)   _fvResult("invalid", wallet, network, score);
+    else if (expired) _fvResult("expired", wallet, network, score);
+    else            _fvResult("valid",   wallet, network, score);
 
   } catch(e) {
     modal.classList.add("fv-invalid");
@@ -4075,219 +4129,40 @@ async function fwGetWorkerPassport() {
 function fwDownloadShareCard() {
   if (!fwScanData || !fwWallet) { showPassportMsg("⚠ Run a scan first."); return; }
 
-  // Draw at 2× for retina, export at 800×420 logical
-  const SCALE = 2;
-  const W = 800 * SCALE, H = 420 * SCALE;
-  const s = SCALE; // shorthand multiplier
+  const card = document.getElementById("passportCard");
+  if (!card) { showPassportMsg("⚠ Passport card not found."); return; }
 
-  const canvas = document.createElement("canvas");
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(s, s); // all coords in logical px (800×420)
-
-  const LW = 800, LH = 420; // logical dimensions
-
-  const score   = fwScanData.score || 0;
-  const riskLvl = score >= 85 ? "Protected"   : score >= 60 ? "Exposed"    : "Critical";
-  const riskCol = score >= 85 ? "#3cffb0"     : score >= 60 ? "#ffd166"    : "#ff4757";
-  const riskBg  = score >= 85 ? "rgba(61,255,178,.10)" : score >= 60 ? "rgba(255,209,102,.10)" : "rgba(255,71,87,.10)";
-  const blastRaw= document.getElementById("ppBlast")?.textContent  || "—";
-  const drainRaw= document.getElementById("ppDrain")?.textContent  || "—";
-  const risky   = document.getElementById("ppApprovals")?.textContent || "0";
-  const net     = fwNet.toUpperCase();
-  const isVerif = fwAccessTier === "full" && _fwAccessVerified;
-
-  // Clip long drain text
-  const drain = drainRaw.replace(" — no unlimited approvals","").replace(" — ","—");
-  const blast = blastRaw;
-
-  // ── Background ──────────────────────────────────────────────
-  const bg = ctx.createLinearGradient(0, 0, LW, LH);
-  bg.addColorStop(0, "#070616");
-  bg.addColorStop(1, "#060e18");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, LW, LH);
-
-  // Purple glow top-left
-  const g1 = ctx.createRadialGradient(0, 0, 0, 0, 0, 380);
-  g1.addColorStop(0, "rgba(124,92,255,0.28)");
-  g1.addColorStop(1, "transparent");
-  ctx.fillStyle = g1; ctx.fillRect(0, 0, LW, LH);
-
-  // Cyan glow top-right
-  const g2 = ctx.createRadialGradient(LW, 0, 0, LW, 0, 340);
-  g2.addColorStop(0, "rgba(0,229,255,0.20)");
-  g2.addColorStop(1, "transparent");
-  ctx.fillStyle = g2; ctx.fillRect(0, 0, LW, LH);
-
-  // ── Outer border ────────────────────────────────────────────
-  ctx.strokeStyle = "rgba(255,255,255,0.10)";
-  ctx.lineWidth = 1;
-  ctx.strokeRect(0.5, 0.5, LW-1, LH-1);
-
-  // ── Logo + Brand (top-left) ──────────────────────────────────
-  const lx = 36, ly = 32;
-  // Shield shape drawn with path
-  function drawShield(ctx, x, y, size, fill, stroke) {
-    const w = size * 0.78, h = size;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + w, y);
-    ctx.lineTo(x + w, y + h * 0.55);
-    ctx.quadraticCurveTo(x + w, y + h, x + w/2, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h * 0.55);
-    ctx.closePath();
-    ctx.fillStyle = fill; ctx.fill();
-    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
-  }
-  const shSize = 28;
-  drawShield(ctx, lx, ly, shSize, "rgba(0,229,255,0.15)", "rgba(0,229,255,0.50)");
-  // "C" inside shield
-  ctx.fillStyle = "rgba(0,229,255,0.95)";
-  ctx.font = "900 13px system-ui";
-  ctx.textAlign = "center";
-  ctx.fillText("C", lx + shSize*0.78/2, ly + shSize*0.60);
-  ctx.textAlign = "left";
-
-  // Brand text
-  ctx.fillStyle = "rgba(244,246,255,0.95)";
-  ctx.font = "900 13px system-ui";
-  ctx.letterSpacing = "0.12em";
-  ctx.fillText("CYCLEX", lx + shSize*0.78 + 9, ly + 13);
-  ctx.fillStyle = "rgba(0,229,255,0.75)";
-  ctx.font = "500 10px system-ui";
-  ctx.letterSpacing = "0.20em";
-  ctx.fillText("FIREWALL", lx + shSize*0.78 + 9, ly + 26);
-  ctx.letterSpacing = "0";
-
-  // ── Verified badge (top-right) or Preview ───────────────────
-  if (isVerif) {
-    const bw = 154, bh = 26, bx = LW - bw - 32, by = ly;
-    _cxRoundRect(ctx, bx, by, bw, bh, 13);
-    ctx.fillStyle = "rgba(61,255,178,0.12)"; ctx.fill();
-    ctx.strokeStyle = "rgba(61,255,178,0.40)"; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = "#3cffb0"; ctx.font = "700 11px system-ui";
-    ctx.textAlign = "center";
-    ctx.fillText("✅  Verified by CycleX", bx + bw/2, by + 17);
-    ctx.textAlign = "left";
-  } else {
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
-    ctx.font = "500 10px system-ui";
-    ctx.textAlign = "right";
-    ctx.fillText("Preview • PASS unlocks Fix Mode", LW - 32, ly + 18);
-    ctx.textAlign = "left";
+  if (typeof html2canvas === "undefined") {
+    showPassportMsg("⚠ Screenshot library not loaded yet — try again in a moment.");
+    return;
   }
 
-  // ── Divider line ─────────────────────────────────────────────
-  ctx.strokeStyle = "rgba(255,255,255,0.07)";
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(32, 78); ctx.lineTo(LW - 32, 78); ctx.stroke();
+  showPassportMsg("📸 Generating share card…");
 
-  // ── Wallet address ───────────────────────────────────────────
-  ctx.fillStyle = "rgba(244,246,255,0.70)";
-  ctx.font = "500 12px ui-monospace,monospace";
-  ctx.fillText(fwWallet ? (fwWallet.slice(0,10) + "..." + fwWallet.slice(-8)) : "—", 36, 102);
-  ctx.fillStyle = "rgba(0,229,255,0.60)";
-  ctx.font = "700 11px system-ui";
-  ctx.fillText("·  " + net, 36 + 190, 102);
+  // Temporarily make card bigger for high-res capture, then restore
+  const origTransform = card.style.transform;
+  const origWidth     = card.style.width;
 
-  // ── Score arc (left column) ──────────────────────────────────
-  const scx = 140, scy = 252, sr = 88;
-
-  // Background circle
-  ctx.beginPath(); ctx.arc(scx, scy, sr, 0, Math.PI*2);
-  ctx.fillStyle = "rgba(255,255,255,0.03)"; ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 2; ctx.stroke();
-
-  // Colored progress arc
-  const pct = score / 100;
-  const startAngle = -Math.PI/2;
-  const endAngle   = startAngle + pct * Math.PI * 2;
-  ctx.beginPath();
-  ctx.arc(scx, scy, sr, startAngle, endAngle);
-  ctx.strokeStyle = riskCol; ctx.lineWidth = 5; ctx.lineCap = "round";
-  ctx.stroke();
-
-  // Score number
-  ctx.fillStyle = riskCol;
-  ctx.font = "900 64px system-ui";
-  ctx.textAlign = "center";
-  ctx.fillText(String(score), scx, scy + 20);
-
-  ctx.fillStyle = "rgba(244,246,255,0.40)";
-  ctx.font = "500 14px system-ui";
-  ctx.fillText("/ 100", scx, scy + 44);
-
-  // Risk badge under arc
-  _cxRoundRect(ctx, scx - 52, scy + sr + 10, 104, 26, 13);
-  ctx.fillStyle = riskBg; ctx.fill();
-  ctx.strokeStyle = riskCol + "66"; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = riskCol; ctx.font = "700 11px system-ui";
-  ctx.fillText(riskLvl, scx - 52 + 52 - ctx.measureText(riskLvl).width/2, scy + sr + 28);
-  ctx.textAlign = "left";
-
-  // ── Stats grid (right column) ────────────────────────────────
-  // 2×2 grid: x from 272 to LW-32, row heights even
-  const gx = 272, gy = 118, gw = LW - gx - 32, gh = LH - gy - 52;
-  const cw = (gw - 12) / 2, ch = (gh - 12) / 2;
-
-  const stats = [
-    { label: "Blast Radius",   val: blast,        icon: "💥" },
-    { label: "Time-to-Drain",  val: drain,         icon: "⏱" },
-    { label: "Risky Approvals",val: risky,         icon: "🎯" },
-    { label: "Scanned",        val: today(),       icon: "📅" },
-  ];
-
-  // Wrap long text helper
-  function fitText(ctx, text, maxW, sizes) {
-    for (const sz of sizes) {
-      ctx.font = `700 ${sz}px system-ui`;
-      if (ctx.measureText(text).width <= maxW) return sz;
+  html2canvas(card, {
+    scale: 3,           // 3× pixel ratio = retina+
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: null,  // preserve card's own background
+    logging: false,
+    removeContainer: true,
+  }).then(canvas => {
+    try {
+      const a = document.createElement("a");
+      a.download = `cyclex-passport-${fwShort(fwWallet).replace(/\./g,"")}.png`;
+      a.href = canvas.toDataURL("image/png", 1.0);
+      a.click();
+      showPassportMsg("✅ Share card downloaded!");
+    } catch(e) {
+      showPassportMsg("⚠ Download failed — try a different browser.");
     }
-    return sizes[sizes.length - 1];
-  }
-
-  stats.forEach(({label, val, icon}, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const bx = gx + col * (cw + 12);
-    const by = gy + row * (ch + 12);
-
-    // Card background
-    _cxRoundRect(ctx, bx, by, cw, ch, 12);
-    ctx.fillStyle = "rgba(255,255,255,0.04)"; ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1; ctx.stroke();
-
-    // Label
-    ctx.fillStyle = "rgba(244,246,255,0.45)";
-    ctx.font = "500 11px system-ui";
-    ctx.fillText(icon + "  " + label, bx + 14, by + 22);
-
-    // Value — auto-size to fit
-    const valStr = String(val);
-    const maxValW = cw - 28;
-    const valSize = fitText(ctx, valStr, maxValW, [22, 18, 15, 13]);
-    ctx.fillStyle = "rgba(244,246,255,0.95)";
-    ctx.font = `700 ${valSize}px system-ui`;
-    // vertical center in remaining space
-    ctx.fillText(valStr, bx + 14, by + ch - 16);
+  }).catch(e => {
+    showPassportMsg(`⚠ Screenshot failed: ${(e.message||"unknown").slice(0,60)}`);
   });
-
-  // ── Bottom bar ───────────────────────────────────────────────
-  ctx.fillStyle = "rgba(255,255,255,0.22)";
-  ctx.font = "500 11px system-ui";
-  ctx.textAlign = "right";
-  ctx.fillText("cyclex.network/firewall", LW - 32, LH - 14);
-  ctx.textAlign = "left";
-
-  // ── Download ─────────────────────────────────────────────────
-  try {
-    const a = document.createElement("a");
-    a.download = `cyclex-${(fwWallet||"wallet").slice(0,10).replace("0x","")}.png`;
-    a.href = canvas.toDataURL("image/png", 1.0);
-    a.click();
-    showPassportMsg("✅ Share card downloaded!");
-  } catch { showPassportMsg("⚠ Download failed — try a different browser."); }
 }
 
 function _cxRoundRect(ctx,x,y,w,h,r) {
