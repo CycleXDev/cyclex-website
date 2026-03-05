@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,29 +34,35 @@
   html{font-size:16px;background:#05060a!important}
   body{
     font-family:var(--sans);
-    background:
-      radial-gradient(1200px 720px at 14% 10%,rgba(124,92,255,.20),transparent 58%),
-      radial-gradient(1200px 720px at 86% 12%,rgba(0,229,255,.18),transparent 56%),
-      radial-gradient(980px 680px at 55% 120%,rgba(0,58,76,.42),transparent 62%),
-      linear-gradient(160deg,#05060a,#0b0a18,#021b24)!important;
-    background-repeat:no-repeat!important;
-    background-attachment:fixed!important;
-    background-size:cover!important;
+    background:#05060a!important;   /* flat color only — gradients moved to .fw-bg-layer */
     color:var(--text);
     min-height:100vh;
     -webkit-font-smoothing:antialiased;
   }
-  body::before{
-    content:"";position:fixed;inset:0;pointer-events:none;
+  /* ── GPU-composited background layer ──────────────────────────────
+     Using a promoted fixed div instead of background-attachment:fixed.
+     background-attachment:fixed forces full repaint on every scroll
+     frame with complex gradients → Chrome GPU process crash.
+     will-change:transform promotes to its own compositor layer → zero
+     scroll repaint cost.                                              */
+  .fw-bg-layer{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(1200px 720px at 14% 10%,rgba(124,92,255,.20),transparent 58%),
+      radial-gradient(1200px 720px at 86% 12%,rgba(0,229,255,.18),transparent 56%),
+      radial-gradient(980px 680px at 55% 120%,rgba(0,58,76,.42),transparent 62%),
+      linear-gradient(160deg,#05060a,#0b0a18,#021b24);
+    will-change:transform; /* promotes to GPU layer — no repaint on scroll */
+  }
+  .fw-bg-layer::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
     background:
       radial-gradient(740px 640px at 20% 14%,rgba(0,229,255,.10),transparent 60%),
       radial-gradient(940px 780px at 78% 18%,rgba(124,92,255,.09),transparent 62%),
       radial-gradient(820px 700px at 52% 78%,rgba(93,255,178,.06),transparent 64%);
-    background-size:auto,auto,auto;
-    background-repeat:no-repeat,no-repeat,no-repeat;
-    opacity:.10;z-index:0
-    /* feTurbulence SVG removed — caused Chrome GPU process crash */
+    opacity:.10;
   }
+  body::before{display:none}  /* disabled — replaced by .fw-bg-layer */
   a{color:inherit;text-decoration:none}
 
   /* ── PAGE SHELL ─────────────────────────────── */
@@ -933,6 +940,7 @@
 </style>
 </head>
 <body>
+<div class="fw-bg-layer" aria-hidden="true"></div>
 <div class="page-shell">
 
   <!-- TOP BAR -->
@@ -1203,14 +1211,7 @@
 
       <!-- WALLET PASSPORT -->
       <div class="section-title" data-i18n="sec_passport">Wallet Passport</div>
-      <div class="passport-wrap locked-section" id="passportWrap">
-        <div class="lock-overlay" id="passportLockOverlay">
-          <div class="lock-overlay-inner">
-            <div class="lock-icon">🔒</div>
-            <p data-i18n="passport_lock_msg">Wallet Passport requires Full Access</p>
-            <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:11px;padding:10px 18px">Unlock Passport</button>
-          </div>
-        </div>
+      <div class="passport-wrap" id="passportWrap">
         <div style="margin-bottom:18px">
           <div style="font-size:16px;font-weight:800;margin-bottom:4px">🪪 Proof Passport</div>
           <div style="font-size:13px;color:var(--muted)">A shareable, verifiable snapshot of your wallet's security state. Tweet it, share it, flex it.</div>
@@ -1219,7 +1220,7 @@
 
           <!-- Card Preview -->
           <div class="passport-card-preview" id="passportCard">
-            <div class="pp-watermark" id="ppWatermark">PREVIEW</div>
+            <div class="pp-watermark" id="ppWatermark">Preview • Fix Mode requires PASS</div>
             <div class="pp-logo"><div class="pp-logo-dot"></div>CycleX Firewall</div>
             <div class="pp-wallet" id="ppWallet">0x...</div>
             <div class="pp-score-row">
@@ -1255,18 +1256,28 @@
           <div class="passport-actions">
             <h3 data-i18n="passport_share_title">Share your Wallet Passport</h3>
             <p>Sign a cryptographic proof of your wallet's security state — verifiable by anyone, no KYC, no gas.</p>
-            <button class="btn-passport sign" id="btnSignPassport">✍ Sign Passport (EIP-712)</button>
-            <div class="pp-signed-badge" id="ppSignedBadge">
-              <div style="font-size:10px;letter-spacing:.08em;font-weight:900;color:#5dffb2;margin-bottom:6px;font-family:var(--sans)">✅ SIGNED — CRYPTOGRAPHIC PROOF</div>
-              <div id="ppSigShort" style="color:var(--muted)"></div>
-              <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn-passport secondary" id="btnCopyVerifyLink" style="font-size:10px;padding:7px 14px;margin:0">🔗 Copy Verify Link</button>
-                <button class="btn-passport secondary" id="btnShareXSigned" style="font-size:10px;padding:7px 14px;margin:0">🐦 Share to X</button>
+
+            <!-- Free tier: share card with watermark -->
+            <button class="btn-passport" id="btnShareX" style="margin-top:2px">🐦 Share to X (Twitter)</button>
+            <button class="btn-passport secondary" id="btnDownloadCard">📥 Download Share Card</button>
+            <button class="btn-passport secondary" id="btnCopyPassport">📋 Copy Passport Text</button>
+
+            <!-- PASS only: Worker-signed Verified Passport -->
+            <div id="passportPassSection" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
+              <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800;margin-bottom:8px">✅ PASS Holder — Verified Passport</div>
+              <button class="btn-passport sign" id="btnGetPassport">🪪 Get Verified Passport</button>
+              <button class="btn-passport sign" id="btnSignPassport" style="margin-top:8px">✍ Sign Passport (EIP-712)</button>
+              <div class="pp-signed-badge" id="ppSignedBadge">
+                <div style="font-size:10px;letter-spacing:.08em;font-weight:900;color:#5dffb2;margin-bottom:6px;font-family:var(--sans)">✅ SIGNED — CRYPTOGRAPHIC PROOF</div>
+                <div id="ppSigShort" style="color:var(--muted)"></div>
+                <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+                  <button class="btn-passport secondary" id="btnCopyVerifyLink" style="font-size:10px;padding:7px 14px;margin:0">🔗 Copy Verify Link</button>
+                  <button class="btn-passport secondary" id="btnShareXSigned" style="font-size:10px;padding:7px 14px;margin:0">🐦 Share to X</button>
+                </div>
               </div>
             </div>
-            <button class="btn-passport" id="btnShareX" style="margin-top:10px">🐦 Share to X (Twitter)</button>
-            <button class="btn-passport secondary" id="btnCopyPassport">📋 Copy Passport Text</button>
-            <button class="btn-passport secondary" id="btnCopyLink">🔗 Copy Share Link</button>
+
+            <button class="btn-passport secondary" id="btnCopyLink" style="margin-top:8px">🔗 Copy Share Link</button>
             <div class="passport-shared" id="passportShared"></div>
           </div>
         </div>
@@ -2023,7 +2034,6 @@ function _doUnlockUI() {
   document.getElementById("tierBadge") && (document.getElementById("tierBadge").style.display = "flex");
   document.getElementById("btnTopAccess") && (document.getElementById("btnTopAccess").style.display = "none");
   document.getElementById("fixLockOverlay")?.style      && (document.getElementById("fixLockOverlay").style.display = "none");
-  document.getElementById("passportLockOverlay")?.style  && (document.getElementById("passportLockOverlay").style.display = "none");
   document.getElementById("ppWatermark")?.style          && (document.getElementById("ppWatermark").style.display = "none");
   // On-chain monitor: show Subscribe, hide lock button
   const onchainBtn  = document.getElementById("fwOnchainBtn");
@@ -3961,9 +3971,17 @@ function renderPassport(wallet, d, tier) {
     statusEl.style.cssText = "border-color:rgba(93,255,178,.35);color:var(--green);background:rgba(93,255,178,.08)";
   }
 
-  // Watermark: show for free, hide for full
+  // Watermark: show for free with new text, hide for full
   const wm = document.getElementById("ppWatermark");
   if (wm) wm.style.display = tier === "free" ? "flex" : "none";
+
+  // PASS section: only visible for full-tier holders
+  const passSection = document.getElementById("passportPassSection");
+  if (passSection) passSection.style.display = tier === "full" ? "block" : "none";
+
+  // Ensure passport section is always visible (card shown to all)
+  const wrap = document.getElementById("passportWrap");
+  if (wrap) wrap.style.display = "block";
 }
 
 function getPassportText() {
@@ -3988,6 +4006,145 @@ Scan your wallet → https://cyclex.io/firewall
 
 
 // ── RULE CONFIRMATION MODAL ──────────────────────────────────────
+
+// ── WORKER HMAC PASSPORT ─────────────────────────────────────────
+async function fwGetWorkerPassport() {
+  const btn = document.getElementById("btnGetPassport");
+  if (!fwScanData || !fwWallet) { showPassportMsg("⚠ Run a scan first."); return; }
+  if (!_fwAccessVerified) { requestFullAccess(); return; }
+  const origText = btn?.textContent || "🪪 Get Verified Passport";
+  if (btn) { btn.disabled = true; btn.textContent = "Issuing…"; }
+  try {
+    const payload = {
+      score:     fwScanData.score,
+      riskLevel: fwScanData.score >= 85 ? "Low" : fwScanData.score >= 60 ? "Medium" : "High",
+      net:       fwNet,
+      stats: {
+        totalApprovals: fwScanData.totalApprovals,
+        unlimitedCount: fwScanData.unlimitedCount,
+        highRiskCount:  fwScanData.highRiskCount,
+        blastDisplay:   fwScanData.blastDisplay,
+        drainTime:      fwScanData.drainTime,
+      }
+    };
+    const res = await fetch(`${API_BASE}/api/issuePassport`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet: fwWallet, payload })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      showPassportMsg(data?.error === "NOT_ELIGIBLE"
+        ? "❌ Wallet does not hold a CycleX PASS."
+        : `⚠ ${data?.message || data?.error || "Failed."}`);
+      return;
+    }
+    const { passport } = data;
+    if (!passport?.sig) { showPassportMsg("⚠ Invalid passport response."); return; }
+    const encoded = btoa(JSON.stringify(passport)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
+    const verifyURL = `${location.origin}/firewall?verify=${encoded}`;
+    _fwShowSignedState(passport.sig, verifyURL);
+    const wm = document.getElementById("ppWatermark");
+    if (wm) wm.style.display = "none";
+    const chip = document.getElementById("ppSigChip");
+    if (chip) { chip.textContent = "✅ Verified by CycleX"; chip.style.display = "flex"; }
+    showPassportMsg("✅ Verified Passport issued — share your link!");
+  } catch(e) {
+    showPassportMsg(`⚠ ${(e.message||"").slice(0,80)}`);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+  }
+}
+
+// ── SHARE CARD PNG DOWNLOAD ───────────────────────────────────────
+function fwDownloadShareCard() {
+  if (!fwScanData || !fwWallet) { showPassportMsg("⚠ Run a scan first."); return; }
+  const W = 1200, H = 630;
+  const canvas = document.createElement("canvas");
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  const score   = fwScanData.score || 0;
+  const riskLvl = score >= 85 ? "Low Risk"    : score >= 60 ? "Medium Risk" : "High Risk";
+  const riskCol = score >= 85 ? "#3cffb0"     : score >= 60 ? "#ffd166"     : "#ff4757";
+  const blast   = document.getElementById("ppBlast")?.textContent  || "—";
+  const drain   = document.getElementById("ppDrain")?.textContent  || "—";
+  const risky   = document.getElementById("ppApprovals")?.textContent || "—";
+  const net     = fwNet.toUpperCase();
+  const isVerif = fwAccessTier === "full" && _fwAccessVerified;
+  // Background
+  const bg = ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,"#08071a"); bg.addColorStop(0.5,"#0b0e20"); bg.addColorStop(1,"#061018");
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+  const g1 = ctx.createRadialGradient(220,160,0,220,160,520);
+  g1.addColorStop(0,"rgba(124,92,255,0.22)"); g1.addColorStop(1,"transparent");
+  ctx.fillStyle = g1; ctx.fillRect(0,0,W,H);
+  const g2 = ctx.createRadialGradient(980,100,0,980,100,480);
+  g2.addColorStop(0,"rgba(0,229,255,0.18)"); g2.addColorStop(1,"transparent");
+  ctx.fillStyle = g2; ctx.fillRect(0,0,W,H);
+  // Top badge
+  ctx.fillStyle = "rgba(0,229,255,0.10)";
+  _cxRoundRect(ctx,52,48,220,34,17); ctx.fill();
+  ctx.strokeStyle = "rgba(0,229,255,0.28)"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = "rgba(0,229,255,0.90)";
+  ctx.font = "700 11px system-ui"; ctx.fillText("🛡  CYCLEX FIREWALL",76,70);
+  // Wallet
+  ctx.fillStyle = "rgba(244,246,255,0.95)";
+  ctx.font = "800 22px ui-monospace,monospace";
+  ctx.fillText(fwShort(fwWallet) + "  ·  " + net, 52, 130);
+  // Score circle
+  const scx = 160, scy = 320, sr = 110;
+  ctx.beginPath(); ctx.arc(scx,scy,sr,0,Math.PI*2);
+  ctx.fillStyle = "rgba(255,255,255,0.04)"; ctx.fill();
+  ctx.strokeStyle = riskCol; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = riskCol; ctx.font = "900 72px system-ui";
+  ctx.textAlign = "center"; ctx.fillText(String(score), scx, scy+22);
+  ctx.fillStyle = "rgba(244,246,255,0.55)"; ctx.font = "600 16px system-ui";
+  ctx.fillText("/ 100", scx, scy+50);
+  ctx.fillStyle = riskCol; ctx.font = "800 15px system-ui";
+  ctx.fillText(riskLvl, scx, scy-sr-16);
+  ctx.textAlign = "left";
+  // Stats grid
+  [[blast,"💥 Blast Radius",360,210],[drain,"⏱ Time-to-Drain",720,210],
+   [risky,"🎯 Risky Approvals",360,340],[today(),"📅 Scanned",720,340]].forEach(([val,label,col,row])=>{
+    ctx.fillStyle = "rgba(255,255,255,0.04)";
+    _cxRoundRect(ctx,col,row,310,100,14); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "rgba(244,246,255,0.52)"; ctx.font = "500 13px system-ui";
+    ctx.fillText(label, col+16, row+30);
+    ctx.fillStyle = "rgba(244,246,255,0.95)"; ctx.font = "800 24px system-ui";
+    ctx.fillText(String(val), col+16, row+68);
+  });
+  // Watermark / Verified
+  ctx.textAlign = "center";
+  if (!isVerif) {
+    ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.font = "600 12px system-ui";
+    ctx.fillText("Preview • Fix Mode requires PASS", W/2, H-28);
+  } else {
+    ctx.fillStyle = "rgba(93,255,178,0.85)"; ctx.font = "700 13px system-ui";
+    ctx.fillText("✅ Verified by CycleX", W/2, H-28);
+  }
+  ctx.fillStyle = "rgba(244,246,255,0.28)"; ctx.font = "500 12px system-ui";
+  ctx.textAlign = "right"; ctx.fillText("cyclex.network/firewall", W-44, H-28);
+  ctx.textAlign = "left";
+  // Download
+  try {
+    const a = document.createElement("a");
+    a.download = `cyclex-${fwShort(fwWallet).replace(/\./g,"")}.png`;
+    a.href = canvas.toDataURL("image/png"); a.click();
+    showPassportMsg("✅ Share card downloaded!");
+  } catch { showPassportMsg("⚠ Download failed — try a different browser."); }
+}
+
+function _cxRoundRect(ctx,x,y,w,h,r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r); ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h); ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r); ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+
 function fwShowRuleConfirm(title, warning, txLines, note, onConfirm) {
   const modal   = document.getElementById("fwRuleConfirmModal");
   const titleEl = document.getElementById("rcTitle");
@@ -4957,6 +5114,8 @@ window.fwRequestNotifications= fwRequestNotifications;
 // Button bindings
 // Sign Passport
 document.getElementById("btnSignPassport")?.addEventListener("click", () => fwSignPassport());
+document.getElementById("btnGetPassport")?.addEventListener("click", () => fwGetWorkerPassport());
+document.getElementById("btnDownloadCard")?.addEventListener("click", () => fwDownloadShareCard());
 
 document.getElementById("btnFix1").addEventListener("click", () => applyFix(0));
 document.getElementById("btnFix2").addEventListener("click", () => applyFix(1));
