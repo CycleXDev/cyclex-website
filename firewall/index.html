@@ -4148,37 +4148,29 @@ function fwDownloadShareCard() {
   const origTransform = card.style.transform;
   const origWidth     = card.style.width;
 
-  // html2canvas bug: letter-spacing + text-transform:uppercase adds extra space after last char.
-  // Fix: temporarily zero out letter-spacing on all card elements, restore after capture.
-  const allEls = card.querySelectorAll("*");
-  const savedLS = [];
-  allEls.forEach(el => {
-    const cs = getComputedStyle(el);
-    const ls = cs.letterSpacing;
-    savedLS.push(ls);
-    if (ls && ls !== "normal" && ls !== "0px") {
-      el.style.letterSpacing = "0px";
-    }
-  });
+  // html2canvas bug: letter-spacing causes extra space after last char of each word.
+  // Fix: inject a <style> override directly into the cloned document's <head>.
+  // We do NOT touch the live DOM — no save/restore needed.
 
   html2canvas(card, {
-    scale: 2,           // 2× = good retina quality without huge file
+    scale: 2,
     useCORS: true,
     allowTaint: true,
     backgroundColor: null,
     logging: false,
     removeContainer: true,
     onclone: (doc) => {
-      // Also zero letter-spacing in the cloned document
-      doc.querySelectorAll("#passportCard *").forEach(el => {
-        el.style.letterSpacing = "0px";
-      });
+      // Inject override style — highest specificity, no side effects on live page
+      const st = doc.createElement("style");
+      st.textContent = `
+        #passportCard, #passportCard * {
+          letter-spacing: 0 !important;
+          word-spacing: 0 !important;
+        }
+      `;
+      doc.head.appendChild(st);
     }
   }).then(canvas => {
-    // Restore letter-spacing
-    allEls.forEach((el, i) => {
-      el.style.letterSpacing = "";
-    });
     try {
       const a = document.createElement("a");
       a.download = `cyclex-passport-${fwShort(fwWallet).replace(/\./g,"")}.png`;
@@ -4189,8 +4181,6 @@ function fwDownloadShareCard() {
       showPassportMsg("⚠ Download failed — try a different browser.");
     }
   }).catch(e => {
-    // Restore even on error
-    allEls.forEach(el => { el.style.letterSpacing = ""; });
     showPassportMsg(`⚠ Screenshot failed: ${(e.message||"unknown").slice(0,60)}`);
   });
 }
