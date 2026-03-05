@@ -75,10 +75,9 @@
     padding:12px 16px;margin:0 auto 36px;
     width:min(1160px,calc(100% - 24px));
     border-radius:999px;
-    background:rgba(10,12,22,.55);
+    background:rgba(8,9,20,.88);   /* solid enough — no backdrop-filter needed on sticky */
     border:1px solid rgba(255,255,255,.14);
-    backdrop-filter:blur(18px) saturate(1.12);
-    -webkit-backdrop-filter:blur(18px) saturate(1.12);
+    /* backdrop-filter removed from sticky element — caused Chrome GPU crash on scroll */
     box-shadow:0 14px 50px rgba(0,0,0,.50),inset 0 1px 0 rgba(255,255,255,.06);
   }
   .top-bar::before{
@@ -95,7 +94,7 @@
   .top-right{display:flex;align-items:center;gap:10px;position:relative;z-index:1}
   .lang-switch{display:inline-flex;align-items:center;padding:4px;border-radius:999px;
     background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);
-    backdrop-filter:blur(12px);gap:2px;flex:0 0 auto}
+    gap:2px;flex:0 0 auto}
   .lang-btn{border:none;background:transparent;color:rgba(244,246,255,.56);
     font-size:11px;padding:5px 9px;border-radius:999px;cursor:pointer;
     transition:background .18s,color .18s,transform .18s;white-space:nowrap}
@@ -383,6 +382,8 @@
   .passport-actions{display:flex;flex-direction:column;gap:10px;padding-top:2px}
   .passport-actions h3{font-size:16px;font-weight:800;margin:0 0 2px}
   .passport-actions p{font-size:13px;color:var(--muted);line-height:1.6;margin:0 0 6px}
+  /* passport header row collapses same breakpoint as passport-inner */
+  @media (max-width:780px){.passport-header-row{grid-template-columns:1fr!important}}
   .btn-passport{
     padding:12px 18px;border-radius:999px;font-size:13px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
     cursor:pointer;transition:all .2s ease;width:100%;text-align:center;
@@ -407,7 +408,7 @@
   }
   .btn-primary{background:linear-gradient(135deg,#00e5ff,#7df2ff);color:#03040a;box-shadow:0 14px 50px rgba(0,229,255,.32)}
   .btn-primary:hover{transform:translateY(-1px);box-shadow:0 22px 70px rgba(0,229,255,.48)}
-  .btn-ghost{background:rgba(255,255,255,.04);color:var(--text);border-color:rgba(255,255,255,.14);backdrop-filter:blur(14px)}
+  .btn-ghost{background:rgba(255,255,255,.04);color:var(--text);border-color:rgba(255,255,255,.14)}
   .btn-ghost:hover{background:rgba(255,255,255,.08);border-color:rgba(0,229,255,.24);transform:translateY(-1px)}
 
   .sig{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--muted)}
@@ -569,8 +570,7 @@
   .locked-section .lock-overlay{
     position:absolute;inset:0;border-radius:var(--radius);z-index:5;
     background:linear-gradient(180deg,rgba(5,6,10,.05) 0%,rgba(5,6,10,.92) 55%,rgba(5,6,10,.98) 100%);
-    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:24px;
-    backdrop-filter:blur(2px)
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:24px
   }
   .lock-overlay-inner{text-align:center}
   .lock-overlay-inner .lock-icon{font-size:22px;margin-bottom:6px}
@@ -1212,9 +1212,16 @@
       <!-- WALLET PASSPORT -->
       <div class="section-title" data-i18n="sec_passport">Wallet Passport</div>
       <div class="passport-wrap" id="passportWrap">
-        <div style="margin-bottom:18px">
-          <div style="font-size:16px;font-weight:800;margin-bottom:4px">🪪 Proof Passport</div>
-          <div style="font-size:13px;color:var(--muted)">A shareable, verifiable snapshot of your wallet's security state. Tweet it, share it, flex it.</div>
+        <!-- Two-column header row: card title left, actions title right — aligned -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:14px" class="passport-header-row">
+          <div>
+            <div style="font-size:16px;font-weight:800;margin-bottom:4px">🪪 Proof Passport</div>
+            <div style="font-size:13px;color:var(--muted)">A shareable, verifiable snapshot of your wallet's security state. Tweet it, share it, flex it.</div>
+          </div>
+          <div>
+            <h3 style="font-size:16px;font-weight:800;margin:0 0 4px" data-i18n="passport_share_title">Share your Wallet Passport</h3>
+            <p style="font-size:13px;color:var(--muted);line-height:1.6;margin:0">Sign a cryptographic proof of your wallet's security state — verifiable by anyone, no KYC, no gas.</p>
+          </div>
         </div>
         <div class="passport-inner">
 
@@ -1254,8 +1261,7 @@
 
           <!-- Actions -->
           <div class="passport-actions">
-            <h3 data-i18n="passport_share_title">Share your Wallet Passport</h3>
-            <p>Sign a cryptographic proof of your wallet's security state — verifiable by anyone, no KYC, no gas.</p>
+            <!-- title moved to passport-header-row above for alignment -->
 
             <!-- Free tier: share card with watermark -->
             <button class="btn-passport" id="btnShareX" style="margin-top:2px">🐦 Share to X (Twitter)</button>
@@ -2124,6 +2130,17 @@ function getRPC(net) {
 
 // ── UTILS ────────────────────────────────────────────────────────
 const wait     = ms => new Promise(r => setTimeout(r, ms));
+// Unicode-safe base64url encoder — btoa() fails on chars > U+00FF (e.g. em-dash "—")
+function fwToBase64url(str) {
+  return btoa(unescape(encodeURIComponent(str)))
+    .replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
+}
+function fwFromBase64url(b64) {
+  const s = b64.replace(/-/g,"+").replace(/_/g,"/");
+  const padded = s + "==".slice(0,(4 - s.length % 4) % 4);
+  return decodeURIComponent(escape(atob(padded)));
+}
+
 function fwShort(a) {
   if (!a || a.length < 12) return a || "—";
   return a.slice(0, 8) + "…" + a.slice(-5);
@@ -3143,9 +3160,8 @@ async function fwSignPassport() {
       signature
     };
 
-    // Build base64url verify link
-    const encoded = btoa(JSON.stringify(_fwSignedPassport))
-      .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+    // Build base64url verify link (Unicode-safe — signature may contain non-Latin1 chars)
+    const encoded = fwToBase64url(JSON.stringify(_fwSignedPassport));
     const verifyURL = `${location.origin}/firewall?verify=${encoded}`;
 
     // Update UI
@@ -3212,10 +3228,8 @@ async function fwVerifyPassport(encoded) {
   modal.classList.add("open");
 
   try {
-    // Decode base64url
-    const padded = encoded.replace(/-/g,'+').replace(/_/g,'/') +
-                   '=='.slice(0, (4 - encoded.length % 4) % 4);
-    const data   = JSON.parse(atob(padded));
+    // Decode base64url (Unicode-safe)
+    const data = JSON.parse(fwFromBase64url(encoded));
 
     const { wallet, network, score, unlimited, highRisk,
             timestamp, expiry, signature } = data;
@@ -4041,7 +4055,7 @@ async function fwGetWorkerPassport() {
     }
     const { passport } = data;
     if (!passport?.sig) { showPassportMsg("⚠ Invalid passport response."); return; }
-    const encoded = btoa(JSON.stringify(passport)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
+    const encoded = fwToBase64url(JSON.stringify(passport));
     const verifyURL = `${location.origin}/firewall?verify=${encoded}`;
     _fwShowSignedState(passport.sig, verifyURL);
     const wm = document.getElementById("ppWatermark");
@@ -5330,7 +5344,11 @@ async function fwRpcRequest(url, method, params, timeoutMs = 8000) {
 }
 
 // ── BSC PROVIDER WITH FALLBACK ────────────────────────────────────
+let _cachedBscProvider = null; // cache to avoid creating new provider on every call
 async function fwGetBscProvider() {
+  if (_cachedBscProvider) {
+    try { await _cachedBscProvider.getBlockNumber(); return _cachedBscProvider; } catch { _cachedBscProvider = null; }
+  }
   const Eth = window.E || window.ethers;
   if (!Eth) return null;
   for (const rpc of BSC_READ_RPCS) {
@@ -5340,6 +5358,7 @@ async function fwGetBscProvider() {
         p.getBlockNumber(),
         new Promise((_, r) => setTimeout(() => r(new Error("timeout")), 6000))
       ]);
+      _cachedBscProvider = p; // cache the working provider
       return p;
     } catch { /* try next */ }
   }
