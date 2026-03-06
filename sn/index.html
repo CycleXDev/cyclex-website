@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -722,6 +723,7 @@
             <select id="qs-net">
               <option value="bsc">BSC (BNB Chain)</option>
               <option value="eth">Ethereum</option>
+              <option value="polygon">Polygon</option>
             </select>
           </div>
           <div class="field">
@@ -804,6 +806,7 @@
             <select id="rpc-net">
               <option value="bsc">BSC (BNB Chain)</option>
               <option value="eth">Ethereum</option>
+              <option value="polygon">Polygon</option>
             </select>
           </div>
           <!-- Private RPC inline save -->
@@ -873,6 +876,7 @@
             <select id="tx-net">
               <option value="bsc">BSC (BNB Chain)</option>
               <option value="eth">Ethereum</option>
+              <option value="polygon">Polygon</option>
             </select>
           </div>
           <div class="field">
@@ -957,6 +961,7 @@
             <select id="mon-net">
               <option value="bsc">BSC (BNB Chain)</option>
               <option value="eth">Ethereum</option>
+              <option value="polygon">Polygon</option>
             </select>
           </div>
           <div class="field">
@@ -2429,6 +2434,24 @@ function renderWalletLabels() {}
   "https://mainnet.gateway.tenderly.co"
 ]
 
+      },
+
+      polygon: {
+        chainId: 137,
+        name: "Polygon",
+        wrapped: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", // WMATIC
+        usdt: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",    // USDT (PoS)
+        explorer: "https://polygonscan.com",
+        addressUrl: (a) => `https://polygonscan.com/address/${a}`,
+        txUrl: (h) => `https://polygonscan.com/tx/${h}`,
+        publicRpcs: [
+          "https://polygon.publicnode.com",
+          "https://1rpc.io/matic",
+          "https://polygon-bor-rpc.publicnode.com",
+          "https://rpc.ankr.com/polygon",
+          "https://polygon-rpc.com",
+          "https://polygon.drpc.org"
+        ]
       }
     };
 
@@ -2648,21 +2671,25 @@ window.getReadProvider = getReadProvider;
 
     function netFromSelect(selId) {
       const v = ($(selId)?.value || "bsc").toLowerCase();
-      return (v === "eth") ? "eth" : "bsc";
+      if (v === "eth") return "eth";
+      if (v === "polygon") return "polygon";
+      return "bsc";
     }
 
     // =========================
     // Explorer API (optional)
     // =========================
     function explorerApiBase(net) {
-  return net === "bsc" ? "https://api.bscscan.com/api" : "https://api.etherscan.io/api";
+  if (net === "bsc") return "https://api.bscscan.com/api";
+  if (net === "polygon") return "https://api.polygonscan.com/api";
+  return "https://api.etherscan.io/api";
 }
 
 async function explorerGetSource(net, addr, apiKey, isUnified) {
   const keyTrim = String(apiKey || "").trim();
 
   const v2Base = "https://api.etherscan.io/v2/api";
-  const chainid = (net === "bsc") ? "56" : "1"; 
+  const chainid = (net === "bsc") ? "56" : (net === "polygon") ? "137" : "1";
 
   const useV2 = !!isUnified; 
 
@@ -2926,12 +2953,34 @@ eth: {
   ],
 
   addressUrl: (a)=> `https://etherscan.io/address/${a}`
+},
+
+polygon: {
+  name: "Polygon",
+  wrapped: "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270", // WMATIC
+  usdt:    "0xc2132d05d31c914a87c6611c10748aeb04b58e8f", // USDT (PoS)
+  usdc:    "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359", // USDC native
+
+  v2Factory: "0x5757371414417b8c6caad45baef941abc7d3ab32", // QuickSwap V2
+  v3Factory: "0x411b0facc3489691f28ad58c47006af5e3ab3a28", // QuickSwap V3
+
+  v2Factories: [
+    { name: "QuickSwap V2", addr: "0x5757371414417b8c6caad45baef941abc7d3ab32" },
+    { name: "SushiSwap V2", addr: "0xc35dadb65012ec5796536bd9864ed8773abc74c4" }
+  ],
+  v3Factories: [
+    { name: "QuickSwap V3", addr: "0x411b0facc3489691f28ad58c47006af5e3ab3a28" },
+    { name: "Uniswap V3",   addr: "0x1f98431c8ad98523631ae4a59f267346ea31f984" }
+  ],
+
+  addressUrl: (a)=> `https://polygonscan.com/address/${a}`
 }
 };
   // Minimum effective liquidity thresholds (rough heuristic)
 const QS_LIQ_FLOOR = {
-  bsc: { wrappedTiny: 0.03, wrappedLow: 0.30, usdtTiny: 80,  usdtLow: 800 },
-  eth: { wrappedTiny: 0.015, wrappedLow: 0.15, usdtTiny: 120, usdtLow: 1200 }
+  bsc:     { wrappedTiny: 0.03,  wrappedLow: 0.30,  usdtTiny: 80,   usdtLow: 800 },
+  eth:     { wrappedTiny: 0.015, wrappedLow: 0.15,  usdtTiny: 120,  usdtLow: 1200 },
+  polygon: { wrappedTiny: 50,    wrappedLow: 500,   usdtTiny: 80,   usdtLow: 800 }
 };
 
 
@@ -3018,6 +3067,7 @@ function qsComputeMarketRisk(rep){
   const m = {
     // currently available
     hasLiquidity: !!rep?.liq?.any,
+    cexListed: !!rep?.meta?.cexListed,
     ownerPct: (typeof rep?.meta?.ownerPct === "number") ? rep.meta.ownerPct : null,
 
     // optional future hooks (if you later inject them)
@@ -3034,8 +3084,11 @@ function qsComputeMarketRisk(rep){
 
   // Base from what we definitely know
   if (!m.hasLiquidity) {
-  marketScore -= 38;
-  flags.push("no_clear_liquidity_signal");
+  if (!m.cexListed) {
+    marketScore -= 38;
+    flags.push("no_clear_liquidity_signal");
+  }
+  // if CEX listed, no penalty for missing DEX liquidity
 }
 
   if (m.ownerPct !== null) {
@@ -3364,7 +3417,11 @@ const read = _getRP ? _getRP(net) : null;
     { label: "Wrapped", addr: qsSafeAddr(cfg.wrapped) },
     { label: "USDT",    addr: qsSafeAddr(cfg.usdt) },
     { label: "BUSD",    addr: net === "bsc" ? qsSafeAddr("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56") : "" },
-    { label: "USDC",    addr: net === "bsc" ? qsSafeAddr("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d") : qsSafeAddr("0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48") },
+    { label: "USDC",    addr: net === "bsc"
+        ? qsSafeAddr("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d")
+        : net === "polygon"
+          ? qsSafeAddr("0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359")
+          : qsSafeAddr("0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48") },
     { label: "FDUSD",   addr: net === "bsc" ? qsSafeAddr("0xc5f0f7b66764f6ec8c8dff7ba683102295e16409") : "" }
   ].filter(t => !!t.addr);
 
@@ -3610,6 +3667,53 @@ const read = _getRP ? _getRP(net) : null;
 
  
 
+  // =========================
+  // CEX Listing check (CoinGecko free API, no key needed)
+  // Returns { listed: bool, exchanges: string[] } — silently fails on network error
+  // =========================
+  const QS_CEX_TOP8 = new Set([
+    "binance","coinbase exchange","coinbase","kraken","okx","bybit","kucoin","gate.io","bitget"
+  ]);
+  const QS_CEX_PLATFORM = { bsc: "binance-smart-chain", eth: "ethereum", polygon: "polygon-pos" };
+
+  async function qsFetchCexListing(net, token) {
+    try {
+      const platform = QS_CEX_PLATFORM[net];
+      if (!platform) return { listed: false, exchanges: [] };
+      const addr = qsLower(String(token || "").trim());
+      if (!addr) return { listed: false, exchanges: [] };
+
+      const url = `https://api.coingecko.com/api/v3/coins/${platform}/contract/${addr}`;
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 7000);
+      let j = null;
+      try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        if (res.ok) j = await res.json();
+      } finally {
+        clearTimeout(tmr);
+      }
+      if (!j || j.error) return { listed: false, exchanges: [] };
+
+      // tickers array has exchange info
+      const tickers = Array.isArray(j.tickers) ? j.tickers : [];
+      const found = [];
+      for (const t of tickers) {
+        const name = qsLower(String(t?.market?.name || ""));
+        if (QS_CEX_TOP8.has(name) && !found.includes(name)) found.push(name);
+      }
+      // capitalise for display
+      const display = found.map(n =>
+        n === "okx" ? "OKX" :
+        n === "gate.io" ? "Gate.io" :
+        n.charAt(0).toUpperCase() + n.slice(1)
+      );
+      return { listed: display.length > 0, exchanges: display };
+    } catch {
+      return { listed: false, exchanges: [] };
+    }
+  }
+
   async function runQuickScan(){
     const st = $("#qs-status");
     const out = $("#qs-out");
@@ -3826,7 +3930,9 @@ try {
   const usdcAddr = qsLower(
     net === "bsc"
       ? "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"
-      : "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      : net === "polygon"
+        ? "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359"
+        : "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
   );
   const fdusdAddr = qsLower(net === "bsc" ? "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409" : "");
 
@@ -3944,6 +4050,12 @@ rep.meta = {
   }
 } catch {}
 
+    // 3.5) CEX listing check (CoinGecko, silent fallback)
+    let cexResult = { listed: false, exchanges: [] };
+    try { cexResult = await qsFetchCexListing(net, token); } catch {}
+    rep.meta.cexListed = cexResult.listed;
+    rep.meta.cexExchanges = cexResult.exchanges;
+
     // 4) Proxy
     let impl = await tryEip1967Impl(net, token);
     let isProxy = !!impl;
@@ -4041,8 +4153,15 @@ if (useApis) {
 // Score model (hardened: Contract + Market + Gates)
 let contractScore = 75;
 
+// CEX listing overrides missing DEX liquidity
+const cexListed = !!rep.meta?.cexListed;
+
 if (rep.liq?.any) {
   contractScore += 10;
+  if (cexListed) contractScore += 5; // DEX + CEX bonus
+} else if (cexListed) {
+  // Listed on major exchange — no DEX penalty, small positive signal
+  contractScore += 8;
 } else {
   // fixed penalty (option removed)
   contractScore -= 30;
@@ -4205,8 +4324,9 @@ const ownerUnknown = !owner;
 if (verified !== true && ownerUnknown && score > 84) score = 84; // max Mixed
 
 // B) No liquidity signal at all -> never exceed Caution (and hard cap)
-if (!rep?.liq?.any && score > 64) score = 64;
-if (hasCode && !rep?.liq?.any && score > 54) score = 54; // strongest cap for "no liquidity"
+// Exception: if listed on major CEX, DEX liquidity absence is not a hard cap
+if (!rep?.liq?.any && !cexListed && score > 64) score = 64;
+if (hasCode && !rep?.liq?.any && !cexListed && score > 54) score = 54; // strongest cap for "no liquidity"
 
 // C) Low confidence + serious market flags -> never reach "Good"
 const lowConf = (uiConfidence === "low");
@@ -4315,13 +4435,20 @@ rep.overallText = overallText;
 
 },
   { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
-  { type: "ok", title: "Pause", value: pauseText }
+  { type: "ok", title: "Pause", value: pauseText },
+  {
+    type: cexListed ? "ok" : "warn",
+    title: "CEX Listed",
+    value: cexListed
+      ? (rep.meta?.cexExchanges?.length ? rep.meta.cexExchanges.slice(0,3).join(", ") : "Yes")
+      : "Not found"
+  }
 ];
 
 
     if (mintDetected) rep.redFlags.push("Mint surface detected (supply risk).");
     if (isProxy) rep.redFlags.push("Proxy detected (upgrade risk).");
-    if (!rep.liq?.any) rep.redFlags.push("No clear DEX liquidity signal detected.");
+    if (!rep.liq?.any && !cexListed) rep.redFlags.push("No clear DEX liquidity signal detected.");
     if (ownerPct !== null && ownerPct >= 35) {
   rep.redFlags.push(`Owner wallet concentration is high (${qsFmtNum(ownerPct, 2)}%).`);
 } else if (ownerPct !== null && ownerPct >= 20) {
@@ -4337,7 +4464,7 @@ for (const f of (marketFlags || [])) {
   else if (f === "few_holders") rep.redFlags.push("Few holders detected.");
   else if (f === "extreme_short_term_volatility") rep.redFlags.push("Extreme short-term volatility detected.");
   else if (f === "holder_concentration_unknown") rep.redFlags.push("Holder concentration data is incomplete (confidence reduced).");
-  else if (f === "no_clear_liquidity_signal" && !rep.redFlags.includes("No clear DEX liquidity signal detected.")) {
+  else if (f === "no_clear_liquidity_signal" && !cexListed && !rep.redFlags.includes("No clear DEX liquidity signal detected.")) {
     rep.redFlags.push("No clear liquidity signal detected.");
   }
 
@@ -5504,10 +5631,10 @@ function safeLower(s){
         return;
       }
 
-      // ---------- BscScan / Etherscan ----------
+      // ---------- BscScan / Etherscan / Polygonscan ----------
       var isTx=/\\/tx\\//i.test(u.pathname);
       var v=href.split("/").pop().split("?")[0].split("#")[0];
-      var net=/etherscan\\.io/i.test(host) ? "eth" : "bsc";
+      var net=/etherscan\\.io/i.test(host) ? "eth" : /polygonscan\\.com/i.test(host) ? "polygon" : "bsc";
 
       hub.searchParams.set("tool", isTx ? "tx" : "quick");
       hub.searchParams.set("net", net);
