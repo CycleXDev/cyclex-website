@@ -639,6 +639,114 @@ body::after{
   }
   #security-activity .section-kicker{ color: rgba(0,229,255,.92); }
 
+  /* ── SOC Monitor Cards — Premium Radial ────────────────────── */
+  .soc-header{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    margin-bottom:6px;
+  }
+  .soc-api-status{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:rgba(255,255,255,.3);
+    background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+    border-radius:999px;padding:4px 10px;
+  }
+  /* health dot lives inside .soc-api-status — injected by JS */
+  #cx-activity-dot{
+    display:inline-block!important;
+    width:7px!important;height:7px!important;
+    border-radius:50%!important;
+    flex-shrink:0;
+    margin:0!important;
+    vertical-align:middle!important;
+  }
+
+  .soc-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:20px;
+    margin-top:32px;
+    width:100%;
+  }
+  .soc-card{
+    position:relative;
+    background:linear-gradient(160deg,rgba(12,14,28,.92),rgba(8,10,20,.96));
+    border-radius:22px;
+    padding:28px 22px 24px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.06);
+    transition:transform .28s ease,box-shadow .28s ease,border-color .28s ease;
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+  }
+  .soc-card::after{
+    content:"";position:absolute;top:0;left:0;right:0;height:1px;border-radius:22px 22px 0 0;
+  }
+  .soc-card.cyan::after{  background:linear-gradient(90deg,transparent,rgba(0,229,255,.5),transparent); }
+  .soc-card.red::after{   background:linear-gradient(90deg,transparent,rgba(255,71,87,.5),transparent); }
+  .soc-card.purple::after{background:linear-gradient(90deg,transparent,rgba(167,139,250,.5),transparent); }
+  .soc-card:hover{ transform:translateY(-4px); }
+  .soc-card.cyan:hover{   box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 40px rgba(0,229,255,.1); border-color:rgba(0,229,255,.18); }
+  .soc-card.red:hover{    box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 40px rgba(255,71,87,.1); border-color:rgba(255,71,87,.18); }
+  .soc-card.purple:hover{ box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 40px rgba(167,139,250,.1); border-color:rgba(167,139,250,.18); }
+
+  /* Radial ring */
+  .soc-ring-wrap{
+    position:relative;width:120px;height:120px;margin-bottom:18px;flex-shrink:0;
+  }
+  .soc-ring-svg{ width:120px;height:120px;transform:rotate(-90deg); }
+  .soc-ring-track{
+    fill:none;stroke:rgba(255,255,255,.06);stroke-width:5;
+  }
+  .soc-ring-fill{
+    fill:none;stroke-width:5;stroke-linecap:round;
+    stroke-dasharray:314;stroke-dashoffset:314;
+    transition:stroke-dashoffset 1.6s cubic-bezier(.16,1,.3,1);
+  }
+  .soc-card.cyan   .soc-ring-fill{ stroke:#00e5ff;filter:drop-shadow(0 0 6px rgba(0,229,255,.6)); }
+  .soc-card.red    .soc-ring-fill{ stroke:#ff4757;filter:drop-shadow(0 0 6px rgba(255,71,87,.6)); }
+  .soc-card.purple .soc-ring-fill{ stroke:#a78bfa;filter:drop-shadow(0 0 6px rgba(167,139,250,.6)); }
+
+  .soc-ring-inner{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:2px;
+  }
+  .soc-icon{ font-size:20px;line-height:1;opacity:.7; }
+  .soc-value{
+    font-size:28px;font-weight:950;line-height:1;
+    letter-spacing:-0.03em;font-variant-numeric:tabular-nums;
+  }
+  .soc-card.cyan   .soc-value{ color:#00e5ff;text-shadow:0 0 20px rgba(0,229,255,.5); }
+  .soc-card.red    .soc-value{ color:#ff4757;text-shadow:0 0 20px rgba(255,71,87,.5); }
+  .soc-card.purple .soc-value{ color:#a78bfa;text-shadow:0 0 20px rgba(167,139,250,.5); }
+
+  .soc-label{
+    font-size:10px;font-weight:800;letter-spacing:.13em;
+    text-transform:uppercase;color:rgba(255,255,255,.5);
+    line-height:1.4;max-width:140px;
+  }
+  .soc-live{
+    display:inline-flex;align-items:center;gap:5px;margin-top:10px;
+    font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:rgba(255,255,255,.22);
+  }
+  .soc-live-dot{
+    width:6px;height:6px;border-radius:50%;background:#3cffb0;
+    box-shadow:0 0 7px #3cffb0;
+    animation:socPulse 2.2s ease-in-out infinite;
+  }
+  @keyframes socPulse{
+    0%,100%{opacity:1;transform:scale(1)}
+    50%{opacity:.3;transform:scale(.65)}
+  }
+  @media(max-width:860px){
+    .soc-grid{ grid-template-columns:1fr;gap:14px; }
+    .soc-card{ flex-direction:row;text-align:left;padding:20px; gap:18px; }
+    .soc-ring-wrap{ width:80px;height:80px;margin-bottom:0;flex-shrink:0; }
+    .soc-ring-svg{ width:80px;height:80px; }
+    .soc-value{ font-size:22px; }
+    .soc-card::after{ display:none; }
+  }
+
   .section-title{
     font-size: clamp(28px, 3vw, 42px);
     font-weight: 950;
@@ -1681,28 +1789,67 @@ html, body { overflow-x: hidden; }
       </h2>
 
       <p class="section-body" data-i18n="security_activity_desc">
-        Lightweight public counters that reflect security tool activity.
+        Real-time counters — updated by every Firewall scan and Security Hub check.
       </p>
 
-      <!-- Reuse existing stat-card styling to avoid breaking CSS -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label" data-i18n="security_wallets_scanned">Wallets Scanned 🔍</div>
-          <div class="stat-value" id="wallets-scanned">12,345</div>
-          <div class="stat-tag" data-i18n="security_activity_tag">Activity counter</div>
+      <!-- API status pill — health dot injected here by JS -->
+      <div class="soc-header">
+        <div class="soc-api-status" id="soc-api-pill">
+          <!-- #cx-activity-dot injected by ensureHealthDot() -->
+          NETWORK STATUS
+        </div>
+      </div>
+
+      <div class="soc-grid">
+
+        <!-- Wallets Scanned -->
+        <div class="soc-card cyan">
+          <div class="soc-ring-wrap">
+            <svg class="soc-ring-svg" viewBox="0 0 120 120">
+              <circle class="soc-ring-track" cx="60" cy="60" r="50"/>
+              <circle class="soc-ring-fill" id="ring-wallets" cx="60" cy="60" r="50"/>
+            </svg>
+            <div class="soc-ring-inner">
+              <span class="soc-icon">🔍</span>
+              <div class="soc-value" id="wallets-scanned">—</div>
+            </div>
+          </div>
+          <div class="soc-label" data-i18n="security_wallets_scanned">Wallets Scanned</div>
+          <div class="soc-live"><span class="soc-live-dot"></span>Live counter</div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-label" data-i18n="security_risky_approvals">Risky Approvals Detected 🚨</div>
-          <div class="stat-value" id="risky-approvals">2,341</div>
-          <div class="stat-tag" data-i18n="security_activity_tag">Activity counter</div>
+        <!-- Risky Approvals -->
+        <div class="soc-card red">
+          <div class="soc-ring-wrap">
+            <svg class="soc-ring-svg" viewBox="0 0 120 120">
+              <circle class="soc-ring-track" cx="60" cy="60" r="50"/>
+              <circle class="soc-ring-fill" id="ring-approvals" cx="60" cy="60" r="50"/>
+            </svg>
+            <div class="soc-ring-inner">
+              <span class="soc-icon">🚨</span>
+              <div class="soc-value" id="risky-approvals">—</div>
+            </div>
+          </div>
+          <div class="soc-label" data-i18n="security_risky_approvals">Risky Approvals Detected</div>
+          <div class="soc-live"><span class="soc-live-dot"></span>Live counter</div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-label" data-i18n="security_high_risk_contracts">High-Risk Contracts Identified 🧬</div>
-          <div class="stat-value" id="high-risk-contracts">1,237</div>
-          <div class="stat-tag" data-i18n="security_activity_tag">Activity counter</div>
+        <!-- High-Risk Contracts -->
+        <div class="soc-card purple">
+          <div class="soc-ring-wrap">
+            <svg class="soc-ring-svg" viewBox="0 0 120 120">
+              <circle class="soc-ring-track" cx="60" cy="60" r="50"/>
+              <circle class="soc-ring-fill" id="ring-contracts" cx="60" cy="60" r="50"/>
+            </svg>
+            <div class="soc-ring-inner">
+              <span class="soc-icon">🧬</span>
+              <div class="soc-value" id="high-risk-contracts">—</div>
+            </div>
+          </div>
+          <div class="soc-label" data-i18n="security_high_risk_contracts">High-Risk Contracts Identified</div>
+          <div class="soc-live"><span class="soc-live-dot"></span>Live counter</div>
         </div>
+
       </div>
     </section>
 
@@ -3939,36 +4086,23 @@ function ensureHealthDot(){
   let dot = document.getElementById("cx-activity-dot");
   if (dot) return dot;
 
-  // try to attach near the section title first
-  const title =
-    document.querySelector('[data-i18n="security_live_activity_title"]') ||
-    document.querySelector("section .section-title") ||
-    document.querySelector("h2, h1");
-
   dot = document.createElement("span");
   dot.id = "cx-activity-dot";
   dot.title = "Activity API status";
   dot.setAttribute("aria-label", "Activity API status");
-  dot.style.display = "inline-block";
-  dot.style.width = "10px";
-  dot.style.height = "10px";
-  dot.style.borderRadius = "999px";
-  dot.style.marginInlineStart = "10px";
-  dot.style.verticalAlign = "middle";
-  dot.style.boxShadow = "0 0 10px rgba(0,0,0,.35)";
-  dot.style.background = "rgba(255,255,255,.35)"; // default unknown
 
-  if (title && title.parentNode) {
-    title.parentNode.insertBefore(dot, title.nextSibling);
+  // Try to inject into the soc-api-pill first
+  const pill = document.getElementById("soc-api-pill");
+  if (pill) {
+    pill.insertBefore(dot, pill.firstChild);
   } else {
-    // fallback: attach to body if no title found
+    // fallback: fixed corner
     dot.style.position = "fixed";
     dot.style.right = "18px";
     dot.style.bottom = "18px";
     dot.style.zIndex = "9999";
     document.body.appendChild(dot);
   }
-
   return dot;
 }
 
@@ -3988,26 +4122,59 @@ function setHealthDot(ok){
 }
 
 
+  // ── Ring animation (circumference = 2π×50 ≈ 314) ──────────────────
+  const SOC_CIRCUMFERENCE = 314;
+  // Max reference values for ring fill (ring = 100% at these values)
+  // These auto-scale: once a counter exceeds the ref, ring stays full
+  const SOC_REF = { wallets: 10000, approvals: 50000, contracts: 5000 };
+
+  function socAnimateRing(ringId, value, refMax, delay) {
+    const ring = document.getElementById(ringId);
+    if (!ring) return;
+    const ratio = Math.min(value / refMax, 1);
+    const offset = SOC_CIRCUMFERENCE - (SOC_CIRCUMFERENCE * ratio);
+    // delay so rings cascade in
+    setTimeout(() => {
+      ring.style.strokeDashoffset = offset;
+    }, delay);
+  }
+
+  function socCountUp(el, target, duration) {
+    if (!el) return;
+    const startTime = performance.now();
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      el.textContent = fmt(Math.round(target * ease));
+      if (progress < 1) requestAnimationFrame(step);
+      else el.textContent = fmt(target);
+    }
+    requestAnimationFrame(step);
+  }
+
   async function refreshActivity(){
     try{
       const r = await fetch("/api/activity", { cache: "no-store" });
       if (!r.ok) { setHealthDot(false); return; }
       const j = await r.json();
-      
       setHealthDot(true);
 
-      const elW = document.getElementById("wallets-scanned");
-      const elR = document.getElementById("risky-approvals");
-      const elH = document.getElementById("high-risk-contracts");
+      const w = Number(j.wallets)          || 0;
+      const a = Number(j.riskyApprovals)   || 0;
+      const h = Number(j.highRiskContracts)|| 0;
 
-      if (elW) elW.textContent = fmt(j.wallets);
-      if (elR) elR.textContent = fmt(j.riskyApprovals);
-      if (elH) elH.textContent = fmt(j.highRiskContracts);
+      socCountUp(document.getElementById("wallets-scanned"),   w, 1400);
+      socCountUp(document.getElementById("risky-approvals"),   a, 1600);
+      socCountUp(document.getElementById("high-risk-contracts"),h, 1800);
+
+      socAnimateRing("ring-wallets",   w, SOC_REF.wallets,   200);
+      socAnimateRing("ring-approvals", a, SOC_REF.approvals, 400);
+      socAnimateRing("ring-contracts", h, SOC_REF.contracts, 600);
 
     } catch(e){
-  setHealthDot(false);
-  }
-
+      setHealthDot(false);
+    }
   }
 
   refreshActivity();
