@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -174,6 +173,7 @@
     background:#fff;
     opacity:.9;
   }
+  .fw-btn-mobile{display:none}
   .fw-hero-tagline{
     margin:0;
     font-size:14px;line-height:1.7;
@@ -423,7 +423,7 @@
   .trow.head{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border-bottom-color:rgba(255,255,255,.10)}
   .trow.rpc{grid-template-columns:2fr 2fr 1fr}
   /* pairs table: addr | type | target | result */
-  #qsLiqTable .trow{grid-template-columns:2fr 1fr 1.5fr 2fr}
+  #qsLiqTable .trow{grid-template-columns:2fr 1fr 1.5fr 2fr;align-items:start}
   .trow:not(.head):hover{background:rgba(255,255,255,.02)}
   .cell{font-size:12px;padding:0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .cell.wrap{white-space:normal;word-break:break-all}
@@ -579,6 +579,8 @@
     .hero-title{font-size:clamp(28px,8vw,48px)}
     .fw-hero-block{padding:14px}
     .btn-firewall-hero{padding:12px 28px !important;font-size:13px !important}
+    .fw-btn-full{display:none}
+    .fw-btn-mobile{display:inline}
     .tool-card{padding:14px 12px}
     .qs-main-btn-row{gap:6px}
     .tx-detail-card,.tx-sum{font-size:11px}
@@ -633,7 +635,8 @@
       <div class="fw-hero-block">
         <a href="/firewall" class="btn-firewall btn-firewall-hero">
           <span class="fw-dot"></span>
-          <span data-i18n="fw_hero_btn">🛡️ CycleX Firewall — Protect Your Wallet</span>
+          <span class="fw-btn-full" data-i18n="fw_hero_btn">🛡️ CycleX Firewall — Protect Your Wallet</span>
+          <span class="fw-btn-mobile">🛡️ מגן CycleX Firewall</span>
         </a>
         <p class="fw-hero-tagline" data-i18n="fw_hero_tagline">
           Real-time wallet scanner — checks approvals, flags risky contracts &amp; sends <em>live alerts</em>.
@@ -3596,9 +3599,9 @@ const read = _getRP ? _getRP(net) : null;
     const body = rows.length ? rows.map(r => `
       <div class="trow ${r.ok ? "highlight" : ""}">
         <div class="cell wrap"><span class="mono">${r.addr ? qsEscapeHtml(qsShortAddr(r.addr)) : "—"}</span></div>
-        <div class="cell">${qsEscapeHtml(r.type)}</div>
+        <div class="cell wrap">${qsEscapeHtml(r.type)}</div>
         <div class="cell">${qsEscapeHtml(r.target)}</div>
-        <div class="cell">${r.ok ? "✅" : "—"} ${qsEscapeHtml(r.note || "")}</div>
+        <div class="cell wrap">${r.ok ? "✅" : "—"} ${qsEscapeHtml(r.note || "")}</div>
       </div>
     `).join("") : `
       <div class="trow">
@@ -3642,8 +3645,36 @@ const read = _getRP ? _getRP(net) : null;
   }
 
   function qsBuildXText(rep){
-    const base = `Quick Scan (${rep.chainName || rep.net})\nToken: ${qsShortAddr(rep.token)}\nScore: ${rep.score}/100 (${rep.overallText})\n`;
-    return `${base}${rep.shareLink || ""}`.trim();
+    const sym = rep.meta?.symbol || "";
+    const nm  = rep.meta?.name  || "";
+    const nameStr = sym
+      ? (nm && nm !== sym ? `${sym} — ${nm}` : sym)
+      : qsShortAddr(rep.token);
+    const chainLabel = rep.chainName || (rep.net || "").toUpperCase();
+    const net = rep.net || "";
+    const hashNet = net === "bsc" ? "#BSC" : net === "eth" ? "#ETH" : net === "polygon" ? "#Polygon" : "";
+
+    const liqChip = (rep.mini || []).find(c => c.title === "Liquidity");
+    const cexChip = (rep.mini || []).find(c => c.title === "CEX Listed");
+    const mktChip = (rep.mini || []).find(c => c.title === "Market Score");
+
+    const liqEmoji = liqChip?.type === "ok" ? "✅" : liqChip?.type === "bad" ? "❌" : "⚠️";
+    const cexEmoji = cexChip?.type === "ok" ? "✅" : "⚠️";
+
+    const lines = [
+      `🔍 ${nameStr} · ${chainLabel}`,
+      `Score: ${rep.score}/100 · ${rep.overallText}`,
+      mktChip ? `Market Score: ${mktChip.value}` : null,
+      ``,
+      liqChip ? `${liqEmoji} Liquidity: ${liqChip.value}` : null,
+      cexChip ? `${cexEmoji} CEX: ${cexChip.value}` : null,
+      ``,
+      `#CryptoSafety${hashNet ? " " + hashNet : ""}`,
+    ].filter(l => l !== null);
+
+    const text = lines.join("\n").trim();
+    const link = rep.shareLink || "";
+    return `${text}\n${link}`.trim();
   }
   async function cxReadWithFallback(net, runner) {
   const base = getReadProvider(net);
@@ -4320,8 +4351,10 @@ if (mFlags.has("holder_concentration_unknown") && rep.meta?.liqCoverageLow && sc
 //   Good >= 85, Mixed >= 70, Caution >= 50, High risk < 50
 
 // A) Unknown Verified + Unknown Owner -> never reach "Good"
+// Exception: CEX listed + healthy liquidity is strong enough signal to allow "Good"
 const ownerUnknown = !owner;
-if (verified !== true && ownerUnknown && score > 84) score = 84; // max Mixed
+const cexHealthyOverride = cexListed && liqQuality === "healthy";
+if (verified !== true && ownerUnknown && !cexHealthyOverride && score > 84) score = 84; // max Mixed
 
 // B) No liquidity signal at all -> never exceed Caution (and hard cap)
 // Exception: if listed on major CEX, DEX liquidity absence is not a hard cap
@@ -4339,7 +4372,7 @@ if (lowConf && hasSeriousMarketFlag && score > 84) score = 84; // max Mixed
 
 if (liqQuality === "tiny" && score > 49) score = 49; // High risk
 if (liqQuality === "low"  && score > 69) score = 69; // Caution max
-if (liqQuality === "medium" && verified !== true && score > 84) score = 84; // no Good unless verified
+if (liqQuality === "medium" && verified !== true && !cexListed && score > 84) score = 84; // no Good unless verified or CEX
 // ✅ Tiny verified+healthy bonus (ONLY when truly clean)
 try {
   // optional: treat owner concentration as "serious" too
@@ -5816,26 +5849,6 @@ function safeLower(s){
       setTimeout(bmGenerate, 50);
     }
 
-    // =========================
-// DNA — exports disabled (DNA features live in Firewall app)
-// =========================
-// try {
-//   window.dnaScan = window.dnaScan || dnaScan;
-//   window.dnaConnectWallet = window.dnaConnectWallet || dnaConnectWallet;
-//   window.dnaRequestFullAccess = window.dnaRequestFullAccess || dnaRequestFullAccess;
-//   window.dnaCheckCycxEligibility_BSC = window.dnaCheckCycxEligibility_BSC || dnaCheckCycxEligibility_BSC;
-//   window.initWalletSecurityDNAUi = window.initWalletSecurityDNAUi || initWalletSecurityDNAUi;
-//   window.initDnaCycxGate = window.initDnaCycxGate || initDnaCycxGate;
-//   window.withRpcFallback = window.withRpcFallback || withRpcFallback;
-//   window.E = window.E || E;
-// } catch (e) { console.warn("DNA exports failed:", e); }
-
-    // =========================
-    // Boot
-    // =========================
-// =========================
-// Boot
-// =========================
 function parseQuery() {
   const u = new URL(location.href);
   return {
