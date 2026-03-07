@@ -1228,29 +1228,61 @@ body::after{
     letter-spacing: .02em;
   }
 
+  /* ── Claim status card ───────────────────────── */
   #claim-status{
     display:none;
-    margin: 12px auto 16px;
-    padding: 14px 16px;
-    border-radius: 14px;
+    margin: 14px 0;
+    padding: 16px 18px;
+    border-radius: 16px;
     font-size: 14px;
-    line-height: 1.45;
+    line-height: 1.55;
     text-align:center;
-    max-width: 100%;
+    animation: claimSlideUp .35s cubic-bezier(.16,1,.3,1) both;
   }
-  #claim-status.pending{ background: rgba(255,193,7,.12); border:1px solid rgba(255,193,7,.45); color:#ffc107; }
-  #claim-status.success{ background: rgba(0,230,118,.12); border:1px solid rgba(0,230,118,.45); color:#00e676; }
-  #claim-status.error{ background: rgba(220,53,69,.12); border:1px solid rgba(220,53,69,.45); color:#dc3545; }
-  #cx-claim-now-btn[disabled]{ opacity:.6; cursor:not-allowed; }
+  @keyframes claimSlideUp{
+    from{ opacity:0; transform:translateY(10px); }
+    to{   opacity:1; transform:translateY(0); }
+  }
+  /* eligible — green glow card */
+  #claim-status:not(.pending):not(.success):not(.error){
+    background: rgba(0,230,118,.07);
+    border: 1px solid rgba(0,230,118,.3);
+    color: #00e676;
+    box-shadow: 0 0 28px rgba(0,230,118,.08), inset 0 1px 0 rgba(0,230,118,.12);
+  }
+  #claim-status.pending{ background:rgba(255,193,7,.1); border:1px solid rgba(255,193,7,.4); color:#ffc107; }
+  #claim-status.success{ background:rgba(0,230,118,.1); border:1px solid rgba(0,230,118,.4); color:#00e676;
+    box-shadow: 0 0 32px rgba(0,230,118,.12); }
+  #claim-status.error{   background:rgba(220,53,69,.1);  border:1px solid rgba(220,53,69,.4);  color:#dc3545; }
 
-  .modal-actions{ display:flex; gap: 10px; margin-bottom: 6px; }
+  /* ── Connected chip (replaces big btn-wallet) ─ */
+  .btn-wallet-chip{
+    display:inline-flex;align-items:center;gap:7px;
+    border-radius:999px;
+    border:1px solid rgba(0,230,118,.3);
+    background:rgba(0,230,118,.07);
+    color:#00e676;
+    font-size:12px;font-weight:700;letter-spacing:.04em;
+    padding:6px 14px;cursor:default;
+    box-shadow:0 0 14px rgba(0,230,118,.1);
+  }
+  .btn-wallet-chip::before{
+    content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+    background:#00e676;box-shadow:0 0 7px #00e676;
+    animation:socPulse 2s ease-in-out infinite;
+  }
+
+  #cx-claim-now-btn[disabled]{ opacity:.5; cursor:not-allowed; }
+
+  .modal-actions{ display:flex; gap: 10px; margin-bottom: 6px; align-items:center; flex-wrap:wrap; }
   .btn-wallet{
     flex:1;
     border-radius:999px;
     border: 1px solid rgba(255,255,255,.10);
-    padding: 11px 18px;
+    padding: 13px 18px;
     cursor:pointer;
     font-weight: 950;
+    font-size:15px;
     background: linear-gradient(135deg, rgba(124,92,255,1), rgba(0,229,255,1));
     color:#05060a;
     box-shadow: 0 18px 60px rgba(0,0,0,.55);
@@ -1258,6 +1290,29 @@ body::after{
   }
   .btn-wallet:hover{ transform: translateY(-1px); box-shadow: 0 26px 90px rgba(0,0,0,.72); }
   .btn-wallet:focus-visible{ outline:none; box-shadow: 0 0 0 3px rgba(0,229,255,.22); }
+
+  /* Claim Now — pulsing CTA */
+  #cx-claim-now-btn{
+    width:100%;margin-top:12px;
+    border-radius:999px;border:none;
+    padding:14px 18px;
+    cursor:pointer;font-weight:950;font-size:16px;
+    background:linear-gradient(135deg,#00c853,#00e676);
+    color:#021b10;
+    box-shadow:0 0 32px rgba(0,230,118,.25),0 12px 40px rgba(0,0,0,.5);
+    animation:claimPulse 2.4s ease-in-out infinite;
+    transition:transform .2s ease,box-shadow .2s ease;
+  }
+  #cx-claim-now-btn:hover{
+    transform:translateY(-2px);
+    box-shadow:0 0 48px rgba(0,230,118,.4),0 18px 50px rgba(0,0,0,.6);
+    animation:none;
+  }
+  #cx-claim-now-btn:disabled{ animation:none;opacity:.5;cursor:not-allowed; }
+  @keyframes claimPulse{
+    0%,100%{ box-shadow:0 0 28px rgba(0,230,118,.2),0 10px 36px rgba(0,0,0,.5); }
+    50%{     box-shadow:0 0 52px rgba(0,230,118,.45),0 14px 44px rgba(0,0,0,.55); }
+  }
 
   .btn-close{
     border-radius:999px;
@@ -1270,7 +1325,7 @@ body::after{
     transition: background .18s var(--ease), color .18s var(--ease), border-color .18s var(--ease);
   }
   .btn-close:hover{ background: rgba(255,255,255,.06); color: var(--text); border-color: rgba(255,255,255,.34); }
-  .modal-caption{ font-size: 11px; color: var(--dim); margin-top: 6px; }
+  .modal-caption{ font-size: 10px; color: rgba(255,255,255,.2); margin-top: 4px; }
 
   .modal-close-x{
     position:absolute;
@@ -3231,17 +3286,20 @@ window.addEventListener("load", async () => {
   const short =
     address.slice(0, 6) + "…" + address.slice(-4);
 
-  const humanAmount = ethers.formatUnits(amount, 18);
+  const humanAmount = Number(ethers.formatUnits(amount, 18)).toLocaleString("en-US", {maximumFractionDigits:2});
 
   const lang =
-  document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
-const dict = translations[lang] || translations.en;
+    document.querySelector(".lang-btn.active")?.getAttribute("data-lang") || "en";
+  const dict = translations[lang] || translations.en;
 
-box.innerHTML = `
-  <strong>✅ ${dict.eligible_title}</strong><br>
-  ${dict.eligible_wallet}: <code>${short}</code><br>
-  ${dict.eligible_amount}: <strong>${humanAmount} CYCX</strong>
-`;
+  box.innerHTML = `
+    <div style="font-size:28px;margin-bottom:8px">🎉</div>
+    <div style="font-size:15px;font-weight:900;margin-bottom:6px">✅ ${dict.eligible_title}</div>
+    <div style="font-size:12px;opacity:.7;margin-bottom:4px">${dict.eligible_wallet}</div>
+    <div style="font-size:13px;font-weight:700;font-family:monospace;margin-bottom:10px">${short}</div>
+    <div style="font-size:12px;opacity:.7;margin-bottom:2px">${dict.eligible_amount}</div>
+    <div style="font-size:22px;font-weight:950;letter-spacing:-0.02em">${humanAmount} <span style="font-size:13px;opacity:.7">CYCX</span></div>
+  `;
 
   box.style.display = "block";
 }
@@ -3347,11 +3405,9 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
       function cxUpdateWalletUI(address) {
   const btn = document.getElementById("btn-connect-wallet");
   if (!btn) return;
-
   const short = address.slice(0, 6) + "…" + address.slice(-4);
-  btn.textContent = `Connected: ${short}`;
-  btn.disabled = true;
-  btn.style.opacity = "0.85";
+  // Swap big gradient btn → small connected chip
+  btn.outerHTML = `<span class="btn-wallet-chip" id="btn-connect-wallet">Connected: ${short}</span>`;
 }
 
 
@@ -3363,9 +3419,7 @@ window.cxEnsureWeb3 = cxEnsureWeb3;
       if (!btn) {
         btn = document.createElement("button");
         btn.id = "cx-claim-now-btn";
-        btn.className = "btn-wallet";
-        btn.style.marginTop = "10px";
-        btn.textContent = "Claim now";
+        btn.textContent = "🔐 Claim now";
         btn.addEventListener("click", cxPerformClaim);
         modal.appendChild(btn);
       }
