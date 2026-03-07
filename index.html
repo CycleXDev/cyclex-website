@@ -3928,43 +3928,37 @@ setMetricsDot(true);
   }
 
   // Lazy-load AppKit only when user clicks Connect — avoids 9s critical path on initial load
-  let appKitLoaded = false;
-  async function loadAppKit() {
-    if (appKitLoaded) return;
-    appKitLoaded = true;
-    cxlog("🟢 [CycleX] Lazy-loading AppKit...");
-    const [{ createAppKit }, { EthersAdapter }, { bsc }] = await Promise.all([
-      import("https://esm.sh/@reown/appkit@1.8.15"),
-      import("https://esm.sh/@reown/appkit-adapter-ethers@1.8.15"),
-      import("https://esm.sh/@reown/appkit/networks"),
-    ]);
-    cxlog("🟢 [CycleX] AppKit imports OK");
-    const projectId = "7886bcb95105e9e47337cec481d5de75";
-    const modal = createAppKit({
-      adapters: [new EthersAdapter()],
-      networks: [bsc],
-      defaultNetwork: bsc,
-      projectId,
-      analytics: false,
-      metadata: {
-        name: "CycleX",
-        description: "CycleX Claim Portal",
-        url: window.location.origin,
-        icons: [`${window.location.origin}/logo.webp`]
-      }
-    });
-    window.cxAppKitModal = modal;
-    cxlog("🟢 [CycleX] AppKit modal exposed globally");
-    cxlog("🟢 [CycleX] AppKit initialized");
+  let _appKitPromise = null;
+  function loadAppKit() {
+    if (_appKitPromise) return _appKitPromise;
+    _appKitPromise = (async () => {
+      cxlog("🟢 [CycleX] Lazy-loading AppKit...");
+      const [{ createAppKit }, { EthersAdapter }, { bsc }] = await Promise.all([
+        import("https://esm.sh/@reown/appkit@1.8.15"),
+        import("https://esm.sh/@reown/appkit-adapter-ethers@1.8.15"),
+        import("https://esm.sh/@reown/appkit/networks"),
+      ]);
+      cxlog("🟢 [CycleX] AppKit imports OK");
+      const projectId = "7886bcb95105e9e47337cec481d5de75";
+      const modal = createAppKit({
+        adapters: [new EthersAdapter()],
+        networks: [bsc],
+        defaultNetwork: bsc,
+        projectId,
+        analytics: false,
+        metadata: {
+          name: "CycleX",
+          description: "CycleX Claim Portal",
+          url: window.location.origin,
+          icons: [`${window.location.origin}/logo.webp`]
+        }
+      });
+      window.cxAppKitModal = modal;
+      cxlog("🟢 [CycleX] AppKit modal exposed globally");
+      cxlog("🟢 [CycleX] AppKit initialized");
+    })();
+    return _appKitPromise;
   }
-
-  // Trigger load on connect button click (before any modal logic runs)
-  document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("btn-connect-wallet");
-    if (btn) {
-      btn.addEventListener("click", () => loadAppKit(), { once: true, capture: true });
-    }
-  });
     
 
 
