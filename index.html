@@ -10,11 +10,12 @@
 
   gtag('config', 'G-BXDFXJWCNQ');
 </script>
-  <link rel="icon" href="/logo.png">
+  <link rel="icon" href="/logo.webp">
   <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" href="/logo.png">
-  <link rel="apple-touch-icon" href="/logo.png">
+  <link rel="icon" type="image/png" href="/logo.webp">
+  <link rel="apple-touch-icon" href="/logo.webp">
   <title>CycleX – Web3 Security Platform &amp; Reward Token</title>
+  <meta name="description" content="CycleX is a Web3 security platform — real-time wallet firewall, smart contract risk scanner, and CYCX token rewards. No wallet connection required." />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <style>
@@ -1665,7 +1666,7 @@ html, body { overflow-x: hidden; }
   <header class="top-bar">
     <!-- Left: Brand -->
     <div class="brand">
-      <img src="logo.png" alt="CycleX logo" class="brand-logo" />
+      <img src="logo.webp" alt="CycleX logo" class="brand-logo" />
       <div class="brand-text">
         <div class="brand-title">CYCLEX</div>
         <div class="brand-sub" data-i18n="brand_sub">Web3 Security Platform</div>
@@ -1696,7 +1697,7 @@ html, body { overflow-x: hidden; }
     </div>
   </header>
   <!-- main logo center -->
-  <img src="logo.png" alt="CycleX main logo" class="main-logo" />
+  <img src="logo.webp" alt="CycleX main logo" class="main-logo" width="92" height="92" fetchpriority="high" />
 
   <!-- hero -->
   <main>
@@ -2279,7 +2280,7 @@ html, body { overflow-x: hidden; }
 
 
   <!-- Load ethers.js -->
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.7.1/dist/ethers.umd.min.js" defer></script>
 
   <script>
   const CX_DEBUG = false; 
@@ -3916,41 +3917,54 @@ setMetricsDot(true);
   <script type="module">
   cxlog("🟢 [CycleX] Step 2 module loaded");
 
-  import { createAppKit } from "https://esm.sh/@reown/appkit@1.8.15";
-  import { EthersAdapter } from "https://esm.sh/@reown/appkit-adapter-ethers@1.8.15";
-  import { bsc } from "https://esm.sh/@reown/appkit/networks";
-
-    async function waitForWalletProvider(timeoutMs = 90000) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const p = window.cxAppKitModal?.getWalletProvider?.();
-    if (p) return p;
-    await new Promise(r => setTimeout(r, 250));
+  async function waitForWalletProvider(timeoutMs = 90000) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const p = window.cxAppKitModal?.getWalletProvider?.();
+      if (p) return p;
+      await new Promise(r => setTimeout(r, 250));
+    }
+    return null;
   }
-  return null;
-}
 
-  cxlog("🟢 [CycleX] AppKit imports OK");
-
-  const projectId = "7886bcb95105e9e47337cec481d5de75";
-
-  const modal = createAppKit({
-  adapters: [new EthersAdapter()],
-  networks: [bsc],
-  defaultNetwork: bsc,
-  projectId,
-  analytics: false,
-  metadata: {
-    name: "CycleX",
-    description: "CycleX Claim Portal",
-    url: window.location.origin,
-    icons: [`${window.location.origin}/logo.png`]
+  // Lazy-load AppKit only when user clicks Connect — avoids 9s critical path on initial load
+  let appKitLoaded = false;
+  async function loadAppKit() {
+    if (appKitLoaded) return;
+    appKitLoaded = true;
+    cxlog("🟢 [CycleX] Lazy-loading AppKit...");
+    const [{ createAppKit }, { EthersAdapter }, { bsc }] = await Promise.all([
+      import("https://esm.sh/@reown/appkit@1.8.15"),
+      import("https://esm.sh/@reown/appkit-adapter-ethers@1.8.15"),
+      import("https://esm.sh/@reown/appkit/networks"),
+    ]);
+    cxlog("🟢 [CycleX] AppKit imports OK");
+    const projectId = "7886bcb95105e9e47337cec481d5de75";
+    const modal = createAppKit({
+      adapters: [new EthersAdapter()],
+      networks: [bsc],
+      defaultNetwork: bsc,
+      projectId,
+      analytics: false,
+      metadata: {
+        name: "CycleX",
+        description: "CycleX Claim Portal",
+        url: window.location.origin,
+        icons: [`${window.location.origin}/logo.webp`]
+      }
+    });
+    window.cxAppKitModal = modal;
+    cxlog("🟢 [CycleX] AppKit modal exposed globally");
+    cxlog("🟢 [CycleX] AppKit initialized");
   }
-});
 
-window.cxAppKitModal = modal;
-cxlog("🟢 [CycleX] AppKit modal exposed globally");
-cxlog("🟢 [CycleX] AppKit initialized");
+  // Trigger load on connect button click (before any modal logic runs)
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("btn-connect-wallet");
+    if (btn) {
+      btn.addEventListener("click", () => loadAppKit(), { once: true, capture: true });
+    }
+  });
     
 
 
