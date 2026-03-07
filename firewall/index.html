@@ -1740,6 +1740,7 @@ async function fwFetchWalletTxs(net, address) {
     const u = new URL("/api/getWalletTxs", API_BASE);
     u.searchParams.set("net", net);
     u.searchParams.set("address", address);
+    u.searchParams.set("limit", "200"); // cap tx fetch — prevents main-thread freeze on active wallets
     const ctrl = new AbortController();
     const timer = setTimeout(()=>ctrl.abort(), 14000);
     try {
@@ -2971,9 +2972,12 @@ async function runLoadSequence(walletAddr, net, isDemo) {
     if (relSummaryEl) relSummaryEl.innerHTML = "";
     if (relContent) relContent.innerHTML = '<div class="rel-loading">🔍 Analyzing wallet relationships…</div>';
     fwFetchWalletTxs(net, walletAddr).then(txs => {
-      const relations = fwAnalyzeRelations(net, walletAddr, txs);
-      window.__fwRelations = relations;
-      fwRenderRelations(net, relations);
+      // Defer analysis off main thread — prevents freeze on large tx sets
+      setTimeout(() => {
+        const relations = fwAnalyzeRelations(net, walletAddr, txs);
+        window.__fwRelations = relations;
+        fwRenderRelations(net, relations);
+      }, 0);
     }).catch(() => {
       if (relContent) relContent.innerHTML = '<div class="rel-empty">⚠ Could not fetch transaction history. Check your connection and try again.</div>';
     });
@@ -2993,9 +2997,12 @@ async function runLoadSequence(walletAddr, net, isDemo) {
     window.__fwRelations = null; // null = fetch in progress, [] = fetched but empty
     if (relContent) relContent.innerHTML = '<div class="rel-loading">🔍 Analyzing wallet relationships…</div>';
     fwFetchWalletTxs(net, walletAddr).then(txs => {
-      const relations = fwAnalyzeRelations(net, walletAddr, txs);
-      window.__fwRelations = relations;
-      fwRenderRelations(net, relations);
+      // Defer analysis off main thread — prevents freeze on large tx sets
+      setTimeout(() => {
+        const relations = fwAnalyzeRelations(net, walletAddr, txs);
+        window.__fwRelations = relations;
+        fwRenderRelations(net, relations);
+      }, 0);
       // Cards show with locked "🔒 Unlock to view transactions" buttons (handled inside fwRenderRelations)
     }).catch(() => {
       window.__fwRelations = [];
@@ -4274,7 +4281,7 @@ function fwDownloadShareCard() {
   const statusBg     = score < 45 ? "rgba(255,71,87,.12)" : score < 70 ? "rgba(255,193,7,.12)" : "rgba(93,255,178,.1)";
 
   // Canvas size — matches card aspect ratio, high resolution
-  const S = 4; // pixel density multiplier — max quality
+  const S = 3; // pixel density — 3x is sharp on retina, avoids 12MB canvas crash
   const pw = 520, R = 20;
 
   // ── First pass: calculate exact content height ────────────────
