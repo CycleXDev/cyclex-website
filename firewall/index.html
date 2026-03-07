@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1374,6 +1375,22 @@
                 <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
                   <button class="btn-passport secondary" id="btnCopyVerifyLink" style="font-size:10px;padding:7px 14px;margin:0">🔗 Copy Verify Link</button>
                   <button class="btn-passport secondary" id="btnShareXSigned" style="font-size:10px;padding:7px 14px;margin:0">🐦 Share to X</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Free tier: unlock CTA + blurred PASS preview -->
+            <div id="passportUnlockSection" style="display:none;margin-top:14px">
+              <button class="btn-full-access" onclick="requestFullAccess()" style="width:100%;font-size:12px;padding:11px 18px">🔓 Unlock PASS Features</button>
+              <div style="margin-top:10px;padding:14px;border-radius:12px;border:1px solid rgba(124,92,255,.2);background:rgba(124,92,255,.05);position:relative;overflow:hidden">
+                <div style="filter:blur(3px);pointer-events:none;opacity:.45">
+                  <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800;margin-bottom:10px">✅ PASS Holder — Verified Passport</div>
+                  <div style="height:36px;border-radius:999px;background:rgba(124,92,255,.25);margin-bottom:8px"></div>
+                  <div style="height:36px;border-radius:999px;background:rgba(124,92,255,.18)"></div>
+                </div>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:6px">
+                  <span style="font-size:13px">🔒</span>
+                  <span style="font-size:11px;color:rgba(174,138,255,.9);font-weight:700;letter-spacing:.08em;text-transform:uppercase">PASS Required</span>
                 </div>
               </div>
             </div>
@@ -4173,13 +4190,17 @@ function renderPassport(wallet, d, tier) {
     statusEl.style.cssText = "border-color:rgba(93,255,178,.35);color:var(--green);background:rgba(93,255,178,.08)";
   }
 
-  // Watermark: show for free with new text, hide for full
+  // Watermark: show for free, hide for full
   const wm = document.getElementById("ppWatermark");
   if (wm) wm.style.display = tier === "free" ? "flex" : "none";
 
   // PASS section: only visible for full-tier holders
   const passSection = document.getElementById("passportPassSection");
   if (passSection) passSection.style.display = tier === "full" ? "block" : "none";
+
+  // Unlock section: only visible for free tier
+  const unlockSection = document.getElementById("passportUnlockSection");
+  if (unlockSection) unlockSection.style.display = tier === "free" ? "block" : "none";
 
   // Ensure passport section is always visible (card shown to all)
   const wrap = document.getElementById("passportWrap");
