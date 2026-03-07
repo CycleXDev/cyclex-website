@@ -5904,5 +5904,24 @@ if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", boot);
 } else { boot(); }
 </script>
+<script>
+// ── Activity Counter — reports QuickScan events to homepage dashboard ──
+if (typeof window.cxActivitySend !== "function") {
+  window.cxActivitySend = function(t, n) {
+    n = Math.min(50, Math.max(1, Number(n) || 1));
+    try {
+      const payload = JSON.stringify({ t, n });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon("/api/activity", new Blob([payload], { type: "application/json" }));
+        return;
+      }
+      fetch("/api/activity", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: payload, keepalive: true
+      }).catch(function(){});
+    } catch(e) {}
+  };
+}
+</script>
 </body>
 </html>
