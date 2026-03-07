@@ -282,7 +282,6 @@
   .threat-item.t-high{background:rgba(255,150,50,.04);border-color:rgba(255,150,50,.18)}
   .threat-item.t-info{background:rgba(255,255,255,.015);border-color:rgba(255,255,255,.06)}
 
-  /* ✅ FIX: היה אצלך שבור בתוך .t-info */
   .threat-item.locked-card{opacity:.35;pointer-events:none;user-select:none;position:relative}
   .threat-item.locked-card::after{content:'🔒';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18px}
 
@@ -955,7 +954,6 @@
     border:1px solid rgba(255,71,87,.3);
     animation:pulseBorder 2s infinite;
   }
-  /* ✅ FIX: לא לדרוס את pulse של הדוט למעלה */
   @keyframes pulseBorder{0%,100%{border-color:rgba(255,71,87,.3)}50%{border-color:rgba(255,71,87,.7)}}
   .fw-alert-banner.show{display:block}
 
@@ -1553,6 +1551,21 @@ const PASS_BSC    = "0x718bc4E915fF66249C1eB86Eb566Ce4fefCA801e";
 const CYCX_MIN    = 100n;   // minimum CYCX
 const PASS_MIN    = 1n;     // minimum PASS
 const API_BASE    = window.CYCLEX_API_BASE || location.origin;
+
+// ── Activity Counter — reports scan events to homepage dashboard ──────
+function cxActivitySend(t, n = 1) {
+  try {
+    const payload = JSON.stringify({ t, n: Math.min(50, Math.max(1, Number(n) || 1)) });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/activity", new Blob([payload], { type: "application/json" }));
+      return;
+    }
+    fetch("/api/activity", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: payload, keepalive: true
+    }).catch(() => {});
+  } catch {}
+}
 
 // ══════════════════════════════════════════════════════════════
 // WALLET RELATIONS ENGINE — Tagged Entities (90+ protocols)
@@ -2905,6 +2918,18 @@ async function runLoadSequence(walletAddr, net, isDemo) {
 
   fwScanData = computeMetrics(approvals);
   fixApprovals = fwScanData.fixTargets;
+
+  // ── Report to homepage activity counters (real scans only) ───────────
+  if (!isDemo) {
+    try {
+      cxActivitySend("wallet_scan", 1);
+      const _riskyCount = (fwScanData.rows || []).filter(r => {
+        const rr = String(r.risk || "").toLowerCase();
+        return rr.includes("high") || rr.includes("med");
+      }).length;
+      if (_riskyCount > 0) cxActivitySend("risky_approvals", _riskyCount);
+    } catch {}
+  }
 
   // Show access gate in free tier
   if (fwAccessTier === "free") {
