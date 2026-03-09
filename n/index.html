@@ -3295,11 +3295,13 @@ async function fwSignPassport() {
     const ts     = Date.now();
     const expiry = ts + FW_PASSPORT_TTL_MS;
     const domain = fwGetEIP712Domain(fwNet);
-    const value  = _fwPassportValue(fwWallet, fwNet, fwScanData, ts, expiry);
 
     // eth_signTypedData_v4 — standard MetaMask/WalletConnect method
     const provider    = window.wallet.providerRaw;
     const signerAddr  = window.wallet.address;
+
+    // value.wallet must equal the signer address so verifyTypedData can recover it correctly
+    const value  = _fwPassportValue(signerAddr, fwNet, fwScanData, ts, expiry);
 
     const msgParams = JSON.stringify({
       domain,
