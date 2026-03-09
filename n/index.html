@@ -3417,8 +3417,12 @@ async function fwVerifyPassport(encoded) {
       document.getElementById("fvIcon").textContent  = "✅";
       document.getElementById("fvTitle").textContent = "Verified Passport";
       document.getElementById("fvSub").innerHTML     =
-        `Authentic signature from <strong style="color:var(--cyan)">${fwShort(wallet)}</strong>`
-        + ` on ${(net||"").toUpperCase()}. Score: <strong style="color:var(--green)">${score}/100</strong>.`;
+        (() => {
+        const sc = Number(score);
+        const scoreColor = sc < 45 ? "#ff4757" : sc < 70 ? "#ffd166" : "#3cffb0";
+        return `Authentic signature from <strong style="color:var(--cyan)">${fwShort(wallet)}</strong>`
+          + ` on ${(net||"").toUpperCase()}. Score: <strong style="color:${scoreColor}">${score}/100</strong>.`;
+      })();
     } else if (state === "expired") {
       modal.classList.add("fv-expired");
       document.getElementById("fvIcon").textContent  = "⏰";
