@@ -3008,26 +3008,47 @@ async function runLoadSequence(walletAddr, net, isDemo) {
     window.__fwRelations = demoRels;
     fwRenderRelations(net, demoRels);
   } else {
-    // Free tier + real wallet: fetch relations and show cards — timeline buttons stay locked
+    // Free tier + real wallet:
+    // Do NOT call fwFetchWalletTxs — would expose wallet address + full tx list in Network tab
+    // before the user has granted full access. Show a static locked teaser instead.
+    window.__fwRelations = null;
     if (relSection) relSection.style.display = "block";
-    window.__fwRelations = null; // null = fetch in progress, [] = fetched but empty
-    if (relContent) relContent.innerHTML = '<div class="rel-loading">🔍 Analyzing wallet relationships…</div>';
-    fwFetchWalletTxs(net, walletAddr).then(txs => {
-      // Defer analysis off main thread — prevents freeze on large tx sets
-      setTimeout(() => {
-        const relations = fwAnalyzeRelations(net, walletAddr, txs);
-        window.__fwRelations = relations;
-        fwRenderRelations(net, relations);
-      }, 0);
-      // Cards show with locked "🔒 Unlock to view transactions" buttons (handled inside fwRenderRelations)
-    }).catch(() => {
-      window.__fwRelations = [];
-      if (relContent) relContent.innerHTML = `
-        <div style="padding:14px 16px;border-radius:12px;background:rgba(255,193,7,.06);
-             border:1px solid rgba(255,193,7,.2);font-size:12px;color:var(--muted)">
-          ⚠ Could not fetch transaction history. Unlock Full Access to retry.
-        </div>`;
-    });
+    if (relContent) relContent.innerHTML = `
+      <div style="
+        display:grid;
+        grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+        gap:12px;
+        pointer-events:none;
+        user-select:none;
+        opacity:.4;
+        filter:blur(2.5px);
+      ">
+        ${["DEX / AMM","CEX Bridge","Lending Protocol","Aggregator"].map(label => `
+          <div style="
+            background:rgba(255,255,255,.04);
+            border:1px solid rgba(255,255,255,.10);
+            border-radius:16px;
+            padding:16px 14px;
+          ">
+            <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:8px">${label}</div>
+            <div style="height:10px;border-radius:6px;background:rgba(255,255,255,.12);width:70%;margin-bottom:6px"></div>
+            <div style="height:8px;border-radius:6px;background:rgba(255,255,255,.07);width:45%"></div>
+          </div>
+        `).join("")}
+      </div>
+      <div style="
+        margin-top:14px;
+        padding:12px 16px;
+        border-radius:12px;
+        background:rgba(0,229,255,.05);
+        border:1px solid rgba(0,229,255,.15);
+        font-size:12px;
+        color:var(--muted);
+        text-align:center;
+      ">
+        🔒 Unlock Full Access to analyze wallet relationships and protocol interactions.
+      </div>
+    `;
   }
 }
 
@@ -3266,6 +3287,7 @@ async function fwSignPassport() {
   if (!window.wallet?.signer) { requestFullAccess(); return; }
   if (!fwScanData) { showPassportMsg("⚠ Run a scan first."); return; }
   if (!_fwAccessVerified) { requestFullAccess(); return; }
+  if (!fwCheckWalletMatch(btn)) return;
 
   btn.disabled = true;
   btn.textContent = "Signing…";
@@ -3274,11 +3296,13 @@ async function fwSignPassport() {
     const ts     = Date.now();
     const expiry = ts + FW_PASSPORT_TTL_MS;
     const domain = fwGetEIP712Domain(fwNet);
-    const value  = _fwPassportValue(fwWallet, fwNet, fwScanData, ts, expiry);
 
     // eth_signTypedData_v4 — standard MetaMask/WalletConnect method
     const provider    = window.wallet.providerRaw;
     const signerAddr  = window.wallet.address;
+
+    // value.wallet must equal the signer address so verifyTypedData can recover it correctly
+    const value  = _fwPassportValue(signerAddr, fwNet, fwScanData, ts, expiry);
 
     const msgParams = JSON.stringify({
       domain,
@@ -3394,8 +3418,12 @@ async function fwVerifyPassport(encoded) {
       document.getElementById("fvIcon").textContent  = "✅";
       document.getElementById("fvTitle").textContent = "Verified Passport";
       document.getElementById("fvSub").innerHTML     =
-        `Authentic signature from <strong style="color:var(--cyan)">${fwShort(wallet)}</strong>`
-        + ` on ${(net||"").toUpperCase()}. Score: <strong style="color:var(--green)">${score}/100</strong>.`;
+        (() => {
+        const sc = Number(score);
+        const scoreColor = sc < 45 ? "#ff4757" : sc < 70 ? "#ffd166" : "#3cffb0";
+        return `Authentic signature from <strong style="color:var(--cyan)">${fwShort(wallet)}</strong>`
+          + ` on ${(net||"").toUpperCase()}. Score: <strong style="color:${scoreColor}">${score}/100</strong>.`;
+      })();
     } else if (state === "expired") {
       modal.classList.add("fv-expired");
       document.getElementById("fvIcon").textContent  = "⏰";
