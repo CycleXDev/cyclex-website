@@ -2486,6 +2486,12 @@ async function fetchApprovals(net, address) {
   u.searchParams.set("net", net);
   u.searchParams.set("address", address);
   const data = await _fwApiFetch(u.toString());
+  // ── DIAGNOSTIC (remove after confirming spender field name) ──
+  if (data) {
+    const sample = Array.isArray(data) ? data[0] : (data?.approvals?.[0] || data?.result?.[0] || data?.data?.[0] || data?.rows?.[0] || null);
+    if (sample) console.log("[CycleX diag] fields:", Object.keys(sample), "\nsample:", JSON.stringify(sample).slice(0,400));
+    else console.log("[CycleX diag] raw response:", JSON.stringify(data).slice(0,400));
+  }
   const arr = Array.isArray(data)                ? data
     : Array.isArray(data?.approvals)             ? data.approvals
     : Array.isArray(data?.result)                ? data.result
