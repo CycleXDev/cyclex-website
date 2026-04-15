@@ -4386,6 +4386,22 @@ async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
   btn.disabled = true;
   btn.textContent = "🔍 Finding spender…";
 
+  // Friendly check: if a different wallet is already connected, warn user
+  if (window.wallet?.address) {
+    const connected = window.wallet.address.toLowerCase();
+    const scanned   = (fwWallet || "").toLowerCase();
+    if (scanned && scanned !== "demo" && connected !== scanned) {
+      btn.disabled = false;
+      btn.textContent = "🛡 Revoke ↗";
+      showPassportMsg(
+        `⚠ You're connected as ${fwShort(window.wallet.address)} ` +
+        `but scanning ${fwShort(fwWallet)}. ` +
+        `Connect the scanned wallet to revoke.`
+      );
+      return;
+    }
+  }
+
   async function tryRpc(url) {
     // Recent ~500k blocks (~6 months on BSC)
     const latestHex = await fwRpcRequest(url, "eth_blockNumber", [], 6000);
@@ -5939,6 +5955,7 @@ function fwOpenTelegramAlerts() {
   if (status) status.textContent = "✅ Telegram opened — follow the bot setup steps";
 }
 window.fwOpenTelegramAlerts = fwOpenTelegramAlerts;
+window.fwFetchTopSpenderAndRevoke = fwFetchTopSpenderAndRevoke;
 
 // Button bindings
 // Sign Passport
