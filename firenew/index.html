@@ -4519,18 +4519,10 @@ async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
   btn.textContent = "Connecting wallet…";
 
   // ── Wallet connect + hydrate ──────────────────────────────────
-  if (!window.wallet?.signer) {
-    if (typeof cxConnectWallet === "function") {
-      await cxConnectWallet();
-    } else {
-      const a = await fwLoadAppKit();
-      await a.open();
-    }
-  }
+  const _needsConnect = !window.wallet?.signer;
 
-  // AppKit may have connected but window.wallet not yet hydrated —
-  // pull signer directly from AppKit provider
-  if (!window.wallet?.signer) {
+  if (_needsConnect) {
+    // Try to hydrate silently from AppKit first (already connected)
     try {
       const p = window.CxAppKitModal?.getWalletProvider?.();
       if (p && Eth) {
@@ -4542,16 +4534,31 @@ async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
         window.wallet.address         = adr;
         window.wallet.providerRaw     = p;
         window.wallet.browserProvider = bp;
-        console.log("[CX revoke] hydrated wallet from AppKit:", adr);
       }
-    } catch(e) {
-      console.warn("[CX revoke] hydration failed:", e.message);
-    }
+    } catch {}
   }
 
+  // Still no signer — open connect modal, then ask user to tap again
   if (!window.wallet?.signer) {
-    btn.disabled = false; btn.textContent = "🛡 Revoke ↗";
-    showPassportMsg("⚠ Wallet not connected. Please try again."); return;
+    btn.disabled = false;
+    btn.textContent = "🛡 Revoke ↗";
+    // Open wallet connect modal
+    if (typeof cxConnectWallet === "function") {
+      cxConnectWallet().catch(() => {});
+    } else {
+      fwLoadAppKit().then(a => a.open()).catch(() => {});
+    }
+    // i18n-aware "tap again" message
+    const _tapAgainMsgs = {
+      en: "Wallet connected ✅ Tap Revoke again to sign the transaction.",
+      zh: "钱包已连接 ✅ 再次点击 Revoke 以签名交易。",
+      ar: "تم ربط المحفظة ✅ اضغط Revoke مرة أخرى للتوقيع.",
+      ru: "Кошелёк подключён ✅ Нажмите Revoke ещё раз для подписи."
+    };
+    const _lang = (typeof _fwActiveLang !== "undefined" ? _fwActiveLang : null)
+               || (typeof currentLang !== "undefined" ? currentLang : "en");
+    showPassportMsg(_tapAgainMsgs[_lang] || _tapAgainMsgs.en);
+    return;
   }
 
   try {
