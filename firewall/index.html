@@ -1015,6 +1015,79 @@
     background:rgba(0,0,0,.4);font-size:10px;color:rgba(93,255,178,.75);
     line-height:1.7;max-height:90px;overflow:auto
   }
+
+  /* ── PER-STEP LOCK OVERLAYS ─────────────────────────────── */
+  #fixStep2 .lock-overlay,
+  #fixStep3 .lock-overlay {
+    border-radius: 16px;
+    background: linear-gradient(180deg,rgba(5,6,10,.05) 0%,rgba(5,6,10,.88) 50%,rgba(5,6,10,.97) 100%);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+  #fixStep2 .lock-overlay-inner p,
+  #fixStep3 .lock-overlay-inner p {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  /* Free: step 1 label */
+  .fix-step-free-badge {
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--green);padding:2px 7px;border-radius:999px;
+    border:1px solid rgba(93,255,178,.3);background:rgba(93,255,178,.08);
+    margin-bottom:6px;
+  }
+  /* Fix card: no locked-section class anymore, but steps 2+3 still show blur */
+  #fixCard { border-color: rgba(255,193,7,.22); }
+
+  /* ── HISTORY BANNER PROMINENCE ───────────────────────────── */
+  #fwHistoryBanner.show.score-dropped {
+    background: rgba(255,71,87,.06);
+    border: 1px solid rgba(255,71,87,.2);
+    border-radius: 14px;
+    padding: 10px 14px;
+    animation: fwHistoryFlash .6s ease-out;
+  }
+  #fwHistoryBanner.show.score-rose {
+    background: rgba(93,255,178,.06);
+    border: 1px solid rgba(93,255,178,.2);
+    border-radius: 14px;
+    padding: 10px 14px;
+  }
+  @keyframes fwHistoryFlash {
+    0%  { box-shadow: 0 0 0 0 rgba(255,71,87,.35); }
+    50% { box-shadow: 0 0 0 8px rgba(255,71,87,.0); }
+    100%{ box-shadow: none; }
+  }
+  /* Re-scan delta — make it bigger when significant */
+  .fwh-delta.down-big {
+    background: rgba(255,71,87,.15);
+    color: #ff6b6b;
+    border: 1px solid rgba(255,71,87,.35);
+    font-size: 13px;
+    font-weight: 900;
+    padding: 4px 10px;
+  }
+  .fwh-delta.up-big {
+    background: rgba(93,255,178,.15);
+    color: #3cffb0;
+    border: 1px solid rgba(93,255,178,.35);
+    font-size: 13px;
+    font-weight: 900;
+    padding: 4px 10px;
+  }
+  /* Full-access delta detail (hidden in free) */
+  #fwHistoryDetail .fw-detail-full {
+    display: none;
+  }
+  .fw-tier-full #fwHistoryDetail .fw-detail-full {
+    display: inline;
+  }
+  .fw-tier-full #fwHistoryDetail .fw-detail-free-only {
+    display: none;
+  }
+
 </style>
 </head>
 <body>
@@ -1133,7 +1206,7 @@
           <div style="font-size:32px;margin-bottom:12px">🔒</div>
           <div style="font-size:18px;font-weight:900;margin-bottom:8px">Full Access Required</div>
           <div style="font-size:13px;color:var(--muted);line-height:1.7;max-width:52ch;margin:0 auto 20px">
-            <span data-i18n="gate_msg">Hold <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.</span>
+            <span data-i18n="gate_msg">Free: remove your biggest threat. <strong style="color:var(--cyan)">Full Access:</strong> clean the rest — bulk revoke, full Blast Radius, Wallet Passport, exports, and advanced protection.</span>
           </div>
           <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
             <!-- Connect & Check — triggers AppKit modal -->
@@ -1158,6 +1231,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn btn-ghost" id="btnRescan" style="padding:9px 16px;font-size:12px">↺ Rescan</button>
           <button class="btn btn-ghost" id="btnNewScan" style="padding:9px 16px;font-size:12px">New wallet</button>
+          <button class="btn btn-ghost" id="btnQuickShare" style="padding:9px 16px;font-size:12px;border-color:rgba(0,229,255,.25);color:var(--cyan)" title="Share scan result">📤 Share</button>
         </div>
       </div>
 
@@ -1239,15 +1313,8 @@
 
       <!-- FIX MODE -->
       <div class="section-title" data-i18n="sec_fix">Fix Mode</div>
-      <div class="fix-card locked-section" id="fixCard">
-        <!-- Lock overlay (shown in free tier) -->
-        <div class="lock-overlay" id="fixLockOverlay">
-          <div class="lock-overlay-inner">
-            <div class="lock-icon">🔒</div>
-            <p data-i18n="fix_lock_msg">Fix Mode requires Full Access<br>(hold 1 PASS token)</p>
-            <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:11px;padding:10px 18px" data-i18n="btn_unlock_fix">Unlock Fix Mode</button>
-          </div>
-        </div>
+      <div class="fix-card" id="fixCard">
+        <!-- No full overlay — Step 1 is free, Steps 2+3 have per-step locks -->
         <div class="fix-header">
           <div>
             <div style="font-size:16px;font-weight:800;margin-bottom:4px" data-i18n="fix_title">🛠 3-Step Fix Plan</div>
@@ -1265,15 +1332,35 @@
             <div class="fix-step-desc">Remove unlimited allowance from the highest-risk spender detected on your wallet.</div>
             <button class="btn-action" id="btnFix1" onclick="applyFix(0)">Revoke Top Spender</button>
             <button class="btn-action btn-undo" id="undoFix1" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(0)">↩ Undo — Restore approval</button>
+            <!-- Free-tier post-revoke upsell — shown after step 1 done -->
+            <div id="fwPostRevokeUpsell" style="display:none;margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(93,255,178,.07);border:1px solid rgba(93,255,178,.2);font-size:11px;line-height:1.6">
+              <strong style="color:var(--green);display:block;margin-bottom:4px">✅ You removed the biggest threat.</strong>
+              <span id="fwPostRevokeRemaining" style="color:var(--muted)">Risky approvals still remain.</span>
+              <button onclick="requestFullAccess()" style="display:block;margin-top:8px;width:100%;padding:7px 10px;border-radius:8px;border:1px solid rgba(124,92,255,.4);background:rgba(124,92,255,.12);color:#a87eff;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;cursor:pointer">Unlock Full Fix Mode to clean the rest →</button>
+            </div>
           </div>
-          <div class="fix-step" id="fixStep2">
+          <div class="fix-step locked-section" id="fixStep2">
+            <div class="lock-overlay" id="fixStep2Lock" style="border-radius:16px">
+              <div class="lock-overlay-inner">
+                <div class="lock-icon" style="font-size:16px">🔒</div>
+                <p style="font-size:11px;margin-bottom:8px">Full Access required</p>
+                <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:10px;padding:7px 14px">Unlock</button>
+              </div>
+            </div>
             <div class="fix-step-num">2</div>
             <div class="fix-step-title" data-i18n="fix2_title">Revoke All Unlimited</div>
             <div class="fix-step-desc">Revoke every unlimited approval on your wallet in one go — one on-chain tx per spender.</div>
             <button class="btn-action" id="btnFix2" onclick="applyFix(1)">Revoke All Unlimited</button>
             <button class="btn-action btn-undo" id="undoFix2" style="display:none;margin-top:6px;background:rgba(255,100,50,.08);border-color:rgba(255,100,50,.3);color:#ff9a6b;font-size:10px" onclick="undoFix(1)">↩ Undo — Restore all unlimited</button>
           </div>
-          <div class="fix-step" id="fixStep3">
+          <div class="fix-step locked-section" id="fixStep3">
+            <div class="lock-overlay" id="fixStep3Lock" style="border-radius:16px">
+              <div class="lock-overlay-inner">
+                <div class="lock-icon" style="font-size:16px">🔒</div>
+                <p style="font-size:11px;margin-bottom:8px">Full Access required</p>
+                <button class="btn-full-access" onclick="requestFullAccess()" style="font-size:10px;padding:7px 14px">Unlock</button>
+              </div>
+            </div>
             <div class="fix-step-num">3</div>
             <div class="fix-step-title" data-i18n="fix3_title">Lock Risky dApp</div>
             <div class="fix-step-desc">Flag and monitor the unverified spender contract to receive alerts on new activity.</div>
@@ -1507,6 +1594,17 @@
             <!-- shown/hidden by JS based on tier -->
             <button class="fw-notif-btn" id="fwOnchainBtn" onclick="fwSubscribeOnchain()" style="border-color:rgba(0,229,255,.3);color:var(--cyan);display:none">Subscribe</button>
             <button class="fw-notif-btn" id="fwOnchainLockBtn" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.3);color:#a87eff">🔒 Full Access</button>
+          </div>
+          <!-- Telegram Alerts row — teaser free / active full -->
+          <div class="fw-notif-row" id="fwTelegramNotifRow" style="margin-top:8px;border-color:rgba(255,193,7,.18);background:rgba(255,193,7,.04)">
+            <span class="fw-notif-icon">📣</span>
+            <div class="fw-notif-text">
+              <strong style="color:#ffd166">Telegram Alerts</strong> —
+              Get instant Telegram messages when a watched wallet's score drops or new risky approvals appear.
+              <span id="fwTelegramStatus" style="display:block;margin-top:3px;font-size:10px;color:var(--muted)">Full Access required</span>
+            </div>
+            <button class="fw-notif-btn" id="fwTelegramBtn" onclick="fwOpenTelegramAlerts()" style="border-color:rgba(255,193,7,.3);color:#ffd166;display:none">Enable</button>
+            <button class="fw-notif-btn" id="fwTelegramLockBtn" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.3);color:#a87eff">🔒 Unlock</button>
           </div>
         </div>
       </div>
@@ -2173,6 +2271,29 @@ function _doUnlockUI() {
   const onchainLock = document.getElementById("fwOnchainLockBtn");
   if (onchainBtn)  onchainBtn.style.display  = "inline-flex";
   if (onchainLock) onchainLock.style.display = "none";
+
+  // Unlock per-step overlays on fix steps 2+3
+  ["fixStep2Lock","fixStep3Lock"].forEach(id => {
+    const overlay = document.getElementById(id);
+    if (overlay) overlay.style.display = "none";
+  });
+  // Remove FREE badge from step 1 (now all steps are unlocked)
+  document.querySelectorAll(".fix-step-free-badge").forEach(el => el.remove());
+  // Hide post-revoke upsell (now user has full access)
+  const upsellEl = document.getElementById("fwPostRevokeUpsell");
+  if (upsellEl) upsellEl.style.display = "none";
+
+  // Telegram alerts: show Enable, hide Lock
+  const telegramBtn  = document.getElementById("fwTelegramBtn");
+  const telegramLock = document.getElementById("fwTelegramLockBtn");
+  const telegramStatus = document.getElementById("fwTelegramStatus");
+  if (telegramBtn)  telegramBtn.style.display  = "inline-flex";
+  if (telegramLock) telegramLock.style.display = "none";
+  if (telegramStatus) telegramStatus.textContent = "Not connected — tap Enable to set up";
+
+  // Add full-tier class to body for CSS-driven detail in history banner
+  document.body.classList.add("fw-tier-full");
+
   fwUpdateExportVisibility();
   fwInitExport();
 
@@ -3133,7 +3254,17 @@ function fwRenderHistory(wallet, net, currentScore, currentData) {
     else if (diff < 0)  { cls="down"; arrow="↓"; label=`−${absDiff} pts`; }
     else                { cls="same"; arrow="→"; label="No change"; }
 
-    deltaEl.innerHTML = `<span class="fwh-delta ${cls}">${arrow} ${label}</span>`;
+    // Use bigger class for significant score changes (>= 5 pts)
+    const bigChange = absDiff >= 5;
+    const bigCls = bigChange ? (diff < 0 ? "down-big" : "up-big") : cls;
+    deltaEl.innerHTML = `<span class="fwh-delta ${bigCls}">${arrow} ${label}</span>`;
+
+    // Apply prominence styling to banner itself
+    const banner2 = document.getElementById("fwHistoryBanner");
+    if (banner2 && bigChange) {
+      banner2.classList.remove("score-dropped","score-rose");
+      banner2.classList.add(diff < 0 ? "score-dropped" : "score-rose");
+    }
 
     // ── DETAIL LINE ───────────────────────────────────────────────
     const changes = [];
@@ -3159,7 +3290,12 @@ function fwRenderHistory(wallet, net, currentScore, currentData) {
     const changeStr = changes.length
       ? ` — ${changes.join(", ")} since last scan`
       : " — no approval changes detected";
-    detailEl.innerHTML = `Last scan: <strong>${prevDate}</strong> · Score was <strong>${prev.score}</strong>${changeStr}`;
+    // Free tier: show score delta only; Full: show full breakdown
+    const fullDetail = `Last scan: <strong>${prevDate}</strong> · Score was <strong>${prev.score}</strong><span class="fw-detail-full">${changeStr}</span>`;
+    const freeTeaser = changes.length
+      ? ` <span class="fw-detail-free-only" style="color:var(--muted);font-size:10px">(approval changes hidden — <button onclick="requestFullAccess()" style="background:none;border:none;color:#a87eff;cursor:pointer;font-size:10px;padding:0;text-decoration:underline">unlock Full Access</button>)</span>`
+      : "";
+    detailEl.innerHTML = fullDetail + freeTeaser;
   } else {
     // First scan for this wallet
     deltaEl.innerHTML  = `<span class="fwh-delta same">→ First scan</span>`;
@@ -3597,12 +3733,9 @@ function renderDashboard(wallet, d, tier) {
     }
   }, 500));
 
-  // Fix Mode
-  if (tier === "full") {
-    _rdTimers.push(setTimeout(() => renderFixMode(d), 250));
-  } else {
-    renderFixGainPreview(d.score);
-  }
+  // Fix Mode — call renderFixMode for both tiers
+  // Free: populates step 1 description + FREE badge; Full: full render
+  _rdTimers.push(setTimeout(() => renderFixMode(d), 250));
 
   // Passport
   renderPassport(wallet, d, tier);
@@ -3798,8 +3931,18 @@ function _buildThreatCard(t, i, tier) {
     // Have both addresses — real on-chain revoke
     actionBtn = `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`;
   } else if (tier === "free" && t.hasApproval) {
-    // Not unlocked yet — prompt upgrade
-    actionBtn = `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`;
+    if (i === 0) {
+      if (t.canRevoke) {
+        // API returned full addresses — direct revoke
+        actionBtn = `<button class="btn-fix-small" style="border-color:rgba(93,255,178,.4);color:var(--green)" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">🛡 Revoke ↗</button>`;
+      } else {
+        // API returned preview only — lazy on-chain lookup on click
+        actionBtn = `<button class="btn-fix-small" style="border-color:rgba(93,255,178,.4);color:var(--green)" onclick="fwFetchTopSpenderAndRevoke('${esc(t.symbol||"")}','${esc(fwNet||"bsc")}',this)">🛡 Revoke ↗</button>`;
+      }
+    } else {
+      // All others: prompt upgrade
+      actionBtn = `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`;
+    }
   }
   // tier=full + hasApproval + !canRevoke → no button here; handled by fwRescanBanner above
   const lockedAttr = isLocked ? ' data-locked="1"' : '';
@@ -3849,6 +3992,21 @@ function _threatsAppendPage() {
 
 // ── FIX MODE ──────────────────────────────────────────────────────
 function renderFixMode(d) {
+  // Hide post-revoke upsell on fresh render (new scan / re-render)
+  const upsellEl = document.getElementById("fwPostRevokeUpsell");
+  if (upsellEl) upsellEl.style.display = "none";
+
+  // In free tier: add FREE badge to step 1 title
+  const step1Title = document.querySelector("#fixStep1 .fix-step-title");
+  if (step1Title && !step1Title.querySelector(".fix-step-free-badge")) {
+    if (fwAccessTier !== "full") {
+      const badge = document.createElement("span");
+      badge.className = "fix-step-free-badge";
+      badge.textContent = "✓ FREE";
+      step1Title.appendChild(badge);
+    }
+  }
+
   // Update step descriptions to show real spenders
   if (fixApprovals[0]) {
     const el = document.querySelector("#fixStep1 .fix-step-desc");
@@ -3926,7 +4084,8 @@ function fwCheckWalletMatch(btn) {
 }
 async function applyFix(step) {
   if (fixDone[step]) return;
-  if (fwAccessTier !== "full" || !_fwAccessVerified) { requestFullAccess(); return; }
+  // Step 0 (Revoke Top Spender) is available in free tier — no access tier check
+  if (step > 0 && (fwAccessTier !== "full" || !_fwAccessVerified)) { requestFullAccess(); return; }
 
   const el  = document.getElementById(`fixStep${step+1}`);
   const btn = document.getElementById(`btnFix${step+1}`);
@@ -3934,9 +4093,30 @@ async function applyFix(step) {
 
   const target = fixApprovals[step];
 
-  // ── STEP 0: Revoke top spender on-chain (approve → 0) ────────────
+  // ── STEP 0: Revoke top spender on-chain (approve → 0) — FREE ─────
   if (step === 0) {
-    if (!window.wallet?.signer) { requestFullAccess(); return; }
+    // If we don't have spender/token address (preview API), use lazy on-chain fetch
+    if (!target?.token || !target?.spender) {
+      const topSymbol = fwScanData?.threats?.[0]?.symbol || "";
+      await fwFetchTopSpenderAndRevoke(topSymbol, fwNet || "bsc", btn);
+      if (btn.classList.contains("done")) {
+        fixDone[0] = true;
+        el.classList.add("step-done");
+        fwUpdateScoreAfterFix(0);
+      }
+      return;
+    }
+    // Need a connected wallet with signer — connect if not yet
+    if (!window.wallet?.signer) {
+      btn.disabled = true; btn.textContent = "Connecting wallet…";
+      const ok = await (typeof cxConnectWallet === "function"
+        ? cxConnectWallet() : loadAppKit().then(a => a.open()));
+      if (!window.wallet?.signer) {
+        btn.disabled = false; btn.textContent = "Revoke Top Spender";
+        showPassportMsg("⚠ Connect your wallet to revoke.");
+        return;
+      }
+    }
     if (!fwCheckWalletMatch(btn)) return;
     if (!target?.token || !target?.spender) {
       btn.textContent = "✓ No target found"; btn.disabled = true; el.classList.add("step-done");
@@ -3951,6 +4131,20 @@ async function applyFix(step) {
       btn.textContent = `Pending… ${tx.hash?.slice(0,10)}`;
       await tx.wait();
       btn.textContent = "✓ Revoked";
+      // Show upsell for free-tier users after successful revoke
+      if (fwAccessTier !== "full") {
+        const upsell = document.getElementById("fwPostRevokeUpsell");
+        const remaining = document.getElementById("fwPostRevokeRemaining");
+        if (upsell) {
+          const remainCount = (fwScanData?.riskyApprovals ?? 1) - 1;
+          if (remaining) {
+            remaining.textContent = remainCount > 0
+              ? `${remainCount} risky approval${remainCount !== 1 ? "s" : ""} still remain.`
+              : "Your wallet is now safer — consider a full cleanup for complete protection.";
+          }
+          upsell.style.display = "block";
+        }
+      }
     } catch(e) {
       if (/reject|cancel|denied|4001/i.test(String(e?.message||""))) {
         btn.disabled = false; btn.textContent = "Revoke (retry)"; return;
@@ -4170,6 +4364,247 @@ async function fwRescanFull() {
     if (scoreRing2) scoreRing2.textContent = fwScanData?.score ?? "—";
   }
 }
+
+// ── FREE TIER: Lazy on-chain top-spender lookup + revoke ─────────────────────
+// Called when free user clicks Revoke on threat #0.
+// Queries eth_getLogs directly from chain — no spender addresses from API.
+async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
+  try {
+
+  const wallet = fwWallet;
+  if (!wallet) { showPassportMsg("⚠ No wallet address to scan."); return; }
+
+  const chain = FW_CHAINS[net] || FW_CHAINS["bsc"];
+  const rpcs  = chain.rpcUrls || [];
+
+  // Approval(address indexed owner, address indexed spender, uint256 value)
+  const APPROVAL_TOPIC = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+  const MAX_UINT_HEX   = "0x" + "f".repeat(64);                     // 2^256-1
+  const MAX_UINT_HALF  = "0x" + "8" + "0".repeat(63);               // >half = "unlimited"
+
+  // Pad wallet address to 32-byte topic
+  const ownerTopic = "0x" + "0".repeat(24) + wallet.toLowerCase().replace("0x","");
+
+  btn.disabled = true;
+  btn.textContent = "🔍 Finding spender…";
+  console.log("[CX revoke] START symbol:", symbol, "net:", net, "wallet:", wallet);
+
+  // Friendly check: if a different wallet is already connected, warn user
+  if (window.wallet?.address) {
+    const connected = window.wallet.address.toLowerCase();
+    const scanned   = (fwWallet || "").toLowerCase();
+    if (scanned && scanned !== "demo" && connected !== scanned) {
+      btn.disabled = false;
+      btn.textContent = "🛡 Revoke ↗";
+      showPassportMsg(
+        `⚠ You're connected as ${fwShort(window.wallet.address)} ` +
+        `but scanning ${fwShort(fwWallet)}. ` +
+        `Connect the scanned wallet to revoke.`
+      );
+      return;
+    }
+  }
+
+  // BSC public RPCs cap eth_getLogs at ~5000 blocks per request.
+  // We paginate: try recent 5k, then expand in chunks up to ~100k total.
+  async function tryRpc(url) {
+    const latestHex = await fwRpcRequest(url, "eth_blockNumber", [], 6000);
+    const latest    = parseInt(latestHex, 16);
+
+    // Chunk sizes to try (blocks): start small, expand
+    const CHUNKS = [5000, 5000, 10000, 20000, 30000];
+    let allLogs = [];
+    let toBlock = latest;
+
+    for (const chunk of CHUNKS) {
+      const fromBlock = Math.max(0, toBlock - chunk);
+      console.log(`[CX revoke] eth_getLogs ${url.slice(0,30)} blocks ${fromBlock}→${toBlock}`);
+      try {
+        const logs = await fwRpcRequest(url, "eth_getLogs", [{
+          fromBlock: "0x" + fromBlock.toString(16),
+          toBlock:   "0x" + toBlock.toString(16),
+          topics:    [APPROVAL_TOPIC, ownerTopic]
+        }], 12000);
+        if (logs?.length) {
+          allLogs = allLogs.concat(logs);
+          console.log(`[CX revoke] got ${logs.length} logs, total ${allLogs.length}`);
+          // If we already found unlimited approvals, stop paginating
+          const hasUnlimited = logs.some(l => { try { return BigInt(l.data) >= BigInt(MAX_UINT_HALF); } catch { return false; } });
+          if (hasUnlimited) break;
+        }
+      } catch(e) {
+        console.warn(`[CX revoke] RPC error (${url.slice(0,30)}):`, e.message);
+        throw e; // let outer loop try next RPC
+      }
+      toBlock = fromBlock;
+      if (toBlock <= 0) break;
+    }
+    return allLogs;
+  }
+
+  let logs = null;
+  for (const url of rpcs) {
+    try {
+      console.log(`[CX revoke] trying RPC: ${url}`);
+      logs = await tryRpc(url);
+      if (logs && logs.length > 0) { console.log(`[CX revoke] ✅ got ${logs.length} total logs`); break; }
+      console.log(`[CX revoke] 0 logs from ${url}, trying next`);
+    } catch(e) {
+      console.warn(`[CX revoke] ❌ RPC failed: ${url}`, e.message);
+    }
+  }
+
+  if (!logs || !logs.length) {
+    btn.disabled = false;
+    btn.textContent = "🛡 Revoke ↗";
+    showPassportMsg("⚠ No approval logs found on-chain. Try re-scanning.");
+    return;
+  }
+
+  // Filter: unlimited allowance (data >= MAX_UINT_HALF)
+  const unlimited = logs.filter(l => {
+    try { return BigInt(l.data) >= BigInt(MAX_UINT_HALF); } catch { return false; }
+  });
+
+  if (!unlimited.length) {
+    btn.disabled = false;
+    btn.textContent = "🛡 Revoke ↗";
+    showPassportMsg("✅ No unlimited approvals found on-chain — you may already be safe.");
+    return;
+  }
+
+  // Group by token contract, keep most recent log per token
+  const byToken = new Map();
+  for (const log of unlimited) {
+    const existing = byToken.get(log.address);
+    if (!existing || parseInt(log.blockNumber,16) > parseInt(existing.blockNumber,16)) {
+      byToken.set(log.address, log);
+    }
+  }
+
+  // Try to match the token shown in the UI by symbol — call symbol() on each
+  let bestToken = null, bestSpender = null;
+  const Eth = getE();
+
+  for (const [tokenAddr, log] of byToken) {
+    // Extract spender from topic[2] (last 20 bytes)
+    const spenderAddr = "0x" + log.topics[2].slice(-40);
+
+    // If we have ethers + provider, try to match symbol
+    if (symbol && Eth) {
+      try {
+        const provider = getRPC(net);
+        if (provider) {
+          const tc = new Eth.Contract(tokenAddr,
+            ["function symbol() view returns (string)"], provider);
+          const sym = await tc.symbol().catch(() => "");
+          if (sym.toUpperCase() === symbol.toUpperCase()) {
+            bestToken = tokenAddr; bestSpender = spenderAddr; break;
+          }
+        }
+      } catch {}
+    }
+    // Fallback: use first unlimited token found
+    if (!bestToken) { bestToken = tokenAddr; bestSpender = spenderAddr; }
+  }
+
+  if (!bestToken || !bestSpender) {
+    btn.disabled = false;
+    btn.textContent = "🛡 Revoke ↗";
+    showPassportMsg("⚠ Could not determine spender address. Try again.");
+    return;
+  }
+
+  // ── Now revoke ──────────────────────────────────────────────────
+  btn.textContent = "Connecting wallet…";
+
+  // ── Wallet connect + hydrate ──────────────────────────────────
+  const _needsConnect = !window.wallet?.signer;
+
+  if (_needsConnect) {
+    // Try to hydrate silently from AppKit first (already connected)
+    try {
+      const p = window.CxAppKitModal?.getWalletProvider?.();
+      if (p && Eth) {
+        const bp  = new Eth.BrowserProvider(p);
+        const sig = await bp.getSigner();
+        const adr = await sig.getAddress();
+        if (!window.wallet) window.wallet = {};
+        window.wallet.signer          = sig;
+        window.wallet.address         = adr;
+        window.wallet.providerRaw     = p;
+        window.wallet.browserProvider = bp;
+      }
+    } catch {}
+  }
+
+  // Still no signer — open connect modal, then ask user to tap again
+  if (!window.wallet?.signer) {
+    btn.disabled = false;
+    btn.textContent = "🛡 Revoke ↗";
+    // Open wallet connect modal
+    if (typeof cxConnectWallet === "function") {
+      cxConnectWallet().catch(() => {});
+    } else {
+      fwLoadAppKit().then(a => a.open()).catch(() => {});
+    }
+    // i18n-aware "tap again" message
+    const _tapAgainMsgs = {
+      en: "Wallet connected ✅ Tap Revoke again to sign the transaction.",
+      zh: "钱包已连接 ✅ 再次点击 Revoke 以签名交易。",
+      ar: "تم ربط المحفظة ✅ اضغط Revoke مرة أخرى للتوقيع.",
+      ru: "Кошелёк подключён ✅ Нажмите Revoke ещё раз для подписи."
+    };
+    const _lang = (typeof _fwActiveLang !== "undefined" ? _fwActiveLang : null)
+               || (typeof currentLang !== "undefined" ? currentLang : "en");
+    showPassportMsg(_tapAgainMsgs[_lang] || _tapAgainMsgs.en);
+    return;
+  }
+
+  try {
+    await fwEnsureBsc(window.wallet.providerRaw);
+  } catch {}
+
+  btn.textContent = "Sending revoke tx…";
+  try {
+    const contract = new Eth.Contract(
+      fwNorm(bestToken), ERC20_APPROVE_ABI, window.wallet.signer);
+    const tx = await contract.approve(fwNorm(bestSpender), 0n);
+    btn.textContent = `Pending… ${tx.hash?.slice(0,10)}`;
+    await tx.wait();
+    btn.textContent = "✓ Revoked";
+    btn.classList.add("done");
+
+    // Show upsell for free tier
+    const upsell = document.getElementById("fwPostRevokeUpsell");
+    const remaining = document.getElementById("fwPostRevokeRemaining");
+    if (upsell) {
+      const remainCount = Math.max(0, (fwScanData?.riskyApprovals ?? 1) - 1);
+      if (remaining) remaining.textContent = remainCount > 0
+        ? `${remainCount} risky approval${remainCount !== 1 ? "s" : ""} still remain.`
+        : "Consider a full cleanup for complete protection.";
+      upsell.style.display = "block";
+    }
+    showPassportMsg(`✅ Top spender revoked on-chain.`);
+  } catch(e) {
+    const msg = String(e?.message || "");
+    if (/reject|cancel|denied|4001/i.test(msg)) {
+      btn.disabled = false; btn.textContent = "🛡 Revoke ↗";
+      showPassportMsg("⚠ Transaction canceled.");
+    } else {
+      btn.textContent = "✗ Failed — retry";
+      btn.disabled = false;
+      showPassportMsg(`⚠ Revoke failed: ${msg.slice(0,80)}`);
+    }
+  }
+
+  } catch(__outerErr) {
+    console.error("[CX revoke] Unhandled error:", __outerErr);
+    try { btn.disabled = false; btn.textContent = "🛡 Revoke ↗"; } catch {}
+    showPassportMsg("⚠ Revoke error: " + String(__outerErr?.message || __outerErr).slice(0,100));
+  }
+}
+
 
 async function revokeSpender(spender, token, btn) {
   if (!window.wallet?.signer) { requestFullAccess(); return; }
@@ -5313,13 +5748,13 @@ const FW_TRANSLATIONS = {
     title_map:"🗺 Exposure Map", map_sub:"Wallet → Spenders → Tokens. Node size = risk weight.",
     title_threats:"🎯 Top Threats",
     // fix mode
-    fix_lock_msg:"Fix Mode requires Full Access<br>(hold 1 PASS token)",
-    btn_unlock_fix:"Unlock Fix Mode",
-    fix_title:"🛠 3-Step Fix Plan",
+    fix_lock_msg:"Bulk revoke &amp; full cleanup require Full Access<br>(hold 1 PASS token)",
+    btn_unlock_fix:"Unlock Full Cleanup",
+    fix_title:"🛠 Fix Mode",
     fix_sub:"Complete these actions to improve your Firewall Score.",
     fix1_title:"Revoke Top Spender", fix2_title:"Revoke All Unlimited", fix3_title:"Lock Risky dApp",
     // passport
-    passport_lock_msg:"Wallet Passport requires Full Access",
+    passport_lock_msg:"Verified Wallet Passport requires Full Access",
     passport_share_title:"Share your Wallet Passport",
     // watch
     watch_title:"Track Multiple Wallets",
@@ -5329,7 +5764,7 @@ const FW_TRANSLATIONS = {
     // Scan notice
     scan_running:"Scanning wallet…",
     // access gate
-    gate_msg:'Hold <strong style="color:var(--cyan)">1 PASS token</strong> to unlock Fix Mode, full Blast Radius, Wallet Passport, and real revoke actions.',
+    gate_msg:'Free: remove your biggest threat. <strong style="color:var(--cyan)">Full Access:</strong> clean the rest — bulk revoke, full Blast Radius, Wallet Passport, exports, and advanced protection.',
     btn_rescan:"Scan another wallet",
     fix_impact:"The 3 most impactful actions to secure your wallet.",
     passport_copy_sub:"Your cryptographic proof of security. Share to prove you've secured your wallet.",
@@ -5354,16 +5789,16 @@ const FW_TRANSLATIONS = {
     drain_sub:"暴露资产的预估清空时间",
     title_map:"🗺 风险地图", map_sub:"钱包 → 授权方 → 代币。节点大小 = 风险权重。",
     title_threats:"🎯 主要威胁",
-    fix_lock_msg:"修复模式需要完整访问权限<br>（持有1个PASS代币）",
-    btn_unlock_fix:"解锁修复模式",
-    fix_title:"🛠 三步修复计划",
+    fix_lock_msg:"批量撤销和完整清理需要完整访问权限<br>（持有1个PASS代币）",
+    btn_unlock_fix:"解锁完整清理",
+    fix_title:"🛠 修复模式",
     fix_sub:"完成以下操作以提升您的防火墙评分。",
     fix1_title:"撤销顶级授权方", fix2_title:"撤销所有无限授权", fix3_title:"锁定高风险DApp",
-    passport_lock_msg:"钱包护照需要完整访问权限",
+    passport_lock_msg:"完整验证钱包护照需要完整访问权限",
     passport_share_title:"分享您的钱包护照",
     watch_title:"追踪多个钱包",
     score_protected:"受保护", score_exposed:"已暴露", score_vulnerable:"存在漏洞", score_critical:"危急",
-    gate_msg:'持有 <strong style="color:var(--cyan)">1个PASS代币</strong> 以解锁修复模式、完整爆炸半径、钱包护照和真实撤销操作。',
+    gate_msg:'免费：撤销最高风险授权。<strong style="color:var(--cyan)">完整访问：</strong>批量撤销、完整爆炸半径、钱包护照、导出及高级保护工具。',
     btn_rescan:"扫描其他钱包",
     fix_impact:"以下3项操作将显著提升您的安全评分。",
     passport_copy_sub:"您的安全加密证明。分享以证明您已保护好钱包。",
@@ -5388,16 +5823,16 @@ const FW_TRANSLATIONS = {
     drain_sub:"الوقت المقدر لتصفية الأصول المكشوفة",
     title_map:"🗺 خريطة التعرض", map_sub:"المحفظة ← المفوَّضون ← الرموز. حجم العقدة = وزن المخاطر.",
     title_threats:"🎯 أبرز التهديدات",
-    fix_lock_msg:"وضع الإصلاح يتطلب وصولاً كاملاً<br>（امتلك رمز PASS واحداً）",
-    btn_unlock_fix:"فتح وضع الإصلاح",
-    fix_title:"🛠 خطة إصلاح من 3 خطوات",
+    fix_lock_msg:"الإلغاء الجماعي والتنظيف الكامل يتطلبان وصولاً كاملاً<br>（امتلك رمز PASS واحداً）",
+    btn_unlock_fix:"فتح التنظيف الكامل",
+    fix_title:"🛠 وضع الإصلاح",
     fix_sub:"أكمل هذه الإجراءات لتحسين نقاط الجدار.",
     fix1_title:"إلغاء أكبر مفوَّض", fix2_title:"إلغاء كل الموافقات غير المحدودة", fix3_title:"حظر DApp عالي الخطورة",
-    passport_lock_msg:"جواز المحفظة يتطلب وصولاً كاملاً",
+    passport_lock_msg:"جواز المحفظة الموثق يتطلب وصولاً كاملاً",
     passport_share_title:"شارك جواز محفظتك",
     watch_title:"تتبع محافظ متعددة",
     score_protected:"محمي", score_exposed:"مكشوف", score_vulnerable:"ضعيف", score_critical:"حرج",
-    gate_msg:'امتلك <strong style="color:var(--cyan)">رمز PASS واحداً</strong> لفتح وضع الإصلاح ونطاق الضرر الكامل وجواز المحفظة وإجراءات الإلغاء الحقيقية.',
+    gate_msg:'مجاناً: إلغاء أكبر تهديد. <strong style="color:var(--cyan)">الوصول الكامل:</strong> التنظيف الشامل — الإلغاء الجماعي ونطاق الضرر الكامل وجواز المحفظة والتصدير.',
     btn_rescan:"فحص محفظة أخرى",
     fix_impact:"الإجراءات الثلاثة الأكثر تأثيراً لتأمين محفظتك.",
     passport_copy_sub:"إثباتك التشفيري على الأمان. شاركه لإثبات أنك أمّنت محفظتك.",
@@ -5423,16 +5858,16 @@ const FW_TRANSLATIONS = {
     drain_sub:"расчётное время опустошения открытых активов",
     title_map:"🗺 Карта Рисков", map_sub:"Кошелёк → Получатели → Токены. Размер узла = вес риска.",
     title_threats:"🎯 Топ Угроз",
-    fix_lock_msg:"Режим исправления требует полного доступа<br>（нужен 1 PASS-токен）",
-    btn_unlock_fix:"Разблокировать Режим",
+    fix_lock_msg:"Массовый отзыв и полная очистка требуют полного доступа<br>（нужен 1 PASS-токен）",
+    btn_unlock_fix:"Полная очистка",
     fix_title:"🛠 3-шаговый план защиты",
     fix_sub:"Выполни эти действия, чтобы улучшить оценку файрвола.",
     fix1_title:"Отозвать главный доступ", fix2_title:"Отозвать все безлимитные доступы", fix3_title:"Заблокировать опасный dApp",
-    passport_lock_msg:"Паспорт кошелька требует полного доступа",
+    passport_lock_msg:"Верифицированный Паспорт кошелька требует полного доступа",
     passport_share_title:"Поделиться паспортом кошелька",
     watch_title:"Отслеживать несколько кошельков",
     score_protected:"Защищён", score_exposed:"Уязвим", score_vulnerable:"Критический", score_critical:"Опасность",
-    gate_msg:'Держи <strong style="color:var(--cyan)">1 PASS-токен</strong>, чтобы разблокировать Режим исправления, полную зону риска, Паспорт кошелька и реальный отзыв.',
+    gate_msg:'Бесплатно: удали главную угрозу. <strong style="color:var(--cyan)">Полный доступ:</strong> полная очистка — массовый отзыв, полная зона риска, Паспорт, экспорт и расширенные инструменты защиты.',
     btn_rescan:"Сканировать другой кошелёк",
     fix_impact:"3 наиболее важных действия для защиты кошелька.",
     passport_copy_sub:"Твоё криптографическое доказательство безопасности. Поделись, чтобы подтвердить, что кошелёк защищён.",
@@ -5556,6 +5991,46 @@ try {
 window.fwWatchAdd            = fwWatchAdd;
 window.fwWatchRemove         = fwWatchRemove;
 window.fwRequestNotifications= fwRequestNotifications;
+
+// ── QUICK SHARE SCAN RESULT ───────────────────────────────────────
+function fwQuickShare() {
+  const score   = fwScanData?.score ?? "—";
+  const risky   = fwScanData?.riskyApprovals ?? "—";
+  const blast   = document.getElementById("blastAmt")?.textContent || "—";
+  const drain   = document.getElementById("drainTime")?.textContent  || "—";
+  const net     = (fwNet || "BSC").toUpperCase();
+  const wallet  = fwWallet ? fwShort(fwWallet) : "—";
+  const url     = `https://cyclex.network/firewall`;
+  const text    = `🔥 Just scanned my wallet with CycleX Firewall
+
+🛡 Score: ${score}/100
+💥 Blast Radius: ${blast}
+⏱ Drain Time: ${drain}
+🎯 Risky Approvals: ${risky}
+🌐 Network: ${net}
+
+Scan yours → ${url}
+#CycleX #WalletSecurity #DeFi`;
+  window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+}
+
+document.getElementById("btnQuickShare")?.addEventListener("click", fwQuickShare);
+
+// ── TELEGRAM ALERTS ──────────────────────────────────────────────
+function fwOpenTelegramAlerts() {
+  if (fwAccessTier !== "full" || !_fwAccessVerified) { requestFullAccess(); return; }
+  const wallet  = fwWallet || "";
+  const net     = fwNet || "bsc";
+  // Deep-link: opens bot and passes wallet address as start parameter
+  const encoded = encodeURIComponent(`${wallet}_${net}`);
+  const botUrl  = `https://t.me/CycleXAlertsBot?start=${encoded}`;
+  window.open(botUrl, "_blank", "noopener");
+  const status = document.getElementById("fwTelegramStatus");
+  if (status) status.textContent = "✅ Telegram opened — follow the bot setup steps";
+}
+window.fwOpenTelegramAlerts = fwOpenTelegramAlerts;
+window.fwFetchTopSpenderAndRevoke = fwFetchTopSpenderAndRevoke;
+
 // Button bindings
 // Sign Passport
 document.getElementById("btnSignPassport")?.addEventListener("click", () => fwSignPassport());
@@ -5671,7 +6146,7 @@ window.applyFix          = applyFix;
     <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.09);border-radius:13px;padding:12px;margin-bottom:14px">
       <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:700">What's included</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 10px">
-        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>Fix Mode + on-chain revoke</span></div>
+        <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>Bulk revoke + complete cleanup</span></div>
         <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>Full Blast Radius details</span></div>
         <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>Passport (no watermark)</span></div>
         <div style="font-size:11px;display:flex;align-items:flex-start;gap:6px"><span style="color:var(--green);flex:0 0 auto;margin-top:1px">✓</span><span>CSV/JSON export</span></div>
