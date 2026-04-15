@@ -2486,12 +2486,6 @@ async function fetchApprovals(net, address) {
   u.searchParams.set("net", net);
   u.searchParams.set("address", address);
   const data = await _fwApiFetch(u.toString());
-  // ── DIAGNOSTIC (remove after confirming spender field name) ──
-  if (data) {
-    const sample = Array.isArray(data) ? data[0] : (data?.approvals?.[0] || data?.result?.[0] || data?.data?.[0] || data?.rows?.[0] || null);
-    if (sample) console.log("[CycleX diag] fields:", Object.keys(sample), "\nsample:", JSON.stringify(sample).slice(0,400));
-    else console.log("[CycleX diag] raw response:", JSON.stringify(data).slice(0,400));
-  }
   const arr = Array.isArray(data)                ? data
     : Array.isArray(data?.approvals)             ? data.approvals
     : Array.isArray(data?.result)                ? data.result
@@ -3937,9 +3931,14 @@ function _buildThreatCard(t, i, tier) {
     // Have both addresses — real on-chain revoke
     actionBtn = `<button class="btn-fix-small" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">Revoke ↗</button>`;
   } else if (tier === "free" && t.hasApproval) {
-    if (i === 0 && t.canRevoke) {
-      // Highest-risk threat: real revoke available in free tier
-      actionBtn = `<button class="btn-fix-small" style="border-color:rgba(93,255,178,.4);color:var(--green)" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">🛡 Revoke ↗</button>`;
+    if (i === 0) {
+      if (t.canRevoke) {
+        // API returned full addresses — direct revoke
+        actionBtn = `<button class="btn-fix-small" style="border-color:rgba(93,255,178,.4);color:var(--green)" onclick="revokeSpender('${esc(t.fullSpender)}','${esc(t.token)}',this)">🛡 Revoke ↗</button>`;
+      } else {
+        // API returned preview only — lazy on-chain lookup on click
+        actionBtn = `<button class="btn-fix-small" style="border-color:rgba(93,255,178,.4);color:var(--green)" onclick="fwFetchTopSpenderAndRevoke('${esc(t.symbol||"")}','${esc(fwNet||"bsc")}',this)">🛡 Revoke ↗</button>`;
+      }
     } else {
       // All others: prompt upgrade
       actionBtn = `<button class="btn-fix-small" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.4);color:#a87eff">Unlock ↗</button>`;
@@ -4096,6 +4095,17 @@ async function applyFix(step) {
 
   // ── STEP 0: Revoke top spender on-chain (approve → 0) — FREE ─────
   if (step === 0) {
+    // If we don't have spender/token address (preview API), use lazy on-chain fetch
+    if (!target?.token || !target?.spender) {
+      const topSymbol = fwScanData?.threats?.[0]?.symbol || "";
+      await fwFetchTopSpenderAndRevoke(topSymbol, fwNet || "bsc", btn);
+      if (btn.classList.contains("done")) {
+        fixDone[0] = true;
+        el.classList.add("step-done");
+        fwUpdateScoreAfterFix(0);
+      }
+      return;
+    }
     // Need a connected wallet with signer — connect if not yet
     if (!window.wallet?.signer) {
       btn.disabled = true; btn.textContent = "Connecting wallet…";
@@ -4354,6 +4364,157 @@ async function fwRescanFull() {
     if (scoreRing2) scoreRing2.textContent = fwScanData?.score ?? "—";
   }
 }
+
+// ── FREE TIER: Lazy on-chain top-spender lookup + revoke ─────────────────────
+// Called when free user clicks Revoke on threat #0.
+// Queries eth_getLogs directly from chain — no spender addresses from API.
+async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
+  const wallet = fwWallet;
+  if (!wallet) { showPassportMsg("⚠ No wallet address to scan."); return; }
+
+  const chain = FW_CHAINS[net] || FW_CHAINS["bsc"];
+  const rpcs  = chain.rpcUrls || [];
+
+  // Approval(address indexed owner, address indexed spender, uint256 value)
+  const APPROVAL_TOPIC = "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925";
+  const MAX_UINT_HEX   = "0x" + "f".repeat(64);                     // 2^256-1
+  const MAX_UINT_HALF  = "0x" + "8" + "0".repeat(63);               // >half = "unlimited"
+
+  // Pad wallet address to 32-byte topic
+  const ownerTopic = "0x" + "0".repeat(24) + wallet.toLowerCase().replace("0x","");
+
+  btn.disabled = true;
+  btn.textContent = "🔍 Finding spender…";
+
+  async function tryRpc(url) {
+    // Recent ~500k blocks (~6 months on BSC)
+    const latestHex = await fwRpcRequest(url, "eth_blockNumber", [], 6000);
+    const latest    = parseInt(latestHex, 16);
+    const fromBlock = "0x" + Math.max(0, latest - 500000).toString(16);
+
+    const logs = await fwRpcRequest(url, "eth_getLogs", [{
+      fromBlock,
+      toBlock: "latest",
+      topics:  [APPROVAL_TOPIC, ownerTopic]   // owner filter only — all tokens
+    }], 12000);
+    return logs;
+  }
+
+  let logs = null;
+  for (const url of rpcs) {
+    try { logs = await tryRpc(url); if (logs) break; } catch {}
+  }
+
+  if (!logs || !logs.length) {
+    btn.disabled = false;
+    btn.textContent = "🛡 Revoke ↗";
+    showPassportMsg("⚠ No approval logs found on-chain. Try re-scanning.");
+    return;
+  }
+
+  // Filter: unlimited allowance (data >= MAX_UINT_HALF)
+  const unlimited = logs.filter(l => {
+    try { return BigInt(l.data) >= BigInt(MAX_UINT_HALF); } catch { return false; }
+  });
+
+  if (!unlimited.length) {
+    btn.disabled = false;
+    btn.textContent = "🛡 Revoke ↗";
+    showPassportMsg("✅ No unlimited approvals found on-chain — you may already be safe.");
+    return;
+  }
+
+  // Group by token contract, keep most recent log per token
+  const byToken = new Map();
+  for (const log of unlimited) {
+    const existing = byToken.get(log.address);
+    if (!existing || parseInt(log.blockNumber,16) > parseInt(existing.blockNumber,16)) {
+      byToken.set(log.address, log);
+    }
+  }
+
+  // Try to match the token shown in the UI by symbol — call symbol() on each
+  let bestToken = null, bestSpender = null;
+  const Eth = getE();
+
+  for (const [tokenAddr, log] of byToken) {
+    // Extract spender from topic[2] (last 20 bytes)
+    const spenderAddr = "0x" + log.topics[2].slice(-40);
+
+    // If we have ethers + provider, try to match symbol
+    if (symbol && Eth) {
+      try {
+        const provider = getRPC(net);
+        if (provider) {
+          const tc = new Eth.Contract(tokenAddr,
+            ["function symbol() view returns (string)"], provider);
+          const sym = await tc.symbol().catch(() => "");
+          if (sym.toUpperCase() === symbol.toUpperCase()) {
+            bestToken = tokenAddr; bestSpender = spenderAddr; break;
+          }
+        }
+      } catch {}
+    }
+    // Fallback: use first unlimited token found
+    if (!bestToken) { bestToken = tokenAddr; bestSpender = spenderAddr; }
+  }
+
+  if (!bestToken || !bestSpender) {
+    btn.disabled = false;
+    btn.textContent = "🛡 Revoke ↗";
+    showPassportMsg("⚠ Could not determine spender address. Try again.");
+    return;
+  }
+
+  // ── Now revoke ──────────────────────────────────────────────────
+  btn.textContent = "Connecting wallet…";
+  if (!window.wallet?.signer) {
+    const ok = await (typeof cxConnectWallet === "function"
+      ? cxConnectWallet() : fwLoadAppKit().then(a => a.open()));
+    if (!window.wallet?.signer) {
+      btn.disabled = false; btn.textContent = "🛡 Revoke ↗";
+      showPassportMsg("⚠ Connect your wallet to revoke."); return;
+    }
+  }
+
+  try {
+    await fwEnsureBsc(window.wallet.providerRaw);
+  } catch {}
+
+  btn.textContent = "Sending revoke tx…";
+  try {
+    const contract = new Eth.Contract(
+      fwNorm(bestToken), ERC20_APPROVE_ABI, window.wallet.signer);
+    const tx = await contract.approve(fwNorm(bestSpender), 0n);
+    btn.textContent = `Pending… ${tx.hash?.slice(0,10)}`;
+    await tx.wait();
+    btn.textContent = "✓ Revoked";
+    btn.classList.add("done");
+
+    // Show upsell for free tier
+    const upsell = document.getElementById("fwPostRevokeUpsell");
+    const remaining = document.getElementById("fwPostRevokeRemaining");
+    if (upsell) {
+      const remainCount = Math.max(0, (fwScanData?.riskyApprovals ?? 1) - 1);
+      if (remaining) remaining.textContent = remainCount > 0
+        ? `${remainCount} risky approval${remainCount !== 1 ? "s" : ""} still remain.`
+        : "Consider a full cleanup for complete protection.";
+      upsell.style.display = "block";
+    }
+    showPassportMsg(`✅ Top spender revoked on-chain.`);
+  } catch(e) {
+    const msg = String(e?.message || "");
+    if (/reject|cancel|denied|4001/i.test(msg)) {
+      btn.disabled = false; btn.textContent = "🛡 Revoke ↗";
+      showPassportMsg("⚠ Transaction canceled.");
+    } else {
+      btn.textContent = "✗ Failed — retry";
+      btn.disabled = false;
+      showPassportMsg(`⚠ Revoke failed: ${msg.slice(0,80)}`);
+    }
+  }
+}
+
 
 async function revokeSpender(spender, token, btn) {
   if (!window.wallet?.signer) { requestFullAccess(); return; }
