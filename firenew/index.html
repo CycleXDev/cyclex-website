@@ -4517,13 +4517,41 @@ async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
 
   // ── Now revoke ──────────────────────────────────────────────────
   btn.textContent = "Connecting wallet…";
+
+  // ── Wallet connect + hydrate ──────────────────────────────────
   if (!window.wallet?.signer) {
-    const ok = await (typeof cxConnectWallet === "function"
-      ? cxConnectWallet() : fwLoadAppKit().then(a => a.open()));
-    if (!window.wallet?.signer) {
-      btn.disabled = false; btn.textContent = "🛡 Revoke ↗";
-      showPassportMsg("⚠ Connect your wallet to revoke."); return;
+    if (typeof cxConnectWallet === "function") {
+      await cxConnectWallet();
+    } else {
+      const a = await fwLoadAppKit();
+      await a.open();
     }
+  }
+
+  // AppKit may have connected but window.wallet not yet hydrated —
+  // pull signer directly from AppKit provider
+  if (!window.wallet?.signer) {
+    try {
+      const p = window.CxAppKitModal?.getWalletProvider?.();
+      if (p && Eth) {
+        const bp  = new Eth.BrowserProvider(p);
+        const sig = await bp.getSigner();
+        const adr = await sig.getAddress();
+        if (!window.wallet) window.wallet = {};
+        window.wallet.signer          = sig;
+        window.wallet.address         = adr;
+        window.wallet.providerRaw     = p;
+        window.wallet.browserProvider = bp;
+        console.log("[CX revoke] hydrated wallet from AppKit:", adr);
+      }
+    } catch(e) {
+      console.warn("[CX revoke] hydration failed:", e.message);
+    }
+  }
+
+  if (!window.wallet?.signer) {
+    btn.disabled = false; btn.textContent = "🛡 Revoke ↗";
+    showPassportMsg("⚠ Wallet not connected. Please try again."); return;
   }
 
   try {
