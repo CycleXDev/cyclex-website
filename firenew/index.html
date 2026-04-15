@@ -4369,6 +4369,8 @@ async function fwRescanFull() {
 // Called when free user clicks Revoke on threat #0.
 // Queries eth_getLogs directly from chain — no spender addresses from API.
 async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
+  try {
+
   const wallet = fwWallet;
   if (!wallet) { showPassportMsg("⚠ No wallet address to scan."); return; }
 
@@ -4385,6 +4387,7 @@ async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
 
   btn.disabled = true;
   btn.textContent = "🔍 Finding spender…";
+  console.log("[CX revoke] START symbol:", symbol, "net:", net, "wallet:", wallet);
 
   // Friendly check: if a different wallet is already connected, warn user
   if (window.wallet?.address) {
@@ -4402,23 +4405,53 @@ async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
     }
   }
 
+  // BSC public RPCs cap eth_getLogs at ~5000 blocks per request.
+  // We paginate: try recent 5k, then expand in chunks up to ~100k total.
   async function tryRpc(url) {
-    // Recent ~500k blocks (~6 months on BSC)
     const latestHex = await fwRpcRequest(url, "eth_blockNumber", [], 6000);
     const latest    = parseInt(latestHex, 16);
-    const fromBlock = "0x" + Math.max(0, latest - 500000).toString(16);
 
-    const logs = await fwRpcRequest(url, "eth_getLogs", [{
-      fromBlock,
-      toBlock: "latest",
-      topics:  [APPROVAL_TOPIC, ownerTopic]   // owner filter only — all tokens
-    }], 12000);
-    return logs;
+    // Chunk sizes to try (blocks): start small, expand
+    const CHUNKS = [5000, 5000, 10000, 20000, 30000];
+    let allLogs = [];
+    let toBlock = latest;
+
+    for (const chunk of CHUNKS) {
+      const fromBlock = Math.max(0, toBlock - chunk);
+      console.log(`[CX revoke] eth_getLogs ${url.slice(0,30)} blocks ${fromBlock}→${toBlock}`);
+      try {
+        const logs = await fwRpcRequest(url, "eth_getLogs", [{
+          fromBlock: "0x" + fromBlock.toString(16),
+          toBlock:   "0x" + toBlock.toString(16),
+          topics:    [APPROVAL_TOPIC, ownerTopic]
+        }], 12000);
+        if (logs?.length) {
+          allLogs = allLogs.concat(logs);
+          console.log(`[CX revoke] got ${logs.length} logs, total ${allLogs.length}`);
+          // If we already found unlimited approvals, stop paginating
+          const hasUnlimited = logs.some(l => { try { return BigInt(l.data) >= BigInt(MAX_UINT_HALF); } catch { return false; } });
+          if (hasUnlimited) break;
+        }
+      } catch(e) {
+        console.warn(`[CX revoke] RPC error (${url.slice(0,30)}):`, e.message);
+        throw e; // let outer loop try next RPC
+      }
+      toBlock = fromBlock;
+      if (toBlock <= 0) break;
+    }
+    return allLogs;
   }
 
   let logs = null;
   for (const url of rpcs) {
-    try { logs = await tryRpc(url); if (logs) break; } catch {}
+    try {
+      console.log(`[CX revoke] trying RPC: ${url}`);
+      logs = await tryRpc(url);
+      if (logs && logs.length > 0) { console.log(`[CX revoke] ✅ got ${logs.length} total logs`); break; }
+      console.log(`[CX revoke] 0 logs from ${url}, trying next`);
+    } catch(e) {
+      console.warn(`[CX revoke] ❌ RPC failed: ${url}`, e.message);
+    }
   }
 
   if (!logs || !logs.length) {
@@ -4528,6 +4561,12 @@ async function fwFetchTopSpenderAndRevoke(symbol, net, btn) {
       btn.disabled = false;
       showPassportMsg(`⚠ Revoke failed: ${msg.slice(0,80)}`);
     }
+  }
+
+  } catch(__outerErr) {
+    console.error("[CX revoke] Unhandled error:", __outerErr);
+    try { btn.disabled = false; btn.textContent = "🛡 Revoke ↗"; } catch {}
+    showPassportMsg("⚠ Revoke error: " + String(__outerErr?.message || __outerErr).slice(0,100));
   }
 }
 
