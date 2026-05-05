@@ -170,7 +170,6 @@
     .partner-hero-title{display:none}
     body.has-partner .partner-hero-title{display:block}
     body.has-partner .default-hero-title{display:none}
-    body.has-partner .default-hero-title{display:block}
 
     /* ── SCAN PANEL (right side of hero) ─────────────────── */
     .scan-panel{
@@ -4108,41 +4107,6 @@ async function slSubmitPartner() {
 }
 window.slSubmitPartner = slSubmitPartner;
 
-// OLD SUBMIT REPLACED
-async function _oldSubmitPartner(){
-  const name=($id("prmName")?.value||"").trim();
-  const slug=($id("prmSlug")?.value||"").trim();
-  const website=($id("prmWebsite")?.value||"").trim();
-  const contact=($id("prmContact")?.value||"").trim();
-  const st=$id("slPrmStatus");
-
-  if(!name||!slug||!contact){if(st) st.textContent="⚠ Please fill in all required fields."; return;}
-  const slugClean=slug.toLowerCase().replace(/[^a-z0-9-]/g,"-");
-  if(st) st.textContent="Submitting…";
-
-  // Send to /api/activity or a partner endpoint
-  try{
-    const payload={
-      type:"partner_request",
-      name,slug:slugClean,website,contact,
-      logo:$id("prmLogo")?.value||"",
-      accent:$id("prmAccent")?.value||"",
-      headline:$id("prmHeadline")?.value||"",
-      desc:$id("prmDesc")?.value||"",
-      timestamp:new Date().toISOString(),
-      source:location.href,
-    };
-    // Try to POST to activity endpoint
-    await fetch("/api/activity",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)}).catch(()=>{});
-    // Also try subscribeAlerts as fallback
-    await fetch("/api/subscribeAlerts",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({type:"partner",data:payload})}).catch(()=>{});
-  }catch{}
-
-  // Show success
-  const body=$id("slPrmBody");
-  if(body) body.innerHTML=`<div class="prm-success"><div class="prm-success-icon">✅</div><h3>Request Submitted!</h3><p>We'll review your application and reach out via your contact details. Your partner page will be at:<br><br><strong style="color:var(--cyan);font-family:var(--mono);font-size:13px">cyclex.network/safety?partner=${slugClean}</strong><br><br>We'll be in touch within 24-48 hours.</p></div>`;
-  if(typeof gtag!=="undefined") gtag("event","partner_request",{partner_name:name,partner_slug:slugClean});
-}
 window.slSubmitPartner=slSubmitPartner;
 
 // ── FAQ ──────────────────────────────────────────────────────
