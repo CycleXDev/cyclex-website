@@ -1080,6 +1080,7 @@ const translations = {
     badge_share: "Share",
     badge_cache: "Cache",
     badge_dex: "DEX",
+    qs_new_contract_note: "⚠️ New contract — age alone doesn't determine quality. Review all signals carefully.",
     badge_pairs: "Pairs",
     badge_wallet: "Wallet",
     badge_safe: "Safe",
@@ -1369,6 +1370,7 @@ ph_rpc_dev_topic: "0xddf252ad... (Transfer) or leave empty"
     badge_share: "分享",
     badge_cache: "缓存",
     badge_dex: "DEX",
+    qs_new_contract_note: "⚠️ 新合约——合约年龄本身不决定其安全性，请综合评估所有信号。",
     badge_pairs: "交易对",
     badge_wallet: "钱包",
     badge_safe: "安全",
@@ -1654,6 +1656,7 @@ ph_rpc_dev_topic: "0xddf252ad...（Transfer）或留空"
     badge_share: "مشاركة",
     badge_cache: "كاش",
     badge_dex: "DEX",
+    qs_new_contract_note: "⚠️ عقد جديد — العمر وحده لا يحدد الجودة، راجع جميع الإشارات بعناية.",
     badge_pairs: "أزواج",
     badge_wallet: "محفظة",
     badge_safe: "آمن",
@@ -1946,6 +1949,7 @@ ph_rpc_dev_topic: "0xddf252ad... (Transfer) أو اتركه فارغاً"
     badge_share: "Поделиться",
     badge_cache: "Кэш",
     badge_dex: "DEX",
+    qs_new_contract_note: "⚠️ Новый контракт — возраст не определяет качество. Изучите все сигналы.",
     badge_pairs: "Пары",
     badge_wallet: "Кошелёк",
     badge_safe: "Безопасно",
@@ -3745,6 +3749,238 @@ const read = _getRP ? _getRP(net) : null;
     }
   }
 
+  // ── Live Native Price (CoinGecko) ────────────────────────────────────────
+  const QS_CGK_IDS = { bsc: "binancecoin", eth: "ethereum", polygon: "matic-network" };
+
+  async function qsFetchNativePrice(net) {
+    const id = QS_CGK_IDS[net];
+    if (!id) return null;
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`;
+    const ctrl = new AbortController();
+    const tmr = setTimeout(() => ctrl.abort(), 6000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tmr);
+      if (!res.ok) return null;
+      const j = await res.json();
+      const p = j?.[id]?.usd;
+      return (typeof p === "number" && p > 0) ? p : null;
+    } catch { clearTimeout(tmr); return null; }
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
+  // ── Contract Age (BscScan getcontractcreation + RPC) ─────────────────────
+  async function qsFetchContractAge(net, token, apiKey) {
+    try {
+      const base = (typeof explorerApiBase === "function") ? explorerApiBase(net) : null;
+      if (!base) return null;
+      const keyParam = apiKey ? `&apikey=${apiKey}` : "";
+
+      // Step 1: get creation tx hash (no key needed for this endpoint)
+      const url1 = `${base}?module=contract&action=getcontractcreation&contractaddresses=${token}${keyParam}`;
+      const ctrl1 = new AbortController();
+      const tmr1 = setTimeout(() => ctrl1.abort(), 7000);
+      let txHash = null;
+      try {
+        const r1 = await fetch(url1, { signal: ctrl1.signal });
+        clearTimeout(tmr1);
+        if (r1.ok) {
+          const j1 = await r1.json();
+          txHash = j1?.result?.[0]?.txHash || null;
+        }
+      } catch { clearTimeout(tmr1); }
+
+      if (!txHash) return null;
+
+      // Step 2: get block timestamp via RPC
+      let deployTs = null;
+      try {
+        const txData = await withRpcFallback(net, async (provider) => {
+          return await provider.getTransaction(txHash);
+        });
+        if (txData?.blockNumber) {
+          const block = await withRpcFallback(net, async (provider) => {
+            return await provider.getBlock(txData.blockNumber);
+          });
+          if (block?.timestamp) deployTs = Number(block.timestamp);
+        }
+      } catch {}
+
+      if (!deployTs) return null;
+      const ageDays = Math.floor((Date.now() / 1000 - deployTs) / 86400);
+      return { deployTs, ageDays };
+    } catch { return null; }
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
+  // ── Holder Count (BscScan tokeninfo — needs API key, silent fallback) ────
+  async function qsFetchHolderCount(net, token, apiKey) {
+    if (!apiKey) return null;
+    try {
+      const base = (typeof explorerApiBase === "function") ? explorerApiBase(net) : null;
+      if (!base) return null;
+      const url = `${base}?module=token&action=tokeninfo&contractaddress=${token}&apikey=${apiKey}`;
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 7000);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tmr);
+      if (!res.ok) return null;
+      const j = await res.json();
+      const info = Array.isArray(j?.result) ? j.result[0] : j?.result;
+      const hc = parseInt(info?.holdersCount || info?.holderCount || "0", 10);
+      return (hc > 0) ? hc : null;
+    } catch { return null; }
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
+    // ── Liquidity Lock checker (PinkLock V2 + Unicrypt) ──────────────────────
+  const QS_LOCKERS = {
+    bsc: [
+      { name: "PinkLock",  addr: "0x407993575c91ce7643a4d4cCACc9A98c36eE1BB" },
+      { name: "Mudra",     addr: "0x0b5E6E6b3E3aE4A11b4F83d4A3AbCC2c12a9Ce7" }
+    ],
+    eth: [
+      { name: "PinkLock",  addr: "0x71B5759d73262FBb223956913ecF4ecC51057641" },
+      { name: "Unicrypt",  addr: "0x663A5C229c09b049E36dCc11a9B0d4a8Eb9db214" }
+    ],
+    polygon: [
+      { name: "PinkLock",  addr: "0x9A0c8Ff858d273f57072D714bca7411D717501D7" }
+    ]
+  };
+
+  const QS_LOCK_ABI = [
+    "function totalLockCountForToken(address token) view returns (uint256)",
+    "function getLocksForToken(address token, uint256 start, uint256 end) view returns (tuple(uint256 lockDate, uint256 amount, uint256 initialAmount, uint256 unlockDate, uint256 lockID, address owner)[])"
+  ];
+
+  async function qsFetchLiquidityLock(net, lpAddress) {
+    if (!lpAddress || !net) return null;
+    const lp = String(lpAddress).toLowerCase().trim();
+    const lockers = QS_LOCKERS[net] || [];
+    if (!lockers.length) return null;
+
+    for (const locker of lockers) {
+      try {
+        const result = await withRpcFallback(net, async (provider) => {
+          if (typeof E === "undefined" || !E?.Contract) return null;
+          const c = new E.Contract(locker.addr, QS_LOCK_ABI, provider);
+          const count = await c.totalLockCountForToken(lp);
+          const countN = Number(count);
+          if (countN === 0) return null;
+          const end = Math.min(countN, 5);
+          const locks = await c.getLocksForToken(lp, 0, end);
+          return { count: countN, locks };
+        });
+
+        if (!result) continue;
+
+        const now = Math.floor(Date.now() / 1000);
+        const activeLocks = result.locks.filter(l => Number(l.unlockDate) > now);
+        const allLocks = result.locks;
+
+        if (allLocks.length === 0) continue;
+
+        // pick lock with latest unlock date
+        const best = allLocks.reduce((a, b) =>
+          Number(b.unlockDate) > Number(a.unlockDate) ? b : a
+        );
+        const unlockTs = Number(best.unlockDate);
+        const isActive = unlockTs > now;
+
+        return {
+          locked:      isActive,
+          locker:      locker.name,
+          lockCount:   result.count,
+          activeLocks: activeLocks.length,
+          unlockTs,
+          unlockDateStr: new Date(unlockTs * 1000).toISOString().slice(0, 7),
+          isExpired:   !isActive
+        };
+      } catch { continue; }
+    }
+
+    return { locked: false, locker: null, lockCount: 0, activeLocks: 0 };
+  }
+  // ───────────────────────────────────────────────────────────────────────────────
+
+  // ── DexScreener (volume, price change, txns) ───────────────────────────
+  const QS_DS_CHAIN = { bsc: "bsc", eth: "ethereum", polygon: "polygon" };
+
+  async function qsFetchDexScreener(net, token) {
+    try {
+      const chain = QS_DS_CHAIN[net];
+      if (!chain) return null;
+      const url = `https://api.dexscreener.com/latest/dex/tokens/${token}`;
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 8000);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tmr);
+      if (!res.ok) return null;
+      const j = await res.json();
+      const pairs = Array.isArray(j?.pairs)
+        ? j.pairs.filter(p => (p?.chainId || "").toLowerCase() === chain)
+        : [];
+      if (!pairs.length) return null;
+      const best = pairs.sort((a,b) => (b?.liquidity?.usd||0) - (a?.liquidity?.usd||0))[0];
+      const safeNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+      return {
+        priceUsd:       safeNum(best?.priceUsd),
+        priceChange24h: safeNum(best?.priceChange?.h24),
+        volumeUsd24h:   safeNum(best?.volume?.h24),
+        liquidityUsd:   safeNum(best?.liquidity?.usd),
+        txns24h:        (best?.txns?.h24?.buys || 0) + (best?.txns?.h24?.sells || 0),
+        pairCount:      pairs.length,
+        dexId:          best?.dexId || null
+      };
+    } catch { return null; }
+  }
+  // ───────────────────────────────────────────────────────────────────────────────
+
+// ── GoPlus Security API ─────────────────────────────────────────────────
+  const QS_GOPLUS_CHAIN = { bsc: "56", eth: "1", polygon: "137" };
+
+  async function qsFetchGoPlus(net, token) {
+    const chainId = QS_GOPLUS_CHAIN[net];
+    if (!chainId) return null;
+    const addr = String(token || "").toLowerCase().trim();
+    if (!addr) return null;
+    const url = `https://api.gopluslabs.io/api/v1/token_security/${chainId}?contract_addresses=${addr}`;
+    const ctrl = new AbortController();
+    const tmr = setTimeout(() => ctrl.abort(), 9000);
+    try {
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tmr);
+      if (!res.ok) return null;
+      const j = await res.json();
+      if (j?.code !== 1) return null;
+      const d = j?.result?.[addr] || j?.result?.[Object.keys(j.result || {})[0]];
+      if (!d) return null;
+      const gp1 = v => v === "1" || v === 1;
+      const gpNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+      return {
+        isHoneypot:           gp1(d.is_honeypot),
+        buyTax:               gpNum(d.buy_tax),
+        sellTax:              gpNum(d.sell_tax),
+        isBlacklisted:        gp1(d.is_blacklisted),
+        hiddenOwner:          gp1(d.hidden_owner),
+        canTakeBackOwnership: gp1(d.can_take_back_ownership),
+        selfdestructDetected: gp1(d.selfdestruct),
+        transferPausable:     gp1(d.transfer_pausable),
+        slippageModifiable:   gp1(d.slippage_modifiable),
+        antiWhale:            gp1(d.is_anti_whale),
+        tradingCooldown:      gp1(d.trading_cooldown),
+        isOpenSource:         gp1(d.is_open_source),
+        holderCount:          gpNum(d.holder_count),
+        lpHolderCount:        gpNum(d.lp_holder_count),
+        raw: d
+      };
+    } catch {
+      clearTimeout(tmr);
+      return null;
+    }
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   async function runQuickScan(){
     const st = $("#qs-status");
     const out = $("#qs-out");
@@ -4081,11 +4317,63 @@ rep.meta = {
   }
 } catch {}
 
-    // 3.5) CEX listing check (CoinGecko, silent fallback)
-    let cexResult = { listed: false, exchanges: [] };
-    try { cexResult = await qsFetchCexListing(net, token); } catch {}
-    rep.meta.cexListed = cexResult.listed;
-    rep.meta.cexExchanges = cexResult.exchanges;
+    // 3.5-3.6) External enrichment — all run in PARALLEL for speed
+    const explorerKey = (typeof qsExplorerKeyFor === "function") ? qsExplorerKeyFor(net)?.key : null;
+    const [
+      cexSettled,
+      priceSettled,
+      ageSettled,
+      holderSettled,
+      goplusSettled,
+      dexscreenerSettled,
+      liqLockSettled
+    ] = await Promise.allSettled([
+      qsFetchCexListing(net, token),
+      qsFetchNativePrice(net),
+      qsFetchContractAge(net, token, explorerKey),
+      qsFetchHolderCount(net, token, explorerKey),
+      qsFetchGoPlus(net, token),
+      qsFetchDexScreener(net, token),
+      qsFetchLiquidityLock(net, null) // LP address injected below after dexscreener resolves
+    ]);
+
+    // Unpack results (allSettled never throws)
+    const cexResult         = cexSettled.status         === "fulfilled" ? (cexSettled.value         || { listed: false, exchanges: [] }) : { listed: false, exchanges: [] };
+    const livePrice         = priceSettled.status       === "fulfilled" ? priceSettled.value         : null;
+    const contractAge       = ageSettled.status         === "fulfilled" ? ageSettled.value           : null;
+    const explorerHolderCount = holderSettled.status    === "fulfilled" ? holderSettled.value        : null;
+    const goplus            = goplusSettled.status      === "fulfilled" ? goplusSettled.value        : null;
+    const dexscreener       = dexscreenerSettled.status === "fulfilled" ? dexscreenerSettled.value   : null;
+
+    // Liquidity lock — run after dexscreener resolves (needs pairAddress)
+    let liqLock = null;
+    try {
+      const lpAddr = dexscreener?.pairAddress || null;
+      if (lpAddr) liqLock = await qsFetchLiquidityLock(net, lpAddr);
+    } catch {}
+
+    // Apply to rep.meta
+    rep.meta.cexListed      = cexResult.listed;
+    rep.meta.cexExchanges   = cexResult.exchanges;
+    if (livePrice)            rep.meta.nativeUsdPrice   = livePrice;
+    rep.meta.contractAgeDays  = contractAge?.ageDays    ?? null;
+    rep.meta.contractDeployTs = contractAge?.deployTs   ?? null;
+    if (explorerHolderCount)  rep.meta.holderCount      = explorerHolderCount;
+    if (dexscreener)          rep.meta.dexscreener      = dexscreener;
+    if (liqLock)              rep.meta.liqLock          = liqLock;
+    rep.meta.goplus = goplus ? {
+      isHoneypot:           goplus.isHoneypot,
+      buyTax:               goplus.buyTax,
+      sellTax:              goplus.sellTax,
+      isBlacklisted:        goplus.isBlacklisted,
+      hiddenOwner:          goplus.hiddenOwner,
+      canTakeBackOwnership: goplus.canTakeBackOwnership,
+      selfdestructDetected: goplus.selfdestructDetected,
+      transferPausable:     goplus.transferPausable,
+      slippageModifiable:   goplus.slippageModifiable,
+      holderCount:          goplus.holderCount,
+      isOpenSource:         goplus.isOpenSource
+    } : null;
 
     // 4) Proxy
     let impl = await tryEip1967Impl(net, token);
@@ -4390,6 +4678,72 @@ try {
 } catch {}
 
 
+// ── Contract Age — info only, no score change ──────────────────────────────
+// Age alone doesn’t determine quality — shown as informational chip only
+// ───────────────────────────────────────────────────────────────────────────────
+
+// ── Liquidity Lock scoring ──────────────────────────────────────────────────────
+if (liqLock !== null) {
+  if (liqLock.locked) {
+    score += 8; // active lock is a positive signal
+  } else if (liqLock.isExpired) {
+    score -= 10;
+    rep.redFlags.push(`LP lock expired (${liqLock.locker}) — liquidity can now be removed.`);
+  }
+  // lockCount === 0 and locked===false: no lock detected, no penalty (absence ≠ rug)
+}
+// ───────────────────────────────────────────────────────────────────────────────
+
+// ── GoPlus penalties ───────────────────────────────────────────────────
+if (goplus) {
+  // Honeypot — hard override, nothing else matters
+  if (goplus.isHoneypot) {
+    score = 3;
+  } else {
+    // Sell tax (more dangerous than buy tax)
+    const st = goplus.sellTax ?? 0;
+    const bt = goplus.buyTax  ?? 0;
+    if (st > 0.50)      score -= 40;
+    else if (st > 0.30) score -= 28;
+    else if (st > 0.15) score -= 18;
+    else if (st > 0.09) score -= 10;
+    else if (st > 0.04) score -=  5;
+
+    if (bt > 0.30)      score -= 15;
+    else if (bt > 0.15) score -= 10;
+    else if (bt > 0.09) score -=  5;
+
+    // Hidden owner / can take back ownership
+    if (goplus.hiddenOwner)          score -= 18;
+    if (goplus.canTakeBackOwnership) score -= 15;
+
+    // Selfdestruct
+    if (goplus.selfdestructDetected) score -= 20;
+
+    // Blacklist function
+    if (goplus.isBlacklisted) score -= 12;
+
+    // Slippage modifiable (rug vector)
+    if (goplus.slippageModifiable) score -= 8;
+
+    // Transfer pausable (already have pause detector, small extra)
+    if (goplus.transferPausable && !pauseDetected) score -= 5;
+
+    // Holder count bonus/penalty (if GoPlus has it and we don't have market data)
+    const hc = goplus.holderCount;
+    if (hc !== null) {
+      if      (hc < 10)   score -= 20;
+      else if (hc < 50)   score -= 12;
+      else if (hc < 200)  score -=  6;
+      else if (hc > 5000) score +=  3;
+    }
+
+    // Open source bonus if explorer API not available
+    if (verified === null && goplus.isOpenSource === true) score += 4;
+  }
+}
+// ────────────────────────────────────────────────────────────────────────
+
 // final clamp
 score = qsClamp(score, 0, 100);
    
@@ -4475,13 +4829,135 @@ rep.overallText = overallText;
     value: cexListed
       ? (rep.meta?.cexExchanges?.length ? rep.meta.cexExchanges.slice(0,3).join(", ") : "Yes")
       : "Not found"
-  }
+  },
+  // ── Contract Age chip ──
+  ...(contractAge !== null ? [{
+    type: contractAge.ageDays < 30 ? "warn" : contractAge.ageDays < 90 ? "warn" : "ok",
+    title: "Contract Age",
+    value: (() => {
+      const d = contractAge.ageDays;
+      const ageStr = d >= 365
+        ? `${Math.floor(d/365)}y ${Math.floor((d%365)/30)}mo`
+        : d >= 30 ? `${Math.floor(d/30)}mo` : `${d}d`;
+      return d < 90 ? `${ageStr} ⚠️` : ageStr;
+    })()
+  }] : []),
+  // ── Holder Count chip (explorer or GoPlus) ──
+  ...(() => {
+    const hc = explorerHolderCount ?? goplus?.holderCount ?? null;
+    if (hc === null) return [];
+    return [{
+      type: hc < 50 ? "bad" : hc < 200 ? "warn" : hc < 1000 ? "warn" : "ok",
+      title: "Holders",
+      value: hc.toLocaleString()
+    }];
+  })(),
+  // ── Liquidity Lock chip ──
+  ...(liqLock ? [{
+    type: liqLock.locked    ? "ok"  :
+          liqLock.isExpired ? "bad" : "warn",
+    title: "LP Lock",
+    value: liqLock.locked
+      ? `✅ ${liqLock.locker} • until ${liqLock.unlockDateStr}`
+      : liqLock.isExpired
+        ? `⚠️ ${liqLock.locker} expired`
+        : "Not detected"
+  }] : []),
+  // ── DexScreener chips ──
+  ...(dexscreener ? [
+    ...(dexscreener.volumeUsd24h !== null ? [{
+      type: dexscreener.volumeUsd24h < 1000 ? "bad" : dexscreener.volumeUsd24h < 10000 ? "warn" : "ok",
+      title: "Vol 24h",
+      value: dexscreener.volumeUsd24h >= 1000000
+        ? `$${(dexscreener.volumeUsd24h/1000000).toFixed(1)}M`
+        : dexscreener.volumeUsd24h >= 1000
+          ? `$${(dexscreener.volumeUsd24h/1000).toFixed(0)}K`
+          : `$${dexscreener.volumeUsd24h.toFixed(0)}`
+    }] : []),
+    ...(dexscreener.priceChange24h !== null ? [{
+      type: dexscreener.priceChange24h < -30 ? "bad" : dexscreener.priceChange24h > 0 ? "ok" : "warn",
+      title: "Price 24h",
+      value: `${dexscreener.priceChange24h > 0 ? "+" : ""}${dexscreener.priceChange24h.toFixed(1)}%`
+    }] : []),
+    ...(dexscreener.txns24h > 0 ? [{
+      type: dexscreener.txns24h < 10 ? "bad" : dexscreener.txns24h < 100 ? "warn" : "ok",
+      title: "Txns 24h",
+      value: dexscreener.txns24h.toLocaleString()
+    }] : [])
+  ] : []),
+  // ── GoPlus chips ──
+  ...(goplus ? [
+    {
+      type: goplus.isHoneypot ? "bad" : "ok",
+      title: "Honeypot",
+      value: goplus.isHoneypot ? "⚠️ DETECTED" : "Not detected"
+    },
+    {
+      type: (() => {
+        const st = goplus.sellTax ?? 0;
+        if (st > 0.15) return "bad";
+        if (st > 0.05) return "warn";
+        return "ok";
+      })(),
+      title: "Sell Tax",
+      value: goplus.sellTax !== null
+        ? `${(goplus.sellTax * 100).toFixed(1)}%`
+        : "Unknown"
+    },
+    {
+      type: (() => {
+        const bt = goplus.buyTax ?? 0;
+        if (bt > 0.15) return "bad";
+        if (bt > 0.05) return "warn";
+        return "ok";
+      })(),
+      title: "Buy Tax",
+      value: goplus.buyTax !== null
+        ? `${(goplus.buyTax * 100).toFixed(1)}%`
+        : "Unknown"
+    },
+    ...(goplus.hiddenOwner ? [{
+      type: "bad", title: "Hidden Owner", value: "Detected"
+    }] : []),
+    ...(goplus.canTakeBackOwnership ? [{
+      type: "bad", title: "Ownership Risk", value: "Can reclaim"
+    }] : []),
+    ...(goplus.selfdestructDetected ? [{
+      type: "bad", title: "Selfdestruct", value: "Detected"
+    }] : [])
+    // Holders shown in dedicated chip above (explorerHolderCount ?? goplus.holderCount)
+  ] : [])
 ];
 
 
     if (mintDetected) rep.redFlags.push("Mint surface detected (supply risk).");
     if (isProxy) rep.redFlags.push("Proxy detected (upgrade risk).");
     if (!rep.liq?.any && !cexListed) rep.redFlags.push("No clear DEX liquidity signal detected.");
+
+    // ── GoPlus red flags ──
+    if (goplus) {
+      if (goplus.isHoneypot)
+        rep.redFlags.push("🚨 HONEYPOT DETECTED — tokens cannot be sold.");
+      if (goplus.sellTax !== null && goplus.sellTax > 0.15)
+        rep.redFlags.push(`High sell tax detected (${(goplus.sellTax*100).toFixed(1)}%) — exit may be impossible.`);
+      else if (goplus.sellTax !== null && goplus.sellTax > 0.05)
+        rep.redFlags.push(`Elevated sell tax (${(goplus.sellTax*100).toFixed(1)}%).`);
+      if (goplus.buyTax !== null && goplus.buyTax > 0.15)
+        rep.redFlags.push(`High buy tax detected (${(goplus.buyTax*100).toFixed(1)}%).`);
+      if (goplus.hiddenOwner)
+        rep.redFlags.push("Hidden owner detected — contract may be controlled without visible ownership.");
+      if (goplus.canTakeBackOwnership)
+        rep.redFlags.push("Owner can reclaim ownership — renounce may not be permanent.");
+      if (goplus.selfdestructDetected)
+        rep.redFlags.push("Selfdestruct function detected — contract can be destroyed.");
+      if (goplus.isBlacklisted)
+        rep.redFlags.push("Blacklist function detected — owner can block addresses from trading.");
+      if (goplus.slippageModifiable)
+        rep.redFlags.push("Slippage is modifiable by owner (potential rug vector).");
+      if (goplus.holderCount !== null && goplus.holderCount < 50)
+        rep.redFlags.push(`Very few holders (${goplus.holderCount}) — extreme concentration risk.`);
+    }
+    // ─────────────────────
     if (ownerPct !== null && ownerPct >= 35) {
   rep.redFlags.push(`Owner wallet concentration is high (${qsFmtNum(ownerPct, 2)}%).`);
 } else if (ownerPct !== null && ownerPct >= 20) {
