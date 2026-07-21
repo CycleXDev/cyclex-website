@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3834,7 +3833,77 @@ const read = _getRP ? _getRP(net) : null;
   }
   // ────────────────────────────────────────────────────────────────────────
 
-    // ── DexScreener (volume, price change, txns) ───────────────────────────
+    // ── Liquidity Lock checker (PinkLock V2 + Unicrypt) ──────────────────────
+  const QS_LOCKERS = {
+    bsc: [
+      { name: "PinkLock",  addr: "0x407993575c91ce7643a4d4cCACc9A98c36eE1BB" },
+      { name: "Mudra",     addr: "0x0b5E6E6b3E3aE4A11b4F83d4A3AbCC2c12a9Ce7" }
+    ],
+    eth: [
+      { name: "PinkLock",  addr: "0x71B5759d73262FBb223956913ecF4ecC51057641" },
+      { name: "Unicrypt",  addr: "0x663A5C229c09b049E36dCc11a9B0d4a8Eb9db214" }
+    ],
+    polygon: [
+      { name: "PinkLock",  addr: "0x9A0c8Ff858d273f57072D714bca7411D717501D7" }
+    ]
+  };
+
+  const QS_LOCK_ABI = [
+    "function totalLockCountForToken(address token) view returns (uint256)",
+    "function getLocksForToken(address token, uint256 start, uint256 end) view returns (tuple(uint256 lockDate, uint256 amount, uint256 initialAmount, uint256 unlockDate, uint256 lockID, address owner)[])"
+  ];
+
+  async function qsFetchLiquidityLock(net, lpAddress) {
+    if (!lpAddress || !net) return null;
+    const lp = String(lpAddress).toLowerCase().trim();
+    const lockers = QS_LOCKERS[net] || [];
+    if (!lockers.length) return null;
+
+    for (const locker of lockers) {
+      try {
+        const result = await withRpcFallback(net, async (provider) => {
+          if (typeof E === "undefined" || !E?.Contract) return null;
+          const c = new E.Contract(locker.addr, QS_LOCK_ABI, provider);
+          const count = await c.totalLockCountForToken(lp);
+          const countN = Number(count);
+          if (countN === 0) return null;
+          const end = Math.min(countN, 5);
+          const locks = await c.getLocksForToken(lp, 0, end);
+          return { count: countN, locks };
+        });
+
+        if (!result) continue;
+
+        const now = Math.floor(Date.now() / 1000);
+        const activeLocks = result.locks.filter(l => Number(l.unlockDate) > now);
+        const allLocks = result.locks;
+
+        if (allLocks.length === 0) continue;
+
+        // pick lock with latest unlock date
+        const best = allLocks.reduce((a, b) =>
+          Number(b.unlockDate) > Number(a.unlockDate) ? b : a
+        );
+        const unlockTs = Number(best.unlockDate);
+        const isActive = unlockTs > now;
+
+        return {
+          locked:      isActive,
+          locker:      locker.name,
+          lockCount:   result.count,
+          activeLocks: activeLocks.length,
+          unlockTs,
+          unlockDateStr: new Date(unlockTs * 1000).toISOString().slice(0, 7),
+          isExpired:   !isActive
+        };
+      } catch { continue; }
+    }
+
+    return { locked: false, locker: null, lockCount: 0, activeLocks: 0 };
+  }
+  // ───────────────────────────────────────────────────────────────────────────────
+
+  // ── DexScreener (volume, price change, txns) ───────────────────────────
   const QS_DS_CHAIN = { bsc: "bsc", eth: "ethereum", polygon: "polygon" };
 
   async function qsFetchDexScreener(net, token) {
@@ -4256,14 +4325,16 @@ rep.meta = {
       ageSettled,
       holderSettled,
       goplusSettled,
-      dexscreenerSettled
+      dexscreenerSettled,
+      liqLockSettled
     ] = await Promise.allSettled([
       qsFetchCexListing(net, token),
       qsFetchNativePrice(net),
       qsFetchContractAge(net, token, explorerKey),
       qsFetchHolderCount(net, token, explorerKey),
       qsFetchGoPlus(net, token),
-      qsFetchDexScreener(net, token)
+      qsFetchDexScreener(net, token),
+      qsFetchLiquidityLock(net, null) // LP address injected below after dexscreener resolves
     ]);
 
     // Unpack results (allSettled never throws)
@@ -4274,6 +4345,13 @@ rep.meta = {
     const goplus            = goplusSettled.status      === "fulfilled" ? goplusSettled.value        : null;
     const dexscreener       = dexscreenerSettled.status === "fulfilled" ? dexscreenerSettled.value   : null;
 
+    // Liquidity lock — run after dexscreener resolves (needs pairAddress)
+    let liqLock = null;
+    try {
+      const lpAddr = dexscreener?.pairAddress || null;
+      if (lpAddr) liqLock = await qsFetchLiquidityLock(net, lpAddr);
+    } catch {}
+
     // Apply to rep.meta
     rep.meta.cexListed      = cexResult.listed;
     rep.meta.cexExchanges   = cexResult.exchanges;
@@ -4282,6 +4360,7 @@ rep.meta = {
     rep.meta.contractDeployTs = contractAge?.deployTs   ?? null;
     if (explorerHolderCount)  rep.meta.holderCount      = explorerHolderCount;
     if (dexscreener)          rep.meta.dexscreener      = dexscreener;
+    if (liqLock)              rep.meta.liqLock          = liqLock;
     rep.meta.goplus = goplus ? {
       isHoneypot:           goplus.isHoneypot,
       buyTax:               goplus.buyTax,
@@ -4603,6 +4682,18 @@ try {
 // Age alone doesn’t determine quality — shown as informational chip only
 // ───────────────────────────────────────────────────────────────────────────────
 
+// ── Liquidity Lock scoring ──────────────────────────────────────────────────────
+if (liqLock !== null) {
+  if (liqLock.locked) {
+    score += 8; // active lock is a positive signal
+  } else if (liqLock.isExpired) {
+    score -= 10;
+    rep.redFlags.push(`LP lock expired (${liqLock.locker}) — liquidity can now be removed.`);
+  }
+  // lockCount === 0 and locked===false: no lock detected, no penalty (absence ≠ rug)
+}
+// ───────────────────────────────────────────────────────────────────────────────
+
 // ── GoPlus penalties ───────────────────────────────────────────────────
 if (goplus) {
   // Honeypot — hard override, nothing else matters
@@ -4761,6 +4852,17 @@ rep.overallText = overallText;
       value: hc.toLocaleString()
     }];
   })(),
+  // ── Liquidity Lock chip ──
+  ...(liqLock ? [{
+    type: liqLock.locked    ? "ok"  :
+          liqLock.isExpired ? "bad" : "warn",
+    title: "LP Lock",
+    value: liqLock.locked
+      ? `✅ ${liqLock.locker} • until ${liqLock.unlockDateStr}`
+      : liqLock.isExpired
+        ? `⚠️ ${liqLock.locker} expired`
+        : "Not detected"
+  }] : []),
   // ── DexScreener chips ──
   ...(dexscreener ? [
     ...(dexscreener.volumeUsd24h !== null ? [{
