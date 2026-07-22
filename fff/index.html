@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1530,6 +1529,7 @@
               <button class="fw-export-btn csv" id="fwBtnExportCSV" disabled>📄 Export CSV</button>
               <button class="fw-export-btn json" id="fwBtnExportJSON" disabled>🗃 Export JSON</button>
               <button class="fw-export-btn copy" id="fwBtnCopyReport" disabled>📋 Copy Report</button>
+              <button class="fw-export-btn" id="fwBtnExportPDF" disabled style="background:rgba(255,100,100,.07);border-color:rgba(255,100,100,.26);color:#ff6b6b">🖨 Export PDF</button>
             </div>
           </div>
           <!-- CTA shown when locked -->
@@ -1595,7 +1595,7 @@
             <!-- shown/hidden by JS based on tier -->
             <button class="fw-notif-btn" id="fwOnchainBtn" onclick="fwSubscribeOnchain()" style="border-color:rgba(0,229,255,.3);color:var(--cyan);display:none">Subscribe</button>
             <button class="fw-notif-btn" id="fwOnchainLockBtn" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.3);color:#a87eff;display:none">🔒 Full Access</button>
-            <!-- COMING SOON --><span class="coming-soon-badge">🔜 Coming Soon</span>
+            <!-- COMING SOON --><span class="coming-soon-badge" id="fwOnchainComingSoon">🔜 Coming Soon</span>
           </div>
           <!-- Telegram Alerts row — teaser free / active full -->
           <div class="fw-notif-row" id="fwTelegramNotifRow" style="margin-top:8px;border-color:rgba(255,193,7,.18);background:rgba(255,193,7,.04)">
@@ -1607,7 +1607,7 @@
             </div>
             <button class="fw-notif-btn" id="fwTelegramBtn" onclick="fwOpenTelegramAlerts()" style="border-color:rgba(255,193,7,.3);color:#ffd166;display:none">Enable</button>
             <button class="fw-notif-btn" id="fwTelegramLockBtn" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.3);color:#a87eff;display:none">🔒 Unlock</button>
-            <!-- COMING SOON --><span class="coming-soon-badge">🔜 Coming Soon</span>
+            <!-- COMING SOON --><span class="coming-soon-badge" id="fwTelegramComingSoon">🔜 Coming Soon</span>
           </div>
         </div>
       </div>
@@ -1631,10 +1631,10 @@
       <div id="fwApiSection">
         <div class="section-title" data-i18n="sec_api">🔌 Developer API</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px 22px;margin-bottom:16px;text-align:center">
-          <div style="font-size:28px;margin-bottom:10px">🚧</div>
-          <div style="font-size:16px;font-weight:800;margin-bottom:6px">Coming Soon</div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.65;max-width:360px;margin:0 auto">
-            The CycleX Public API is under development — score lookups, approval lists, and passport verification will be available soon. Stay tuned.
+          <div style="font-size:28px;margin-bottom:10px">🔌</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px">Developer API — Coming Soon</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;max-width:380px;margin:0 auto">
+            Programmatic access to CycleX security data is on the roadmap — API keys, webhook support, and rate-limited endpoints for wallet scoring and approval data. Current features (scan, revoke, passport) are available via the UI now.
           </div>
         </div>
       </div>
@@ -2169,7 +2169,7 @@ function fwUpdateExportVisibility() {
     if (cta)  cta.style.display  = "none";
     if (stat) stat.style.display = "block";
     // Enable buttons
-    ["fwBtnExportCSV","fwBtnExportJSON","fwBtnCopyReport"].forEach(id => {
+    ["fwBtnExportCSV","fwBtnExportJSON","fwBtnCopyReport","fwBtnExportPDF"].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) { btn.disabled = false; btn.parentElement.style.opacity = "1"; }
     });
@@ -2191,7 +2191,58 @@ function fwInitExport() {
   if (csvBtn  && !csvBtn.__fwBound)  { csvBtn.addEventListener("click",  window.fwExportCSV);    csvBtn.__fwBound=true; }
   if (jsonBtn && !jsonBtn.__fwBound) { jsonBtn.addEventListener("click",  window.fwExportJSON);   jsonBtn.__fwBound=true; }
   if (copyBtn && !copyBtn.__fwBound) { copyBtn.addEventListener("click",  window.fwCopyReport);   copyBtn.__fwBound=true; }
+  const pdfBtn  = document.getElementById("fwBtnExportPDF");
+  if (pdfBtn  && !pdfBtn.__fwBound)  { pdfBtn.addEventListener("click",   window.fwExportPDF);    pdfBtn.__fwBound=true; }
 }
+
+window.fwExportPDF = function() {
+  if (!fwScanData?.rows?.length) { fwSetExportStatus("⚠ Run a scan first.", "#ffd166"); return; }
+  const wallet  = fwScanData?.wallet  || "Unknown";
+  const net     = fwScanData?.net     || "BSC";
+  const score   = fwScanData?.score   ?? "—";
+  const dateStr = new Date().toLocaleString();
+  const rows    = fwScanData.rows || [];
+
+  const rowsHtml = rows.map((r,i) => `
+    <tr style="background:${i%2===0?'#f9f9f9':'#fff'}">
+      <td>${esc(r.symbol||"—")}</td>
+      <td>${r.allow === "infinite" ? "Unlimited ∞" : esc(String(r.allow||"—"))}</td>
+      <td style="color:${r.risk==='bad'?'#e03e3e':r.risk==='medium'?'#d97706':'#16a34a'}">${esc(r.displayRisk||r.risk||"—")}</td>
+      <td>${esc(r.spender||"(locked)")}</td>
+      <td>${r.lastUpdated && r.lastUpdated!=="—" ? new Date(r.lastUpdated).toLocaleDateString() : "—"}</td>
+    </tr>`).join("");
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>CycleX Firewall Report — ${wallet.slice(0,10)}...</title>
+    <style>
+      body{font-family:system-ui,sans-serif;padding:32px;color:#111;max-width:900px;margin:0 auto}
+      h1{font-size:22px;margin-bottom:4px}
+      .meta{font-size:13px;color:#555;margin-bottom:24px}
+      .score{display:inline-block;font-size:28px;font-weight:900;padding:6px 18px;border-radius:10px;
+             background:${score>=80?'#dcfce7':score>=60?'#fef9c3':'#fee2e2'};
+             color:${score>=80?'#16a34a':score>=60?'#b45309':'#dc2626'};margin-bottom:20px}
+      table{width:100%;border-collapse:collapse;font-size:13px}
+      th{background:#1a1a2e;color:#fff;padding:10px 12px;text-align:left}
+      td{padding:9px 12px;border-bottom:1px solid #e5e7eb}
+      .footer{margin-top:28px;font-size:11px;color:#999;text-align:center}
+    </style></head><body>
+    <h1>🛡 CycleX Firewall Report</h1>
+    <div class="meta">Wallet: ${wallet} &nbsp;|&nbsp; Network: ${net.toUpperCase()} &nbsp;|&nbsp; Generated: ${dateStr}</div>
+    <div class="score">${score}/100</div>
+    <table>
+      <thead><tr><th>Token</th><th>Allowance</th><th>Risk</th><th>Spender</th><th>Approval Date</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+    <div class="footer">Generated by CycleX Network — cyclex.network/firewall</div>
+    <script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
+  </body></html>`;
+
+  const w = window.open("","_blank","width=900,height=700");
+  if (!w) { fwSetExportStatus("⚠ Allow popups to export PDF.", "#ffd166"); return; }
+  w.document.write(html);
+  w.document.close();
+  fwSetExportStatus("✅ PDF print dialog opened!", "#5dffb2");
+};
 
 
 const GATE_ABI = [
@@ -2270,10 +2321,12 @@ function _doUnlockUI() {
   document.getElementById("fixLockOverlay")?.style      && (document.getElementById("fixLockOverlay").style.display = "none");
   document.getElementById("ppWatermark")?.style          && (document.getElementById("ppWatermark").style.display = "none");
   // On-chain monitor: show Subscribe, hide lock button
-  const onchainBtn  = document.getElementById("fwOnchainBtn");
-  const onchainLock = document.getElementById("fwOnchainLockBtn");
-  if (onchainBtn)  onchainBtn.style.display  = "inline-flex";
-  if (onchainLock) onchainLock.style.display = "none";
+  const onchainBtn       = document.getElementById("fwOnchainBtn");
+  const onchainLock      = document.getElementById("fwOnchainLockBtn");
+  const onchainComing    = document.getElementById("fwOnchainComingSoon");
+  if (onchainBtn)    onchainBtn.style.display    = "inline-flex";
+  if (onchainLock)   onchainLock.style.display   = "none";
+  if (onchainComing) onchainComing.style.display = "none";
 
   // Unlock per-step overlays on fix steps 2+3
   ["fixStep2Lock","fixStep3Lock"].forEach(id => {
