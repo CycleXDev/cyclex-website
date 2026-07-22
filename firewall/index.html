@@ -2355,8 +2355,8 @@ window.fwExportPDF = function() {
       : "—";
     return `<tr style="background:${i%2===0?"#fafafa":"#fff"}">
       <td style="font-weight:700;color:#111">${esc(r.symbol||"—")}</td>
-      <td style="font-family:monospace;font-size:10px;color:#555">${esc((r.token||"—").slice(0,18)+"…")}</td>
-      <td style="font-family:monospace;font-size:10px;color:#555">${r.spender?esc(r.spender.slice(0,18)+"…"):"<em style='color:#999'>locked</em>"}</td>
+      <td style="font-family:monospace;font-size:10px;color:#555;word-break:break-all">${esc(r.token||"—")}</td>
+      <td style="font-family:monospace;font-size:10px;color:#555;word-break:break-all">${r.spender?esc(r.spender):"<em style='color:#999'>locked</em>"}</td>
       <td style="font-weight:700;color:${r.isUnlimited?"#dc2626":"#555"}">${r.isUnlimited?"∞ Unlimited":esc(r.allow||"—")}</td>
       <td><span style="background:${riskBg(risk)};color:${riskColor(risk)};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase">${esc(risk)}</span></td>
       <td style="text-align:center;font-weight:700">${r.compositeRisk??0}</td>
@@ -2371,6 +2371,13 @@ window.fwExportPDF = function() {
     const typeColor = type==="cex"?"#2563eb":type==="dex"?"#7c3aed":type==="bridge"?"#0891b2":type==="lending"?"#059669":type==="staking"?"#d97706":type==="nft"?"#db2777":"#555";
     const fd = rel.firstSeen ? new Date(rel.firstSeen).toLocaleDateString() : "—";
     const ld = rel.lastSeen  ? new Date(rel.lastSeen).toLocaleDateString()  : "—";
+    const realTxs = (rel.txs||[]).filter(t=>t.hash&&/^0x[0-9a-fA-F]{64}$/.test(t.hash)).slice(0,5);
+    const txHashHtml = realTxs.map(t=>{
+      const dir = t.dir==="in"?"⬅ IN":"➡ OUT";
+      const dirColor = t.dir==="in"?"#16a34a":"#7c3aed";
+      const ts = t.ts ? new Date(t.ts).toLocaleDateString() : "";
+      return `<div style="font-family:monospace;font-size:9px;margin-bottom:3px"><span style="color:${dirColor};font-weight:700">${dir}</span> <span style="color:#333">${esc(t.hash)}</span> <span style="color:#999">${ts}</span></div>`;
+    }).join("") || "<span style='color:#aaa;font-size:10px'>No tx hashes available</span>";
     return `<tr>
       <td style="font-weight:700">${esc(rel.entity.name)}</td>
       <td><span style="background:${typeColor}18;color:${typeColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase">${esc(type)}</span></td>
@@ -2379,7 +2386,8 @@ window.fwExportPDF = function() {
       <td style="text-align:center;font-weight:700">${rel.in+rel.out}</td>
       <td style="font-size:11px;color:#555">${fd}</td>
       <td style="font-size:11px;color:#555">${ld}</td>
-      <td style="font-family:monospace;font-size:9px;color:#888">${esc((rel.address||"—").slice(0,20)+"…")}</td>
+      <td style="font-family:monospace;font-size:10px;color:#333;word-break:break-all">${esc(rel.address||"—")}</td>
+      <td style="min-width:200px">${txHashHtml}</td>
     </tr>`;
   }).join("") : "";
 
@@ -2388,7 +2396,7 @@ window.fwExportPDF = function() {
     return `<tr>
       <td style="text-align:center;font-weight:900;font-size:14px">${i+1}</td>
       <td style="font-weight:700">${esc(r.symbol||"—")}</td>
-      <td style="font-family:monospace;font-size:10px;color:#555">${esc((r.spender||r.fullSpender||"—").slice(0,20)+"…")}</td>
+      <td style="font-family:monospace;font-size:10px;color:#555;word-break:break-all">${esc(r.spender||r.fullSpender||"—")}</td>
       <td>${urgency}</td>
       <td style="color:#dc2626;font-weight:700">Revoke immediately</td>
     </tr>`;
@@ -2421,14 +2429,17 @@ window.fwExportPDF = function() {
 </style></head><body>
 
 <div class="header">
-  <div>
-    <div class="brand">Cycle<span>X</span> <span style="font-size:13px;font-weight:400;color:#888">Firewall Report</span></div>
-    <div style="font-size:11px;color:#555;margin-top:4px">Security Intelligence Platform — cyclex.network</div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <img src="https://cyclex.network/logo.png" style="width:44px;height:44px;border-radius:50%" onerror="this.style.display='none'" alt="CycleX">
+    <div>
+      <div class="brand">Cycle<span>X</span> <span style="font-size:13px;font-weight:400;color:#888">Firewall Report</span></div>
+      <div style="font-size:11px;color:#555;margin-top:2px">Security Intelligence Platform — cyclex.network</div>
+    </div>
   </div>
   <div class="meta">
     <div><strong>Generated:</strong> ${dateStr}</div>
     <div><strong>Network:</strong> ${net}</div>
-    <div><strong>Wallet:</strong> <span style="font-family:monospace">${wallet}</span></div>
+    <div><strong>Wallet:</strong> <span style="font-family:monospace;font-size:10px">${wallet}</span></div>
   </div>
 </div>
 
@@ -2459,7 +2470,7 @@ ${rows.length ? `<h2>Approval Analysis</h2>
 
 ${rels.length ? `<h2>Wallet Relations — Protocol & Exchange Interactions</h2>
 <table>
-  <thead><tr><th>Protocol / Exchange</th><th>Type</th><th>Received</th><th>Sent</th><th>Total Txs</th><th>First Seen</th><th>Last Seen</th><th>Address</th></tr></thead>
+  <thead><tr><th>Protocol / Exchange</th><th>Type</th><th>Received</th><th>Sent</th><th>Total Txs</th><th>First Seen</th><th>Last Seen</th><th>Contract Address</th><th>Recent Tx Hashes</th></tr></thead>
   <tbody>${relRows}</tbody>
 </table>` : ""}
 
