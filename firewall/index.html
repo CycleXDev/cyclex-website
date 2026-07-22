@@ -935,8 +935,9 @@
   }
   .fw-watch-submit:hover{background:rgba(0,229,255,.18);transform:translateY(-1px)}
   .fw-notif-row{
+    position:relative;
     display:flex;align-items:center;gap:10px;margin-top:10px;
-    padding:10px 14px;border-radius:11px;
+    padding:10px 14px;border-radius:11px;flex-wrap:wrap;
     background:rgba(124,92,255,.06);border:1px solid rgba(124,92,255,.18)
   }
   .fw-notif-row .fw-notif-icon{font-size:16px}
@@ -1529,6 +1530,7 @@
               <button class="fw-export-btn csv" id="fwBtnExportCSV" disabled>📄 Export CSV</button>
               <button class="fw-export-btn json" id="fwBtnExportJSON" disabled>🗃 Export JSON</button>
               <button class="fw-export-btn copy" id="fwBtnCopyReport" disabled>📋 Copy Report</button>
+              <button class="fw-export-btn" id="fwBtnExportPDF" disabled style="background:rgba(255,100,100,.07);border-color:rgba(255,100,100,.26);color:#ff6b6b">🖨 Export PDF</button>
             </div>
           </div>
           <!-- CTA shown when locked -->
@@ -1589,13 +1591,11 @@
             <div class="fw-notif-text">
               <strong style="color:var(--cyan)">On-chain approval monitor</strong> — 
               Sign a read-only subscription (no gas) to enable real-time Approval event monitoring for your wallet.
-              <span id="fwOnchainStatus" style="display:block;margin-top:3px;font-size:10px;color:var(--muted)">Coming soon</span>
+              <span id="fwOnchainStatus" style="display:block;margin-top:3px;font-size:10px;color:var(--muted)">Not subscribed</span>
             </div>
             <!-- shown/hidden by JS based on tier -->
-            <!-- COMING SOON: on-chain monitor buttons hidden until Moralis Streams integrated -->
-            <button class="fw-notif-btn" id="fwOnchainBtn" onclick="fwSubscribeOnchain()" style="display:none">Subscribe</button>
-            <button class="fw-notif-btn" id="fwOnchainLockBtn" onclick="requestFullAccess()" style="display:none">🔒 Full Access</button>
-            <span style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:6px 12px;border:1px solid rgba(255,255,255,.10);border-radius:9px;white-space:nowrap">🔜 Coming Soon</span>
+            <button class="fw-notif-btn" id="fwOnchainBtn" onclick="fwSubscribeOnchain()" style="border-color:rgba(0,229,255,.3);color:var(--cyan);display:none">Subscribe</button>
+            <button class="fw-notif-btn" id="fwOnchainLockBtn" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.3);color:#a87eff">🔒 Full Access</button>
           </div>
           <!-- Telegram Alerts row — teaser free / active full -->
           <div class="fw-notif-row" id="fwTelegramNotifRow" style="margin-top:8px;border-color:rgba(255,193,7,.18);background:rgba(255,193,7,.04)">
@@ -1605,10 +1605,9 @@
               Get instant Telegram messages when a watched wallet's score drops or new risky approvals appear.
               <span id="fwTelegramStatus" style="display:block;margin-top:3px;font-size:10px;color:var(--muted)">Coming soon</span>
             </div>
-            <!-- COMING SOON: Telegram alerts hidden until bot backend + Moralis Streams integrated -->
-            <button class="fw-notif-btn" id="fwTelegramBtn" onclick="fwOpenTelegramAlerts()" style="display:none">Enable</button>
-            <button class="fw-notif-btn" id="fwTelegramLockBtn" onclick="requestFullAccess()" style="display:none">🔒 Unlock</button>
-            <span style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:6px 12px;border:1px solid rgba(255,255,255,.10);border-radius:9px;white-space:nowrap">🔜 Coming Soon</span>
+            <button class="fw-notif-btn" id="fwTelegramBtn" onclick="fwOpenTelegramAlerts()" style="border-color:rgba(255,193,7,.3);color:#ffd166;display:none">Enable</button>
+            <button class="fw-notif-btn" id="fwTelegramLockBtn" onclick="requestFullAccess()" style="border-color:rgba(124,92,255,.3);color:#a87eff;display:none">🔒 Unlock</button>
+            <!-- COMING SOON --><span class="coming-soon-badge" id="fwTelegramComingSoon">🔜 Coming Soon</span>
           </div>
         </div>
       </div>
@@ -1632,10 +1631,10 @@
       <div id="fwApiSection">
         <div class="section-title" data-i18n="sec_api">🔌 Developer API</div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px 22px;margin-bottom:16px;text-align:center">
-          <div style="font-size:28px;margin-bottom:10px">🚧</div>
-          <div style="font-size:16px;font-weight:800;margin-bottom:6px">Coming Soon</div>
-          <div style="font-size:13px;color:var(--muted);line-height:1.65;max-width:360px;margin:0 auto">
-            The CycleX Public API is under development — score lookups, approval lists, and passport verification will be available soon. Stay tuned.
+          <div style="font-size:28px;margin-bottom:10px">🔌</div>
+          <div style="font-size:16px;font-weight:800;margin-bottom:6px">Developer API — Coming Soon</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.65;max-width:380px;margin:0 auto">
+            Programmatic access to CycleX security data is on the roadmap — API keys, webhook support, and rate-limited endpoints for wallet scoring and approval data. Current features (scan, revoke, passport) are available via the UI now.
           </div>
         </div>
       </div>
@@ -1734,6 +1733,26 @@ var FW_TAGGED_ENTITIES = {
     "0x40ec5b33f54e0e8a33a975908c5ba1c14e5bbbdf": {name:"Polygon Bridge",    type:"bridge",  tags:["verified"]},
     "0x3154cf16ccdb4c6d922629664174b904d80f2c35": {name:"Stargate ETH",      type:"bridge",  tags:["trusted"]},
     "0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe": {name:"Multichain ETH",    type:"bridge",  tags:["trusted"]},
+    // Additional DEX / Aggregator
+    "0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f": {name:"SushiSwap V2 ETH",         type:"dex",     tags:["verified","defi"]},
+    "0xdef171fe48cf0115b1d80b88dc8eab59176fee57": {name:"ParaSwap ETH",              type:"dex",     tags:["aggregator","defi"]},
+    "0x881d40237659c251811cec9c364ef91234861421": {name:"MetaMask Swap Router",      type:"dex",     tags:["aggregator","defi"]},
+    "0x99a58482bd75cbab83b27ec03ca68ff489b5788f": {name:"Curve Router ETH",          type:"dex",     tags:["verified","defi"]},
+    "0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7": {name:"Curve 3Pool ETH",           type:"dex",     tags:["verified","defi"]},
+    // NFT Marketplaces
+    "0x00000000006c3852cbef3e08e8df289169ede581": {name:"OpenSea Seaport 1.1",       type:"nft",     tags:["verified"]},
+    "0x0000000000000068f116a894984e2db1123eb395": {name:"OpenSea Seaport 1.6",       type:"nft",     tags:["verified"]},
+    "0x000000000000ad05ccc4f10045630fb830b95127": {name:"Blur Marketplace",          type:"nft",     tags:["verified"]},
+    // Staking additions
+    "0xdd3f50f8a6cafbe9b31a427582963f465e745af8": {name:"Rocket Pool ETH",           type:"staking", tags:["verified","defi"]},
+    "0x9d8a62f656a8d1615c1294fd71e9cfb3e4855a4f": {name:"MakerDAO DSR",              type:"lending", tags:["verified","defi"]},
+    // Additional CEX
+    "0x0d0707963952f2fba59dd06f2b425ace40b492fe": {name:"Gate.io ETH",               type:"cex",     tags:["trusted"]},
+    "0xcffad3200574698b78f32232aa9d63eabd290703": {name:"Crypto.com ETH",            type:"cex",     tags:["trusted"]},
+    "0x6fc82a5fe25a5cdb58bc74600a40a69c065263f8": {name:"MEXC ETH",                  type:"cex",     tags:["trusted"]},
+    // Bridges additions
+    "0x4dbd4fc535ac27206064b68ffcf827b0a60bab3f": {name:"Arbitrum Bridge ETH",       type:"bridge",  tags:["verified"]},
+    "0x5427fefa711eff984124bfbb1ab6fbf5e3da1820": {name:"Celer cBridge ETH",         type:"bridge",  tags:["trusted"]},
   },
   bsc: {
     // CEX
@@ -1769,6 +1788,20 @@ var FW_TAGGED_ENTITIES = {
     "0xac98d8d1bb07d04f7e4e015f09bd2f1cb0c13ca1": {name:"Stargate BSC",      type:"bridge",  tags:["trusted"]},
     "0xf3c091ed43de9c270593445163a41a876a0bb3dd": {name:"cBridge BSC",       type:"bridge",  tags:["trusted"]},
     "0x22f9dcf4647084d6c31b2765f6910cd85c178c18": {name:"Wormhole BSC",      type:"bridge",  tags:["trusted"]},
+    // Additional DEX
+    "0x3a6d8ca21d1cf76f653a67577fa0d27453350dd8": {name:"BiSwap Router",             type:"dex",     tags:["verified","defi"]},
+    "0x7dae51bd3e3376b8c7c4900e9107f12be3af1ba8": {name:"MDEX BSC",                  type:"dex",     tags:["defi"]},
+    "0x325e343f1de602396e256b67efd1f61c3a6b38bd": {name:"BabySwap Router",           type:"dex",     tags:["defi"]},
+    "0x05e61e0cdcd2170a76f9568a110cee3afdd6c46f": {name:"KnightSwap",                type:"dex",     tags:["defi"]},
+    "0x4f3afec4e5a3f2a6a1a411def7d7dfe50ee057bf": {name:"DODO BSC",                  type:"dex",     tags:["defi"]},
+    // Lending additions
+    "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d": {name:"Alpaca Finance BSC",        type:"lending", tags:["verified","defi"]},
+    // Yield
+    "0x453d4ba9a2d594314df88564248497f7d74d6b2c": {name:"Beefy Finance BSC",         type:"yield",   tags:["defi"]},
+    "0x73feaa1ee314f2c655e82f2ea4e563e7ef34c1db": {name:"PancakeSwap MasterChef",    type:"yield",   tags:["verified","defi"]},
+    // Additional CEX
+    "0x5a52e96bacdabb82fd05763e25335261b270efcb": {name:"Binance BSC 4",             type:"cex",     tags:["trusted"]},
+    "0x8b99f3660622e21f2910ecca7fbe51d654a1517d": {name:"MEXC BSC",                  type:"cex",     tags:["trusted"]},
   },
   polygon: {
     // CEX
@@ -1796,6 +1829,18 @@ var FW_TAGGED_ENTITIES = {
     "0xfe5e5d361b2ad62c541bab87c45a0b9b018389a2": {name:"Polygon PoS Bridge",type:"bridge",  tags:["verified"]},
     "0x45a01e4e04f14f7a4a6702c74187c5f6222033cd": {name:"Stargate Polygon",  type:"bridge",  tags:["trusted"]},
     "0xf3c091ed43de9c270593445163a41a876a0bb3dd": {name:"cBridge Polygon",   type:"bridge",  tags:["trusted"]},
+    // Additional DEX
+    "0xc9b8a3fdecb9d5b218d02555a8baf332e5b740d5": {name:"Curve Polygon",             type:"dex",     tags:["verified","defi"]},
+    "0x546c79662e028b661dfb4767664d0273184e4dd1": {name:"Kyber Classic Polygon",     type:"dex",     tags:["defi"]},
+    "0x6131b5fae19ea4f9d964eac0408e4408b66337b5": {name:"Kyber DMM Polygon",         type:"dex",     tags:["defi"]},
+    "0x4f3afec4e5a3f2a6a1a411def7d7dfe50ee057bf": {name:"DODO Polygon",              type:"dex",     tags:["defi"]},
+    "0xdef171fe48cf0115b1d80b88dc8eab59176fee57": {name:"ParaSwap Polygon",          type:"dex",     tags:["aggregator","defi"]},
+    // Lending additions
+    "0x4a1c3ad6ed28a636ee1751c69071f6be75deb8b8": {name:"Aave GHO Polygon",          type:"lending", tags:["verified","defi"]},
+    "0xa102072a4c07f06ec3b4900fdc4c7b80b6c57429": {name:"Dfyn Exchange Polygon",      type:"dex",     tags:["defi"]},
+    "0x91e7bc8d059a478b3bed0ec4d38ca7b61ac85b97": {name:"Retro Finance Polygon",      type:"dex",     tags:["defi"]},
+    // Additional CEX
+    "0xb0b0f6a5f048a4b62966a1e5b3555f98c4b9c69b": {name:"OKX Polygon",               type:"cex",     tags:["trusted"]},
   }
 };
 
@@ -2049,27 +2094,79 @@ function fwSetExportStatus(msg, color) {
 window.fwExportCSV = function() {
   if (!fwScanData?.rows?.length){fwSetExportStatus("⚠ Run a scan first.","#ffd166");return;}
   const q = v=>`"${String(v??"").replace(/"/g,'""')}"`;
-  let csv = "Wallet,Network,Token Address,Symbol,Spender,Allowance,Risk,Verified,Decimals\n";
-  for(const r of fwScanData.rows){
-    csv += [q(fwWallet),q(fwNet),q(r.token),q(r.symbol),q(r.spender),q(r.allow),q(r.risk),q(r.verified),q(r.decimals)].join(",")+"\n";
+  const d = fwScanData;
+  const dateStr = new Date().toLocaleString();
+
+  // ── HEADER SUMMARY ──────────────────────────────────────────
+  let csv = `CycleX Firewall Report\n`;
+  csv += `Generated,${q(dateStr)}\n`;
+  csv += `Wallet,${q(fwWallet)}\n`;
+  csv += `Network,${q((fwNet||'bsc').toUpperCase())}\n`;
+  csv += `Firewall Score,${q((d.score??'—')+'/100 — '+(d.scoreLabel||''))}\n`;
+  csv += `Blast Radius,${q(d.blastDisplay||'—')}\n`;
+  csv += `Drain Time,${q(d.drainTime||'—')}\n`;
+  csv += `Total Approvals,${q(d.totalApprovals||0)}\n`;
+  csv += `Unlimited Approvals,${q(d.unlimitedCount||0)}\n`;
+  csv += `High Risk Approvals,${q(d.highRiskCount||0)}\n`;
+  csv += `Unverified Spenders,${q(d.unverifiedCount||0)}\n\n`;
+
+  // ── APPROVALS TABLE ─────────────────────────────────────────
+  csv += `APPROVALS\n`;
+  csv += `Token Symbol,Token Address,Spender,Allowance,Risk Level,Risk Score,Contract Type,Drain Risk,Approval Type,Verified,Decimals,Approval Date (UTC),Days Open\n`;
+  for(const r of d.rows){
+    const daysOpen = (r.lastUpdated && r.lastUpdated!=='—')
+      ? Math.floor((Date.now()-new Date(r.lastUpdated))/86400000)+'d'
+      : '—';
+    csv += [
+      q(r.symbol||'—'), q(r.token||'—'), q(r.spender||'—'),
+      q(r.allow||'—'), q(r.displayRisk||r.risk||'—'),
+      q(r.compositeRisk??'—'), q(r.contractLabel||'—'),
+      q(r.drainLabel||'—'), q(r.approvalLabel||'—'),
+      q(r.verified?'Yes':'No'), q(r.decimals??18),
+      q(r.lastUpdated&&r.lastUpdated!=='—'?new Date(r.lastUpdated).toISOString().slice(0,19).replace('T',' '):'—'),
+      q(daysOpen)
+    ].join(',')+'\n';
   }
+
+  // ── WALLET RELATIONS ─────────────────────────────────────────
   if (window.__fwRelations?.length) {
-    csv += "\n\nWALLET RELATIONS\nEntity,Type,Tags,Protocol Address,Incoming,Outgoing,Total,First Seen,Last Seen,Recent Tx Hashes\n";
+    csv += `\nWALLET RELATIONS\n`;
+    csv += `Protocol/Exchange,Type,Tags,Status,Contract Address,Incoming Txs,Outgoing Txs,Total Txs,First Seen,Last Seen,Known Threat\n`;
     for(const rel of window.__fwRelations){
-      const fd = rel.firstSeen ? new Date(rel.firstSeen).toLocaleDateString() : "—";
-      const ld = rel.lastSeen  ? new Date(rel.lastSeen).toLocaleDateString()  : "—";
-      const tags = (rel.entity.tags||[]).join("|");
-      const hashes = rel.txs.slice(0,5).map(t=>t.hash||"").filter(Boolean).join(" | ");
-      csv += [q(rel.entity.name),q(rel.entity.type),q(tags),q(rel.address||""),
-              q(rel.in),q(rel.out),q(rel.in+rel.out),q(fd),q(ld),q(hashes)].join(",")+"\n";
+      const fd = rel.firstSeen?new Date(rel.firstSeen).toLocaleDateString():'—';
+      const ld = rel.lastSeen?new Date(rel.lastSeen).toLocaleDateString():'—';
+      const tags = (rel.entity.tags||[]).join('|');
+      const trusted = (rel.entity.tags||[]).includes('trusted')||'verified' ? 'Verified/Trusted' : 'Unverified';
+      const relLower = (rel.address||'').toLowerCase();
+      const threat = (typeof FW_THREATS!=='undefined')
+        ? (FW_THREATS.find(t=>t.spenders?.some(s=>s.toLowerCase()===relLower))?.title||'None')
+        : 'None';
+      csv += [
+        q(rel.entity.name), q(rel.entity.type), q(tags), q(trusted),
+        q(rel.address||'—'), q(rel.in), q(rel.out), q(rel.in+rel.out),
+        q(fd), q(ld), q(threat)
+      ].join(',')+'\n';
     }
   }
-  const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
+
+  // ── FIX PLAN ─────────────────────────────────────────────────
+  const fixes = d.fixTargets||d.threats?.filter(t=>t.hasApproval&&t.canRevoke)||[];
+  if (fixes.length) {
+    csv += `\nRECOMMENDED FIX PLAN\n`;
+    csv += `Priority,Token,Spender,Risk,Recommendation\n`;
+    fixes.slice(0,10).forEach((r,i)=>{
+      csv += [q(i+1),q(r.symbol||'—'),q(r.spender||r.fullSpender||'—'),q(r.risk||'—'),q('Revoke approval immediately')].join(',')+'\n';
+    });
+  }
+
+  csv += `\nGenerated by CycleX Security Platform — https://cyclex.network/firewall\n`;
+
+  const blob = new Blob(["\uFEFF"+csv],{type:'text/csv;charset=utf-8;'});
   const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
+  const a    = document.createElement('a');
   a.href=url; a.download=`CycleX-Firewall-${fwNet}-${new Date().toISOString().slice(0,10)}.csv`;
   a.click(); URL.revokeObjectURL(url);
-  fwSetExportStatus("✅ CSV exported!","#5dffb2");
+  fwSetExportStatus('✅ CSV exported!','#5dffb2');
 };
 
 window.fwExportJSON = function() {
@@ -2079,14 +2176,47 @@ window.fwExportJSON = function() {
     wallet: fwWallet, network: fwNet,
     score: fwScanData.score, scoreLabel: fwScanData.scoreLabel,
     summary: {
-      totalApprovals:fwScanData.totalApprovals,
-      unlimited:fwScanData.unlimitedCount,
-      highRisk:fwScanData.highRiskCount,
-      unverified:fwScanData.unverifiedCount
+      firestoreScore:  fwScanData.score,
+      scoreLabel:      fwScanData.scoreLabel,
+      blastRadius:     fwScanData.blastDisplay,
+      drainTime:       fwScanData.drainTime,
+      totalApprovals:  fwScanData.totalApprovals,
+      unlimited:       fwScanData.unlimitedCount,
+      highRisk:        fwScanData.highRiskCount,
+      unverified:      fwScanData.unverifiedCount,
+      confidence:      fwScanData.confidence||null,
+      fixTargetCount:  (fwScanData.fixTargets||[]).length
     },
-    approvals: fwScanData.rows.map(r=>({
-      token:r.token, symbol:r.symbol, spender:r.spender,
-      allowance:r.allow, risk:r.risk, verified:r.verified, decimals:r.decimals
+    approvals: fwScanData.rows.map((r,i)=>({
+      index:           i+1,
+      token:           r.token||null,
+      symbol:          r.symbol||null,
+      spender:         r.spender||null,
+      allowance:       r.allow,
+      isUnlimited:     !!r.isUnlimited,
+      hasApproval:     !!r.hasApproval,
+      riskLevel:       r.displayRisk||r.risk||null,
+      riskScore:       r.compositeRisk??null,
+      contractType:    r.contractLabel||null,
+      drainRisk:       r.drainLabel||null,
+      approvalType:    r.approvalLabel||null,
+      verified:        !!r.verified,
+      decimals:        r.decimals??18,
+      approvalDate:    (r.lastUpdated&&r.lastUpdated!=='—')?r.lastUpdated:null,
+      daysOpen:        (r.lastUpdated&&r.lastUpdated!=='—')
+                         ?Math.floor((Date.now()-new Date(r.lastUpdated))/86400000)
+                         :null,
+      canRevoke:       !!r.canRevoke
+    })),
+    fixPlan: (fwScanData.fixTargets||fwScanData.threats?.filter(t=>t.hasApproval&&t.canRevoke)||[]).slice(0,10).map((r,i)=>({
+      priority:    i+1,
+      token:       r.symbol||r.token||null,
+      tokenAddress:r.token||null,
+      spender:     r.spender||r.fullSpender||null,
+      riskScore:   r.compositeRisk??null,
+      drainRisk:   r.drainLabel||null,
+      action:      'revoke',
+      urgency:     (r.compositeRisk??0)>=40?'critical':(r.compositeRisk??0)>=10?'high':'medium'
     })),
     walletRelations: (window.__fwRelations||[]).map(rel=>{
       // Cross-reference with threat feed
@@ -2170,7 +2300,7 @@ function fwUpdateExportVisibility() {
     if (cta)  cta.style.display  = "none";
     if (stat) stat.style.display = "block";
     // Enable buttons
-    ["fwBtnExportCSV","fwBtnExportJSON","fwBtnCopyReport"].forEach(id => {
+    ["fwBtnExportCSV","fwBtnExportJSON","fwBtnCopyReport","fwBtnExportPDF"].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) { btn.disabled = false; btn.parentElement.style.opacity = "1"; }
     });
@@ -2192,7 +2322,167 @@ function fwInitExport() {
   if (csvBtn  && !csvBtn.__fwBound)  { csvBtn.addEventListener("click",  window.fwExportCSV);    csvBtn.__fwBound=true; }
   if (jsonBtn && !jsonBtn.__fwBound) { jsonBtn.addEventListener("click",  window.fwExportJSON);   jsonBtn.__fwBound=true; }
   if (copyBtn && !copyBtn.__fwBound) { copyBtn.addEventListener("click",  window.fwCopyReport);   copyBtn.__fwBound=true; }
+  const pdfBtn  = document.getElementById("fwBtnExportPDF");
+  if (pdfBtn  && !pdfBtn.__fwBound)  { pdfBtn.addEventListener("click",   window.fwExportPDF);    pdfBtn.__fwBound=true; }
 }
+
+window.fwExportPDF = function() {
+  if (!fwScanData?.rows?.length) { fwSetExportStatus("⚠ Run a scan first.", "#ffd166"); return; }
+  const d        = fwScanData;
+  const wallet   = fwWallet || "Unknown";
+  const net      = (fwNet || "bsc").toUpperCase();
+  const score    = d.score ?? "—";
+  const dateStr  = new Date().toLocaleString();
+  const rows     = d.rows || [];
+  const rels     = window.__fwRelations || [];
+  const fixes    = d.fixTargets || d.threats?.filter(t=>t.hasApproval&&t.canRevoke) || [];
+
+  const scoreColor = score >= 80 ? "#16a34a" : score >= 60 ? "#b45309" : score >= 40 ? "#c2410c" : "#dc2626";
+  const scoreBg    = score >= 80 ? "#f0fdf4" : score >= 60 ? "#fefce8" : score >= 40 ? "#fff7ed" : "#fef2f2";
+
+  const riskColor  = r => r==="critical"||r==="bad"?"#dc2626":r==="high"?"#ea580c":r==="medium"||r==="warn"?"#d97706":"#16a34a";
+  const riskBg     = r => r==="critical"||r==="bad"?"#fef2f2":r==="high"?"#fff7ed":r==="medium"||r==="warn"?"#fefce8":"#f0fdf4";
+
+  const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+  const approvalRows = rows.map((r,i) => {
+    const risk = r.displayRisk || r.risk || "low";
+    const daysOpen = (r.lastUpdated && r.lastUpdated !== "—")
+      ? Math.floor((Date.now() - new Date(r.lastUpdated)) / 86400000)
+      : null;
+    const ageStr = daysOpen !== null
+      ? `<span style="color:${daysOpen>365?"#dc2626":daysOpen>90?"#ea580c":daysOpen>30?"#d97706":"#16a34a"};font-weight:700">${daysOpen}d</span>`
+      : "—";
+    return `<tr style="background:${i%2===0?"#fafafa":"#fff"}">
+      <td style="font-weight:700;color:#111">${esc(r.symbol||"—")}</td>
+      <td style="font-family:monospace;font-size:10px;color:#555">${esc((r.token||"—").slice(0,18)+"…")}</td>
+      <td style="font-family:monospace;font-size:10px;color:#555">${r.spender?esc(r.spender.slice(0,18)+"…"):"<em style='color:#999'>locked</em>"}</td>
+      <td style="font-weight:700;color:${r.isUnlimited?"#dc2626":"#555"}">${r.isUnlimited?"∞ Unlimited":esc(r.allow||"—")}</td>
+      <td><span style="background:${riskBg(risk)};color:${riskColor(risk)};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase">${esc(risk)}</span></td>
+      <td style="text-align:center;font-weight:700">${r.compositeRisk??0}</td>
+      <td style="font-size:11px;color:#555">${esc(r.contractLabel||"—")}</td>
+      <td style="font-size:11px">${ageStr}</td>
+      <td style="font-size:11px;color:#555">${esc(r.drainLabel||"—")}</td>
+    </tr>`;
+  }).join("");
+
+  const relRows = rels.length ? rels.map(rel => {
+    const type = rel.entity.type;
+    const typeColor = type==="cex"?"#2563eb":type==="dex"?"#7c3aed":type==="bridge"?"#0891b2":type==="lending"?"#059669":type==="staking"?"#d97706":type==="nft"?"#db2777":"#555";
+    const fd = rel.firstSeen ? new Date(rel.firstSeen).toLocaleDateString() : "—";
+    const ld = rel.lastSeen  ? new Date(rel.lastSeen).toLocaleDateString()  : "—";
+    return `<tr>
+      <td style="font-weight:700">${esc(rel.entity.name)}</td>
+      <td><span style="background:${typeColor}18;color:${typeColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase">${esc(type)}</span></td>
+      <td style="text-align:center;font-weight:700;color:#2563eb">${rel.in}</td>
+      <td style="text-align:center;font-weight:700;color:#7c3aed">${rel.out}</td>
+      <td style="text-align:center;font-weight:700">${rel.in+rel.out}</td>
+      <td style="font-size:11px;color:#555">${fd}</td>
+      <td style="font-size:11px;color:#555">${ld}</td>
+      <td style="font-family:monospace;font-size:9px;color:#888">${esc((rel.address||"—").slice(0,20)+"…")}</td>
+    </tr>`;
+  }).join("") : "";
+
+  const fixRows = fixes.slice(0,10).map((r,i) => {
+    const urgency = (r.compositeRisk??0)>=40?"🔴 CRITICAL":(r.compositeRisk??0)>=10?"🟠 HIGH":"🟡 MEDIUM";
+    return `<tr>
+      <td style="text-align:center;font-weight:900;font-size:14px">${i+1}</td>
+      <td style="font-weight:700">${esc(r.symbol||"—")}</td>
+      <td style="font-family:monospace;font-size:10px;color:#555">${esc((r.spender||r.fullSpender||"—").slice(0,20)+"…")}</td>
+      <td>${urgency}</td>
+      <td style="color:#dc2626;font-weight:700">Revoke immediately</td>
+    </tr>`;
+  }).join("");
+
+  const html = `<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<title>CycleX Firewall Report — ${wallet.slice(0,10)}…</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#111;background:#fff;padding:32px;font-size:13px;line-height:1.5}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:2px solid #111}
+  .brand{font-size:22px;font-weight:900;letter-spacing:-.5px}
+  .brand span{color:#7c5cff}
+  .meta{font-size:11px;color:#555;text-align:right;line-height:1.8}
+  .score-block{display:flex;align-items:center;gap:20px;margin-bottom:24px;padding:20px 24px;background:#f8f8f8;border-radius:12px;border-left:4px solid ${scoreColor}}
+  .score-num{font-size:52px;font-weight:900;color:${scoreColor};line-height:1}
+  .score-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.08em}
+  .score-detail{font-size:15px;font-weight:700;color:#111;margin-bottom:4px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+  .stat{background:#f8f8f8;border-radius:10px;padding:14px 16px;text-align:center}
+  .stat-num{font-size:26px;font-weight:900;color:#111}
+  .stat-lbl{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+  h2{font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.10em;color:#888;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid #e5e7eb}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px}
+  th{background:#111;color:#fff;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em;font-weight:700}
+  td{padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+  .footer{margin-top:32px;padding-top:16px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;font-size:10px;color:#999}
+  @media print{body{padding:20px}.score-block{break-inside:avoid}table{break-inside:auto}tr{break-inside:avoid}}
+</style></head><body>
+
+<div class="header">
+  <div>
+    <div class="brand">Cycle<span>X</span> <span style="font-size:13px;font-weight:400;color:#888">Firewall Report</span></div>
+    <div style="font-size:11px;color:#555;margin-top:4px">Security Intelligence Platform — cyclex.network</div>
+  </div>
+  <div class="meta">
+    <div><strong>Generated:</strong> ${dateStr}</div>
+    <div><strong>Network:</strong> ${net}</div>
+    <div><strong>Wallet:</strong> <span style="font-family:monospace">${wallet}</span></div>
+  </div>
+</div>
+
+<div class="score-block">
+  <div>
+    <div class="score-label">Firewall Score</div>
+    <div class="score-num">${score}<span style="font-size:24px;color:#888">/100</span></div>
+  </div>
+  <div style="flex:1">
+    <div class="score-detail">${esc(d.scoreLabel||"—")}</div>
+    <div style="font-size:12px;color:#555;margin-top:4px">Blast Radius: <strong>${esc(d.blastDisplay||"—")}</strong> &nbsp;|&nbsp; Drain Time: <strong>${esc(d.drainTime||"—")}</strong></div>
+    <div style="font-size:11px;color:#888;margin-top:6px">${rows.length} approvals analyzed • ${d.unlimitedCount||0} unlimited • ${d.highRiskCount||0} high risk • ${d.unverifiedCount||0} unverified</div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-num">${rows.length}</div><div class="stat-lbl">Total Approvals</div></div>
+  <div class="stat"><div class="stat-num" style="color:#dc2626">${d.unlimitedCount||0}</div><div class="stat-lbl">Unlimited</div></div>
+  <div class="stat"><div class="stat-num" style="color:#ea580c">${d.highRiskCount||0}</div><div class="stat-lbl">High Risk</div></div>
+  <div class="stat"><div class="stat-num" style="color:#d97706">${d.unverifiedCount||0}</div><div class="stat-lbl">Unverified</div></div>
+</div>
+
+${rows.length ? `<h2>Approval Analysis</h2>
+<table>
+  <thead><tr><th>Token</th><th>Token Address</th><th>Spender</th><th>Allowance</th><th>Risk</th><th>Score</th><th>Contract Type</th><th>Open</th><th>Drain Risk</th></tr></thead>
+  <tbody>${approvalRows}</tbody>
+</table>` : ""}
+
+${rels.length ? `<h2>Wallet Relations — Protocol & Exchange Interactions</h2>
+<table>
+  <thead><tr><th>Protocol / Exchange</th><th>Type</th><th>Received</th><th>Sent</th><th>Total Txs</th><th>First Seen</th><th>Last Seen</th><th>Address</th></tr></thead>
+  <tbody>${relRows}</tbody>
+</table>` : ""}
+
+${fixRows ? `<h2>Recommended Fix Plan</h2>
+<table>
+  <thead><tr><th>#</th><th>Token</th><th>Spender</th><th>Urgency</th><th>Action</th></tr></thead>
+  <tbody>${fixRows}</tbody>
+</table>` : ""}
+
+<div class="footer">
+  <div>Generated by CycleX Security Platform — https://cyclex.network/firewall</div>
+  <div>This report is for informational purposes only. Always verify on-chain before revoking.</div>
+</div>
+
+<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script>
+</body></html>`;
+
+  const w = window.open("","_blank","width=1000,height=800");
+  if (!w) { fwSetExportStatus("⚠ Allow popups to export PDF.", "#ffd166"); return; }
+  w.document.write(html);
+  w.document.close();
+  fwSetExportStatus("✅ PDF ready — print dialog opened!", "#5dffb2");
+};
 
 
 const GATE_ABI = [
@@ -2271,10 +2561,12 @@ function _doUnlockUI() {
   document.getElementById("fixLockOverlay")?.style      && (document.getElementById("fixLockOverlay").style.display = "none");
   document.getElementById("ppWatermark")?.style          && (document.getElementById("ppWatermark").style.display = "none");
   // On-chain monitor: show Subscribe, hide lock button
-  const onchainBtn  = document.getElementById("fwOnchainBtn");
-  const onchainLock = document.getElementById("fwOnchainLockBtn");
-  if (onchainBtn)  onchainBtn.style.display  = "inline-flex";
-  if (onchainLock) onchainLock.style.display = "none";
+  const onchainBtn       = document.getElementById("fwOnchainBtn");
+  const onchainLock      = document.getElementById("fwOnchainLockBtn");
+  const onchainComing    = document.getElementById("fwOnchainComingSoon");
+  if (onchainBtn)    onchainBtn.style.display    = "inline-flex";
+  if (onchainLock)   onchainLock.style.display   = "none";
+  if (onchainComing) onchainComing.style.display = "none";
 
   // Unlock per-step overlays on fix steps 2+3
   ["fixStep2Lock","fixStep3Lock"].forEach(id => {
@@ -2708,7 +3000,8 @@ function computeMetrics(approvals) {
     // fwNorm() handles address format normalization at revoke time
     canRevoke:   !!(r.hasApproval && r.token && r.token.length > 5 && r.spender && r.spender.length > 5),
     compositeRisk: r.compositeRisk,
-    tokens:      [r.symbol || "TOKEN"]
+    tokens:      [r.symbol || "TOKEN"],
+    lastUpdated: r.lastUpdated || "—"
   }));
 
   // Fix targets: only rows with ACTIVE approvals, sorted by composite risk
@@ -3926,6 +4219,24 @@ function _buildThreatCard(t, i, tier) {
         ? `<span class="sig bad"><span class="sig-dot"></span>∞ Unlimited</span>`
         : `<span class="sig warn"><span class="sig-dot"></span>Capped</span>`)
     : `<span class="sig ok"><span class="sig-dot"></span>No Approval</span>`;
+  // ── Approval Age badge (visible to all tiers) ──────────────────────────
+  function approvalAge(lastUpdated) {
+    if (!lastUpdated || lastUpdated === "—") return null;
+    const days = (Date.now() - new Date(lastUpdated)) / 86400000;
+    if (!isFinite(days) || days < 0) return null;
+    let color, label;
+    if      (days > 365) { color = "#ff4757"; label = `${Math.floor(days/365)}y`; }
+    else if (days > 90)  { color = "#ffa94d"; label = `${Math.floor(days/30)}mo`; }
+    else if (days > 30)  { color = "#ffd166"; label = `${Math.floor(days)}d`; }
+    else                 { color = "#5dffb2"; label = `${Math.floor(days)}d`; }
+    return { color, label };
+  }
+  const age = approvalAge(t.lastUpdated);
+  const ageBadge = age
+    ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:${age.color};background:${age.color}18;border:1px solid ${age.color}40;border-radius:6px;padding:1px 7px;margin-left:6px;letter-spacing:.3px">${age.label} open</span>`
+    : "";
+  // ────────────────────────────────────────────────────────────────────────
+
   const contractBadge = `<span class="sig ${t.risk}"><span class="sig-dot"></span>${esc(t.contractLabel||t.label)}</span>`;
   const drainRow = t.hasApproval
     ? `<span class="threat-drain ${t.risk==="bad"?"bad":t.isUnlimited?"warn":"ok"}">${esc(t.drainLabel||"—")}</span>`
@@ -3956,7 +4267,7 @@ function _buildThreatCard(t, i, tier) {
       <div style="flex:1;min-width:0">
         <div class="threat-name">${esc(t.name)}</div>
         <div class="threat-meta" style="margin-top:5px">
-          ${approvalBadge}${contractBadge}${tokenChip}
+          ${approvalBadge}${contractBadge}${tokenChip}${ageBadge}
         </div>
       </div>
       <div style="text-align:right;flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
@@ -5786,6 +6097,7 @@ const FW_TRANSLATIONS = {
     step1:"获取授权日志", step2:"分析风险合约", step3:"计算爆炸半径", step4:"生成修复计划",
     notice_live_title:"实时扫描。", notice_live_body:"只读链上数据，不产生任何交易。",
     notice_demo_title:"演示模式：", notice_demo_body:"显示示例数据。输入真实钱包地址并点击「运行防火墙」进行实时扫描。",
+    scan_running:"正在扫描钱包…",
     sec_status:"防火墙状态", sec_fix:"修复模式", sec_passport:"钱包护照",
     sec_rules:"防火墙规则", sec_relations:"🔗 钱包关联", sec_export:"📊 导出报告",
     sec_watch:"👁 钱包监控", sec_threats:"🚨 威胁动态", sec_api:"🔌 开发者API",
@@ -5820,6 +6132,7 @@ const FW_TRANSLATIONS = {
     step1:"جلب سجلات الموافقات", step2:"تحليل مخاطر العقود", step3:"حساب نطاق الضرر", step4:"بناء خطة الإصلاح",
     notice_live_title:"فحص مباشر.", notice_live_body:"بيانات للقراءة فقط. لا معاملات.",
     notice_demo_title:"وضع العرض التجريبي:", notice_demo_body:'بيانات نموذجية. أدخل عنوان محفظة حقيقية واضغط "تشغيل الجدار" للفحص الفعلي.',
+    scan_running:"جارٍ فحص المحفظة…",
     sec_status:"حالة الجدار", sec_fix:"وضع الإصلاح", sec_passport:"جواز المحفظة",
     sec_rules:"قواعد الجدار", sec_relations:"🔗 علاقات المحفظة", sec_export:"📊 تصدير التقرير",
     sec_watch:"👁 مراقبة المحافظ", sec_threats:"🚨 خلاصة التهديدات", sec_api:"🔌 واجهة المطورين",
@@ -5855,6 +6168,7 @@ const FW_TRANSLATIONS = {
     step3:"Расчёт зоны поражения", step4:"Формирование плана защиты",
     notice_live_title:"Живое сканирование.", notice_live_body:"Только чтение. Транзакции не создаются.",
     notice_demo_title:"Демо-режим:", notice_demo_body:'Тестовые данные. Введи адрес кошелька и нажми "Запустить" для реального сканирования.',
+    scan_running:"Сканирование кошелька…",
     sec_status:"Статус Файрвола", sec_fix:"Режим Исправления", sec_passport:"Паспорт Кошелька",
     sec_rules:"Правила Файрвола", sec_relations:"🔗 Связи Кошелька", sec_export:"📊 Экспорт Отчёта",
     sec_watch:"👁 Слежение", sec_threats:"🚨 Лента Угроз", sec_api:"🔌 API Разработчика",
