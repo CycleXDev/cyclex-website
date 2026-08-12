@@ -3956,7 +3956,8 @@ const read = _getRP ? _getRP(net) : null;
         txns24h:        (best?.txns?.h24?.buys || 0) + (best?.txns?.h24?.sells || 0),
         pairCount:      pairs.length,
         dexId:          best?.dexId || null,
-        pairAddress:    best?.pairAddress || null
+        pairAddress:    best?.pairAddress || null,
+        pairCreatedAt:  Number.isFinite(Number(best?.pairCreatedAt)) ? Number(best.pairCreatedAt) : null
       };
     } catch { return null; }
   }
@@ -4057,6 +4058,18 @@ const read = _getRP ? _getRP(net) : null;
           const p = Number(h?.percent);
           return Number.isFinite(p) ? p : null;
         })(),
+        // ✅ NEW: aggregate concentration across all returned holders (up to ~10 per GoPlus),
+        // not just the single largest one. NOTE: this may include the DEX pool's own
+        // token account as a "holder" (GoPlus doesn't clearly enum-document a pool tag in
+        // the snippet available) — treat as an upper-bound concentration estimate, not a
+        // guaranteed "held by people" figure.
+        top10ConcentrationPct: (() => {
+          const arr = Array.isArray(d?.holders) ? d.holders : [];
+          if (!arr.length) return null;
+          const sum = arr.reduce((acc, h) => acc + (Number(h?.percent) || 0), 0);
+          return Number.isFinite(sum) ? sum : null;
+        })(),
+        holdersReturned: Array.isArray(d?.holders) ? d.holders.length : 0,
         dex: Array.isArray(d?.dex) ? d.dex : [], // ⚠️ verify field name against a live response
         raw: d
       };
@@ -5182,6 +5195,19 @@ try {
       else if (gp.topHolderPct >= 30) contractScore -= 12;
       else if (gp.topHolderPct >= 15) contractScore -= 6;
     }
+    // ✅ NEW: aggregate concentration across all returned holders (not just #1).
+    // Kept intentionally lighter than the top-1 penalty above since the two overlap
+    // (the top holder is already counted inside this sum).
+    if (gp?.top10ConcentrationPct != null) {
+      if (gp.top10ConcentrationPct >= 80) {
+        contractScore -= 14;
+        rep.redFlags.push(`Top ${gp.holdersReturned} holders together control ${gp.top10ConcentrationPct.toFixed(1)}% of supply.`);
+      } else if (gp.top10ConcentrationPct >= 60) {
+        contractScore -= 8;
+      } else if (gp.top10ConcentrationPct >= 40) {
+        contractScore -= 3;
+      }
+    }
     if (gp?.trustedToken) contractScore += 10;
     contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
@@ -5209,6 +5235,24 @@ try {
     rep.meta.cexExchanges = cex?.exchanges || [];
     rep.meta.liquidityUsdEst = liqUsd;
 
+    // ✅ NEW: expose GoPlus's raw response + holder aggregates so "Copy JSON" can
+    // actually be used to diagnose gaps (e.g. why a field came back "Unknown").
+    rep.meta.goplusRaw = gp?.raw || null;
+    rep.meta.holdersReturned = gp?.holdersReturned ?? null;
+    rep.meta.top10ConcentrationPct = gp?.top10ConcentrationPct ?? null;
+
+    // ✅ NEW: "Trading Age" — time since the DEX pair started trading, via
+    // DexScreener's pairCreatedAt. This is NOT the same as token mint time —
+    // a pump.fun-style token can exist on a bonding curve for a while before
+    // any DexScreener-visible pair exists at all, in which case this is simply
+    // absent (null) rather than guessed at.
+    let solAgeDays = null;
+    if (ds?.pairCreatedAt) {
+      const ageMs = Date.now() - Number(ds.pairCreatedAt);
+      if (Number.isFinite(ageMs) && ageMs > 0) solAgeDays = ageMs / 86400000;
+    }
+    rep.meta.tradingAgeDays = solAgeDays;
+
     rep.liq = { any: !!(liqUsd && liqUsd > 0), hint: liqUsd ? "liquidity found" : "none", rows: [] };
     if (Array.isArray(gp?.dex) && gp.dex.length) {
       rep.liq.any = true;
@@ -5228,16 +5272,47 @@ try {
       { type: gp?.closable?"bad":"ok", title: "Closable", value: gp?.closable?"Yes":(gp?"No":"Unknown") },
       { type: gp?.trustedToken?"ok":"warn", title: "Trusted Token", value: gp?.trustedToken?"Yes (GoPlus)":"No/Unknown" },
       { type: gp?.transferFeePct ? (gp.transferFeePct>5?"bad":"warn") : "ok", title: "Transfer Fee",
-        value: (gp?.transferFeePct !== null && gp?.transferFeePct !== undefined) ? `${gp.transferFeePct.toFixed(2)}%` : "0% / Unknown" },
+        value: (gp?.transferFeePct !== null && gp?.transferFeePct !== undefined) ? `${gp.transferFeePct.toFixed(2)}%` : "Unknown" },
       { type: gp?.topHolderPct==null?"warn":gp.topHolderPct>=30?"bad":gp.topHolderPct>=15?"warn":"ok", title: "Top Holder",
         value: gp?.topHolderPct!=null ? `${gp.topHolderPct.toFixed(1)}% (incl. possible LP)` : "Unknown" },
       { type: rep.liq.any?"ok":(cex?.listed?"warn":"bad"), title: "Liquidity",
         value: liqUsd ? `~$${Number(liqUsd).toLocaleString(undefined,{maximumFractionDigits:0})}` : (rep.liq.any?"Found":"No/Unknown") },
       { type: cex?.listed?"ok":"warn", title: "CEX Listed",
         value: cex?.listed ? (cex.exchanges.slice(0,3).join(", ")||"Yes") : "Not found" },
+      // ── NEW: aggregate holder concentration (top-10, not just top-1) ──
+      ...(gp?.top10ConcentrationPct != null ? [{
+        type: gp.top10ConcentrationPct>=60?"bad":gp.top10ConcentrationPct>=40?"warn":"ok",
+        title: "Top 10 Holders",
+        value: `${gp.top10ConcentrationPct.toFixed(1)}% (${gp.holdersReturned} wallets, may incl. LP)`
+      }] : []),
+      // ── NEW: trading age (pair-creation based, see note above) ──
+      ...(solAgeDays != null ? [{
+        type: solAgeDays < 1 ? "bad" : solAgeDays < 7 ? "warn" : "ok",
+        title: "Trading Age",
+        value: (() => {
+          if (solAgeDays < 1) return `${Math.max(0, Math.round(solAgeDays*24))}h ⚠️`;
+          if (solAgeDays < 30) return `${Math.floor(solAgeDays)}d`;
+          return `${Math.floor(solAgeDays/30)}mo`;
+        })()
+      }] : []),
       ...(ds?.priceChange24h != null ? [{
         type: ds.priceChange24h < -30 ? "bad" : ds.priceChange24h > 0 ? "ok" : "warn",
         title: "Price 24h", value: `${ds.priceChange24h > 0 ? "+" : ""}${ds.priceChange24h.toFixed(1)}%`
+      }] : []),
+      // ── NEW: volume + txns (data was already fetched via DexScreener, just not shown) ──
+      ...(ds?.volumeUsd24h != null ? [{
+        type: ds.volumeUsd24h < 1000 ? "bad" : ds.volumeUsd24h < 10000 ? "warn" : "ok",
+        title: "Vol 24h",
+        value: ds.volumeUsd24h >= 1000000
+          ? `$${(ds.volumeUsd24h/1000000).toFixed(1)}M`
+          : ds.volumeUsd24h >= 1000
+            ? `$${(ds.volumeUsd24h/1000).toFixed(0)}K`
+            : `$${ds.volumeUsd24h.toFixed(0)}`
+      }] : []),
+      ...(ds?.txns24h > 0 ? [{
+        type: ds.txns24h < 10 ? "bad" : ds.txns24h < 100 ? "warn" : "ok",
+        title: "Txns 24h",
+        value: ds.txns24h.toLocaleString()
       }] : [])
     ];
 
@@ -5252,7 +5327,9 @@ try {
 
   function render(rep){
   const sym = rep.meta?.symbol || "Token";
-  const nm = rep.meta?.name ? ` — ${rep.meta.name}` : "";
+  // ✅ FIX: avoid "Sym — — Name" when symbol and name are identical (common on Solana)
+  const nmRaw = String(rep.meta?.name || "").trim();
+  const nm = (nmRaw && nmRaw !== sym) ? ` — ${nmRaw}` : "";
 
 
       // ✅ compute supply inside render (no TDZ, safe for cached rep)
@@ -5277,7 +5354,7 @@ try {
 out.innerHTML = `
   <div class="qs-result-card">
     <div class="qs-result-name">
-      ${qsEscapeHtml(sym)} — ${qsEscapeHtml(nm)}
+      ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}
       <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}</span>
     </div>
     <div class="qs-result-meta">
