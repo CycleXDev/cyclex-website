@@ -4041,7 +4041,12 @@ const read = _getRP ? _getRP(net) : null;
         totalSupply: d?.total_supply ?? null,
         trustedToken: d?.trusted_token === "1" || d?.trusted_token === 1,
         nonTransferable: d?.non_transferable === "1" || d?.non_transferable === 1,
-        creatorMalicious: flaggedMalicious(d?.creator),
+        // ✅ FIX (confirmed via live response): GoPlus returns "creators" as an
+        // ARRAY, not a single "creator" object. The old code checked a field
+        // that never existed, so this flag silently never fired.
+        creatorMalicious: Array.isArray(d?.creators)
+          ? d.creators.some(c => c?.malicious_address === "1" || c?.malicious_address === 1)
+          : false,
         mintable: active(d?.mintable),
         mintAuthorityMalicious: flaggedMalicious(d?.mintable?.authority),
         freezable: active(d?.freezable),
@@ -5222,10 +5227,43 @@ try {
     if (ds?.volumeUsd24h != null && ds.volumeUsd24h < 1000) marketScore -= 10;
     marketScore = qsClamp(Math.round(marketScore), 0, 100);
 
+    // ✅ Moved up (was computed after the score): needed by the guardrail below.
+    let solAgeDays = null;
+    if (ds?.pairCreatedAt) {
+      const ageMs = Date.now() - Number(ds.pairCreatedAt);
+      if (Number.isFinite(ageMs) && ageMs > 0) solAgeDays = ageMs / 86400000;
+    }
+    const liqAnyForGuard = !!(liqUsd && liqUsd > 0) || (Array.isArray(gp?.dex) && gp.dex.length > 0);
+    const holdersUnknown = (gp?.holdersReturned == null || gp?.holdersReturned === 0);
+
     let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
     if (hardBad) score = 3;
     score = qsClamp(score, 0, 100);
-    const overallText = score >= 85 ? "Good" : score >= 70 ? "Mixed signals" : score >= 50 ? "Caution" : "High risk";
+
+    // ✅ NEW GUARDRAIL: "data blackout" hard cap.
+    // A token that is (a) less than 24h old, (b) has no liquidity signal, and
+    // (c) has no holder data yet, has not been shown to be safe — GoPlus simply
+    // hasn't had time to index it. "Nothing bad detected" is not the same as
+    // "confirmed clean" in this window, and this exact window (mint → first
+    // hours, before indexers or holders exist) is where most pump.fun-style
+    // rugs happen. Don't let the score imply more confidence than we actually have.
+    //
+    // ⚠️ Important honesty note: this same state also happens to a genuinely GOOD
+    // project's token in its first hours (bonding-curve phase, before graduation
+    // to a real AMM pool). The cap below is deliberately kept — a real project
+    // will move past this window on its own within hours/days as liquidity and
+    // holders appear — but the LABEL is kept distinct from a confirmed-dangerous
+    // token below, so we never falsely imply "we found proof this is bad" when
+    // the honest truth is "we don't have enough information yet".
+    const dataBlackout = !hardBad && solAgeDays != null && solAgeDays < 1 && !liqAnyForGuard && holdersUnknown;
+    if (dataBlackout && score > 44) {
+      score = 44;
+      rep.redFlags.push("Token is under 24h old with no liquidity signal and no holder data available yet — too early to assess either way. This is not proof of a scam, but treat it with maximum caution until more data exists (usually within hours to a day or two for a real project).");
+    }
+
+    const overallText = dataBlackout
+      ? "Too Early To Tell"
+      : (score >= 85 ? "Good" : score >= 70 ? "Mixed signals" : score >= 50 ? "Caution" : "High risk");
 
     rep.score = score;
     rep.overallText = overallText;
@@ -5234,24 +5272,14 @@ try {
     rep.meta.cexListed = !!cex?.listed;
     rep.meta.cexExchanges = cex?.exchanges || [];
     rep.meta.liquidityUsdEst = liqUsd;
+    rep.meta.tradingAgeDays = solAgeDays;
+    rep.meta.dataBlackout = dataBlackout;
 
     // ✅ NEW: expose GoPlus's raw response + holder aggregates so "Copy JSON" can
     // actually be used to diagnose gaps (e.g. why a field came back "Unknown").
     rep.meta.goplusRaw = gp?.raw || null;
     rep.meta.holdersReturned = gp?.holdersReturned ?? null;
     rep.meta.top10ConcentrationPct = gp?.top10ConcentrationPct ?? null;
-
-    // ✅ NEW: "Trading Age" — time since the DEX pair started trading, via
-    // DexScreener's pairCreatedAt. This is NOT the same as token mint time —
-    // a pump.fun-style token can exist on a bonding curve for a while before
-    // any DexScreener-visible pair exists at all, in which case this is simply
-    // absent (null) rather than guessed at.
-    let solAgeDays = null;
-    if (ds?.pairCreatedAt) {
-      const ageMs = Date.now() - Number(ds.pairCreatedAt);
-      if (Number.isFinite(ageMs) && ageMs > 0) solAgeDays = ageMs / 86400000;
-    }
-    rep.meta.tradingAgeDays = solAgeDays;
 
     rep.liq = { any: !!(liqUsd && liqUsd > 0), hint: liqUsd ? "liquidity found" : "none", rows: [] };
     if (Array.isArray(gp?.dex) && gp.dex.length) {
@@ -5261,10 +5289,32 @@ try {
         target: "pool", ok: true,
         note: p?.tvl ? `TVL: $${Number(p.tvl).toLocaleString(undefined,{maximumFractionDigits:0})}` : ""
       }));
+    } else if (ds && (ds.pairAddress || ds.dexId)) {
+      // ✅ NEW: fallback to DexScreener when GoPlus's "dex" field is empty —
+      // confirmed empirically (via live JSON) that this happens even when
+      // DexScreener itself has found real trading activity for the token.
+      // Deliberately does NOT set rep.liq.any = true here: that flag stays
+      // tied to real pooled liquidity (liqUsd > 0) only, so this doesn't
+      // quietly weaken the "data blackout" guardrail above — a pair existing
+      // is not the same as pooled liquidity existing.
+      rep.liq.rows = [{
+        addr: ds.pairAddress || "",
+        type: ds.dexId ? String(ds.dexId) : "DEX (via DexScreener)",
+        target: "pool",
+        ok: !!(liqUsd && liqUsd > 0),
+        note: (liqUsd && liqUsd > 0)
+          ? `Liquidity: ~$${Number(liqUsd).toLocaleString(undefined,{maximumFractionDigits:0})}`
+          : "Liquidity not reported (possibly bonding-curve / pre-graduation)"
+      }];
     }
 
     rep.mini = [
       { type: score>=85?"ok":score>=70?"warn":score>=50?"warn":"bad", title: "Overall", value: overallText },
+      ...(dataBlackout ? [{
+        type: "bad",
+        title: "Data Confidence",
+        value: "Not enough data yet — not proof of a scam, but treat with max caution"
+      }] : []),
       { type: contractScore>=85?"ok":contractScore>=70?"warn":"bad", title: "Contract Score", value: String(contractScore) },
       { type: marketScore>=85?"ok":marketScore>=70?"warn":"bad", title: "Market Score", value: String(marketScore) },
       { type: gp?.mintable?"bad":"ok", title: "Mint Authority", value: gp?.mintable?"Active":(gp?"Renounced/None":"Unknown") },
