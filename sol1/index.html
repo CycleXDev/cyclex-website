@@ -4119,8 +4119,22 @@ const read = _getRP ? _getRP(net) : null;
   // =========================
   // Solana on-chain RPC layer (lightweight, mirrors the existing EVM
   // rpcRequest() pattern — plain JSON-RPC over fetch, no SDK needed)
+  //
+  // ⚠️ Honesty note (confirmed against Solana's own docs, solana.com/docs/rpc):
+  // "Public RPC endpoints are shared infrastructure and are not intended for
+  // production applications... may return 429 when you exceed rate limits and
+  // 403 when traffic is blocked." This is EXPECTED behavior for these free,
+  // no-key endpoints — not a bug when one (or all) of them reject a request.
+  // qsFetchSolanaHolderDistribution() already degrades gracefully to null in
+  // that case, and the scan correctly falls back to GoPlus's holder data (or
+  // shows "Unknown" if that's empty too) — never crashes either way.
+  // Treat this as a best-effort enhancement, not a guaranteed data source.
+  // A more reliable long-term fix would mirror the EVM "Private RPC" input
+  // pattern — let power users paste their own Solana RPC URL (e.g. from
+  // Helius/QuickNode) for consistent results.
   // =========================
   const SOLANA_RPCS = [
+    "https://rpc.solanatracker.io/public", // newer, less universally hammered than the big 3 below
     "https://api.mainnet-beta.solana.com",
     "https://solana-rpc.publicnode.com",
     "https://rpc.ankr.com/solana"
