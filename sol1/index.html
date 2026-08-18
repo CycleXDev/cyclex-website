@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3515,6 +3517,12 @@ function initPanels() {
 
   const QS_DS_CHAIN = { bsc: "bsc", eth: "ethereum", polygon: "polygon", solana: "solana" };
 
+  // ✅ FIX: DexScreener's response includes baseToken.name/symbol, which
+  // wasn't being captured — meaning if GoPlus Solana data is unavailable
+  // for a token (common for very new/low-cap tokens GoPlus hasn't indexed
+  // yet — this is a real coverage gap in a third-party service, not a bug),
+  // the report had zero fallback and showed a bare "Token" placeholder even
+  // though DexScreener clearly had the real name/symbol the whole time.
   async function qsFetchDexScreener(net, token) {
     try {
       const chain = QS_DS_CHAIN[net];
@@ -3541,7 +3549,10 @@ function initPanels() {
         pairCount:      pairs.length,
         dexId:          best?.dexId || null,
         pairAddress:    best?.pairAddress || null,
-        pairCreatedAt:  Number.isFinite(Number(best?.pairCreatedAt)) ? Number(best.pairCreatedAt) : null
+        pairCreatedAt:  Number.isFinite(Number(best?.pairCreatedAt)) ? Number(best.pairCreatedAt) : null,
+        // ✅ NEW
+        symbol:         best?.baseToken?.symbol ? String(best.baseToken.symbol).trim() : null,
+        name:           best?.baseToken?.name ? String(best.baseToken.name).trim() : null
       };
     } catch { return null; }
   }
@@ -3604,6 +3615,12 @@ function initPanels() {
     }
   }
 
+  // ✅ FIX: had zero logging (unlike its EVM counterpart qsFetchGoPlus and
+  // qsFetchCexListing, both already fixed with logging) — every failure
+  // path here was completely silent, making it impossible to tell from the
+  // console whether GoPlus genuinely has no data for a token (common for
+  // very new/low-cap Solana tokens — a real coverage gap, not a bug) versus
+  // a network error, bad status, or malformed response.
   async function qsFetchGoPlusSolana(token) {
     const addr = String(token || "").trim();
     if (!addr) return null;
@@ -3613,12 +3630,12 @@ function initPanels() {
     try {
       const res = await fetch(url, { signal: ctrl.signal });
       clearTimeout(tmr);
-      if (!res.ok) return null;
+      if (!res.ok) { console.error("GoPlus Solana call failed, status:", res.status); return null; }
       const j = await res.json();
-      if (j?.code !== 1) return null;
+      if (j?.code !== 1) { console.error("GoPlus Solana call returned non-1 code:", JSON.stringify(j).slice(0, 200)); return null; }
       const result = j?.result || {};
       const d = result[addr] || result[Object.keys(result)[0]];
-      if (!d) return null;
+      if (!d) { console.error("GoPlus Solana call succeeded but returned no data for this address — likely not indexed yet (common for very new/low-cap tokens)."); return null; }
       const active = (o) => o && (o.status === "1" || o.status === 1);
       const anyMalicious = (arr) => Array.isArray(arr) && arr.some(o => o?.malicious_address === "1" || o?.malicious_address === 1);
       const firstAddress = (arr) => (Array.isArray(arr) && arr[0]?.address) ? String(arr[0].address) : null;
@@ -3663,8 +3680,9 @@ function initPanels() {
         dex: Array.isArray(d?.dex) ? d.dex : [],
         raw: d
       };
-    } catch {
+    } catch (e) {
       clearTimeout(tmr);
+      console.error("qsFetchGoPlusSolana threw:", e?.message || e);
       return null;
     }
   }
@@ -4629,10 +4647,23 @@ function initPanels() {
       return;
     }
 
-    rep.meta.symbol = gp?.symbol || "";
-    rep.meta.name = gp?.name || "";
+    // ✅ FIX: symbol/name now fall back to DexScreener's baseToken data when
+    // GoPlus has nothing (common for very new/low-cap tokens GoPlus hasn't
+    // indexed yet) — previously showed a bare "Token" placeholder even when
+    // DexScreener clearly had the real name/symbol the whole time.
+    rep.meta.symbol = gp?.symbol || ds?.symbol || "";
+    rep.meta.name = gp?.name || ds?.name || "";
     rep.meta.totalSupply = null;
     rep.meta.supplyUiDisplay = solHolders?.supplyUi ?? null;
+    // ✅ NEW: surfaced clearly rather than leaving the person to infer it
+    // from a wall of individual "Unknown" chips (mint/freeze/closable/
+    // transfer fee/transfer hook/trusted token all come from GoPlus only —
+    // there's no on-chain fallback for these on Solana the way there is for
+    // holder distribution).
+    rep.meta.goplusUnavailable = !gp;
+    if (!gp) {
+      rep.redFlags.push("GoPlus security data isn't available yet for this token (common for very new or low-liquidity tokens) — mint/freeze authority, closable, transfer fee/hook, and trusted-token checks below could not be verified. Liquidity, price, and volume data below still comes from DexScreener independently.");
+    }
 
     const effTopHolderPct = solHolders?.topHolderPct ?? gp?.topHolderPct ?? null;
     const effTop10Pct = solHolders?.top10Pct ?? gp?.top10ConcentrationPct ?? null;
@@ -4641,6 +4672,15 @@ function initPanels() {
 
     let contractScore = 75;
     const hardBad = !!(gp?.creatorMalicious || gp?.mintAuthorityMalicious || gp?.freezeAuthorityMalicious || gp?.nonTransferable || gp?.transferHookMalicious);
+
+    // ✅ FIX: without this, a token GoPlus hasn't indexed at all (zero
+    // mint/freeze/closable/transfer-fee/transfer-hook checks actually
+    // performed) landed on exactly the same 75 baseline as a token that WAS
+    // checked and came back clean — "we don't know" was scoring identically
+    // to "we checked and it's fine". A modest uncertainty penalty now
+    // reflects that genuine gap instead of giving an unverified token a
+    // free pass.
+    if (!gp) contractScore -= 15;
 
     if (gp?.nonTransferable) rep.redFlags.push("Token is marked non-transferable — it may not be sellable at all.");
     if (gp?.creatorMalicious) rep.redFlags.push("Creator address is flagged as malicious by GoPlus.");
@@ -4803,13 +4843,18 @@ function initPanels() {
       // ✅ NEW: parity with the EVM "Data Coverage" chip — how much info we
       // actually found, not a safety score.
       { type: solDataCoverage === "high" ? "ok" : "warn", title: "Data Coverage", value: `${solDataCoverage} (how much info we found — not a safety score)` },
-      { type: gp?.mintable?"bad":"ok", title: "Mint Authority", value: gp?.mintable?"Active":(gp?"Renounced/None":"Unknown") },
-      { type: gp?.freezable?"bad":"ok", title: "Freeze Authority", value: gp?.freezable?"Active":(gp?"Renounced/None":"Unknown") },
-      { type: gp?.closable?"bad":"ok", title: "Closable", value: gp?.closable?"Yes":(gp?"No":"Unknown") },
+      // ✅ FIX: these previously colored the chip "ok" (green) whenever gp
+      // was null, even though the text correctly said "Unknown" — a green
+      // dot next to "Unknown" reads as "checked, safe" when it should read
+      // as "not checked at all". Now explicitly "warn" (yellow) when gp is
+      // unavailable, only "ok" when GoPlus actually confirmed a clean result.
+      { type: !gp ? "warn" : (gp.mintable?"bad":"ok"), title: "Mint Authority", value: gp?.mintable?"Active":(gp?"Renounced/None":"Unknown") },
+      { type: !gp ? "warn" : (gp.freezable?"bad":"ok"), title: "Freeze Authority", value: gp?.freezable?"Active":(gp?"Renounced/None":"Unknown") },
+      { type: !gp ? "warn" : (gp.closable?"bad":"ok"), title: "Closable", value: gp?.closable?"Yes":(gp?"No":"Unknown") },
       { type: gp?.trustedToken?"ok":"warn", title: "Trusted Token", value: gp?.trustedToken?"Yes (GoPlus)":"No/Unknown" },
-      { type: gp?.transferFeePct ? (gp.transferFeePct>5?"bad":"warn") : "ok", title: "Transfer Fee",
+      { type: !gp ? "warn" : (gp.transferFeePct ? (gp.transferFeePct>5?"bad":"warn") : "ok"), title: "Transfer Fee",
         value: (gp?.transferFeePct !== null && gp?.transferFeePct !== undefined) ? `${gp.transferFeePct.toFixed(2)}%` : "Unknown" },
-      { type: gp?.transferHookMalicious?"bad":gp?.transferHookAttached?"warn":"ok", title: "Transfer Hook",
+      { type: !gp ? "warn" : (gp.transferHookMalicious?"bad":gp.transferHookAttached?"warn":"ok"), title: "Transfer Hook",
         value: gp?.transferHookMalicious ? "⚠️ Attached (flagged malicious)" : gp?.transferHookAttached ? "Attached (review it)" : (gp?"None detected":"Unknown") },
       ...(gp?.defaultAccountStateFrozen ? [{ type: "bad", title: "New Accounts", value: "May start frozen (best-effort signal)" }] : []),
       { type: effTopHolderPct==null?"warn":effTopHolderPct>=30?"bad":effTopHolderPct>=15?"warn":"ok", title: "Top Holder",
