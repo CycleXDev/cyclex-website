@@ -3744,6 +3744,69 @@ function initPanels() {
     throw lastErr || new Error("All Solana RPCs failed");
   }
 
+  // ✅ NEW: reads Mint Authority, Freeze Authority, and Supply directly from
+  // the token's on-chain Mint account — completely independent of GoPlus.
+  // This is the canonical, most authoritative source for these 3 fields:
+  // it's literally the same raw data GoPlus (or any other scanner) would
+  // have derived their own mint/freeze/supply analysis from in the first
+  // place. Uses the standard, stable SPL Token Program Mint account layout
+  // (82 bytes: 4-byte option-tag + 32-byte pubkey for mint authority, 8-byte
+  // little-endian supply, 1-byte decimals, 1-byte initialized flag, then
+  // another 4-byte option-tag + 32-byte pubkey for freeze authority) — this
+  // layout is foundational to SPL Token and has been stable for years.
+  // Token-2022 mints with extensions can be longer than 82 bytes; the first
+  // 82 bytes of a Token-2022 mint follow the same base layout, so this still
+  // reads correctly even though it won't decode any extension-specific data.
+  function qsBase58Encode(bytes) {
+    const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    if (!bytes || !bytes.length) return "";
+    let num = 0n;
+    for (let i = 0; i < bytes.length; i++) num = (num << 8n) | BigInt(bytes[i]);
+    let out = "";
+    while (num > 0n) {
+      const rem = num % 58n;
+      out = ALPHABET[Number(rem)] + out;
+      num = num / 58n;
+    }
+    for (let i = 0; i < bytes.length && bytes[i] === 0; i++) out = "1" + out;
+    return out || "1";
+  }
+
+  async function qsFetchSolanaMintInfo(token) {
+    try {
+      const res = await solanaRpcRequest("getAccountInfo", [token, { encoding: "base64" }], 9000);
+      const dataArr = res?.value?.data;
+      if (!Array.isArray(dataArr) || !dataArr[0]) return null;
+      const binaryStr = atob(dataArr[0]);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+      if (bytes.length < 82) return null; // not a standard Mint account layout
+
+      function readPubkeyOption(offset) {
+        const tag = bytes[offset] | (bytes[offset+1] << 8) | (bytes[offset+2] << 16) | (bytes[offset+3] << 24);
+        if (tag === 0) return null; // None = renounced / never set
+        return qsBase58Encode(bytes.slice(offset + 4, offset + 36));
+      }
+
+      const mintAuthority = readPubkeyOption(0);
+      let supplyBig = 0n;
+      for (let i = 0; i < 8; i++) supplyBig |= BigInt(bytes[36 + i]) << BigInt(8 * i);
+      const decimals = bytes[44];
+      const freezeAuthority = readPubkeyOption(46);
+
+      return {
+        mintAuthority,     // null = renounced/none (verified on-chain)
+        freezeAuthority,   // null = renounced/none (verified on-chain)
+        decimals,
+        supplyRaw: supplyBig.toString(),
+        supplyUi: decimals != null ? Number(supplyBig) / Math.pow(10, decimals) : null
+      };
+    } catch (e) {
+      console.error("qsFetchSolanaMintInfo threw:", e?.message || e);
+      return null;
+    }
+  }
+
   async function qsFetchSolanaHolderDistribution(token) {
     try {
       const [largest, supply] = await Promise.all([
@@ -4625,16 +4688,20 @@ function initPanels() {
       mini: [], redFlags: [], json: ""
     };
 
-    const [gpS, dsS, cexS, solHoldersS] = await Promise.allSettled([
+    const [gpS, dsS, cexS, solHoldersS, mintInfoS] = await Promise.allSettled([
       qsFetchGoPlusSolana(token),
       qsFetchDexScreener("solana", token),
       qsFetchCexListing("solana", token),
-      qsFetchSolanaHolderDistribution(token)
+      qsFetchSolanaHolderDistribution(token),
+      qsFetchSolanaMintInfo(token)
     ]);
     const gp  = gpS.status  === "fulfilled" ? gpS.value  : null;
     const ds  = dsS.status  === "fulfilled" ? dsS.value  : null;
     const cex = cexS.status === "fulfilled" ? cexS.value : { listed:false, exchanges:[] };
     const solHolders = solHoldersS.status === "fulfilled" ? solHoldersS.value : null;
+    // ✅ NEW: on-chain Mint Authority / Freeze Authority / Supply — the
+    // canonical source, independent of GoPlus entirely.
+    const mintInfo = mintInfoS.status === "fulfilled" ? mintInfoS.value : null;
 
     if (!gp && !ds) {
       rep.redFlags.push("Could not retrieve any Solana security/market data for this address.");
@@ -4654,15 +4721,33 @@ function initPanels() {
     rep.meta.symbol = gp?.symbol || ds?.symbol || "";
     rep.meta.name = gp?.name || ds?.name || "";
     rep.meta.totalSupply = null;
-    rep.meta.supplyUiDisplay = solHolders?.supplyUi ?? null;
+    // ✅ FIX: supply now also falls back to the on-chain Mint account read
+    // (qsFetchSolanaMintInfo, via getAccountInfo) — a second, independent
+    // RPC-based source alongside the existing getTokenSupply-based one, so
+    // a hiccup in either single call doesn't leave supply blank.
+    rep.meta.supplyUiDisplay = solHolders?.supplyUi ?? mintInfo?.supplyUi ?? null;
+
+    // ✅ NEW: Mint Authority / Freeze Authority now read from the on-chain
+    // Mint account FIRST (qsFetchSolanaMintInfo) — the canonical source,
+    // completely independent of GoPlus — and only fall back to GoPlus's
+    // boolean-only signal if the on-chain read didn't succeed. `null` means
+    // "verified renounced on-chain", a real address string means "verified
+    // active on-chain with this specific authority address".
+    const effMintActive = mintInfo ? (mintInfo.mintAuthority !== null) : (gp ? !!gp.mintable : null);
+    const effMintAuthorityAddr = mintInfo?.mintAuthority ?? null;
+    const effMintSource = mintInfo ? "on-chain" : (gp ? "GoPlus" : null);
+    const effFreezeActive = mintInfo ? (mintInfo.freezeAuthority !== null) : (gp ? !!gp.freezable : null);
+    const effFreezeAuthorityAddr = mintInfo?.freezeAuthority ?? null;
+    const effFreezeSource = mintInfo ? "on-chain" : (gp ? "GoPlus" : null);
+
     // ✅ NEW: surfaced clearly rather than leaving the person to infer it
-    // from a wall of individual "Unknown" chips (mint/freeze/closable/
-    // transfer fee/transfer hook/trusted token all come from GoPlus only —
-    // there's no on-chain fallback for these on Solana the way there is for
-    // holder distribution).
+    // from a wall of individual "Unknown" chips. Mint/Freeze Authority no
+    // longer depend solely on GoPlus (see above), so this note is now
+    // scoped to the fields that genuinely have no on-chain fallback:
+    // closable, transfer fee/hook, and trusted-token status.
     rep.meta.goplusUnavailable = !gp;
     if (!gp) {
-      rep.redFlags.push("GoPlus security data isn't available yet for this token (common for very new or low-liquidity tokens) — mint/freeze authority, closable, transfer fee/hook, and trusted-token checks below could not be verified. Liquidity, price, and volume data below still comes from DexScreener independently.");
+      rep.redFlags.push("GoPlus security data isn't available yet for this token (common for very new or low-liquidity tokens) — closable, transfer fee/hook, and trusted-token checks below could not be verified. Mint/Freeze Authority above are read directly from the blockchain independently of GoPlus. Liquidity, price, and volume data below also comes from DexScreener independently.");
     }
 
     const effTopHolderPct = solHolders?.topHolderPct ?? gp?.topHolderPct ?? null;
@@ -4673,14 +4758,15 @@ function initPanels() {
     let contractScore = 75;
     const hardBad = !!(gp?.creatorMalicious || gp?.mintAuthorityMalicious || gp?.freezeAuthorityMalicious || gp?.nonTransferable || gp?.transferHookMalicious);
 
-    // ✅ FIX: without this, a token GoPlus hasn't indexed at all (zero
-    // mint/freeze/closable/transfer-fee/transfer-hook checks actually
-    // performed) landed on exactly the same 75 baseline as a token that WAS
-    // checked and came back clean — "we don't know" was scoring identically
-    // to "we checked and it's fine". A modest uncertainty penalty now
-    // reflects that genuine gap instead of giving an unverified token a
-    // free pass.
-    if (!gp) contractScore -= 15;
+    // ✅ FIX: reduced from a flat -15 whenever GoPlus was missing — now that
+    // Mint/Freeze Authority are independently verified on-chain (see above),
+    // a missing GoPlus response is a smaller gap than before (2 of the ~7
+    // GoPlus-derived checks are covered another way). Still penalized,
+    // since closable/transfer-fee/transfer-hook/trusted-token remain
+    // GoPlus-only with no on-chain fallback — just less harshly than a
+    // token where we truly have zero verification of anything.
+    if (!gp && !mintInfo) contractScore -= 15;
+    else if (!gp) contractScore -= 8;
 
     if (gp?.nonTransferable) rep.redFlags.push("Token is marked non-transferable — it may not be sellable at all.");
     if (gp?.creatorMalicious) rep.redFlags.push("Creator address is flagged as malicious by GoPlus.");
@@ -4688,11 +4774,26 @@ function initPanels() {
     if (gp?.freezeAuthorityMalicious) rep.redFlags.push("Freeze authority address is flagged as malicious.");
     if (gp?.transferHookMalicious) rep.redFlags.push("Transfer hook program is flagged as malicious — it can run arbitrary code on every transfer.");
 
-    if (gp?.mintable)  { contractScore -= 22; rep.redFlags.push("Mint authority is active — supply can be increased at any time."); }
-    if (gp?.freezable) { contractScore -= 18; rep.redFlags.push("Freeze authority is active — holder accounts can be frozen."); }
+    // ✅ FIX: now scores off effMintActive/effFreezeActive (on-chain first,
+    // GoPlus fallback) instead of gp?.mintable/gp?.freezable directly — a
+    // token can now be correctly penalized for an active mint/freeze
+    // authority even when GoPlus itself has no data for it.
+    if (effMintActive === true) {
+      contractScore -= 22;
+      rep.redFlags.push(effMintSource === "on-chain"
+        ? `Mint authority is active (verified on-chain: ${effMintAuthorityAddr}) — supply can be increased at any time.`
+        : "Mint authority is active — supply can be increased at any time.");
+    }
+    if (effFreezeActive === true) {
+      contractScore -= 18;
+      rep.redFlags.push(effFreezeSource === "on-chain"
+        ? `Freeze authority is active (verified on-chain: ${effFreezeAuthorityAddr}) — holder accounts can be frozen.`
+        : "Freeze authority is active — holder accounts can be frozen.");
+    }
     if (gp?.closable)  { contractScore -= 15; rep.redFlags.push("Token program can be closed — could eliminate all assets."); }
     if (gp?.balanceMutable) { contractScore -= 15; rep.redFlags.push("Balances can reportedly be altered by an authority."); }
     if (gp?.metadataMutable) contractScore -= 4;
+
 
     if (gp?.transferHookAttached && !gp?.transferHookMalicious) {
       contractScore -= 15;
@@ -4848,8 +4949,16 @@ function initPanels() {
       // dot next to "Unknown" reads as "checked, safe" when it should read
       // as "not checked at all". Now explicitly "warn" (yellow) when gp is
       // unavailable, only "ok" when GoPlus actually confirmed a clean result.
-      { type: !gp ? "warn" : (gp.mintable?"bad":"ok"), title: "Mint Authority", value: gp?.mintable?"Active":(gp?"Renounced/None":"Unknown") },
-      { type: !gp ? "warn" : (gp.freezable?"bad":"ok"), title: "Freeze Authority", value: gp?.freezable?"Active":(gp?"Renounced/None":"Unknown") },
+      // ✅ FIX: now reads effMintActive/effFreezeActive (on-chain first,
+      // GoPlus fallback) instead of gp?.mintable/gp?.freezable directly —
+      // shows real Active/Renounced status (with the actual authority
+      // address when verified on-chain) instead of "Unknown" whenever
+      // GoPlus alone didn't have data, since these 2 fields no longer
+      // depend on GoPlus at all when the RPC call succeeds.
+      { type: effMintActive === null ? "warn" : (effMintActive ? "bad" : "ok"), title: "Mint Authority",
+        value: effMintActive === null ? "Unknown" : (effMintActive ? `Active (${effMintSource}${effMintAuthorityAddr ? ": " + qsShortAddr(effMintAuthorityAddr) : ""})` : `Renounced/None (verified ${effMintSource})`) },
+      { type: effFreezeActive === null ? "warn" : (effFreezeActive ? "bad" : "ok"), title: "Freeze Authority",
+        value: effFreezeActive === null ? "Unknown" : (effFreezeActive ? `Active (${effFreezeSource}${effFreezeAuthorityAddr ? ": " + qsShortAddr(effFreezeAuthorityAddr) : ""})` : `Renounced/None (verified ${effFreezeSource})`) },
       { type: !gp ? "warn" : (gp.closable?"bad":"ok"), title: "Closable", value: gp?.closable?"Yes":(gp?"No":"Unknown") },
       { type: gp?.trustedToken?"ok":"warn", title: "Trusted Token", value: gp?.trustedToken?"Yes (GoPlus)":"No/Unknown" },
       { type: !gp ? "warn" : (gp.transferFeePct ? (gp.transferFeePct>5?"bad":"warn") : "ok"), title: "Transfer Fee",
