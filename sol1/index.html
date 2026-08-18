@@ -3538,7 +3538,8 @@ function initPanels() {
         ? j.pairs.filter(p => (p?.chainId || "").toLowerCase() === chain)
         : [];
       if (!pairs.length) return null;
-      const best = pairs.sort((a,b) => (b?.liquidity?.usd||0) - (a?.liquidity?.usd||0))[0];
+      const sorted = pairs.sort((a,b) => (b?.liquidity?.usd||0) - (a?.liquidity?.usd||0));
+      const best = sorted[0];
       const safeNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
       return {
         priceUsd:       safeNum(best?.priceUsd),
@@ -3550,9 +3551,23 @@ function initPanels() {
         dexId:          best?.dexId || null,
         pairAddress:    best?.pairAddress || null,
         pairCreatedAt:  Number.isFinite(Number(best?.pairCreatedAt)) ? Number(best.pairCreatedAt) : null,
-        // ✅ NEW
         symbol:         best?.baseToken?.symbol ? String(best.baseToken.symbol).trim() : null,
-        name:           best?.baseToken?.name ? String(best.baseToken.name).trim() : null
+        name:           best?.baseToken?.name ? String(best.baseToken.name).trim() : null,
+        // ✅ FIX (major finding): DexScreener's response includes EVERY
+        // indexed pool for this token — the code was fetching all of them
+        // and then throwing away every pair except the single largest one
+        // (`sorted[0]`) before this fix. A token with 9+ real pools across
+        // PumpSwap/Meteora/Orca was showing "1 pool" in the report even
+        // though the full list was sitting right there in the API
+        // response the whole time. Now keeps up to 10, used to build the
+        // full pool table below instead of a single collapsed figure.
+        allPairs: sorted.slice(0, 10).map(p => ({
+          dex:          p?.dexId || "DEX",
+          pairAddress:  p?.pairAddress || "",
+          quoteSymbol:  p?.quoteToken?.symbol || "",
+          liquidityUsd: safeNum(p?.liquidity?.usd),
+          volumeUsd24h: safeNum(p?.volume?.h24)
+        }))
       };
     } catch { return null; }
   }
@@ -3807,14 +3822,29 @@ function initPanels() {
     }
   }
 
-  async function qsFetchSolanaHolderDistribution(token) {
+  // ✅ FIX: accepts an optional pre-fetched supply value so the caller can
+  // skip the redundant getTokenSupply call when qsFetchSolanaMintInfo's
+  // getAccountInfo read (which also returns supply) already succeeded —
+  // reduces concurrent RPC calls hitting the single public endpoint from 2
+  // down to 1 for this function, which matters since a burst of 3
+  // simultaneous calls to a free/public RPC (mint info + largest accounts +
+  // supply) was observed in testing to sometimes let 2 of 3 through while
+  // the 3rd (this one) came back empty.
+  async function qsFetchSolanaHolderDistribution(token, knownSupplyUi = null) {
     try {
-      const [largest, supply] = await Promise.all([
-        solanaRpcRequest("getTokenLargestAccounts", [token]),
-        solanaRpcRequest("getTokenSupply", [token])
-      ]);
+      let largest, supplyUi;
+      if (Number.isFinite(knownSupplyUi) && knownSupplyUi > 0) {
+        largest = await solanaRpcRequest("getTokenLargestAccounts", [token]);
+        supplyUi = knownSupplyUi;
+      } else {
+        const [l, s] = await Promise.all([
+          solanaRpcRequest("getTokenLargestAccounts", [token]),
+          solanaRpcRequest("getTokenSupply", [token])
+        ]);
+        largest = l;
+        supplyUi = Number(s?.value?.uiAmount);
+      }
       const accounts = Array.isArray(largest?.value) ? largest.value : [];
-      const supplyUi = Number(supply?.value?.uiAmount);
       if (!accounts.length || !Number.isFinite(supplyUi) || supplyUi <= 0) return null;
       const rows = accounts.map(a => {
         const ui = Number(a?.uiAmount) || 0;
@@ -4688,20 +4718,27 @@ function initPanels() {
       mini: [], redFlags: [], json: ""
     };
 
-    const [gpS, dsS, cexS, solHoldersS, mintInfoS] = await Promise.allSettled([
+    // ✅ FIX: mintInfo now runs FIRST, alone (a single, fast, essential RPC
+    // call — Mint/Freeze Authority and Supply). Only once that settles do
+    // the remaining calls fire together, and holder-distribution reuses
+    // mintInfo's supply instead of re-fetching it — cuts peak concurrent
+    // requests to the single public RPC endpoint from 3 down to 2, which
+    // testing showed matters (a 3-way burst let 2 of 3 through while the
+    // heaviest one, getTokenLargestAccounts, silently lost out). Adds one
+    // small round-trip of latency in exchange for meaningfully better
+    // reliability on the calls that actually depend on that endpoint.
+    const mintInfo = await qsFetchSolanaMintInfo(token).catch(() => null);
+
+    const [gpS, dsS, cexS, solHoldersS] = await Promise.allSettled([
       qsFetchGoPlusSolana(token),
       qsFetchDexScreener("solana", token),
       qsFetchCexListing("solana", token),
-      qsFetchSolanaHolderDistribution(token),
-      qsFetchSolanaMintInfo(token)
+      qsFetchSolanaHolderDistribution(token, mintInfo?.supplyUi ?? null)
     ]);
     const gp  = gpS.status  === "fulfilled" ? gpS.value  : null;
     const ds  = dsS.status  === "fulfilled" ? dsS.value  : null;
     const cex = cexS.status === "fulfilled" ? cexS.value : { listed:false, exchanges:[] };
     const solHolders = solHoldersS.status === "fulfilled" ? solHoldersS.value : null;
-    // ✅ NEW: on-chain Mint Authority / Freeze Authority / Supply — the
-    // canonical source, independent of GoPlus entirely.
-    const mintInfo = mintInfoS.status === "fulfilled" ? mintInfoS.value : null;
 
     if (!gp && !ds) {
       rep.redFlags.push("Could not retrieve any Solana security/market data for this address.");
@@ -4904,18 +4941,63 @@ function initPanels() {
     rep.meta.holdersReturned = gp?.holdersReturned ?? null;
     rep.meta.top10ConcentrationPct = gp?.top10ConcentrationPct ?? null;
 
+    // ✅ FIX (major finding, from live testing): GoPlus's dex array was
+    // being used as the PRIMARY pool list (capped at 6), with DexScreener
+    // only as a single-pair fallback if GoPlus had nothing — but GoPlus's
+    // list is often far less complete than DexScreener's. A token could
+    // have 9+ real, active pools across PumpSwap/Meteora/Orca that
+    // DexScreener already had, and the report would still show just "1
+    // pool" because GoPlus's own (much shorter) list took priority. Now
+    // DexScreener's full pool list is the primary source (up to 10, sorted
+    // by liquidity) since it's consistently the more complete one in
+    // practice — GoPlus's per-pool LP-lock status is still overlaid onto
+    // matching pools by address where available, since DexScreener doesn't
+    // report lock status at all.
     rep.liq = { any: !!(liqUsd && liqUsd > 0), hint: liqUsd ? "liquidity found" : "none", rows: [] };
-    if (Array.isArray(gp?.dex) && gp.dex.length) {
+    const lpLockNote = (p) => {
+      const truthy = (v) => v === "1" || v === 1 || v === true;
+      if (truthy(p?.is_locked)) return " • LP locked";
+      if (Array.isArray(p?.lp_holders)) {
+        if (p.lp_holders.some(h => truthy(h?.is_locked))) return " • LP locked";
+        if (p.lp_holders.length) return " • LP lock: not detected";
+      }
+      return "";
+    };
+    const gpDexByAddr = new Map();
+    if (Array.isArray(gp?.dex)) {
+      for (const p of gp.dex) {
+        const addr = String(p?.id || "").toLowerCase();
+        if (addr) gpDexByAddr.set(addr, p);
+      }
+    }
+
+    if (Array.isArray(ds?.allPairs) && ds.allPairs.length) {
       rep.liq.any = true;
-      const lpLockNote = (p) => {
-        const truthy = (v) => v === "1" || v === 1 || v === true;
-        if (truthy(p?.is_locked)) return " • LP locked";
-        if (Array.isArray(p?.lp_holders)) {
-          if (p.lp_holders.some(h => truthy(h?.is_locked))) return " • LP locked";
-          if (p.lp_holders.length) return " • LP lock: not detected";
-        }
-        return "";
-      };
+      rep.liq.rows = ds.allPairs.map(p => {
+        const gpMatch = gpDexByAddr.get(String(p.pairAddress || "").toLowerCase());
+        const lockNote = gpMatch ? lpLockNote(gpMatch) : "";
+        const liqTxt = p.liquidityUsd ? `Liquidity: ~$${Number(p.liquidityUsd).toLocaleString(undefined,{maximumFractionDigits:0})}` : "";
+        const volTxt = p.volumeUsd24h ? ` • Vol 24h: ~$${Number(p.volumeUsd24h).toLocaleString(undefined,{maximumFractionDigits:0})}` : "";
+        return {
+          addr: p.pairAddress || "",
+          type: p.quoteSymbol ? `${p.dex} (vs ${p.quoteSymbol})` : p.dex,
+          target: "pool",
+          ok: !!(p.liquidityUsd && p.liquidityUsd > 0),
+          note: `${liqTxt}${volTxt}${lockNote}` || "—"
+        };
+      });
+      // any GoPlus-reported pool DexScreener didn't already cover
+      const coveredAddrs = new Set(ds.allPairs.map(p => String(p.pairAddress || "").toLowerCase()));
+      const extraGpPools = (gp?.dex || []).filter(p => !coveredAddrs.has(String(p?.id || "").toLowerCase()));
+      if (extraGpPools.length) {
+        rep.liq.rows.push(...extraGpPools.slice(0, 4).map(p => ({
+          addr: p?.id || "", type: `${p?.dexname || "DEX"}${p?.type ? " • " + p.type : ""}`,
+          target: "pool", ok: true,
+          note: (p?.tvl ? `TVL: $${Number(p.tvl).toLocaleString(undefined,{maximumFractionDigits:0})}` : "") + lpLockNote(p)
+        })));
+      }
+    } else if (Array.isArray(gp?.dex) && gp.dex.length) {
+      rep.liq.any = true;
       rep.liq.rows = gp.dex.slice(0, 6).map(p => ({
         addr: p?.id || "", type: `${p?.dexname || "DEX"}${p?.type ? " • " + p.type : ""}`,
         target: "pool", ok: true,
