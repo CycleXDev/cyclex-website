@@ -722,6 +722,20 @@
             <input id="qs-token" class="mono" placeholder="0x..." />
           </div>
 
+          <!-- ✅ NEW: optional custom Solana RPC — only shown for net=solana.
+               Public Solana RPCs are unreliable for direct browser use (see
+               qsBindSolanaApiBlockToggle below); this gives visitors who
+               want stronger reliability a place to paste their own, e.g. a
+               free Helius API key endpoint. Falls back to the built-in
+               public endpoint automatically if left empty. -->
+          <div class="field" id="qs-solana-rpc-field" style="display:none">
+            <div class="label">Solana RPC <span class="label-muted">(optional — improves reliability, e.g. a free Helius key)</span></div>
+            <div class="input-btn-row">
+              <input id="qs-solana-rpc" class="mono" placeholder="https://mainnet.helius-rpc.com/?api-key=... (optional)" />
+              <button class="btn btn-ghost" id="qs-solana-rpc-save" style="padding:8px 10px;font-size:11px;flex-shrink:0">Save</button>
+            </div>
+          </div>
+
           <!-- API Keys: toggle+select on row 1, input+save on row 2 -->
           <div class="api-block">
             <div class="api-block-row1">
@@ -3655,16 +3669,40 @@ function initPanels() {
     }
   }
 
+  // ✅ FIX (confirmed via live browser console testing): 3 of the original 4
+  // public Solana RPC endpoints do NOT work for direct browser-origin
+  // requests in practice — api.mainnet-beta.solana.com returns 403 (Solana's
+  // own docs explicitly say not to use this endpoint for production apps),
+  // solana-rpc.publicnode.com blocks with a CORS policy error (no
+  // Access-Control-Allow-Origin header), and rpc.ankr.com/solana's public
+  // tier returns 403. Only rpc.solanatracker.io/public actually works from
+  // a browser. Keeping the 3 broken ones added console error noise and
+  // wasted retry time on every single Solana scan for zero benefit (they
+  // never succeed) — removed rather than left in as dead weight, matching
+  // the same reasoning used for the removed "Mudra" locker entry above.
+  //
+  // This does reduce built-in redundancy to a single working public
+  // endpoint. To compensate, a user-supplied custom Solana RPC field was
+  // added to the UI below (mirrors the existing EVM "Custom RPC" pattern in
+  // the RPC Health Checker panel) — a free Helius API key is the most
+  // reliable option if a visitor wants stronger redundancy.
   const SOLANA_RPCS = [
-    "https://rpc.solanatracker.io/public",
-    "https://api.mainnet-beta.solana.com",
-    "https://solana-rpc.publicnode.com",
-    "https://rpc.ankr.com/solana"
+    "https://rpc.solanatracker.io/public"
   ];
+  function getSolanaCustomRpc(){
+    try { return (localStorage.getItem("cx_sec_solana_custom_rpc") || "").trim(); } catch { return ""; }
+  }
+  function buildSolanaRpcCandidates(){
+    const custom = ($("#qs-solana-rpc")?.value || "").trim() || getSolanaCustomRpc();
+    return custom ? [custom, ...SOLANA_RPCS] : SOLANA_RPCS;
+  }
 
   async function solanaRpcRequest(method, params, timeoutMs = 9000) {
     let lastErr = null;
-    for (const url of SOLANA_RPCS) {
+    // ✅ FIX: now includes the user's custom RPC (if provided) ahead of the
+    // built-in list, matching the EVM RPC panel's existing "custom RPC
+    // takes top priority" pattern.
+    for (const url of buildSolanaRpcCandidates()) {
       const ctrl = new AbortController();
       const tmr = setTimeout(() => ctrl.abort(), timeoutMs);
       try {
@@ -4699,6 +4737,18 @@ function initPanels() {
       ? "Too Early To Tell"
       : (score >= 85 ? "Good" : score >= 70 ? "Mixed signals" : score >= 50 ? "Caution" : "High risk");
 
+    // ✅ NEW: "Data Coverage" for Solana — EVM already has this chip (how
+    // much info we actually found, distinct from the safety score itself),
+    // Solana never got an equivalent. Same points-based approach as EVM's
+    // uiConfidence calculation, adapted to what's actually available here.
+    let solCoveragePoints = 0;
+    if (gp) solCoveragePoints += 2;
+    if (ds) solCoveragePoints += 1;
+    if (effHoldersKnown) solCoveragePoints += 1;
+    if (liqAnyForGuard) solCoveragePoints += 1;
+    if (effTop10Pct != null) solCoveragePoints += 1;
+    const solDataCoverage = solCoveragePoints >= 4 ? "high" : solCoveragePoints >= 2 ? "medium" : "low";
+
     rep.score = score;
     rep.overallText = overallText;
     rep.meta.contractScore = contractScore;
@@ -4750,6 +4800,9 @@ function initPanels() {
       }] : []),
       { type: contractScore>=85?"ok":contractScore>=70?"warn":"bad", title: "Contract Score", value: String(contractScore) },
       { type: marketScore>=85?"ok":marketScore>=70?"warn":"bad", title: "Market Score", value: String(marketScore) },
+      // ✅ NEW: parity with the EVM "Data Coverage" chip — how much info we
+      // actually found, not a safety score.
+      { type: solDataCoverage === "high" ? "ok" : "warn", title: "Data Coverage", value: `${solDataCoverage} (how much info we found — not a safety score)` },
       { type: gp?.mintable?"bad":"ok", title: "Mint Authority", value: gp?.mintable?"Active":(gp?"Renounced/None":"Unknown") },
       { type: gp?.freezable?"bad":"ok", title: "Freeze Authority", value: gp?.freezable?"Active":(gp?"Renounced/None":"Unknown") },
       { type: gp?.closable?"bad":"ok", title: "Closable", value: gp?.closable?"Yes":(gp?"No":"Unknown") },
@@ -4761,8 +4814,18 @@ function initPanels() {
       ...(gp?.defaultAccountStateFrozen ? [{ type: "bad", title: "New Accounts", value: "May start frozen (best-effort signal)" }] : []),
       { type: effTopHolderPct==null?"warn":effTopHolderPct>=30?"bad":effTopHolderPct>=15?"warn":"ok", title: "Top Holder",
         value: effTopHolderPct!=null ? `${effTopHolderPct.toFixed(1)}% (${effHoldersSource || "unknown"} data, may incl. LP)` : "Unknown" },
+      // ✅ FIX: now shows pool count too (up to 6 pools already collected
+      // into rep.liq.rows from GoPlus's dex array above) — was previously
+      // just a single $ figure or "Found" with no indication of how many
+      // pools/DEXes back that number, unlike the EVM chip's pool count.
       { type: rep.liq.any?"ok":(cex?.listed?"warn":"bad"), title: "Liquidity",
-        value: liqUsd ? `~$${Number(liqUsd).toLocaleString(undefined,{maximumFractionDigits:0})}` : (rep.liq.any?"Found":"No/Unknown") },
+        value: (() => {
+          const poolCount = rep.liq?.rows?.length || 0;
+          const poolsTxt = poolCount > 0 ? ` • ${poolCount} pool${poolCount > 1 ? "s" : ""}` : "";
+          if (liqUsd) return `~$${Number(liqUsd).toLocaleString(undefined,{maximumFractionDigits:0})}${poolsTxt}`;
+          if (rep.liq.any) return `Found${poolsTxt}`;
+          return "No/Unknown";
+        })() },
       {
         type: cex?.listed?"ok":"warn", title: "CEX Listed",
         value: cex?.listed
@@ -4917,6 +4980,27 @@ function initPanels() {
       function apply(){ apiBlock.style.display = (netEl.value === "solana") ? "none" : ""; }
       apply();
       netEl.addEventListener("change", apply);
+    })();
+
+    // ✅ NEW: optional custom Solana RPC field — shown only for net=solana,
+    // loaded from / saved to localStorage, mirrors the EVM private-RPC UX.
+    (function qsBindSolanaRpcField(){
+      const netEl = $("#qs-net");
+      const field = $("#qs-solana-rpc-field");
+      const input = $("#qs-solana-rpc");
+      if (!netEl || !field || !input) return;
+      function applyVisibility(){ field.style.display = (netEl.value === "solana") ? "" : "none"; }
+      applyVisibility();
+      netEl.addEventListener("change", applyVisibility);
+      try { input.value = getSolanaCustomRpc(); } catch {}
+      $("#qs-solana-rpc-save")?.addEventListener("click", () => {
+        try {
+          localStorage.setItem("cx_sec_solana_custom_rpc", (input.value || "").trim());
+          setStatus($("#qs-status"), "ok", "Saved custom Solana RPC locally.");
+        } catch {
+          setStatus($("#qs-status"), "warn", "Could not save (localStorage blocked).");
+        }
+      });
     })();
 
     $("#qs-run")?.addEventListener("click", () => {
