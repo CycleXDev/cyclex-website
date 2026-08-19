@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4674,13 +4672,20 @@ function initPanels() {
       ] : []),
       ...(goplus ? [
         { type: goplus.isHoneypot ? "bad" : "ok", title: "Honeypot", value: goplus.isHoneypot ? "⚠️ DETECTED" : "Not detected" },
+        // ✅ FIX: same pattern already fixed for Solana's Transfer Fee — this
+        // whole block only renders when goplus exists, so "Unknown" here
+        // never meant "couldn't check", it meant "GoPlus responded but
+        // didn't report a tax value" (almost always because the token
+        // simply has no tax mechanism). The color already treated a null
+        // value as 0%/safe (`goplus.sellTax ?? 0`) — the text just hadn't
+        // caught up, so a green dot sat next to the word "Unknown".
         {
           type: (() => { const st3 = goplus.sellTax ?? 0; if (st3 > 0.15) return "bad"; if (st3 > 0.05) return "warn"; return "ok"; })(),
-          title: "Sell Tax", value: goplus.sellTax !== null ? `${(goplus.sellTax * 100).toFixed(1)}%` : "Unknown"
+          title: "Sell Tax", value: (goplus.sellTax !== null && goplus.sellTax !== undefined) ? `${(goplus.sellTax * 100).toFixed(1)}%` : "0% (not reported by GoPlus)"
         },
         {
           type: (() => { const bt2 = goplus.buyTax ?? 0; if (bt2 > 0.15) return "bad"; if (bt2 > 0.05) return "warn"; return "ok"; })(),
-          title: "Buy Tax", value: goplus.buyTax !== null ? `${(goplus.buyTax * 100).toFixed(1)}%` : "Unknown"
+          title: "Buy Tax", value: (goplus.buyTax !== null && goplus.buyTax !== undefined) ? `${(goplus.buyTax * 100).toFixed(1)}%` : "0% (not reported by GoPlus)"
         },
         ...(goplus.hiddenOwner ? [{ type: "bad", title: "Hidden Owner", value: "Detected" }] : []),
         ...(goplus.canTakeBackOwnership ? [{ type: "bad", title: "Ownership Risk", value: "Can reclaim" }] : []),
