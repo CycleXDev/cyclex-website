@@ -3175,7 +3175,7 @@ function initPanels() {
     return { any, hint: any ? "liquidity found" : "none", rows };
   }
 
-  function qsRenderLiquidityTable(container, liqRes){
+  function qsRenderLiquidityTable(container, liqRes, footerNote){
     if (!container) return;
     const rows = [...(liqRes?.rows || [])].sort((a, b) => {
       const ao = a?.ok ? 1 : 0;
@@ -3202,6 +3202,16 @@ function initPanels() {
         <div class="cell muted">No pairs/pools detected</div>
       </div>
     `;
+    // ✅ NEW: optional footer caption — used on Solana to make explicit
+    // that LP-lock status isn't available for most pools listed here
+    // (rather than silently omitting it and leaving it ambiguous whether
+    // we checked and found nothing, or never checked at all). Solana AMMs
+    // mostly use NFT-based concentrated liquidity positions rather than
+    // simple fungible LP tokens, so there's no single universal on-chain
+    // check the way there is for BSC/EVM V2 pairs (see qsCheckLpBurned).
+    const footerHtml = footerNote
+      ? `<div class="small muted" style="padding:8px 4px 2px;">${qsEscapeHtml(footerNote)}</div>`
+      : "";
     container.innerHTML = `
       <div id="qsLiqTable" class="table">
         <div class="trow head">
@@ -3212,6 +3222,7 @@ function initPanels() {
         </div>
         ${body}
       </div>
+      ${footerHtml}
     `;
   }
 
@@ -4137,6 +4148,39 @@ function initPanels() {
     const goplus            = goplusSettled.status      === "fulfilled" ? goplusSettled.value        : null;
     const dexscreener       = dexscreenerSettled.status === "fulfilled" ? dexscreenerSettled.value   : null;
 
+    // ✅ NEW: merge in any pool DexScreener knows about that our fixed
+    // 5-factory on-chain scan (Pancake V2/V3, Four.meme, Biswap, ApeSwap,
+    // Bakery) doesn't cover — e.g. a token trading on a smaller/newer DEX
+    // not in that hardcoded list. Same safety-net role this now plays for
+    // Solana, where there's no equivalent on-chain multi-DEX scan at all.
+    // Deduplicated by pair address so an already-found pool isn't listed
+    // twice.
+    if (Array.isArray(dexscreener?.allPairs) && dexscreener.allPairs.length) {
+      const coveredAddrs = new Set((rep.liq?.rows || []).map(r => String(r?.addr || "").toLowerCase()));
+      const extraPools = dexscreener.allPairs.filter(p => !coveredAddrs.has(String(p.pairAddress || "").toLowerCase()));
+      if (extraPools.length) {
+        rep.liq.any = true;
+        rep.liq.rows = [
+          ...(rep.liq?.rows || []),
+          ...extraPools.map(p => ({
+            addr: p.pairAddress || "",
+            type: `${p.dex}${p.quoteSymbol ? " (vs " + p.quoteSymbol + ")" : ""} • via DexScreener`,
+            target: "pool",
+            ok: !!(p.liquidityUsd && p.liquidityUsd > 0),
+            note: p.liquidityUsd
+              ? `Liquidity: ~$${Number(p.liquidityUsd).toLocaleString(undefined,{maximumFractionDigits:0})}${p.volumeUsd24h ? ` • Vol 24h: ~$${Number(p.volumeUsd24h).toLocaleString(undefined,{maximumFractionDigits:0})}` : ""}`
+              : "—"
+          }))
+        ];
+        // ✅ Keep the active-pool count consistent with the merged table —
+        // this feeds both the Data Coverage calculation and the "healthy
+        // liquidity" score bonus further below, so it needs to reflect the
+        // true total, not just the on-chain-factory-scan subset.
+        const newlyActive = extraPools.filter(p => p.liquidityUsd && p.liquidityUsd > 0).length;
+        rep.meta.liqActivePools = Number(rep.meta?.liqActivePools || 0) + newlyActive;
+      }
+    }
+
     // Liquidity lock — run after dexscreener resolves (needs pairAddress)
     let liqLock = null;
     let lpBurnInfo = null;
@@ -4520,8 +4564,17 @@ function initPanels() {
       // much information we found, NOT how safe the token is. The old label
       // could be misread as a safety score, same fix already applied to the bot.
       { type: uiConfidence === "high" ? "ok" : "warn", title: "Data Coverage", value: `${uiConfidence} (how much info we found — not a safety score)` },
-      { type: verified === true ? "ok" : "warn", title: "Verified", value: verified === true ? "Yes" : "No/Unknown" },
-      { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No/Unknown" },
+      // ✅ FIX: same conflation issue just fixed on the Solana side — this
+      // chip only ever gets checked when useApis is true (an explorer API
+      // key is configured); if it's off, verified stays null forever and
+      // showed "No/Unknown", indistinguishable from "we checked and it's
+      // genuinely not verified". Now says explicitly when the check simply
+      // wasn't run at all.
+      { type: verified === true ? "ok" : (useApis ? "warn" : "warn"), title: "Verified",
+        value: verified === true ? "Yes" : (useApis ? "No" : "Not checked (no explorer API key set)") },
+      // "No" here reflects a real, always-performed on-chain check (EIP-1967
+      // storage slot read), so it's a genuine negative — not "unknown".
+      { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No" },
       { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown },
       { type: holderConcType, title: "Holder Concentration", value: holderConcText },
       // ✅ NEW: top-holder chip (distinct from owner-only concentration above).
@@ -5042,9 +5095,21 @@ function initPanels() {
       { type: effFreezeActive === null ? "warn" : (effFreezeActive ? "bad" : "ok"), title: "Freeze Authority",
         value: effFreezeActive === null ? "Unknown" : (effFreezeActive ? `Active (${effFreezeSource}${effFreezeAuthorityAddr ? ": " + qsShortAddr(effFreezeAuthorityAddr) : ""})` : `Renounced/None (verified ${effFreezeSource})`) },
       { type: !gp ? "warn" : (gp.closable?"bad":"ok"), title: "Closable", value: gp?.closable?"Yes":(gp?"No":"Unknown") },
-      { type: gp?.trustedToken?"ok":"warn", title: "Trusted Token", value: gp?.trustedToken?"Yes (GoPlus)":"No/Unknown" },
+      // ✅ FIX: "No/Unknown" conflated two very different situations — GoPlus
+      // genuinely has no data at all (gp is null) vs. GoPlus DID respond and
+      // explicitly said this token isn't on its curated trusted-token list
+      // (a real, checked answer, just not a positive one). Now distinguishes
+      // them in the wording.
+      { type: !gp ? "warn" : (gp.trustedToken ? "ok" : "warn"), title: "Trusted Token",
+        value: !gp ? "Unknown (GoPlus unavailable)" : (gp.trustedToken ? "Yes (GoPlus)" : "Not on GoPlus's trusted list") },
+      // ✅ FIX: showed "Unknown" even when GoPlus DID respond and simply has
+      // no transfer-fee data to report — true for the vast majority of
+      // tokens, since a transfer fee is a Token-2022-only extension that
+      // legacy SPL Token Program tokens (most tokens, including this one)
+      // don't have at all. "Unknown" implied genuine uncertainty about
+      // something that was actually a checked, known "doesn't apply".
       { type: !gp ? "warn" : (gp.transferFeePct ? (gp.transferFeePct>5?"bad":"warn") : "ok"), title: "Transfer Fee",
-        value: (gp?.transferFeePct !== null && gp?.transferFeePct !== undefined) ? `${gp.transferFeePct.toFixed(2)}%` : "Unknown" },
+        value: !gp ? "Unknown (GoPlus unavailable)" : ((gp.transferFeePct !== null && gp.transferFeePct !== undefined) ? `${gp.transferFeePct.toFixed(2)}%` : "None (no fee extension)") },
       { type: !gp ? "warn" : (gp.transferHookMalicious?"bad":gp.transferHookAttached?"warn":"ok"), title: "Transfer Hook",
         value: gp?.transferHookMalicious ? "⚠️ Attached (flagged malicious)" : gp?.transferHookAttached ? "Attached (review it)" : (gp?"None detected":"Unknown") },
       ...(gp?.defaultAccountStateFrozen ? [{ type: "bad", title: "New Accounts", value: "May start frozen (best-effort signal)" }] : []),
@@ -5158,7 +5223,13 @@ function initPanels() {
       chipsWrap.innerHTML = (rep.mini || []).map(x => qsMiniChip(x.type, x.title, x.value)).join("");
     }
     if (pairsWrap){
-      qsRenderLiquidityTable(pairsWrap, rep.liq);
+      qsRenderLiquidityTable(
+        pairsWrap,
+        rep.liq,
+        rep.net === "solana"
+          ? "LP-lock status isn't shown for most pools above — Solana's major DEXes (Meteora, Orca) use NFT-based liquidity positions rather than simple burnable/lockable LP tokens, so there's no single reliable on-chain check the way there is for BSC/Ethereum."
+          : null
+      );
     }
     if (redflagsWrap){
       const flags = Array.isArray(rep.redFlags) ? rep.redFlags : [];
