@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -132,6 +134,24 @@
     flex-shrink:0;
   }
   @keyframes fwDotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+
+  /* ── TELEGRAM BOT BUTTON ─────────────────────── */
+  .btn-telegram{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:7px 14px;border-radius:999px;
+    font-size:11px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;
+    cursor:pointer;white-space:nowrap;text-decoration:none;
+    background:rgba(42,171,238,.10);
+    border:1px solid rgba(42,171,238,.32);
+    color:#5ac8f5;
+    transition:all .2s ease;
+  }
+  .btn-telegram:hover{
+    background:rgba(42,171,238,.18);
+    border-color:rgba(42,171,238,.55);
+    color:#7dd6ff;
+  }
+  .tg-icon{width:12px;height:12px;flex-shrink:0;fill:currentColor}
 
   /* ── HERO ───────────────────────────────────── */
   .hero{position:relative;max-width:1100px;margin:4px auto 16px;padding:6px 0 14px;text-align:center;z-index:1}
@@ -601,6 +621,14 @@
         <span class="fw-dot"></span>
         <span data-i18n="btn_firewall">Firewall</span>
       </a>
+      <!-- ✅ NEW: Telegram bot cross-promotion — same design pattern as the
+           Firewall pill button above (static link, no new JS), just in
+           Telegram's brand blue instead of red so the two are visually
+           distinct at a glance. -->
+      <a href="https://t.me/CyclexScannerBot" class="btn-telegram" target="_blank" rel="noopener">
+        <svg class="tg-icon" viewBox="0 0 24 24"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71l-4.14-3.05-2 1.93c-.24.24-.44.44-.82.44z"/></svg>
+        <span data-i18n="btn_telegram">Bot</span>
+      </a>
       <div class="lang-switch" aria-label="Language selector" data-i18n-aria-label="aria_lang_selector">
         <button class="lang-btn active" data-lang="en">EN</button>
         <button class="lang-btn" data-lang="zh">中文</button>
@@ -1047,6 +1075,7 @@ const translations = {
     hero_subtitle: "Quick Scan tokens, verify RPC health, decode transactions, and build dev tools — all client-side, no wallet needed.",
     btn_back: "Back to Site",
     btn_firewall: "Firewall",
+    btn_telegram: "Bot",
     fw_hero_btn: "🛡️ CycleX Firewall — Protect Your Wallet",
     fw_hero_tagline: "Real-time wallet scanner — checks approvals, flags risky contracts & sends <em>live alerts</em>. Wallet Passport · Permission Guard · One-click revoke. Your keys, always safe.",
     hub_title: "Advanced Security Tools",
@@ -1268,6 +1297,7 @@ const translations = {
     hero_subtitle: "快速扫描代币、验证 RPC 健康、解码交易 — 全部在客户端运行，无需连接钱包。",
     btn_back: "返回主站",
     btn_firewall: "防火墙",
+    btn_telegram: "机器人",
     fw_hero_btn: "🛡️ CycleX Firewall — 保护您的钱包",
     fw_hero_tagline: "实时钱包扫描器 — 检查授权、标记高风险合约并发送<em>实时警报</em>。钱包护照 · 权限守卫 · 一键撤销。您的私钥，始终安全。",
     hub_title: "高级安全工具",
@@ -1489,6 +1519,7 @@ const translations = {
     hero_subtitle: "فحص سريع للتوكنات، التحقق من صحة RPC، فك تشفير المعاملات — على المتصفح، بدون محفظة.",
     btn_back: "العودة للموقع",
     btn_firewall: "جدار الحماية",
+    btn_telegram: "البوت",
     fw_hero_btn: "🛡️ CycleX Firewall — احمِ محفظتك",
     fw_hero_tagline: "ماسح محفظة فوري — يفحص الموافقات، يُحذّر من العقود الخطرة ويُرسل <em>تنبيهات حية</em>. جواز المحفظة · حارس الصلاحيات · إلغاء بنقرة واحدة. مفاتيحك، آمنة دائمًا.",
     hub_title: "أدوات الأمان المتقدمة",
@@ -1710,6 +1741,7 @@ const translations = {
     hero_subtitle: "Понимайте свои approvals, выявляйте рискованных spender'ов и открывайте продвинутые инструменты revoke — для BSC и Ethereum.",
     btn_back: "Назад на сайт",
     btn_firewall: "Файрвол",
+    btn_telegram: "Бот",
     fw_hero_btn: "🛡️ CycleX Firewall — Защитите ваш кошелёк",
     fw_hero_tagline: "Сканер кошелька в реальном времени — проверяет апрувы, выявляет опасные контракты и отправляет <em>живые оповещения</em>. Паспорт кошелька · Защита прав · Отзыв в один клик. Ваши ключи — всегда в безопасности.",
     hub_title: "Продвинутые инструменты безопасности",
@@ -6352,19 +6384,59 @@ function handleAutoRun() {
   const q = parseQuery();
   if (!q.tool) return;
   window.showPanel && window.showPanel(q.tool);
-  if (q.tool === "quick" && q.net && q.token) {
-    const selNet = document.querySelector("#qs-net");
-    const inp = document.querySelector("#qs-token");
-    if (selNet) selNet.value = q.net;
-    if (inp) inp.value = q.token;
-    if (q.autorun) setTimeout(() => document.querySelector("#qs-run")?.click(), 700);
-  } else if (q.tool === "tx" && q.net && q.tx) {
-    const selNet = document.querySelector("#tx-net");
-    const inp = document.querySelector("#tx-hash");
-    if (selNet) selNet.value = q.net;
-    if (inp) inp.value = q.tx;
-    if (q.autorun) setTimeout(() => document.querySelector("#tx-run")?.click(), 700);
+
+  // ✅ FIX: reported from a real device — opening the bot's "View Full
+  // Report" deep-link (Telegram's in-app browser) filled in the token
+  // address correctly but left the Network dropdown blank and never
+  // auto-ran the scan. Static review of the logic found nothing wrong
+  // (option values, param names, and boot() ordering all check out) — the
+  // most likely explanation is a mobile in-app-WebView quirk where a
+  // <select>'s displayed value doesn't reliably update from a bare
+  // `.value =` assignment without an explicit 'change' event, and/or the
+  // fixed 700ms delay being too short while CDN scripts (ethers.js) are
+  // still loading on a slower mobile connection. This version is more
+  // defensive on both fronts: dispatches 'change'/'input' after setting
+  // the value (forces a proper re-render and matches what real user
+  // interaction would fire), uses a longer delay, and retries once if the
+  // element wasn't found the first time (panel/DOM not fully ready yet).
+  function setFieldRobust(selector, value, isSelect) {
+    const el = document.querySelector(selector);
+    if (!el) return false;
+    el.value = value;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    return isSelect ? el.value === value : true;
   }
+
+  function runAutoFill(attempt) {
+    let ok = false;
+    if (q.tool === "quick" && q.net && q.token) {
+      const tokenEl = document.querySelector("#qs-token");
+      const netOk = setFieldRobust("#qs-net", q.net, true);
+      const tokenFound = !!tokenEl;
+      setFieldRobust("#qs-token", q.token, false);
+      ok = netOk && tokenFound;
+      if (ok && q.autorun) {
+        setTimeout(() => document.querySelector("#qs-run")?.click(), 400);
+      }
+    } else if (q.tool === "tx" && q.net && q.tx) {
+      const txEl = document.querySelector("#tx-hash");
+      const netOk = setFieldRobust("#tx-net", q.net, true);
+      const txFound = !!txEl;
+      setFieldRobust("#tx-hash", q.tx, false);
+      ok = netOk && txFound;
+      if (ok && q.autorun) {
+        setTimeout(() => document.querySelector("#tx-run")?.click(), 400);
+      }
+    } else {
+      ok = true; // nothing to auto-fill for this tool
+    }
+    if (!ok && attempt < 3) {
+      setTimeout(() => runAutoFill(attempt + 1), 500);
+    }
+  }
+
+  setTimeout(() => runAutoFill(1), 900);
 }
 
 window.CHAINS = (typeof CHAINS !== 'undefined') ? CHAINS : undefined;
