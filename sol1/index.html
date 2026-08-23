@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2924,10 +2925,15 @@ function initPanels() {
     }
   }
 
-  function qsMiniChip(type, title, value){
+  function qsMiniChip(type, title, value, onChain){
     const map = { ok:"ok", warn:"warn", bad:"bad", info:"warn" };
     const cls = map[type] || "warn";
-    return `<div class="risk ${cls}"><span class="dot"></span><span><b>${qsEscapeHtml(title)}</b><span style="opacity:.7;font-weight:400;"> — ${qsEscapeHtml(value)}</span></span></div>`;
+    // ✅ NEW: optional "🔗 on-chain" suffix — appended ONLY when the caller
+    // marks this specific chip's value as having come from a direct RPC
+    // read this scan (not GoPlus/DexScreener/CoinGecko/explorer API).
+    // Mirrors the bot's onChainTag() helper — same rule, same wording.
+    const tag = onChain ? ` <i style="opacity:.65;font-weight:400;">🔗 on-chain</i>` : "";
+    return `<div class="risk ${cls}"><span class="dot"></span><span><b>${qsEscapeHtml(title)}</b><span style="opacity:.7;font-weight:400;"> — ${qsEscapeHtml(value)}</span>${tag}</span></div>`;
   }
 
   function codeHasSelector(bytecode, selHex){
@@ -4289,12 +4295,50 @@ function initPanels() {
       anySelector(code, SEL.pause) ||
       anySelector(code, SEL.unpause) ||
       anySelector(code, SEL.paused);
-    const pauseText = pausedState === true ? "Detected (paused)" : pauseDetected ? "Detected" : "No/Unknown";
+    // ✅ FIX: clearer wording, matching the bot's equivalent fix — "No/Unknown"
+    // was ambiguous (didn't check vs. checked-and-found-nothing), even though
+    // this check ALWAYS runs (bytecode selectors + a live paused() eth_call
+    // are unconditional above, no API dependency at all).
+    const pauseText = pausedState === true ? "⚠️ Currently paused" : pauseDetected ? "Pausable (not active now)" : "No pause function found";
 
     // ✅ FIX: combine bytecode heuristic with GoPlus's own direct is_mintable
     // flag — OR'd together so this can only catch MORE real mint functions
     // than before, never fewer (bytecode-only can miss obfuscated code).
-    const mintDetected = anySelector(code, SEL.mint) || goplus?.isMintableFlag === true;
+    // ✅ NEW: tracked separately (mintBytecodeDetected) so the report can
+    // show whether "Detected" came from our own on-chain bytecode scan
+    // (always run, no API needed) vs. only GoPlus's flag — matches the
+    // bot's equivalent fix.
+    const mintBytecodeDetected = anySelector(code, SEL.mint);
+    const mintDetected = mintBytecodeDetected || goplus?.isMintableFlag === true;
+    const mintText = mintBytecodeDetected
+      ? "Detected"
+      : (goplus?.isMintableFlag === true ? "Possibly (flagged by GoPlus only — not found in bytecode)" : "Not detected");
+    // ✅ NEW: on-chain tag applies whenever the bytecode scan itself is
+    // what's being reported — true for BOTH "Detected" (bytecode found it)
+    // and "Not detected" (bytecode search ran and found nothing), false
+    // only for the GoPlus-only "Possibly" case (bytecode said no, GoPlus
+    // said yes — not confirmed on-chain by us).
+    const mintOnChain = mintBytecodeDetected || goplus?.isMintableFlag !== true;
+
+    // ✅ NEW: Est. Circulating Supply — total supply minus the owner
+    // wallet's holding (when known and non-trivial). Same principle as the
+    // bot's equivalent field: an ESTIMATE, not an exact figure like
+    // CoinGecko's (which relies on project disclosures, known team-wallet
+    // lists, vesting schedules — none of which are derivable from on-chain
+    // data alone). Only computed when total supply and owner-holding % are
+    // both actually known on-chain; shows "Same as Total Supply" when the
+    // owner is renounced (nothing to subtract), omitted entirely otherwise
+    // rather than showing a misleading number.
+    let estCirculatingSupplyText = null;
+    if (totalSupplyBI > 0n) {
+      if (ownerIsRenounced) {
+        estCirculatingSupplyText = "Same as Total Supply (owner renounced)";
+      } else if (ownerPct != null) {
+        const circBI = totalSupplyBI - ownerBal;
+        const dec = Number(rep?.meta?.decimals ?? 18);
+        estCirculatingSupplyText = qsFmtBig(circBI > 0n ? circBI : 0n, dec, 4);
+      }
+    }
 
     let verified = null;
     if (useApis) {
@@ -4604,10 +4648,23 @@ function initPanels() {
         value: verified === true ? "Yes" : (useApis ? "No" : "Not checked (no explorer API key set)") },
       // "No" here reflects a real, always-performed on-chain check (EIP-1967
       // storage slot read), so it's a genuine negative — not "unknown".
-      { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No" },
-      { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown },
-      { type: holderConcType, title: "Holder Concentration", value: holderConcText },
+      // ✅ NEW: onChain:true — this check always runs (no API dependency),
+      // for both the "Detected" and "No" outcomes.
+      { type: isProxy ? "warn" : "ok", title: "Proxy", value: isProxy ? "Detected" : "No", onChain: true },
+      // ✅ NEW: onChain:true — Owner here is read directly via owner() and
+      // never falls back to GoPlus on this site (unlike the bot), so it's
+      // always on-chain when we have a value at all.
+      { type: owner ? (ownerIsRenounced ? "ok" : "warn") : "warn", title: "Owner", value: ownerShown, onChain: !!owner },
+      // ✅ NEW: onChain:true whenever ownerPct was actually computed — it's
+      // a live balanceOf()/totalSupply() read, same as the bot's Dev/Owner
+      // Holds field.
+      { type: holderConcType, title: "Holder Concentration", value: holderConcText, onChain: ownerPct != null },
+      // ✅ NEW: Est. Circulating Supply — see estCirculatingSupplyText above.
+      ...(estCirculatingSupplyText ? [{
+        type: "ok", title: "Est. Circulating Supply", value: estCirculatingSupplyText, onChain: true
+      }] : []),
       // ✅ NEW: top-holder chip (distinct from owner-only concentration above).
+      // Not tagged on-chain — this is GoPlus's off-chain holders data.
       ...(gpTopHolderPct != null ? [{
         type: gpTopHolderPct >= 30 ? "bad" : gpTopHolderPct >= 15 ? "warn" : "ok",
         title: "Top Holder",
@@ -4616,6 +4673,13 @@ function initPanels() {
       {
         type: !rep.liq?.any ? "warn" : liqQuality === "tiny" ? "bad" : liqQuality === "low" ? "bad" : liqQuality === "medium" ? "warn" : "ok",
         title: "Liquidity",
+        // ✅ NEW: not tagged on-chain — this figure merges our own
+        // 5-factory on-chain scan WITH pools DexScreener found that our
+        // fixed factory list doesn't cover (see the merge step earlier in
+        // this function). Since it's usually a mix of both sources, it's
+        // left untagged rather than implying it's purely on-chain — the
+        // per-row breakdown in the pools table below already marks which
+        // rows came "via DexScreener".
         value: (() => {
           if (!rep.liq?.any) return "No/Unknown";
           const usd = rep?.meta?.liquidityUsdEst;
@@ -4636,8 +4700,18 @@ function initPanels() {
           return `Healthy${wTxt}`;
         })()
       },
-      { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintDetected ? "Detected" : "No/Unknown" },
-      { type: "ok", title: "Pause", value: pauseText },
+      // ✅ FIX: onChain flag set per the mintOnChain rule above — true for
+      // both "Detected" (bytecode) and "Not detected" (bytecode searched,
+      // found nothing), false for the GoPlus-only "Possibly" case.
+      { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintText, onChain: mintOnChain },
+      // ✅ FIX (real bug, not just wording): type was HARDCODED to "ok"
+      // (green) regardless of pauseText's actual content — a token that IS
+      // currently paused would still show a green dot next to "Detected
+      // (paused)". Now reflects the real state: bad when paused right now,
+      // warn when merely pausable, ok only when no pause capability exists
+      // at all. Always on-chain — bytecode selectors + a live paused()
+      // eth_call, no API dependency.
+      { type: pausedState === true ? "bad" : pauseDetected ? "warn" : "ok", title: "Pause", value: pauseText, onChain: true },
       {
         type: cexListed ? "ok" : "warn",
         title: "CEX Listed",
@@ -4646,6 +4720,10 @@ function initPanels() {
           ? `${rep.meta?.cexExchanges?.length ? rep.meta.cexExchanges.slice(0,3).join(", ") : "Yes"}${rep.meta?.cexVolume24hUsd ? ` (~$${Math.round(rep.meta.cexVolume24hUsd).toLocaleString()}/24h)` : ""}`
           : "Not found"
       },
+      // ✅ NEW: onChain:true — real deployment block timestamp (explorer's
+      // txHash → eth_getTransactionByHash → eth_getBlockByNumber), a
+      // genuine on-chain figure, distinct from the DexScreener-estimated
+      // "Trading Age" fallback right below (which is NOT tagged on-chain).
       ...(contractAge !== null ? [{
         type: contractAge.ageDays < 30 ? "warn" : contractAge.ageDays < 90 ? "warn" : "ok",
         title: "Contract Age",
@@ -4653,8 +4731,12 @@ function initPanels() {
           const d = contractAge.ageDays;
           const ageStr = d >= 365 ? `${Math.floor(d/365)}y ${Math.floor((d%365)/30)}mo` : d >= 30 ? `${Math.floor(d/30)}mo` : `${d}d`;
           return d < 90 ? `${ageStr} ⚠️` : ageStr;
-        })()
+        })(),
+        onChain: true
       }] : []),
+      // ✅ NOTE: Trading Age deliberately left untagged — it's DexScreener's
+      // pair-creation estimate (off-chain), only used as a fallback when no
+      // explorer API key is configured for the real Contract Age above.
       ...(contractAge === null && evmAgeDays != null ? [{
         type: evmAgeDays < 1 ? "bad" : evmAgeDays < 7 ? "warn" : "ok",
         title: "Trading Age",
@@ -4674,15 +4756,22 @@ function initPanels() {
         }];
       })(),
       // ✅ NEW: LP burn chip, shown alongside/instead of lock status.
+      // onChain:true — balanceOf()/totalSupply() read directly on the LP
+      // pair contract, no API involved at all.
       ...(lpBurnInfo?.isBurned ? [{
-        type: "ok", title: "LP Burned", value: `🔥 ~${lpBurnInfo.burnedPct.toFixed(0)}% sent to dead address`
+        type: "ok", title: "LP Burned", value: `🔥 ~${lpBurnInfo.burnedPct.toFixed(0)}% sent to dead address`, onChain: true
       }] : []),
+      // ✅ NEW: onChain:true — unlike the bot (which uses GoPlus's locker
+      // API), this site reads the locker CONTRACT (PinkLock/Unicrypt)
+      // directly via RPC, so this is genuinely on-chain data regardless of
+      // whether a lock was found or not.
       ...(liqLock ? [{
         type: liqLock.locked ? "ok" : liqLock.isExpired ? "bad" : "warn",
         title: "LP Lock",
         value: liqLock.locked
           ? `✅ ${liqLock.locker} • until ${liqLock.unlockDateStr}`
-          : liqLock.isExpired ? `⚠️ ${liqLock.locker} expired` : "Not detected"
+          : liqLock.isExpired ? `⚠️ ${liqLock.locker} expired` : "Not detected",
+        onChain: true
       }] : []),
       ...(dexscreener ? [
         ...(dexscreener.volumeUsd24h !== null ? [{
@@ -5257,7 +5346,7 @@ function initPanels() {
     `;
 
     if (chipsWrap){
-      chipsWrap.innerHTML = (rep.mini || []).map(x => qsMiniChip(x.type, x.title, x.value)).join("");
+      chipsWrap.innerHTML = (rep.mini || []).map(x => qsMiniChip(x.type, x.title, x.value, x.onChain)).join("");
     }
     if (pairsWrap){
       qsRenderLiquidityTable(
