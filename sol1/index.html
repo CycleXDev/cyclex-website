@@ -3592,6 +3592,16 @@ function initPanels() {
       const sorted = pairs.sort((a,b) => (b?.liquidity?.usd||0) - (a?.liquidity?.usd||0));
       const best = sorted[0];
       const safeNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+      // ✅ FIX (real bug, confirmed live: KII/Kiichain — a real 4-month-old
+      // token showed "Trading Age: 9d"): pairCreatedAt was only ever taken
+      // from `best` (the highest-LIQUIDITY pair). For a token whose original
+      // pool is small/old but a much bigger pool was created recently (e.g.
+      // a new PancakeSwap v4 CL pool), `best` picks the NEW big pool, so its
+      // pairCreatedAt reflects the new pool's age, not the token's actual
+      // trading history. Age should come from the OLDEST pool, not the
+      // biggest one — computed here across every pair DexScreener returned.
+      const allCreatedAt = pairs.map(p => Number(p?.pairCreatedAt)).filter(n => Number.isFinite(n) && n > 0);
+      const earliestPairCreatedAt = allCreatedAt.length ? Math.min(...allCreatedAt) : null;
       return {
         priceUsd:       safeNum(best?.priceUsd),
         priceChange24h: safeNum(best?.priceChange?.h24),
@@ -3602,6 +3612,10 @@ function initPanels() {
         dexId:          best?.dexId || null,
         pairAddress:    best?.pairAddress || null,
         pairCreatedAt:  Number.isFinite(Number(best?.pairCreatedAt)) ? Number(best.pairCreatedAt) : null,
+        // ✅ NEW: use this one for age calculations instead of pairCreatedAt
+        // above (kept as-is since other code may rely on it meaning "the
+        // main/best pair's" creation time specifically, e.g. LP-lock lookups).
+        earliestPairCreatedAt,
         symbol:         best?.baseToken?.symbol ? String(best.baseToken.symbol).trim() : null,
         name:           best?.baseToken?.name ? String(best.baseToken.name).trim() : null,
         // ✅ FIX (major finding): DexScreener's response includes EVERY
@@ -3654,18 +3668,26 @@ function initPanels() {
       const allPairs = j.data.slice(0, 10).map(p => ({
         dex:          p?.relationships?.dex?.data?.id || "DEX",
         pairAddress:  p?.attributes?.address || "",
-        quoteSymbol:  "",
+        quoteSymbol:  "", // not directly given per-pool without an extra fetch; omitted rather than guessed
         liquidityUsd: safeNum(p?.attributes?.reserve_in_usd),
         volumeUsd24h: safeNum(p?.attributes?.volume_usd?.h24)
       }));
       const sorted = [...allPairs].sort((a,b) => (b.liquidityUsd||0) - (a.liquidityUsd||0));
       const best = sorted[0] || null;
+      // ✅ NEW: same "oldest pool, not biggest pool" age fix as DexScreener's
+      // earliestPairCreatedAt — GeckoTerminal's pool_created_at is an ISO
+      // string per pool, across the full (unsliced) response.
+      const allCreatedAtMs = j.data
+        .map(p => Date.parse(p?.attributes?.pool_created_at || ""))
+        .filter(n => Number.isFinite(n) && n > 0);
+      const earliestPoolCreatedAtMs = allCreatedAtMs.length ? Math.min(...allCreatedAtMs) : null;
 
       return {
         liquidityUsd: best?.liquidityUsd ?? null,
         pairAddress:  best?.pairAddress || null,
         dexId:        best?.dex || null,
         pairCount:    allPairs.length,
+        earliestPoolCreatedAtMs,
         allPairs
       };
     } catch { return null; }
@@ -4006,6 +4028,16 @@ function initPanels() {
       out.className = "status info";
       out.innerHTML = "<strong>Scanning…</strong><br>Checking contract, liquidity, and market data — usually a few seconds.";
     }
+    // ✅ FIX (real bug, reported live): only #qs-out was being replaced with
+    // the "Scanning…" state — the risk-chip grid, pool table, and red-flags
+    // panel are separate DOM containers only touched by render(), so the
+    // PREVIOUS token's chips/pools/flags stayed fully visible on screen
+    // throughout the new scan, disappearing only once the new report was
+    // ready and render() finally ran. Clearing them here too so nothing
+    // stale is shown mid-scan.
+    if (chipsWrap) chipsWrap.innerHTML = "";
+    if (pairsWrap) pairsWrap.innerHTML = "";
+    if (redflagsWrap) redflagsWrap.innerHTML = "";
 
     const cache = loadQsCache();
     const ckey = qsCacheKey(net, token, useApis);
@@ -4733,10 +4765,27 @@ function initPanels() {
     let evmAgeDays = null;
     if (contractAge?.ageDays != null) {
       evmAgeDays = contractAge.ageDays;
-    } else if (dexscreener?.pairCreatedAt) {
-      const ageMs = Date.now() - Number(dexscreener.pairCreatedAt);
-      if (Number.isFinite(ageMs) && ageMs > 0) evmAgeDays = ageMs / 86400000;
+    } else {
+      // ✅ FIX (real bug, confirmed live: KII/Kiichain showed "Trading Age:
+      // 9d" despite being ~4 months old): use the OLDEST pool found across
+      // both DexScreener and GeckoTerminal, not just DexScreener's
+      // highest-liquidity pair — a big new pool otherwise makes an old
+      // token look freshly created. See earliestPairCreatedAt /
+      // earliestPoolCreatedAtMs at their source for the full explanation.
+      const candidates = [
+        dexscreener?.earliestPairCreatedAt,
+        geckoterminal?.earliestPoolCreatedAtMs
+      ].filter(n => Number.isFinite(n) && n > 0);
+      const earliestMs = candidates.length ? Math.min(...candidates) : null;
+      if (earliestMs) {
+        const ageMs = Date.now() - earliestMs;
+        if (Number.isFinite(ageMs) && ageMs > 0) evmAgeDays = ageMs / 86400000;
+      }
     }
+    // ✅ NEW: stored so render() can show a compact age badge in the header
+    // card without recomputing this logic — matches the existing
+    // rep.meta.contractAgeDays / rep.meta.tradingAgeDays (Solana) pattern.
+    rep.meta.tradingAgeDaysEvm = evmAgeDays;
     const evmHardBad = !!(goplus?.isHoneypot);
     const evmHoldersUnknown = (rep.meta?.holderCount == null);
     const knownVeryFresh = evmAgeDays != null && evmAgeDays < 1;
@@ -5030,6 +5079,9 @@ function initPanels() {
       out.className = "status info";
       out.innerHTML = "<strong>Scanning…</strong><br>Checking contract, liquidity, and market data — usually a few seconds.";
     }
+    if (chipsWrap) chipsWrap.innerHTML = "";
+    if (pairsWrap) pairsWrap.innerHTML = "";
+    if (redflagsWrap) redflagsWrap.innerHTML = "";
 
     const cache = loadQsCache();
     const ckey = qsCacheKey("solana", token, false);
@@ -5482,10 +5534,28 @@ function initPanels() {
       ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);border-radius:10px;font-size:12px;color:#ff8a8a;font-weight:700;">⚠️ Thin liquidity — price impact/slippage may be extreme</div>`
       : "";
 
+    // ✅ NEW: compact age badge for the header card — requested so the
+    // token's age is visible immediately without scanning down to the
+    // Trading Age/Contract Age metric chip. Prefers the real on-chain
+    // contract age (contractAgeDays) when known; falls back to the
+    // (now oldest-pool-based, not newest-biggest-pool) trading age
+    // estimate otherwise. Not shown at all if neither is known, rather
+    // than displaying a misleading placeholder.
+    const ageDaysForBadge = rep?.meta?.contractAgeDays ?? rep?.meta?.tradingAgeDaysEvm ?? rep?.meta?.tradingAgeDays ?? null;
+    const ageIsOnChain = rep?.meta?.contractAgeDays != null;
+    const ageBadgeHtml = (ageDaysForBadge != null) ? (() => {
+      const d = ageDaysForBadge;
+      const ageStr = d >= 365 ? `${Math.floor(d/365)}y ${Math.floor((d%365)/30)}mo`
+        : d >= 30 ? `${Math.floor(d/30)}mo`
+        : d < 1 ? `${Math.max(0, Math.round(d*24))}h`
+        : `${Math.floor(d)}d`;
+      return `<span class="qs-age-badge" style="display:inline-block;margin-inline-start:8px;padding:2px 10px;border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:12px;color:#c9d1d9;vertical-align:middle;">🕐 ${qsEscapeHtml(ageStr)}${ageIsOnChain ? "" : " (trading age)"}</span>`;
+    })() : "";
+
     out.innerHTML = `
       <div class="qs-result-card">
         <div class="qs-result-name">
-          ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}
+          ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}${ageBadgeHtml}
           <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}</span>
         </div>
         <div class="qs-result-meta">
