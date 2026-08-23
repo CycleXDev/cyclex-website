@@ -4450,22 +4450,24 @@ function initPanels() {
     let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
     score = qsApplyScoreGates(score, rep, marketFlags);
 
+    // ✅ FIX (real scoring bug, found via a live report showing 0/100
+    // despite Contract Score 72 / Market Score 28 — those should blend to
+    // ~46, not 0): every flag checked below (possible_manipulated_move,
+    // very_low_liquidity_usd, very_few_holders, extreme_volume_liquidity_
+    // ratio, etc.) is ALREADY subtracted from marketScore INSIDE
+    // qsComputeMarketRisk() above (confirmed by matching each flag name
+    // against that function's own penalty logic) — marketScore then
+    // already feeds into `score` via the 0.60 weight two lines up. This
+    // block re-subtracted the SAME penalties a second time directly from
+    // `score`, on top of the weighted average that already contained them.
+    // Combined with the further liqQuality-based deductions right below,
+    // this could easily push a token's score below 0 before the final
+    // qsClamp(0,100) floor silently absorbed the overshoot — wiping out
+    // otherwise-decent signals (no honeypot, 0% tax, thousands of
+    // holders, CEX-listed) into a flat, uninformative 0/100. Removed
+    // entirely rather than re-tuned, since it was pure duplication, not a
+    // separate intentional penalty.
     const mFlags = new Set((marketFlags || []).map(s => String(s).toLowerCase()));
-
-    if (mFlags.has("possible_manipulated_move")) score -= 22;
-    if (mFlags.has("extreme_short_term_volatility")) score -= 14;
-    if (mFlags.has("very_low_liquidity_usd")) score -= 22;
-    else if (mFlags.has("low_liquidity_usd")) score -= 10;
-    if (mFlags.has("very_few_holders")) score -= 18;
-    else if (mFlags.has("few_holders")) score -= 8;
-    if (mFlags.has("holder_concentration_unknown")) score -= 8;
-    // ✅ NEW: penalties for the newly-live volume/liquidity ratio flags.
-    if (mFlags.has("extreme_volume_liquidity_ratio")) {
-      score -= 18;
-      rep.redFlags.push("24h volume is extremely high relative to liquidity — pattern consistent with wash trading or extreme volatility around thin liquidity.");
-    } else if (mFlags.has("high_volume_liquidity_ratio")) {
-      score -= 8;
-    }
 
     if (liqQuality === "tiny") {
       if (rep.meta?.liqCoverageLow) {
@@ -4844,6 +4846,11 @@ function initPanels() {
       else if (f === "few_holders") rep.redFlags.push("Few holders detected.");
       else if (f === "extreme_short_term_volatility") rep.redFlags.push("Extreme short-term volatility detected.");
       else if (f === "holder_concentration_unknown") rep.redFlags.push("Holder concentration data is incomplete (confidence reduced).");
+      // ✅ NEW: message preserved from the removed double-penalty block —
+      // score impact now comes only from marketScore (see qsComputeMarketRisk),
+      // this just keeps the user-facing explanation.
+      else if (f === "extreme_volume_liquidity_ratio") rep.redFlags.push("24h volume is extremely high relative to liquidity — pattern consistent with wash trading or extreme volatility around thin liquidity.");
+      else if (f === "high_volume_liquidity_ratio") rep.redFlags.push("24h volume is unusually high relative to liquidity — worth a closer look.");
       else if (f === "no_clear_liquidity_signal" && !cexListed && !rep.redFlags.includes("No clear DEX liquidity signal detected.")) {
         rep.redFlags.push("No clear liquidity signal detected.");
       }
