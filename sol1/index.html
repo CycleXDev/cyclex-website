@@ -326,7 +326,7 @@
     padding:18px 20px;margin-bottom:14px;
     position:relative;
   }
-  .qs-result-name{font-size:20px;font-weight:900;letter-spacing:-.02em;color:#5dffd9;margin-bottom:6px;padding-inline-end:110px}
+  .qs-result-name{font-size:20px;font-weight:900;letter-spacing:-.02em;color:#5dffd9;margin-bottom:6px}
   .qs-result-meta{font-size:12px;color:rgba(255,255,255,.65);line-height:1.8}
   .qs-result-meta b{color:var(--text)}
   .qs-result-meta .mono{font-size:11px;color:rgba(255,255,255,.5)}
@@ -340,16 +340,17 @@
   .qs-score-ok{background:rgba(93,255,178,.15);color:var(--green);border:1px solid rgba(93,255,178,.3)}
   .qs-score-warn{background:rgba(255,193,7,.12);color:#ffd166;border:1px solid rgba(255,193,7,.25)}
   .qs-score-bad{background:rgba(255,71,87,.12);color:#ff7a8a;border:1px solid rgba(255,71,87,.25)}
-  /* ✅ NEW: age badge — pinned to the card's top-right corner via absolute
-     positioning so it never collides with or gets pushed around by long
-     token names (the earlier inline placement did, on request). Distinct
-     violet accent so it visually stands out from the green/amber/red score
-     badge instead of blending in. */
+  /* ✅ FIX (real bug, reported live): the earlier absolute top-right
+     placement collided with the score badge whenever the token name was
+     short (both ended up fighting for the same corner). Moved inline next
+     to "Network:" instead — same font-size as the rest of qs-result-meta
+     (12px) so it sits at the right visual weight there, keeping the
+     distinct violet accent so it still stands out from the meta text. */
   .qs-age-badge{
-    position:absolute;top:18px;right:20px;
     display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
-    padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;
+    padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;
     background:rgba(178,102,255,.16);color:#cb9dff;border:1px solid rgba(178,102,255,.4);
+    margin-inline-start:8px;vertical-align:middle;
   }
 
   /* ── CHIPS GRID ──────────────────────────────── */
@@ -5609,13 +5610,12 @@ function initPanels() {
 
     out.innerHTML = `
       <div class="qs-result-card">
-        ${ageBadgeHtml}
         <div class="qs-result-name">
           ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}
           <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}</span>
         </div>
         <div class="qs-result-meta">
-          <div>Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b></div>
+          <div>Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b>${ageBadgeHtml}</div>
           <div>Token: <span class="mono">${qsEscapeHtml(rep.token)}</span></div>
           <div>Total Supply: <span class="mono">${qsEscapeHtml(supplyTxt)}</span></div>
           <div>Explorer: <a href="${qsEscapeHtml(rep.explorer)}" target="_blank" rel="noopener">open ↗</a></div>
