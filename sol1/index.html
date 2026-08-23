@@ -4217,6 +4217,40 @@ function initPanels() {
       }
     }
 
+    // ✅ FIX (real bug, confirmed live via a direct DexScreener API call):
+    // liqQuality/liquidityUsdEst above were computed ENTIRELY from our own
+    // on-chain 5-factory scan (Pancake V2/V3, Four.meme, Biswap, ApeSwap,
+    // Bakery), BEFORE DexScreener was even fetched (a few lines up). A
+    // token whose real liquidity sits on a DEX architecture our factory
+    // scan doesn't cover at all — confirmed here: PancakeSwap V4 uses a
+    // completely different singleton PoolManager contract, not a
+    // per-pair factory like V2/V3 — could have DexScreener correctly
+    // reporting ~$1.4M in real liquidity while our own on-chain figure
+    // sat at ~$0, and the score/liqQuality classification used ONLY that
+    // $0 figure. The merge block above already adds DexScreener's extra
+    // pools as TABLE ROWS for display, but never fed their $ value back
+    // into liquidityUsdEst/liqQuality — this closes that gap by taking
+    // the larger of (our on-chain estimate) and (DexScreener's own
+    // reported liquidity, including the newly-merged pools above).
+    const dsBestLiquidityUsd = Number(dexscreener?.liquidityUsd);
+    const dsAllPairsLiquidityUsd = Array.isArray(dexscreener?.allPairs)
+      ? dexscreener.allPairs.reduce((acc, p) => acc + (Number(p?.liquidityUsd) || 0), 0)
+      : 0;
+    const dsLiquidityUsd = Math.max(
+      Number.isFinite(dsBestLiquidityUsd) ? dsBestLiquidityUsd : 0,
+      dsAllPairsLiquidityUsd
+    );
+    if (dsLiquidityUsd > 0) {
+      const onChainEst = Number.isFinite(rep.meta?.liquidityUsdEst) ? rep.meta.liquidityUsdEst : 0;
+      const correctedLiquidityUsdEst = Math.max(onChainEst, dsLiquidityUsd);
+      rep.meta.liquidityUsdEst = correctedLiquidityUsdEst;
+      if (correctedLiquidityUsdEst < 25000) liqQuality = "tiny";
+      else if (correctedLiquidityUsdEst < 250000) liqQuality = "low";
+      else if (correctedLiquidityUsdEst < 500000) liqQuality = "medium";
+      else liqQuality = "healthy";
+      rep.liq.any = true;
+    }
+
     // Liquidity lock — run after dexscreener resolves (needs pairAddress)
     let liqLock = null;
     let lpBurnInfo = null;
@@ -4413,6 +4447,16 @@ function initPanels() {
     if (verified === false) contractScore -= 6;
     if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
     contractScore = qsClamp(Math.round(contractScore), 0, 100);
+
+    // ✅ FIX: rep.meta.liqQuality was previously only written into the final
+    // rep.meta object much later (near the end of this function), but
+    // qsComputeMarketRisk() (called right below) reads rep.meta.liqQuality
+    // to decide its own "+8 healthy liquidity" bonus — at this point in
+    // execution that field was always still undefined, so the bonus could
+    // never actually fire for any token, however healthy its liquidity.
+    // Writing it here, right before the call that needs it, fixes that
+    // without changing anything else about scoring.
+    rep.meta.liqQuality = liqQuality;
 
     const market = qsComputeMarketRisk(rep);
     let marketScore = Number(market.marketScore ?? 100);
