@@ -324,8 +324,9 @@
     background:linear-gradient(135deg,rgba(0,180,180,.12) 0%,rgba(0,130,160,.08) 100%);
     border:1px solid rgba(0,229,255,.18);border-radius:16px;
     padding:18px 20px;margin-bottom:14px;
+    position:relative;
   }
-  .qs-result-name{font-size:20px;font-weight:900;letter-spacing:-.02em;color:#5dffd9;margin-bottom:6px}
+  .qs-result-name{font-size:20px;font-weight:900;letter-spacing:-.02em;color:#5dffd9;margin-bottom:6px;padding-inline-end:110px}
   .qs-result-meta{font-size:12px;color:rgba(255,255,255,.65);line-height:1.8}
   .qs-result-meta b{color:var(--text)}
   .qs-result-meta .mono{font-size:11px;color:rgba(255,255,255,.5)}
@@ -339,6 +340,17 @@
   .qs-score-ok{background:rgba(93,255,178,.15);color:var(--green);border:1px solid rgba(93,255,178,.3)}
   .qs-score-warn{background:rgba(255,193,7,.12);color:#ffd166;border:1px solid rgba(255,193,7,.25)}
   .qs-score-bad{background:rgba(255,71,87,.12);color:#ff7a8a;border:1px solid rgba(255,71,87,.25)}
+  /* ✅ NEW: age badge — pinned to the card's top-right corner via absolute
+     positioning so it never collides with or gets pushed around by long
+     token names (the earlier inline placement did, on request). Distinct
+     violet accent so it visually stands out from the green/amber/red score
+     badge instead of blending in. */
+  .qs-age-badge{
+    position:absolute;top:18px;right:20px;
+    display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+    padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;
+    background:rgba(178,102,255,.16);color:#cb9dff;border:1px solid rgba(178,102,255,.4);
+  }
 
   /* ── CHIPS GRID ──────────────────────────────── */
   .chips-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
@@ -806,7 +818,7 @@
               <span class="small" data-i18n="opt_show_json">Enable JSON report</span>
             </label>
           </div>
-          <div id="qs-status" class="status info"></div>
+          <div id="qs-status" class="status info" style="margin-top:10px;"></div>
         </div>
         <div class="card">
           <h3 data-i18n="results_title">Results</h3>
@@ -3374,9 +3386,28 @@ function initPanels() {
         n === "gate.io" ? "Gate.io" :
         n.charAt(0).toUpperCase() + n.slice(1)
       );
+      // ✅ NEW: real circulating supply, when CoinGecko tracks this token's
+      // market data (requires it to be a recognized/listed coin there, not
+      // just any contract — most small/new tokens won't have this, same
+      // caveat as everywhere else in this codebase: use real data when
+      // available, fall back to the on-chain estimate otherwise, never
+      // invent a number). This is the actual "how much is trading in the
+      // market right now" concept (e.g. what a CoinGecko/CMC coin page
+      // shows for XRP) — different from, and more accurate than, the
+      // on-chain "total supply minus the current owner wallet balance"
+      // approximation used as a fallback.
+      const md = j.market_data || null;
+      const circulatingSupplyReal = (md && Number.isFinite(Number(md.circulating_supply))) ? Number(md.circulating_supply) : null;
+      const totalSupplyFromCg = (md && Number.isFinite(Number(md.total_supply))) ? Number(md.total_supply) : null;
       // ✅ NEW: total 24h volume across matched top-tier exchanges.
       const totalVolume24hUsd = matched.reduce((acc, t) => acc + (Number(t?.converted_volume?.usd) || 0), 0);
-      return { listed: display.length > 0, exchanges: display, totalVolume24hUsd: totalVolume24hUsd > 0 ? totalVolume24hUsd : null };
+      return {
+        listed: display.length > 0,
+        exchanges: display,
+        totalVolume24hUsd: totalVolume24hUsd > 0 ? totalVolume24hUsd : null,
+        circulatingSupplyReal,
+        totalSupplyFromCg
+      };
     } catch (e) {
       console.error("qsFetchCexListing threw:", e?.message || e);
       return { listed: false, exchanges: [] };
@@ -4479,17 +4510,25 @@ function initPanels() {
     // said yes — not confirmed on-chain by us).
     const mintOnChain = mintBytecodeDetected || goplus?.isMintableFlag !== true;
 
-    // ✅ NEW: Est. Circulating Supply — total supply minus the owner
-    // wallet's holding (when known and non-trivial). Same principle as the
-    // bot's equivalent field: an ESTIMATE, not an exact figure like
-    // CoinGecko's (which relies on project disclosures, known team-wallet
-    // lists, vesting schedules — none of which are derivable from on-chain
-    // data alone). Only computed when total supply and owner-holding % are
-    // both actually known on-chain; shows "Same as Total Supply" when the
-    // owner is renounced (nothing to subtract), omitted entirely otherwise
-    // rather than showing a misleading number.
+    // ✅ FIX (real design gap, reported live): this used to ALWAYS mean
+    // "total supply minus the current owner wallet's balance" — a
+    // reasonable on-chain-only proxy, but not the actual "circulating
+    // supply" concept (how much is trading in the market right now, e.g.
+    // what a CoinGecko/CMC coin page shows for XRP — total supply minus
+    // locked/reserved/unvested tokens, which usually sit in a treasury or
+    // vesting contract, NOT the current "owner" address this scanner
+    // tracks). Now prefers CoinGecko's own disclosed circulating_supply
+    // (see qsFetchCexListing) when the token is one CoinGecko tracks
+    // market data for — real data, not an approximation. Falls back to the
+    // on-chain owner-holding estimate only when CoinGecko has nothing,
+    // clearly labeled either way so the two are never confused.
     let estCirculatingSupplyText = null;
-    if (totalSupplyBI > 0n) {
+    let circSupplyIsReal = false;
+    const cgCirculating = cexResult?.circulatingSupplyReal;
+    if (Number.isFinite(cgCirculating) && cgCirculating > 0) {
+      estCirculatingSupplyText = cgCirculating.toLocaleString(undefined, { maximumFractionDigits: 4 });
+      circSupplyIsReal = true;
+    } else if (totalSupplyBI > 0n) {
       if (ownerIsRenounced) {
         estCirculatingSupplyText = "Same as Total Supply (owner renounced)";
       } else if (ownerPct != null) {
@@ -4863,9 +4902,14 @@ function initPanels() {
       // a live balanceOf()/totalSupply() read, same as the bot's Dev/Owner
       // Holds field.
       { type: holderConcType, title: "Holder Concentration", value: holderConcText, onChain: ownerPct != null },
-      // ✅ NEW: Est. Circulating Supply — see estCirculatingSupplyText above.
+      // ✅ NEW: title/tag now reflect whether this is CoinGecko's real
+      // disclosed circulating supply (not on-chain, but real market data)
+      // or our own on-chain owner-holding estimate (see above).
       ...(estCirculatingSupplyText ? [{
-        type: "ok", title: "Est. Circulating Supply", value: estCirculatingSupplyText, onChain: true
+        type: "ok",
+        title: circSupplyIsReal ? "Circulating Supply" : "Est. Circulating Supply",
+        value: estCirculatingSupplyText,
+        onChain: !circSupplyIsReal
       }] : []),
       // ✅ NEW: top-holder chip (distinct from owner-only concentration above).
       // Not tagged on-chain — this is GoPlus's off-chain holders data.
@@ -5560,19 +5604,20 @@ function initPanels() {
         : d >= 30 ? `${Math.floor(d/30)}mo`
         : d < 1 ? `${Math.max(0, Math.round(d*24))}h`
         : `${Math.floor(d)}d`;
-      return `<span class="qs-age-badge" style="display:inline-block;margin-inline-start:8px;padding:2px 10px;border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:12px;color:#c9d1d9;vertical-align:middle;">🕐 ${qsEscapeHtml(ageStr)}${ageIsOnChain ? "" : " (trading age)"}</span>`;
+      return `<span class="qs-age-badge">🕐 ${qsEscapeHtml(ageStr)}${ageIsOnChain ? "" : " (trading age)"}</span>`;
     })() : "";
 
     out.innerHTML = `
       <div class="qs-result-card">
+        ${ageBadgeHtml}
         <div class="qs-result-name">
           ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}
-          <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}</span>${ageBadgeHtml}
+          <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}</span>
         </div>
         <div class="qs-result-meta">
           <div>Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b></div>
           <div>Token: <span class="mono">${qsEscapeHtml(rep.token)}</span></div>
-          <div>Supply: <span class="mono">${qsEscapeHtml(supplyTxt)}</span></div>
+          <div>Total Supply: <span class="mono">${qsEscapeHtml(supplyTxt)}</span></div>
           <div>Explorer: <a href="${qsEscapeHtml(rep.explorer)}" target="_blank" rel="noopener">open ↗</a></div>
         </div>
         ${thinLiqWarn}
