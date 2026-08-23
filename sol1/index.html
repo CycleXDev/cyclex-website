@@ -3563,6 +3563,10 @@ function initPanels() {
   }
 
   const QS_DS_CHAIN = { bsc: "bsc", eth: "ethereum", polygon: "polygon", solana: "solana" };
+  // GeckoTerminal network IDs differ from DexScreener's — eth (not
+  // "ethereum"), polygon_pos (not "polygon"). Verified against
+  // GeckoTerminal API docs.
+  const QS_GT_CHAIN = { bsc: "bsc", eth: "eth", polygon: "polygon_pos", solana: "solana" };
 
   // ✅ FIX: DexScreener's response includes baseToken.name/symbol, which
   // wasn't being captured — meaning if GoPlus Solana data is unavailable
@@ -3615,6 +3619,54 @@ function initPanels() {
           liquidityUsd: safeNum(p?.liquidity?.usd),
           volumeUsd24h: safeNum(p?.volume?.h24)
         }))
+      };
+    } catch { return null; }
+  }
+
+  // ✅ NEW: second liquidity-aggregator source, same role DexScreener
+  // already plays: catches pools our own factory scan AND DexScreener
+  // both miss. Confirmed necessary for PancakeSwap Infinity/V4 pools
+  // that DexScreener doesn't consistently index (verified live: TRIA's
+  // real $573K pancakeswap-infinity-clmm pool was entirely absent from
+  // DexScreener's response but present here). Free, no API key, 30
+  // req/min. Shape matches qsFetchDexScreener's allPairs[] so it plugs
+  // into the same merge/max-liquidity logic below.
+  async function qsFetchGeckoTerminal(net, token) {
+    try {
+      const chain = QS_GT_CHAIN[net];
+      if (!chain) return null;
+      const addr = String(token || "").trim();
+      if (!addr) return null;
+      const url = `https://api.geckoterminal.com/api/v2/networks/${chain}/tokens/${addr}/pools`;
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 8000);
+      let j = null;
+      try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        if (res.ok) j = await res.json();
+        else console.error("GeckoTerminal call failed, status:", res.status);
+      } finally {
+        clearTimeout(tmr);
+      }
+      if (!j || !Array.isArray(j.data) || !j.data.length) return null;
+
+      const safeNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+      const allPairs = j.data.slice(0, 10).map(p => ({
+        dex:          p?.relationships?.dex?.data?.id || "DEX",
+        pairAddress:  p?.attributes?.address || "",
+        quoteSymbol:  "",
+        liquidityUsd: safeNum(p?.attributes?.reserve_in_usd),
+        volumeUsd24h: safeNum(p?.attributes?.volume_usd?.h24)
+      }));
+      const sorted = [...allPairs].sort((a,b) => (b.liquidityUsd||0) - (a.liquidityUsd||0));
+      const best = sorted[0] || null;
+
+      return {
+        liquidityUsd: best?.liquidityUsd ?? null,
+        pairAddress:  best?.pairAddress || null,
+        dexId:        best?.dex || null,
+        pairCount:    allPairs.length,
+        allPairs
       };
     } catch { return null; }
   }
@@ -4167,14 +4219,15 @@ function initPanels() {
 
     const explorerKey = (typeof qsExplorerKeyFor === "function") ? qsExplorerKeyFor(net)?.key : null;
     const [
-      cexSettled, priceSettled, ageSettled, holderSettled, goplusSettled, dexscreenerSettled
+      cexSettled, priceSettled, ageSettled, holderSettled, goplusSettled, dexscreenerSettled, geckoterminalSettled
     ] = await Promise.allSettled([
       qsFetchCexListing(net, token),
       qsFetchNativePrice(net),
       qsFetchContractAge(net, token, explorerKey),
       qsFetchHolderCount(net, token, explorerKey),
       qsFetchGoPlus(net, token),
-      qsFetchDexScreener(net, token)
+      qsFetchDexScreener(net, token),
+      qsFetchGeckoTerminal(net, token)
     ]);
 
     const cexResult         = cexSettled.status         === "fulfilled" ? (cexSettled.value         || { listed: false, exchanges: [] }) : { listed: false, exchanges: [] };
@@ -4183,6 +4236,7 @@ function initPanels() {
     const explorerHolderCount = holderSettled.status    === "fulfilled" ? holderSettled.value        : null;
     const goplus            = goplusSettled.status      === "fulfilled" ? goplusSettled.value        : null;
     const dexscreener       = dexscreenerSettled.status === "fulfilled" ? dexscreenerSettled.value   : null;
+    const geckoterminal     = geckoterminalSettled.status === "fulfilled" ? geckoterminalSettled.value : null;
 
     // ✅ NEW: merge in any pool DexScreener knows about that our fixed
     // 5-factory on-chain scan (Pancake V2/V3, Four.meme, Biswap, ApeSwap,
@@ -4217,6 +4271,31 @@ function initPanels() {
       }
     }
 
+    // ✅ NEW: same merge, second source (GeckoTerminal). Recomputes
+    // coveredAddrs fresh so it also dedupes against whatever the
+    // DexScreener merge just added above.
+    if (Array.isArray(geckoterminal?.allPairs) && geckoterminal.allPairs.length) {
+      const coveredAddrsGt = new Set((rep.liq?.rows || []).map(r => String(r?.addr || "").toLowerCase()));
+      const extraPoolsGt = geckoterminal.allPairs.filter(p => !coveredAddrsGt.has(String(p.pairAddress || "").toLowerCase()));
+      if (extraPoolsGt.length) {
+        rep.liq.any = true;
+        rep.liq.rows = [
+          ...(rep.liq?.rows || []),
+          ...extraPoolsGt.map(p => ({
+            addr: p.pairAddress || "",
+            type: `${p.dex} • via GeckoTerminal`,
+            target: "pool",
+            ok: !!(p.liquidityUsd && p.liquidityUsd > 0),
+            note: p.liquidityUsd
+              ? `Liquidity: ~$${Number(p.liquidityUsd).toLocaleString(undefined,{maximumFractionDigits:0})}${p.volumeUsd24h ? ` • Vol 24h: ~$${Number(p.volumeUsd24h).toLocaleString(undefined,{maximumFractionDigits:0})}` : ""}`
+              : "—"
+          }))
+        ];
+        const newlyActiveGt = extraPoolsGt.filter(p => p.liquidityUsd && p.liquidityUsd > 0).length;
+        rep.meta.liqActivePools = Number(rep.meta?.liqActivePools || 0) + newlyActiveGt;
+      }
+    }
+
     // ✅ FIX (real bug, confirmed live via a direct DexScreener API call):
     // liqQuality/liquidityUsdEst above were computed ENTIRELY from our own
     // on-chain 5-factory scan (Pancake V2/V3, Four.meme, Biswap, ApeSwap,
@@ -4236,9 +4315,19 @@ function initPanels() {
     const dsAllPairsLiquidityUsd = Array.isArray(dexscreener?.allPairs)
       ? dexscreener.allPairs.reduce((acc, p) => acc + (Number(p?.liquidityUsd) || 0), 0)
       : 0;
+    // ✅ NEW: fold GeckoTerminal's figures into the same max() so a pool
+    // it alone found (e.g. PancakeSwap Infinity/V4) can raise
+    // liquidityUsdEst/liqQuality the same way a DexScreener-only pool
+    // already could.
+    const gtBestLiquidityUsd = Number(geckoterminal?.liquidityUsd);
+    const gtAllPairsLiquidityUsd = Array.isArray(geckoterminal?.allPairs)
+      ? geckoterminal.allPairs.reduce((acc, p) => acc + (Number(p?.liquidityUsd) || 0), 0)
+      : 0;
     const dsLiquidityUsd = Math.max(
       Number.isFinite(dsBestLiquidityUsd) ? dsBestLiquidityUsd : 0,
-      dsAllPairsLiquidityUsd
+      dsAllPairsLiquidityUsd,
+      Number.isFinite(gtBestLiquidityUsd) ? gtBestLiquidityUsd : 0,
+      gtAllPairsLiquidityUsd
     );
     if (dsLiquidityUsd > 0) {
       const onChainEst = Number.isFinite(rep.meta?.liquidityUsdEst) ? rep.meta.liquidityUsdEst : 0;
