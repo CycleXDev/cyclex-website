@@ -4002,6 +4002,10 @@ function initPanels() {
     }
 
     setStatus(st, "info", "Scanning…");
+    if (out) {
+      out.className = "status info";
+      out.innerHTML = "<strong>Scanning…</strong><br>Checking contract, liquidity, and market data — usually a few seconds.";
+    }
 
     const cache = loadQsCache();
     const ckey = qsCacheKey(net, token, useApis);
@@ -4576,9 +4580,14 @@ function initPanels() {
     else if (liqQuality === "low") marketScore = Math.min(marketScore, 58);
     else if (liqQuality === "medium") marketScore = Math.min(marketScore, 75);
     marketScore = qsClamp(Math.round(marketScore), 0, 100);
-    if (liqQuality === "healthy" && Number(rep.meta?.liqUsdtAmt || 0) >= 100000 && Number(rep.meta?.liqActivePools || 0) >= 2) {
-      marketScore = qsClamp(Math.round(marketScore + 8), 0, 100);
-    }
+    // ✅ FIX (duplicate scoring bug, same class as the one already fixed
+    // above with the liqQuality-write-order comment): this exact +8
+    // "healthy liquidity" bonus, same condition, is ALREADY applied
+    // inside qsComputeMarketRisk() (see there) and feeds into marketScore
+    // above via `market.marketScore`. This second copy re-applied it a
+    // second time on the same marketScore value. Removed — the one
+    // inside qsComputeMarketRisk() is the single source of truth for
+    // this bonus now.
 
     let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
     score = qsApplyScoreGates(score, rep, marketFlags);
@@ -5017,6 +5026,10 @@ function initPanels() {
     }
 
     setStatus(st, "info", "Scanning (Solana)…");
+    if (out) {
+      out.className = "status info";
+      out.innerHTML = "<strong>Scanning…</strong><br>Checking contract, liquidity, and market data — usually a few seconds.";
+    }
 
     const cache = loadQsCache();
     const ckey = qsCacheKey("solana", token, false);
