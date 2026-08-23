@@ -4754,6 +4754,17 @@ function initPanels() {
       }
     }
 
+    // ✅ NEW (Eyal's decision, 2026-08-23): soft cap — a token whose source
+    // code verification is unconfirmed (no explorer key set, or explicitly
+    // unverified) can no longer land on a perfect 100/100. Deliberately
+    // soft: 97, not a hard block like the earlier "cap at 84 without
+    // Verified=true" idea Eyal rejected (that would unfairly punish good
+    // tokens for users who simply haven't set an API key). This only trims
+    // the very top of the range so 100 becomes rare/meaningful again,
+    // rather than routinely reachable via GoPlus's holder-count/open-source
+    // bonuses stacking with a high blended base.
+    if (verified !== true && score > 97) score = 97;
+
     score = qsClamp(score, 0, 100);
 
     // ✅ FIX (major finding, same class of bug as the bot): the ORIGINAL
@@ -5555,8 +5566,8 @@ function initPanels() {
     out.innerHTML = `
       <div class="qs-result-card">
         <div class="qs-result-name">
-          ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}${ageBadgeHtml}
-          <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}</span>
+          ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}
+          <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}</span>${ageBadgeHtml}
         </div>
         <div class="qs-result-meta">
           <div>Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b></div>
