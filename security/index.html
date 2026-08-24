@@ -593,13 +593,15 @@
        RU invisible entirely) instead of dropping to a second line. Now
        wraps and right-aligns, matching how .top-bar itself already wraps
        at this breakpoint. */
-    /* ✅ FIX (refined per follow-up, matches the hub page's mobile
-       pattern): languages now get their own full-width row (via
-       flex-basis:100% + order:-1, pushing them first even though they're
-       last in the HTML), with Firewall + Bot wrapping together onto the
-       row below, both rows centered. */
-    .top-right{flex-wrap:wrap;justify-content:center;row-gap:10px}
-    .lang-switch{order:-1;flex-basis:100%;justify-content:center}
+    /* ⚠️ REVERTED (real regression, reported live): the follow-up refine
+       (lang-switch with flex-basis:100% + order:-1, to put languages on
+       their own row above Firewall/Bot) caused the whole page to shift
+       right on mobile with content clipped on the left edge — a real
+       horizontal-overflow bug, not a rendering preference. Reverted to
+       this simpler, already-confirmed-working wrap (items just wrap in
+       DOM order, no forced full-width row) rather than risk guessing at
+       another flex fix blind. */
+    .top-right{flex-wrap:wrap;justify-content:flex-end;row-gap:8px}
     .brand-sub{display:none}
     .back-link{display:none}
     .modal-backdrop{padding:0;align-items:flex-end}
