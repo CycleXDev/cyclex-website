@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -324,6 +321,7 @@
     background:linear-gradient(135deg,rgba(0,180,180,.12) 0%,rgba(0,130,160,.08) 100%);
     border:1px solid rgba(0,229,255,.18);border-radius:16px;
     padding:18px 20px;margin-bottom:14px;
+    position:relative;
   }
   .qs-result-name{font-size:20px;font-weight:900;letter-spacing:-.02em;color:#5dffd9;margin-bottom:6px}
   .qs-result-meta{font-size:12px;color:rgba(255,255,255,.65);line-height:1.8}
@@ -339,6 +337,18 @@
   .qs-score-ok{background:rgba(93,255,178,.15);color:var(--green);border:1px solid rgba(93,255,178,.3)}
   .qs-score-warn{background:rgba(255,193,7,.12);color:#ffd166;border:1px solid rgba(255,193,7,.25)}
   .qs-score-bad{background:rgba(255,71,87,.12);color:#ff7a8a;border:1px solid rgba(255,71,87,.25)}
+  /* ✅ FIX (real bug, reported live): the earlier absolute top-right
+     placement collided with the score badge whenever the token name was
+     short (both ended up fighting for the same corner). Moved inline next
+     to "Network:" instead — same font-size as the rest of qs-result-meta
+     (12px) so it sits at the right visual weight there, keeping the
+     distinct violet accent so it still stands out from the meta text. */
+  .qs-age-badge{
+    display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+    padding:2px 10px;border-radius:999px;font-size:12px;font-weight:700;
+    background:rgba(178,102,255,.16);color:#cb9dff;border:1px solid rgba(178,102,255,.4);
+    margin-inline-start:8px;vertical-align:middle;
+  }
 
   /* ── CHIPS GRID ──────────────────────────────── */
   .chips-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
@@ -576,6 +586,22 @@
     .rpc-2btn-row{grid-template-columns:1fr 1fr}
     #qsLiqTable .trow{font-size:10px}
     .top-bar{flex-wrap:wrap;padding:10px 12px;border-radius:18px;gap:8px;margin-bottom:18px}
+    /* ✅ FIX (real bug, reported live on mobile): .top-right (Firewall +
+       Bot + 4-language switch) never wrapped its own children — when the
+       row ran out of horizontal space, buttons were clipped/cut off at
+       the edge (confirmed live: the AR language button was cut mid-way,
+       RU invisible entirely) instead of dropping to a second line. Now
+       wraps and right-aligns, matching how .top-bar itself already wraps
+       at this breakpoint. */
+    /* ⚠️ REVERTED (real regression, reported live): the follow-up refine
+       (lang-switch with flex-basis:100% + order:-1, to put languages on
+       their own row above Firewall/Bot) caused the whole page to shift
+       right on mobile with content clipped on the left edge — a real
+       horizontal-overflow bug, not a rendering preference. Reverted to
+       this simpler, already-confirmed-working wrap (items just wrap in
+       DOM order, no forced full-width row) rather than risk guessing at
+       another flex fix blind. */
+    .top-right{flex-wrap:wrap;justify-content:flex-end;row-gap:8px}
     .brand-sub{display:none}
     .back-link{display:none}
     .modal-backdrop{padding:0;align-items:flex-end}
@@ -594,6 +620,90 @@
     .tx-detail-card,.tx-sum{font-size:11px}
     .tx-detail-k{min-width:60px}
     .rpc-full-btn{font-size:15px;padding:13px}
+
+    /* ✅ MOBILE TOP BAR — match Firewall layout:
+       brand on its own row, languages full-width, then Firewall + Bot side-by-side. */
+    .top-bar{
+      align-items:flex-start;
+    }
+    .top-bar .brand{
+      width:100%;
+      justify-content:flex-start;
+    }
+    .top-right{
+      width:100%;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      gap:10px;
+      align-items:center;
+    }
+    .top-right .lang-switch{
+      grid-column:1 / -1;
+      grid-row:1;
+      width:100%;
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:2px;
+      padding:5px;
+    }
+    .top-right .lang-btn{
+      width:100%;
+      padding:7px 4px;
+      text-align:center;
+    }
+    .top-right .btn-firewall{
+      grid-column:1;
+      grid-row:2;
+      width:100%;
+      justify-content:center;
+      padding:9px 10px;
+    }
+    .top-right .btn-telegram{
+      grid-column:2;
+      grid-row:2;
+      width:100%;
+      justify-content:center;
+      padding:9px 10px;
+    }
+
+    /* ✅ QUICK SCAN — prevent dynamically-rendered results from widening mobile viewport */
+    #panel-quick,
+    #panel-quick .grid-2,
+    #panel-quick .card,
+    #qs-out,
+    #qs-risk,
+    #qs-pairsWrap,
+    #qs-redflagsWrap,
+    .qs-result-card{
+      min-width:0;
+      max-width:100%;
+    }
+    .qs-result-name,
+    .qs-result-meta,
+    .qs-result-meta .mono,
+    #qs-risk .risk,
+    #qs-risk .risk > span{
+      min-width:0;
+      max-width:100%;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+    .qs-result-meta .mono{white-space:normal}
+    #qs-risk .risk > span:last-child{
+      min-width:0;
+      overflow-wrap:anywhere;
+    }
+    #qsLiqTable{
+      width:100%;
+      max-width:100%;
+      overflow-x:auto;
+    }
+    #qsLiqTable .trow{
+      min-width:0;
+      grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1.5fr) minmax(0,2fr);
+    }
+    #qsLiqTable .cell{min-width:0}
+    #panel-quick.panel-shell{overflow-x:hidden}
   }
   @media(max-width:480px){
     #toolGrid{grid-template-columns:1fr 1fr}
@@ -806,7 +916,7 @@
               <span class="small" data-i18n="opt_show_json">Enable JSON report</span>
             </label>
           </div>
-          <div id="qs-status" class="status info"></div>
+          <div id="qs-status" class="status info" style="margin-top:10px;"></div>
         </div>
         <div class="card">
           <h3 data-i18n="results_title">Results</h3>
@@ -3374,9 +3484,28 @@ function initPanels() {
         n === "gate.io" ? "Gate.io" :
         n.charAt(0).toUpperCase() + n.slice(1)
       );
+      // ✅ NEW: real circulating supply, when CoinGecko tracks this token's
+      // market data (requires it to be a recognized/listed coin there, not
+      // just any contract — most small/new tokens won't have this, same
+      // caveat as everywhere else in this codebase: use real data when
+      // available, fall back to the on-chain estimate otherwise, never
+      // invent a number). This is the actual "how much is trading in the
+      // market right now" concept (e.g. what a CoinGecko/CMC coin page
+      // shows for XRP) — different from, and more accurate than, the
+      // on-chain "total supply minus the current owner wallet balance"
+      // approximation used as a fallback.
+      const md = j.market_data || null;
+      const circulatingSupplyReal = (md && Number.isFinite(Number(md.circulating_supply))) ? Number(md.circulating_supply) : null;
+      const totalSupplyFromCg = (md && Number.isFinite(Number(md.total_supply))) ? Number(md.total_supply) : null;
       // ✅ NEW: total 24h volume across matched top-tier exchanges.
       const totalVolume24hUsd = matched.reduce((acc, t) => acc + (Number(t?.converted_volume?.usd) || 0), 0);
-      return { listed: display.length > 0, exchanges: display, totalVolume24hUsd: totalVolume24hUsd > 0 ? totalVolume24hUsd : null };
+      return {
+        listed: display.length > 0,
+        exchanges: display,
+        totalVolume24hUsd: totalVolume24hUsd > 0 ? totalVolume24hUsd : null,
+        circulatingSupplyReal,
+        totalSupplyFromCg
+      };
     } catch (e) {
       console.error("qsFetchCexListing threw:", e?.message || e);
       return { listed: false, exchanges: [] };
@@ -3563,6 +3692,10 @@ function initPanels() {
   }
 
   const QS_DS_CHAIN = { bsc: "bsc", eth: "ethereum", polygon: "polygon", solana: "solana" };
+  // GeckoTerminal network IDs differ from DexScreener's — eth (not
+  // "ethereum"), polygon_pos (not "polygon"). Verified against
+  // GeckoTerminal API docs.
+  const QS_GT_CHAIN = { bsc: "bsc", eth: "eth", polygon: "polygon_pos", solana: "solana" };
 
   // ✅ FIX: DexScreener's response includes baseToken.name/symbol, which
   // wasn't being captured — meaning if GoPlus Solana data is unavailable
@@ -3588,6 +3721,16 @@ function initPanels() {
       const sorted = pairs.sort((a,b) => (b?.liquidity?.usd||0) - (a?.liquidity?.usd||0));
       const best = sorted[0];
       const safeNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+      // ✅ FIX (real bug, confirmed live: KII/Kiichain — a real 4-month-old
+      // token showed "Trading Age: 9d"): pairCreatedAt was only ever taken
+      // from `best` (the highest-LIQUIDITY pair). For a token whose original
+      // pool is small/old but a much bigger pool was created recently (e.g.
+      // a new PancakeSwap v4 CL pool), `best` picks the NEW big pool, so its
+      // pairCreatedAt reflects the new pool's age, not the token's actual
+      // trading history. Age should come from the OLDEST pool, not the
+      // biggest one — computed here across every pair DexScreener returned.
+      const allCreatedAt = pairs.map(p => Number(p?.pairCreatedAt)).filter(n => Number.isFinite(n) && n > 0);
+      const earliestPairCreatedAt = allCreatedAt.length ? Math.min(...allCreatedAt) : null;
       return {
         priceUsd:       safeNum(best?.priceUsd),
         priceChange24h: safeNum(best?.priceChange?.h24),
@@ -3598,6 +3741,10 @@ function initPanels() {
         dexId:          best?.dexId || null,
         pairAddress:    best?.pairAddress || null,
         pairCreatedAt:  Number.isFinite(Number(best?.pairCreatedAt)) ? Number(best.pairCreatedAt) : null,
+        // ✅ NEW: use this one for age calculations instead of pairCreatedAt
+        // above (kept as-is since other code may rely on it meaning "the
+        // main/best pair's" creation time specifically, e.g. LP-lock lookups).
+        earliestPairCreatedAt,
         symbol:         best?.baseToken?.symbol ? String(best.baseToken.symbol).trim() : null,
         name:           best?.baseToken?.name ? String(best.baseToken.name).trim() : null,
         // ✅ FIX (major finding): DexScreener's response includes EVERY
@@ -3616,6 +3763,96 @@ function initPanels() {
           volumeUsd24h: safeNum(p?.volume?.h24)
         }))
       };
+    } catch { return null; }
+  }
+
+  // ✅ NEW: second liquidity-aggregator source, same role DexScreener
+  // already plays: catches pools our own factory scan AND DexScreener
+  // both miss. Confirmed necessary for PancakeSwap Infinity/V4 pools
+  // that DexScreener doesn't consistently index (verified live: TRIA's
+  // real $573K pancakeswap-infinity-clmm pool was entirely absent from
+  // DexScreener's response but present here). Free, no API key, 30
+  // req/min. Shape matches qsFetchDexScreener's allPairs[] so it plugs
+  // into the same merge/max-liquidity logic below.
+  async function qsFetchGeckoTerminal(net, token) {
+    try {
+      const chain = QS_GT_CHAIN[net];
+      if (!chain) return null;
+      const addr = String(token || "").trim();
+      if (!addr) return null;
+      const url = `https://api.geckoterminal.com/api/v2/networks/${chain}/tokens/${addr}/pools`;
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 8000);
+      let j = null;
+      try {
+        const res = await fetch(url, { signal: ctrl.signal });
+        if (res.ok) j = await res.json();
+        else console.error("GeckoTerminal call failed, status:", res.status);
+      } finally {
+        clearTimeout(tmr);
+      }
+      if (!j || !Array.isArray(j.data) || !j.data.length) return null;
+
+      const safeNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+      const allPairs = j.data.slice(0, 10).map(p => ({
+        dex:          p?.relationships?.dex?.data?.id || "DEX",
+        pairAddress:  p?.attributes?.address || "",
+        quoteSymbol:  "", // not directly given per-pool without an extra fetch; omitted rather than guessed
+        liquidityUsd: safeNum(p?.attributes?.reserve_in_usd),
+        volumeUsd24h: safeNum(p?.attributes?.volume_usd?.h24)
+      }));
+      const sorted = [...allPairs].sort((a,b) => (b.liquidityUsd||0) - (a.liquidityUsd||0));
+      const best = sorted[0] || null;
+      // ✅ NEW: same "oldest pool, not biggest pool" age fix as DexScreener's
+      // earliestPairCreatedAt — GeckoTerminal's pool_created_at is an ISO
+      // string per pool, across the full (unsliced) response.
+      const allCreatedAtMs = j.data
+        .map(p => Date.parse(p?.attributes?.pool_created_at || ""))
+        .filter(n => Number.isFinite(n) && n > 0);
+      const earliestPoolCreatedAtMs = allCreatedAtMs.length ? Math.min(...allCreatedAtMs) : null;
+
+      return {
+        liquidityUsd: best?.liquidityUsd ?? null,
+        pairAddress:  best?.pairAddress || null,
+        dexId:        best?.dex || null,
+        pairCount:    allPairs.length,
+        earliestPoolCreatedAtMs,
+        allPairs
+      };
+    } catch { return null; }
+  }
+
+  // ✅ NEW: real circulating supply, wider coverage than CoinGecko's
+  // contract-lookup endpoint alone (matches the bot's equivalent fix).
+  // GeckoTerminal's singular token-info endpoint (distinct from the
+  // /pools list endpoint above) returns market_cap_usd and price_usd for
+  // any token GeckoTerminal has a verified CoinGecko-sourced supply for.
+  // When market_cap_usd is present, circulating supply = market_cap_usd /
+  // price_usd — real, disclosed data, not an estimate. Returns null (not
+  // a guess) when GeckoTerminal has no verified market cap for this token.
+  async function qsFetchGeckoTerminalTokenInfo(net, token) {
+    try {
+      const chain = QS_GT_CHAIN[net];
+      if (!chain) return null;
+      const addr = String(token || "").trim();
+      if (!addr) return null;
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 8000);
+      let j = null;
+      try {
+        const res = await fetch(`https://api.geckoterminal.com/api/v2/networks/${chain}/tokens/${addr}`, { signal: ctrl.signal });
+        if (res.ok) j = await res.json();
+      } finally {
+        clearTimeout(tmr);
+      }
+      const attrs = j?.data?.attributes;
+      if (!attrs) return null;
+      const marketCapUsd = Number(attrs.market_cap_usd);
+      const priceUsd = Number(attrs.price_usd);
+      const circulatingSupplyReal = (Number.isFinite(marketCapUsd) && marketCapUsd > 0 && Number.isFinite(priceUsd) && priceUsd > 0)
+        ? marketCapUsd / priceUsd
+        : null;
+      return { circulatingSupplyReal };
     } catch { return null; }
   }
 
@@ -3909,6 +4146,59 @@ function initPanels() {
     }
   }
 
+  // ✅ FIX (real bug, confirmed live via CyberELON — a pump.fun token):
+  // Helius's getAsset (Metaplex `creators` field) came back EMPTY for
+  // pump.fun tokens specifically — they don't populate that standard
+  // field, they track creator through their own bonding-curve program
+  // instead. pump.fun's own API (`frontend-api-v3.pump.fun/coins/{mint}`)
+  // returns the real creator directly, but that endpoint is CORS-blocked
+  // for browser-origin requests by pump.fun themselves — it can only be
+  // called from a backend. Replaced the old approach (only worked if the
+  // visitor personally pasted a Helius RPC URL into the custom-RPC field)
+  // with a call to CycleX's own backend endpoint, which tries pump.fun
+  // first (no key needed — covers the exact category Eyal cares about
+  // most, freshly-launched tokens) and falls back to Helius server-side
+  // (if HELIUS_API_KEY is configured there) for non-pump.fun tokens. Works
+  // automatically for every visitor now, not just ones with their own key.
+  const QS_API_BASE = "https://cyclex-api.cyclexdev.workers.dev";
+  async function qsFetchSolanaCreatorViaHelius(token) {
+    try {
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 8000);
+      let j = null;
+      try {
+        const res = await fetch(`${QS_API_BASE}/api/solanaCreator?token=${encodeURIComponent(token)}`, { signal: ctrl.signal });
+        if (res.ok) j = await res.json();
+      } finally {
+        clearTimeout(tmr);
+      }
+      const addr = String(j?.creator || "").trim();
+      return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr) ? addr : null;
+    } catch { return null; }
+  }
+
+  // ✅ NEW: how much of total supply a specific wallet holds for this
+  // specific mint — sums every token account that wallet owns for this
+  // mint (usually just one, but summed defensively in case of more).
+  // Mirrors the bot's fetchSolanaWalletHoldingPct exactly.
+  async function qsFetchSolanaWalletHoldingPct(walletAddress, mintAddress, supplyUi) {
+    if (!walletAddress || !supplyUi) return null;
+    try {
+      const result = await solanaRpcRequest("getTokenAccountsByOwner", [
+        walletAddress,
+        { mint: mintAddress },
+        { encoding: "jsonParsed" }
+      ]);
+      const accounts = Array.isArray(result?.value) ? result.value : [];
+      let total = 0;
+      for (const acc of accounts) {
+        const ui = acc?.account?.data?.parsed?.info?.tokenAmount?.uiAmount;
+        if (Number.isFinite(ui)) total += ui;
+      }
+      return (total / supplyUi) * 100;
+    } catch { return null; }
+  }
+
   async function runQuickScan(){
     const st = $("#qs-status");
     const out = $("#qs-out");
@@ -3950,6 +4240,20 @@ function initPanels() {
     }
 
     setStatus(st, "info", "Scanning…");
+    if (out) {
+      out.className = "status info";
+      out.innerHTML = "<strong>Scanning…</strong><br>Checking contract, liquidity, and market data — usually a few seconds.";
+    }
+    // ✅ FIX (real bug, reported live): only #qs-out was being replaced with
+    // the "Scanning…" state — the risk-chip grid, pool table, and red-flags
+    // panel are separate DOM containers only touched by render(), so the
+    // PREVIOUS token's chips/pools/flags stayed fully visible on screen
+    // throughout the new scan, disappearing only once the new report was
+    // ready and render() finally ran. Clearing them here too so nothing
+    // stale is shown mid-scan.
+    if (chipsWrap) chipsWrap.innerHTML = "";
+    if (pairsWrap) pairsWrap.innerHTML = "";
+    if (redflagsWrap) redflagsWrap.innerHTML = "";
 
     const cache = loadQsCache();
     const ckey = qsCacheKey(net, token, useApis);
@@ -4167,14 +4471,17 @@ function initPanels() {
 
     const explorerKey = (typeof qsExplorerKeyFor === "function") ? qsExplorerKeyFor(net)?.key : null;
     const [
-      cexSettled, priceSettled, ageSettled, holderSettled, goplusSettled, dexscreenerSettled
+      cexSettled, priceSettled, ageSettled, holderSettled, goplusSettled, dexscreenerSettled, geckoterminalSettled, gtInfoSettled
     ] = await Promise.allSettled([
       qsFetchCexListing(net, token),
       qsFetchNativePrice(net),
       qsFetchContractAge(net, token, explorerKey),
       qsFetchHolderCount(net, token, explorerKey),
       qsFetchGoPlus(net, token),
-      qsFetchDexScreener(net, token)
+      qsFetchDexScreener(net, token),
+      qsFetchGeckoTerminal(net, token),
+      // ✅ NEW: real circulating supply, wider coverage than CoinGecko alone.
+      qsFetchGeckoTerminalTokenInfo(net, token)
     ]);
 
     const cexResult         = cexSettled.status         === "fulfilled" ? (cexSettled.value         || { listed: false, exchanges: [] }) : { listed: false, exchanges: [] };
@@ -4183,6 +4490,8 @@ function initPanels() {
     const explorerHolderCount = holderSettled.status    === "fulfilled" ? holderSettled.value        : null;
     const goplus            = goplusSettled.status      === "fulfilled" ? goplusSettled.value        : null;
     const dexscreener       = dexscreenerSettled.status === "fulfilled" ? dexscreenerSettled.value   : null;
+    const geckoterminal     = geckoterminalSettled.status === "fulfilled" ? geckoterminalSettled.value : null;
+    const gtInfo            = gtInfoSettled.status      === "fulfilled" ? gtInfoSettled.value        : null;
 
     // ✅ NEW: merge in any pool DexScreener knows about that our fixed
     // 5-factory on-chain scan (Pancake V2/V3, Four.meme, Biswap, ApeSwap,
@@ -4215,6 +4524,75 @@ function initPanels() {
         const newlyActive = extraPools.filter(p => p.liquidityUsd && p.liquidityUsd > 0).length;
         rep.meta.liqActivePools = Number(rep.meta?.liqActivePools || 0) + newlyActive;
       }
+    }
+
+    // ✅ NEW: same merge, second source (GeckoTerminal). Recomputes
+    // coveredAddrs fresh so it also dedupes against whatever the
+    // DexScreener merge just added above.
+    if (Array.isArray(geckoterminal?.allPairs) && geckoterminal.allPairs.length) {
+      const coveredAddrsGt = new Set((rep.liq?.rows || []).map(r => String(r?.addr || "").toLowerCase()));
+      const extraPoolsGt = geckoterminal.allPairs.filter(p => !coveredAddrsGt.has(String(p.pairAddress || "").toLowerCase()));
+      if (extraPoolsGt.length) {
+        rep.liq.any = true;
+        rep.liq.rows = [
+          ...(rep.liq?.rows || []),
+          ...extraPoolsGt.map(p => ({
+            addr: p.pairAddress || "",
+            type: `${p.dex} • via GeckoTerminal`,
+            target: "pool",
+            ok: !!(p.liquidityUsd && p.liquidityUsd > 0),
+            note: p.liquidityUsd
+              ? `Liquidity: ~$${Number(p.liquidityUsd).toLocaleString(undefined,{maximumFractionDigits:0})}${p.volumeUsd24h ? ` • Vol 24h: ~$${Number(p.volumeUsd24h).toLocaleString(undefined,{maximumFractionDigits:0})}` : ""}`
+              : "—"
+          }))
+        ];
+        const newlyActiveGt = extraPoolsGt.filter(p => p.liquidityUsd && p.liquidityUsd > 0).length;
+        rep.meta.liqActivePools = Number(rep.meta?.liqActivePools || 0) + newlyActiveGt;
+      }
+    }
+
+    // ✅ FIX (real bug, confirmed live via a direct DexScreener API call):
+    // liqQuality/liquidityUsdEst above were computed ENTIRELY from our own
+    // on-chain 5-factory scan (Pancake V2/V3, Four.meme, Biswap, ApeSwap,
+    // Bakery), BEFORE DexScreener was even fetched (a few lines up). A
+    // token whose real liquidity sits on a DEX architecture our factory
+    // scan doesn't cover at all — confirmed here: PancakeSwap V4 uses a
+    // completely different singleton PoolManager contract, not a
+    // per-pair factory like V2/V3 — could have DexScreener correctly
+    // reporting ~$1.4M in real liquidity while our own on-chain figure
+    // sat at ~$0, and the score/liqQuality classification used ONLY that
+    // $0 figure. The merge block above already adds DexScreener's extra
+    // pools as TABLE ROWS for display, but never fed their $ value back
+    // into liquidityUsdEst/liqQuality — this closes that gap by taking
+    // the larger of (our on-chain estimate) and (DexScreener's own
+    // reported liquidity, including the newly-merged pools above).
+    const dsBestLiquidityUsd = Number(dexscreener?.liquidityUsd);
+    const dsAllPairsLiquidityUsd = Array.isArray(dexscreener?.allPairs)
+      ? dexscreener.allPairs.reduce((acc, p) => acc + (Number(p?.liquidityUsd) || 0), 0)
+      : 0;
+    // ✅ NEW: fold GeckoTerminal's figures into the same max() so a pool
+    // it alone found (e.g. PancakeSwap Infinity/V4) can raise
+    // liquidityUsdEst/liqQuality the same way a DexScreener-only pool
+    // already could.
+    const gtBestLiquidityUsd = Number(geckoterminal?.liquidityUsd);
+    const gtAllPairsLiquidityUsd = Array.isArray(geckoterminal?.allPairs)
+      ? geckoterminal.allPairs.reduce((acc, p) => acc + (Number(p?.liquidityUsd) || 0), 0)
+      : 0;
+    const dsLiquidityUsd = Math.max(
+      Number.isFinite(dsBestLiquidityUsd) ? dsBestLiquidityUsd : 0,
+      dsAllPairsLiquidityUsd,
+      Number.isFinite(gtBestLiquidityUsd) ? gtBestLiquidityUsd : 0,
+      gtAllPairsLiquidityUsd
+    );
+    if (dsLiquidityUsd > 0) {
+      const onChainEst = Number.isFinite(rep.meta?.liquidityUsdEst) ? rep.meta.liquidityUsdEst : 0;
+      const correctedLiquidityUsdEst = Math.max(onChainEst, dsLiquidityUsd);
+      rep.meta.liquidityUsdEst = correctedLiquidityUsdEst;
+      if (correctedLiquidityUsdEst < 25000) liqQuality = "tiny";
+      else if (correctedLiquidityUsdEst < 250000) liqQuality = "low";
+      else if (correctedLiquidityUsdEst < 500000) liqQuality = "medium";
+      else liqQuality = "healthy";
+      rep.liq.any = true;
     }
 
     // Liquidity lock — run after dexscreener resolves (needs pairAddress)
@@ -4320,17 +4698,29 @@ function initPanels() {
     // said yes — not confirmed on-chain by us).
     const mintOnChain = mintBytecodeDetected || goplus?.isMintableFlag !== true;
 
-    // ✅ NEW: Est. Circulating Supply — total supply minus the owner
-    // wallet's holding (when known and non-trivial). Same principle as the
-    // bot's equivalent field: an ESTIMATE, not an exact figure like
-    // CoinGecko's (which relies on project disclosures, known team-wallet
-    // lists, vesting schedules — none of which are derivable from on-chain
-    // data alone). Only computed when total supply and owner-holding % are
-    // both actually known on-chain; shows "Same as Total Supply" when the
-    // owner is renounced (nothing to subtract), omitted entirely otherwise
-    // rather than showing a misleading number.
+    // ✅ FIX (real design gap, reported live): this used to ALWAYS mean
+    // "total supply minus the current owner wallet's balance" — a
+    // reasonable on-chain-only proxy, but not the actual "circulating
+    // supply" concept (how much is trading in the market right now, e.g.
+    // what a CoinGecko/CMC coin page shows for XRP — total supply minus
+    // locked/reserved/unvested tokens, which usually sit in a treasury or
+    // vesting contract, NOT the current "owner" address this scanner
+    // tracks). Now prefers CoinGecko's own disclosed circulating_supply
+    // (see qsFetchCexListing) when the token is one CoinGecko tracks
+    // market data for — real data, not an approximation. Falls back to the
+    // on-chain owner-holding estimate only when CoinGecko has nothing,
+    // clearly labeled either way so the two are never confused.
     let estCirculatingSupplyText = null;
-    if (totalSupplyBI > 0n) {
+    let circSupplyIsReal = false;
+    const cgCirculating = cexResult?.circulatingSupplyReal;
+    const gtCirculating = gtInfo?.circulatingSupplyReal;
+    const realCirculating = (Number.isFinite(cgCirculating) && cgCirculating > 0)
+      ? cgCirculating
+      : (Number.isFinite(gtCirculating) && gtCirculating > 0 ? gtCirculating : null);
+    if (realCirculating != null) {
+      estCirculatingSupplyText = realCirculating.toLocaleString(undefined, { maximumFractionDigits: 4 });
+      circSupplyIsReal = true;
+    } else if (totalSupplyBI > 0n) {
       if (ownerIsRenounced) {
         estCirculatingSupplyText = "Same as Total Supply (owner renounced)";
       } else if (ownerPct != null) {
@@ -4414,6 +4804,16 @@ function initPanels() {
     if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
     contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
+    // ✅ FIX: rep.meta.liqQuality was previously only written into the final
+    // rep.meta object much later (near the end of this function), but
+    // qsComputeMarketRisk() (called right below) reads rep.meta.liqQuality
+    // to decide its own "+8 healthy liquidity" bonus — at this point in
+    // execution that field was always still undefined, so the bonus could
+    // never actually fire for any token, however healthy its liquidity.
+    // Writing it here, right before the call that needs it, fixes that
+    // without changing anything else about scoring.
+    rep.meta.liqQuality = liqQuality;
+
     const market = qsComputeMarketRisk(rep);
     let marketScore = Number(market.marketScore ?? 100);
     const marketFlags = Array.isArray(market.flags) ? market.flags : [];
@@ -4443,29 +4843,36 @@ function initPanels() {
     else if (liqQuality === "low") marketScore = Math.min(marketScore, 58);
     else if (liqQuality === "medium") marketScore = Math.min(marketScore, 75);
     marketScore = qsClamp(Math.round(marketScore), 0, 100);
-    if (liqQuality === "healthy" && Number(rep.meta?.liqUsdtAmt || 0) >= 100000 && Number(rep.meta?.liqActivePools || 0) >= 2) {
-      marketScore = qsClamp(Math.round(marketScore + 8), 0, 100);
-    }
+    // ✅ FIX (duplicate scoring bug, same class as the one already fixed
+    // above with the liqQuality-write-order comment): this exact +8
+    // "healthy liquidity" bonus, same condition, is ALREADY applied
+    // inside qsComputeMarketRisk() (see there) and feeds into marketScore
+    // above via `market.marketScore`. This second copy re-applied it a
+    // second time on the same marketScore value. Removed — the one
+    // inside qsComputeMarketRisk() is the single source of truth for
+    // this bonus now.
 
     let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
     score = qsApplyScoreGates(score, rep, marketFlags);
 
+    // ✅ FIX (real scoring bug, found via a live report showing 0/100
+    // despite Contract Score 72 / Market Score 28 — those should blend to
+    // ~46, not 0): every flag checked below (possible_manipulated_move,
+    // very_low_liquidity_usd, very_few_holders, extreme_volume_liquidity_
+    // ratio, etc.) is ALREADY subtracted from marketScore INSIDE
+    // qsComputeMarketRisk() above (confirmed by matching each flag name
+    // against that function's own penalty logic) — marketScore then
+    // already feeds into `score` via the 0.60 weight two lines up. This
+    // block re-subtracted the SAME penalties a second time directly from
+    // `score`, on top of the weighted average that already contained them.
+    // Combined with the further liqQuality-based deductions right below,
+    // this could easily push a token's score below 0 before the final
+    // qsClamp(0,100) floor silently absorbed the overshoot — wiping out
+    // otherwise-decent signals (no honeypot, 0% tax, thousands of
+    // holders, CEX-listed) into a flat, uninformative 0/100. Removed
+    // entirely rather than re-tuned, since it was pure duplication, not a
+    // separate intentional penalty.
     const mFlags = new Set((marketFlags || []).map(s => String(s).toLowerCase()));
-
-    if (mFlags.has("possible_manipulated_move")) score -= 22;
-    if (mFlags.has("extreme_short_term_volatility")) score -= 14;
-    if (mFlags.has("very_low_liquidity_usd")) score -= 22;
-    else if (mFlags.has("low_liquidity_usd")) score -= 10;
-    if (mFlags.has("very_few_holders")) score -= 18;
-    else if (mFlags.has("few_holders")) score -= 8;
-    if (mFlags.has("holder_concentration_unknown")) score -= 8;
-    // ✅ NEW: penalties for the newly-live volume/liquidity ratio flags.
-    if (mFlags.has("extreme_volume_liquidity_ratio")) {
-      score -= 18;
-      rep.redFlags.push("24h volume is extremely high relative to liquidity — pattern consistent with wash trading or extreme volatility around thin liquidity.");
-    } else if (mFlags.has("high_volume_liquidity_ratio")) {
-      score -= 8;
-    }
 
     if (liqQuality === "tiny") {
       if (rep.meta?.liqCoverageLow) {
@@ -4578,6 +4985,17 @@ function initPanels() {
       }
     }
 
+    // ✅ NEW (Eyal's decision, 2026-08-23): soft cap — a token whose source
+    // code verification is unconfirmed (no explorer key set, or explicitly
+    // unverified) can no longer land on a perfect 100/100. Deliberately
+    // soft: 97, not a hard block like the earlier "cap at 84 without
+    // Verified=true" idea Eyal rejected (that would unfairly punish good
+    // tokens for users who simply haven't set an API key). This only trims
+    // the very top of the range so 100 becomes rare/meaningful again,
+    // rather than routinely reachable via GoPlus's holder-count/open-source
+    // bonuses stacking with a high blended base.
+    if (verified !== true && score > 97) score = 97;
+
     score = qsClamp(score, 0, 100);
 
     // ✅ FIX (major finding, same class of bug as the bot): the ORIGINAL
@@ -4589,10 +5007,27 @@ function initPanels() {
     let evmAgeDays = null;
     if (contractAge?.ageDays != null) {
       evmAgeDays = contractAge.ageDays;
-    } else if (dexscreener?.pairCreatedAt) {
-      const ageMs = Date.now() - Number(dexscreener.pairCreatedAt);
-      if (Number.isFinite(ageMs) && ageMs > 0) evmAgeDays = ageMs / 86400000;
+    } else {
+      // ✅ FIX (real bug, confirmed live: KII/Kiichain showed "Trading Age:
+      // 9d" despite being ~4 months old): use the OLDEST pool found across
+      // both DexScreener and GeckoTerminal, not just DexScreener's
+      // highest-liquidity pair — a big new pool otherwise makes an old
+      // token look freshly created. See earliestPairCreatedAt /
+      // earliestPoolCreatedAtMs at their source for the full explanation.
+      const candidates = [
+        dexscreener?.earliestPairCreatedAt,
+        geckoterminal?.earliestPoolCreatedAtMs
+      ].filter(n => Number.isFinite(n) && n > 0);
+      const earliestMs = candidates.length ? Math.min(...candidates) : null;
+      if (earliestMs) {
+        const ageMs = Date.now() - earliestMs;
+        if (Number.isFinite(ageMs) && ageMs > 0) evmAgeDays = ageMs / 86400000;
+      }
     }
+    // ✅ NEW: stored so render() can show a compact age badge in the header
+    // card without recomputing this logic — matches the existing
+    // rep.meta.contractAgeDays / rep.meta.tradingAgeDays (Solana) pattern.
+    rep.meta.tradingAgeDaysEvm = evmAgeDays;
     const evmHardBad = !!(goplus?.isHoneypot);
     const evmHoldersUnknown = (rep.meta?.holderCount == null);
     const knownVeryFresh = evmAgeDays != null && evmAgeDays < 1;
@@ -4659,9 +5094,14 @@ function initPanels() {
       // a live balanceOf()/totalSupply() read, same as the bot's Dev/Owner
       // Holds field.
       { type: holderConcType, title: "Holder Concentration", value: holderConcText, onChain: ownerPct != null },
-      // ✅ NEW: Est. Circulating Supply — see estCirculatingSupplyText above.
+      // ✅ NEW: title/tag now reflect whether this is CoinGecko's real
+      // disclosed circulating supply (not on-chain, but real market data)
+      // or our own on-chain owner-holding estimate (see above).
       ...(estCirculatingSupplyText ? [{
-        type: "ok", title: "Est. Circulating Supply", value: estCirculatingSupplyText, onChain: true
+        type: "ok",
+        title: circSupplyIsReal ? "Circulating Supply" : "Est. Circulating Supply",
+        value: estCirculatingSupplyText,
+        onChain: !circSupplyIsReal
       }] : []),
       // ✅ NEW: top-holder chip (distinct from owner-only concentration above).
       // Not tagged on-chain — this is GoPlus's off-chain holders data.
@@ -4844,6 +5284,11 @@ function initPanels() {
       else if (f === "few_holders") rep.redFlags.push("Few holders detected.");
       else if (f === "extreme_short_term_volatility") rep.redFlags.push("Extreme short-term volatility detected.");
       else if (f === "holder_concentration_unknown") rep.redFlags.push("Holder concentration data is incomplete (confidence reduced).");
+      // ✅ NEW: message preserved from the removed double-penalty block —
+      // score impact now comes only from marketScore (see qsComputeMarketRisk),
+      // this just keeps the user-facing explanation.
+      else if (f === "extreme_volume_liquidity_ratio") rep.redFlags.push("24h volume is extremely high relative to liquidity — pattern consistent with wash trading or extreme volatility around thin liquidity.");
+      else if (f === "high_volume_liquidity_ratio") rep.redFlags.push("24h volume is unusually high relative to liquidity — worth a closer look.");
       else if (f === "no_clear_liquidity_signal" && !cexListed && !rep.redFlags.includes("No clear DEX liquidity signal detected.")) {
         rep.redFlags.push("No clear liquidity signal detected.");
       }
@@ -4877,6 +5322,13 @@ function initPanels() {
     }
 
     setStatus(st, "info", "Scanning (Solana)…");
+    if (out) {
+      out.className = "status info";
+      out.innerHTML = "<strong>Scanning…</strong><br>Checking contract, liquidity, and market data — usually a few seconds.";
+    }
+    if (chipsWrap) chipsWrap.innerHTML = "";
+    if (pairsWrap) pairsWrap.innerHTML = "";
+    if (redflagsWrap) redflagsWrap.innerHTML = "";
 
     const cache = loadQsCache();
     const ckey = qsCacheKey("solana", token, false);
@@ -4908,16 +5360,26 @@ function initPanels() {
     // reliability on the calls that actually depend on that endpoint.
     const mintInfo = await qsFetchSolanaMintInfo(token).catch(() => null);
 
-    const [gpS, dsS, cexS, solHoldersS] = await Promise.allSettled([
+    const [gpS, dsS, cexS, solHoldersS, heliusCreatorS, gtS, gtInfoS] = await Promise.allSettled([
       qsFetchGoPlusSolana(token),
       qsFetchDexScreener("solana", token),
       qsFetchCexListing("solana", token),
-      qsFetchSolanaHolderDistribution(token, mintInfo?.supplyUi ?? null)
+      qsFetchSolanaHolderDistribution(token, mintInfo?.supplyUi ?? null),
+      qsFetchSolanaCreatorViaHelius(token),
+      // ✅ FIX (real gap found live): Solana liquidity here only ever used
+      // DexScreener — GeckoTerminal (which catches pools DexScreener misses,
+      // the entire reason this project started) was wired into the EVM path
+      // but never into Solana's. Matches the bot's equivalent fix.
+      qsFetchGeckoTerminal("solana", token),
+      qsFetchGeckoTerminalTokenInfo("solana", token)
     ]);
     const gp  = gpS.status  === "fulfilled" ? gpS.value  : null;
     const ds  = dsS.status  === "fulfilled" ? dsS.value  : null;
     const cex = cexS.status === "fulfilled" ? cexS.value : { listed:false, exchanges:[] };
     const solHolders = solHoldersS.status === "fulfilled" ? solHoldersS.value : null;
+    const heliusCreator = heliusCreatorS.status === "fulfilled" ? heliusCreatorS.value : null;
+    const gt = gtS.status === "fulfilled" ? gtS.value : null;
+    const gtInfo = gtInfoS.status === "fulfilled" ? gtInfoS.value : null;
 
     if (!gp && !ds) {
       rep.redFlags.push("Could not retrieve any Solana security/market data for this address.");
@@ -5041,13 +5503,47 @@ function initPanels() {
       } else if (effTop10Pct >= 60) contractScore -= 8;
       else if (effTop10Pct >= 40) contractScore -= 3;
     }
+    // ✅ NEW: "Dev/Creator Holds" — see qsFetchSolanaCreatorViaHelius above
+    // for the full rationale. Priority: Helius's Metaplex creator (fast,
+    // survives authority renouncement) > GoPlus's creator_address > current
+    // mint/freeze authority address (weakest — a different concept, and
+    // gone entirely once renounced).
+    const devCandidateAddress = heliusCreator || gp?.creatorAddress || effMintAuthorityAddr || effFreezeAuthorityAddr || null;
+    const devSupplyForPct = solHolders?.supplyUi ?? mintInfo?.supplyUi ?? null;
+    const devHoldingPct = (devCandidateAddress && devSupplyForPct)
+      ? await qsFetchSolanaWalletHoldingPct(devCandidateAddress, token, devSupplyForPct)
+      : null;
+    if (devHoldingPct != null) {
+      if (devHoldingPct >= 50) { contractScore -= 20; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
+      else if (devHoldingPct >= 20) { contractScore -= 10; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
+      else if (devHoldingPct >= 5) contractScore -= 3;
+    }
     if (gp?.trustedToken) contractScore += 10;
     contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
     let marketScore = 100;
-    const liqUsd = ds?.liquidityUsd ?? null;
-    if (liqUsd === null && !cex?.listed) { marketScore -= 38; rep.redFlags.push("No clear DEX liquidity signal detected."); }
-    else if (liqUsd !== null) {
+    // ✅ FIX (real gap found live, matches the bot's fix): liquidity now
+    // takes the max across DexScreener's best/sum and GeckoTerminal's
+    // best/sum — was DexScreener alone before, missing pools (e.g.
+    // PancakeSwap Infinity-style concentrated-liquidity pools on Solana's
+    // equivalent DEXes) that only GeckoTerminal indexes.
+    const dsLiqUsdSol = ds?.liquidityUsd ?? null;
+    const gtLiqUsdSol = gt?.liquidityUsd ?? null;
+    const dsSumSol = Array.isArray(ds?.allPairs) ? ds.allPairs.reduce((a,p)=>a+(Number(p?.liquidityUsd)||0),0) : 0;
+    const gtSumSol = Array.isArray(gt?.allPairs) ? gt.allPairs.reduce((a,p)=>a+(Number(p?.liquidityUsd)||0),0) : 0;
+    const liqUsd = (dsLiqUsdSol == null && gtLiqUsdSol == null && dsSumSol <= 0 && gtSumSol <= 0)
+      ? null
+      : Math.max(dsLiqUsdSol || 0, gtLiqUsdSol || 0, dsSumSol, gtSumSol);
+    if (gtLiqUsdSol && gtLiqUsdSol > (dsLiqUsdSol || 0)) {
+      rep.redFlags.push(`GeckoTerminal shows higher liquidity (~$${Math.round(gtLiqUsdSol).toLocaleString()}, ${gt.dexId}) than DexScreener found for this token — using the larger figure.`);
+    }
+    // ✅ FIX (same gap already found and fixed in the bot): a CEX-listed
+    // token with no findable DEX liquidity fell through both branches and
+    // kept marketScore at an unpenalized 100.
+    if (liqUsd === null) {
+      if (!cex?.listed) { marketScore -= 38; rep.redFlags.push("No clear DEX liquidity signal detected."); }
+      else { marketScore -= 15; rep.redFlags.push("No DEX liquidity data found (CEX-listed, so some real liquidity likely exists elsewhere, but couldn't be measured here)."); }
+    } else {
       if (liqUsd < 25000) marketScore = Math.min(marketScore, 28);
       else if (liqUsd < 250000) marketScore = Math.min(marketScore, 58);
       else if (liqUsd < 500000) marketScore = Math.min(marketScore, 78);
@@ -5175,6 +5671,37 @@ function initPanels() {
           note: (p?.tvl ? `TVL: $${Number(p.tvl).toLocaleString(undefined,{maximumFractionDigits:0})}` : "") + lpLockNote(p)
         })));
       }
+      // ✅ NEW: also fold in any GeckoTerminal pool DexScreener+GoPlus
+      // didn't already cover, deduped by address.
+      if (Array.isArray(gt?.allPairs) && gt.allPairs.length) {
+        const coveredAddrs2 = new Set(rep.liq.rows.map(r => String(r?.addr || "").toLowerCase()));
+        const extraGtPools = gt.allPairs.filter(p => !coveredAddrs2.has(String(p.pairAddress || "").toLowerCase()));
+        if (extraGtPools.length) {
+          rep.liq.rows.push(...extraGtPools.map(p => ({
+            addr: p.pairAddress || "",
+            type: `${p.dex} • via GeckoTerminal`,
+            target: "pool",
+            ok: !!(p.liquidityUsd && p.liquidityUsd > 0),
+            note: p.liquidityUsd
+              ? `Liquidity: ~$${Number(p.liquidityUsd).toLocaleString(undefined,{maximumFractionDigits:0})}${p.volumeUsd24h ? ` • Vol 24h: ~$${Number(p.volumeUsd24h).toLocaleString(undefined,{maximumFractionDigits:0})}` : ""}`
+              : "—"
+          })));
+        }
+      }
+    } else if (Array.isArray(gt?.allPairs) && gt.allPairs.length) {
+      // ✅ NEW: same role as the ds.allPairs branch above, for the case
+      // DexScreener has nothing but GeckoTerminal does (the exact gap this
+      // whole project exists to close).
+      rep.liq.any = true;
+      rep.liq.rows = gt.allPairs.map(p => ({
+        addr: p.pairAddress || "",
+        type: `${p.dex} • via GeckoTerminal`,
+        target: "pool",
+        ok: !!(p.liquidityUsd && p.liquidityUsd > 0),
+        note: p.liquidityUsd
+          ? `Liquidity: ~$${Number(p.liquidityUsd).toLocaleString(undefined,{maximumFractionDigits:0})}${p.volumeUsd24h ? ` • Vol 24h: ~$${Number(p.volumeUsd24h).toLocaleString(undefined,{maximumFractionDigits:0})}` : ""}`
+          : "—"
+      }));
     } else if (Array.isArray(gp?.dex) && gp.dex.length) {
       rep.liq.any = true;
       rep.liq.rows = gp.dex.slice(0, 6).map(p => ({
@@ -5241,6 +5768,31 @@ function initPanels() {
       ...(gp?.defaultAccountStateFrozen ? [{ type: "bad", title: "New Accounts", value: "May start frozen (best-effort signal)" }] : []),
       { type: effTopHolderPct==null?"warn":effTopHolderPct>=30?"bad":effTopHolderPct>=15?"warn":"ok", title: "Top Holder",
         value: effTopHolderPct!=null ? `${effTopHolderPct.toFixed(1)}% (${effHoldersSource || "unknown"} data, may incl. LP)` : "Unknown" },
+      // ✅ NEW: Dev/Creator Holds — see devCandidateAddress/devHoldingPct
+      // above (this whole feature previously only existed in the bot).
+      { type: devHoldingPct==null ? "warn" : devHoldingPct>=20 ? "bad" : devHoldingPct>=5 ? "warn" : "ok",
+        title: "Dev/Creator Holds",
+        value: devHoldingPct != null ? `${devHoldingPct.toFixed(1)}%` : (devCandidateAddress ? "Unknown" : "No dev/creator address identified") },
+      // ✅ FIX: Circulating Supply — now also tries GeckoTerminal's derived
+      // figure (market_cap_usd / price_usd, wider coverage than CoinGecko
+      // alone) before falling back to the on-chain estimate. Also fixed
+      // misleading wording: "no dev/creator wallet identified" is missing
+      // data, not a confirmed fact — no longer claims a specific number.
+      ...(() => {
+        const cgCirc = cex?.circulatingSupplyReal;
+        const gtCirc = gtInfo?.circulatingSupplyReal;
+        const realCirc = (Number.isFinite(cgCirc) && cgCirc > 0) ? cgCirc : (Number.isFinite(gtCirc) && gtCirc > 0 ? gtCirc : null);
+        const supplyKnown = solHolders?.supplyUi ?? mintInfo?.supplyUi ?? null;
+        let text = null, isReal = false;
+        if (realCirc != null) {
+          text = realCirc.toLocaleString(undefined, { maximumFractionDigits: 4 });
+          isReal = true;
+        } else if (supplyKnown != null) {
+          if (devCandidateAddress == null) text = "Unknown (no disclosed data, no dev/creator wallet identified to estimate from)";
+          else if (devHoldingPct != null) text = (supplyKnown * (1 - devHoldingPct / 100)).toLocaleString(undefined, { maximumFractionDigits: 4 });
+        }
+        return text ? [{ type: "ok", title: isReal ? "Circulating Supply" : "Est. Circulating Supply", value: text }] : [];
+      })(),
       // ✅ FIX: now shows pool count too (up to 6 pools already collected
       // into rep.liq.rows from GoPlus's dex array above) — was previously
       // just a single $ figure or "Found" with no indication of how many
@@ -5329,6 +5881,24 @@ function initPanels() {
       ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);border-radius:10px;font-size:12px;color:#ff8a8a;font-weight:700;">⚠️ Thin liquidity — price impact/slippage may be extreme</div>`
       : "";
 
+    // ✅ NEW: compact age badge for the header card — requested so the
+    // token's age is visible immediately without scanning down to the
+    // Trading Age/Contract Age metric chip. Prefers the real on-chain
+    // contract age (contractAgeDays) when known; falls back to the
+    // (now oldest-pool-based, not newest-biggest-pool) trading age
+    // estimate otherwise. Not shown at all if neither is known, rather
+    // than displaying a misleading placeholder.
+    const ageDaysForBadge = rep?.meta?.contractAgeDays ?? rep?.meta?.tradingAgeDaysEvm ?? rep?.meta?.tradingAgeDays ?? null;
+    const ageIsOnChain = rep?.meta?.contractAgeDays != null;
+    const ageBadgeHtml = (ageDaysForBadge != null) ? (() => {
+      const d = ageDaysForBadge;
+      const ageStr = d >= 365 ? `${Math.floor(d/365)}y ${Math.floor((d%365)/30)}mo`
+        : d >= 30 ? `${Math.floor(d/30)}mo`
+        : d < 1 ? `${Math.max(0, Math.round(d*24))}h`
+        : `${Math.floor(d)}d`;
+      return `<span class="qs-age-badge">🕐 ${qsEscapeHtml(ageStr)}${ageIsOnChain ? "" : " (trading age)"}</span>`;
+    })() : "";
+
     out.innerHTML = `
       <div class="qs-result-card">
         <div class="qs-result-name">
@@ -5336,9 +5906,9 @@ function initPanels() {
           <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}</span>
         </div>
         <div class="qs-result-meta">
-          <div>Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b></div>
+          <div>Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b>${ageBadgeHtml}</div>
           <div>Token: <span class="mono">${qsEscapeHtml(rep.token)}</span></div>
-          <div>Supply: <span class="mono">${qsEscapeHtml(supplyTxt)}</span></div>
+          <div>Total Supply: <span class="mono">${qsEscapeHtml(supplyTxt)}</span></div>
           <div>Explorer: <a href="${qsEscapeHtml(rep.explorer)}" target="_blank" rel="noopener">open ↗</a></div>
         </div>
         ${thinLiqWarn}
