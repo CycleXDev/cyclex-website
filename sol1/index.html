@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3722,6 +3725,40 @@ function initPanels() {
     } catch { return null; }
   }
 
+  // ✅ NEW: real circulating supply, wider coverage than CoinGecko's
+  // contract-lookup endpoint alone (matches the bot's equivalent fix).
+  // GeckoTerminal's singular token-info endpoint (distinct from the
+  // /pools list endpoint above) returns market_cap_usd and price_usd for
+  // any token GeckoTerminal has a verified CoinGecko-sourced supply for.
+  // When market_cap_usd is present, circulating supply = market_cap_usd /
+  // price_usd — real, disclosed data, not an estimate. Returns null (not
+  // a guess) when GeckoTerminal has no verified market cap for this token.
+  async function qsFetchGeckoTerminalTokenInfo(net, token) {
+    try {
+      const chain = QS_GT_CHAIN[net];
+      if (!chain) return null;
+      const addr = String(token || "").trim();
+      if (!addr) return null;
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 8000);
+      let j = null;
+      try {
+        const res = await fetch(`https://api.geckoterminal.com/api/v2/networks/${chain}/tokens/${addr}`, { signal: ctrl.signal });
+        if (res.ok) j = await res.json();
+      } finally {
+        clearTimeout(tmr);
+      }
+      const attrs = j?.data?.attributes;
+      if (!attrs) return null;
+      const marketCapUsd = Number(attrs.market_cap_usd);
+      const priceUsd = Number(attrs.price_usd);
+      const circulatingSupplyReal = (Number.isFinite(marketCapUsd) && marketCapUsd > 0 && Number.isFinite(priceUsd) && priceUsd > 0)
+        ? marketCapUsd / priceUsd
+        : null;
+      return { circulatingSupplyReal };
+    } catch { return null; }
+  }
+
   const QS_GOPLUS_CHAIN = { bsc: "56", eth: "1", polygon: "137" };
 
   // ✅ FIX: now also extracts holders (top1/top10 concentration, matching
@@ -4012,6 +4049,59 @@ function initPanels() {
     }
   }
 
+  // ✅ FIX (real bug, confirmed live via CyberELON — a pump.fun token):
+  // Helius's getAsset (Metaplex `creators` field) came back EMPTY for
+  // pump.fun tokens specifically — they don't populate that standard
+  // field, they track creator through their own bonding-curve program
+  // instead. pump.fun's own API (`frontend-api-v3.pump.fun/coins/{mint}`)
+  // returns the real creator directly, but that endpoint is CORS-blocked
+  // for browser-origin requests by pump.fun themselves — it can only be
+  // called from a backend. Replaced the old approach (only worked if the
+  // visitor personally pasted a Helius RPC URL into the custom-RPC field)
+  // with a call to CycleX's own backend endpoint, which tries pump.fun
+  // first (no key needed — covers the exact category Eyal cares about
+  // most, freshly-launched tokens) and falls back to Helius server-side
+  // (if HELIUS_API_KEY is configured there) for non-pump.fun tokens. Works
+  // automatically for every visitor now, not just ones with their own key.
+  const QS_API_BASE = "https://cyclex-api.cyclexdev.workers.dev";
+  async function qsFetchSolanaCreatorViaHelius(token) {
+    try {
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 8000);
+      let j = null;
+      try {
+        const res = await fetch(`${QS_API_BASE}/api/solanaCreator?token=${encodeURIComponent(token)}`, { signal: ctrl.signal });
+        if (res.ok) j = await res.json();
+      } finally {
+        clearTimeout(tmr);
+      }
+      const addr = String(j?.creator || "").trim();
+      return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr) ? addr : null;
+    } catch { return null; }
+  }
+
+  // ✅ NEW: how much of total supply a specific wallet holds for this
+  // specific mint — sums every token account that wallet owns for this
+  // mint (usually just one, but summed defensively in case of more).
+  // Mirrors the bot's fetchSolanaWalletHoldingPct exactly.
+  async function qsFetchSolanaWalletHoldingPct(walletAddress, mintAddress, supplyUi) {
+    if (!walletAddress || !supplyUi) return null;
+    try {
+      const result = await solanaRpcRequest("getTokenAccountsByOwner", [
+        walletAddress,
+        { mint: mintAddress },
+        { encoding: "jsonParsed" }
+      ]);
+      const accounts = Array.isArray(result?.value) ? result.value : [];
+      let total = 0;
+      for (const acc of accounts) {
+        const ui = acc?.account?.data?.parsed?.info?.tokenAmount?.uiAmount;
+        if (Number.isFinite(ui)) total += ui;
+      }
+      return (total / supplyUi) * 100;
+    } catch { return null; }
+  }
+
   async function runQuickScan(){
     const st = $("#qs-status");
     const out = $("#qs-out");
@@ -4284,7 +4374,7 @@ function initPanels() {
 
     const explorerKey = (typeof qsExplorerKeyFor === "function") ? qsExplorerKeyFor(net)?.key : null;
     const [
-      cexSettled, priceSettled, ageSettled, holderSettled, goplusSettled, dexscreenerSettled, geckoterminalSettled
+      cexSettled, priceSettled, ageSettled, holderSettled, goplusSettled, dexscreenerSettled, geckoterminalSettled, gtInfoSettled
     ] = await Promise.allSettled([
       qsFetchCexListing(net, token),
       qsFetchNativePrice(net),
@@ -4292,7 +4382,9 @@ function initPanels() {
       qsFetchHolderCount(net, token, explorerKey),
       qsFetchGoPlus(net, token),
       qsFetchDexScreener(net, token),
-      qsFetchGeckoTerminal(net, token)
+      qsFetchGeckoTerminal(net, token),
+      // ✅ NEW: real circulating supply, wider coverage than CoinGecko alone.
+      qsFetchGeckoTerminalTokenInfo(net, token)
     ]);
 
     const cexResult         = cexSettled.status         === "fulfilled" ? (cexSettled.value         || { listed: false, exchanges: [] }) : { listed: false, exchanges: [] };
@@ -4302,6 +4394,7 @@ function initPanels() {
     const goplus            = goplusSettled.status      === "fulfilled" ? goplusSettled.value        : null;
     const dexscreener       = dexscreenerSettled.status === "fulfilled" ? dexscreenerSettled.value   : null;
     const geckoterminal     = geckoterminalSettled.status === "fulfilled" ? geckoterminalSettled.value : null;
+    const gtInfo            = gtInfoSettled.status      === "fulfilled" ? gtInfoSettled.value        : null;
 
     // ✅ NEW: merge in any pool DexScreener knows about that our fixed
     // 5-factory on-chain scan (Pancake V2/V3, Four.meme, Biswap, ApeSwap,
@@ -4523,8 +4616,12 @@ function initPanels() {
     let estCirculatingSupplyText = null;
     let circSupplyIsReal = false;
     const cgCirculating = cexResult?.circulatingSupplyReal;
-    if (Number.isFinite(cgCirculating) && cgCirculating > 0) {
-      estCirculatingSupplyText = cgCirculating.toLocaleString(undefined, { maximumFractionDigits: 4 });
+    const gtCirculating = gtInfo?.circulatingSupplyReal;
+    const realCirculating = (Number.isFinite(cgCirculating) && cgCirculating > 0)
+      ? cgCirculating
+      : (Number.isFinite(gtCirculating) && gtCirculating > 0 ? gtCirculating : null);
+    if (realCirculating != null) {
+      estCirculatingSupplyText = realCirculating.toLocaleString(undefined, { maximumFractionDigits: 4 });
       circSupplyIsReal = true;
     } else if (totalSupplyBI > 0n) {
       if (ownerIsRenounced) {
@@ -5166,16 +5263,26 @@ function initPanels() {
     // reliability on the calls that actually depend on that endpoint.
     const mintInfo = await qsFetchSolanaMintInfo(token).catch(() => null);
 
-    const [gpS, dsS, cexS, solHoldersS] = await Promise.allSettled([
+    const [gpS, dsS, cexS, solHoldersS, heliusCreatorS, gtS, gtInfoS] = await Promise.allSettled([
       qsFetchGoPlusSolana(token),
       qsFetchDexScreener("solana", token),
       qsFetchCexListing("solana", token),
-      qsFetchSolanaHolderDistribution(token, mintInfo?.supplyUi ?? null)
+      qsFetchSolanaHolderDistribution(token, mintInfo?.supplyUi ?? null),
+      qsFetchSolanaCreatorViaHelius(token),
+      // ✅ FIX (real gap found live): Solana liquidity here only ever used
+      // DexScreener — GeckoTerminal (which catches pools DexScreener misses,
+      // the entire reason this project started) was wired into the EVM path
+      // but never into Solana's. Matches the bot's equivalent fix.
+      qsFetchGeckoTerminal("solana", token),
+      qsFetchGeckoTerminalTokenInfo("solana", token)
     ]);
     const gp  = gpS.status  === "fulfilled" ? gpS.value  : null;
     const ds  = dsS.status  === "fulfilled" ? dsS.value  : null;
     const cex = cexS.status === "fulfilled" ? cexS.value : { listed:false, exchanges:[] };
     const solHolders = solHoldersS.status === "fulfilled" ? solHoldersS.value : null;
+    const heliusCreator = heliusCreatorS.status === "fulfilled" ? heliusCreatorS.value : null;
+    const gt = gtS.status === "fulfilled" ? gtS.value : null;
+    const gtInfo = gtInfoS.status === "fulfilled" ? gtInfoS.value : null;
 
     if (!gp && !ds) {
       rep.redFlags.push("Could not retrieve any Solana security/market data for this address.");
@@ -5299,13 +5406,47 @@ function initPanels() {
       } else if (effTop10Pct >= 60) contractScore -= 8;
       else if (effTop10Pct >= 40) contractScore -= 3;
     }
+    // ✅ NEW: "Dev/Creator Holds" — see qsFetchSolanaCreatorViaHelius above
+    // for the full rationale. Priority: Helius's Metaplex creator (fast,
+    // survives authority renouncement) > GoPlus's creator_address > current
+    // mint/freeze authority address (weakest — a different concept, and
+    // gone entirely once renounced).
+    const devCandidateAddress = heliusCreator || gp?.creatorAddress || effMintAuthorityAddr || effFreezeAuthorityAddr || null;
+    const devSupplyForPct = solHolders?.supplyUi ?? mintInfo?.supplyUi ?? null;
+    const devHoldingPct = (devCandidateAddress && devSupplyForPct)
+      ? await qsFetchSolanaWalletHoldingPct(devCandidateAddress, token, devSupplyForPct)
+      : null;
+    if (devHoldingPct != null) {
+      if (devHoldingPct >= 50) { contractScore -= 20; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
+      else if (devHoldingPct >= 20) { contractScore -= 10; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
+      else if (devHoldingPct >= 5) contractScore -= 3;
+    }
     if (gp?.trustedToken) contractScore += 10;
     contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
     let marketScore = 100;
-    const liqUsd = ds?.liquidityUsd ?? null;
-    if (liqUsd === null && !cex?.listed) { marketScore -= 38; rep.redFlags.push("No clear DEX liquidity signal detected."); }
-    else if (liqUsd !== null) {
+    // ✅ FIX (real gap found live, matches the bot's fix): liquidity now
+    // takes the max across DexScreener's best/sum and GeckoTerminal's
+    // best/sum — was DexScreener alone before, missing pools (e.g.
+    // PancakeSwap Infinity-style concentrated-liquidity pools on Solana's
+    // equivalent DEXes) that only GeckoTerminal indexes.
+    const dsLiqUsdSol = ds?.liquidityUsd ?? null;
+    const gtLiqUsdSol = gt?.liquidityUsd ?? null;
+    const dsSumSol = Array.isArray(ds?.allPairs) ? ds.allPairs.reduce((a,p)=>a+(Number(p?.liquidityUsd)||0),0) : 0;
+    const gtSumSol = Array.isArray(gt?.allPairs) ? gt.allPairs.reduce((a,p)=>a+(Number(p?.liquidityUsd)||0),0) : 0;
+    const liqUsd = (dsLiqUsdSol == null && gtLiqUsdSol == null && dsSumSol <= 0 && gtSumSol <= 0)
+      ? null
+      : Math.max(dsLiqUsdSol || 0, gtLiqUsdSol || 0, dsSumSol, gtSumSol);
+    if (gtLiqUsdSol && gtLiqUsdSol > (dsLiqUsdSol || 0)) {
+      rep.redFlags.push(`GeckoTerminal shows higher liquidity (~$${Math.round(gtLiqUsdSol).toLocaleString()}, ${gt.dexId}) than DexScreener found for this token — using the larger figure.`);
+    }
+    // ✅ FIX (same gap already found and fixed in the bot): a CEX-listed
+    // token with no findable DEX liquidity fell through both branches and
+    // kept marketScore at an unpenalized 100.
+    if (liqUsd === null) {
+      if (!cex?.listed) { marketScore -= 38; rep.redFlags.push("No clear DEX liquidity signal detected."); }
+      else { marketScore -= 15; rep.redFlags.push("No DEX liquidity data found (CEX-listed, so some real liquidity likely exists elsewhere, but couldn't be measured here)."); }
+    } else {
       if (liqUsd < 25000) marketScore = Math.min(marketScore, 28);
       else if (liqUsd < 250000) marketScore = Math.min(marketScore, 58);
       else if (liqUsd < 500000) marketScore = Math.min(marketScore, 78);
@@ -5433,6 +5574,37 @@ function initPanels() {
           note: (p?.tvl ? `TVL: $${Number(p.tvl).toLocaleString(undefined,{maximumFractionDigits:0})}` : "") + lpLockNote(p)
         })));
       }
+      // ✅ NEW: also fold in any GeckoTerminal pool DexScreener+GoPlus
+      // didn't already cover, deduped by address.
+      if (Array.isArray(gt?.allPairs) && gt.allPairs.length) {
+        const coveredAddrs2 = new Set(rep.liq.rows.map(r => String(r?.addr || "").toLowerCase()));
+        const extraGtPools = gt.allPairs.filter(p => !coveredAddrs2.has(String(p.pairAddress || "").toLowerCase()));
+        if (extraGtPools.length) {
+          rep.liq.rows.push(...extraGtPools.map(p => ({
+            addr: p.pairAddress || "",
+            type: `${p.dex} • via GeckoTerminal`,
+            target: "pool",
+            ok: !!(p.liquidityUsd && p.liquidityUsd > 0),
+            note: p.liquidityUsd
+              ? `Liquidity: ~$${Number(p.liquidityUsd).toLocaleString(undefined,{maximumFractionDigits:0})}${p.volumeUsd24h ? ` • Vol 24h: ~$${Number(p.volumeUsd24h).toLocaleString(undefined,{maximumFractionDigits:0})}` : ""}`
+              : "—"
+          })));
+        }
+      }
+    } else if (Array.isArray(gt?.allPairs) && gt.allPairs.length) {
+      // ✅ NEW: same role as the ds.allPairs branch above, for the case
+      // DexScreener has nothing but GeckoTerminal does (the exact gap this
+      // whole project exists to close).
+      rep.liq.any = true;
+      rep.liq.rows = gt.allPairs.map(p => ({
+        addr: p.pairAddress || "",
+        type: `${p.dex} • via GeckoTerminal`,
+        target: "pool",
+        ok: !!(p.liquidityUsd && p.liquidityUsd > 0),
+        note: p.liquidityUsd
+          ? `Liquidity: ~$${Number(p.liquidityUsd).toLocaleString(undefined,{maximumFractionDigits:0})}${p.volumeUsd24h ? ` • Vol 24h: ~$${Number(p.volumeUsd24h).toLocaleString(undefined,{maximumFractionDigits:0})}` : ""}`
+          : "—"
+      }));
     } else if (Array.isArray(gp?.dex) && gp.dex.length) {
       rep.liq.any = true;
       rep.liq.rows = gp.dex.slice(0, 6).map(p => ({
@@ -5499,6 +5671,31 @@ function initPanels() {
       ...(gp?.defaultAccountStateFrozen ? [{ type: "bad", title: "New Accounts", value: "May start frozen (best-effort signal)" }] : []),
       { type: effTopHolderPct==null?"warn":effTopHolderPct>=30?"bad":effTopHolderPct>=15?"warn":"ok", title: "Top Holder",
         value: effTopHolderPct!=null ? `${effTopHolderPct.toFixed(1)}% (${effHoldersSource || "unknown"} data, may incl. LP)` : "Unknown" },
+      // ✅ NEW: Dev/Creator Holds — see devCandidateAddress/devHoldingPct
+      // above (this whole feature previously only existed in the bot).
+      { type: devHoldingPct==null ? "warn" : devHoldingPct>=20 ? "bad" : devHoldingPct>=5 ? "warn" : "ok",
+        title: "Dev/Creator Holds",
+        value: devHoldingPct != null ? `${devHoldingPct.toFixed(1)}%` : (devCandidateAddress ? "Unknown" : "No dev/creator address identified") },
+      // ✅ FIX: Circulating Supply — now also tries GeckoTerminal's derived
+      // figure (market_cap_usd / price_usd, wider coverage than CoinGecko
+      // alone) before falling back to the on-chain estimate. Also fixed
+      // misleading wording: "no dev/creator wallet identified" is missing
+      // data, not a confirmed fact — no longer claims a specific number.
+      ...(() => {
+        const cgCirc = cex?.circulatingSupplyReal;
+        const gtCirc = gtInfo?.circulatingSupplyReal;
+        const realCirc = (Number.isFinite(cgCirc) && cgCirc > 0) ? cgCirc : (Number.isFinite(gtCirc) && gtCirc > 0 ? gtCirc : null);
+        const supplyKnown = solHolders?.supplyUi ?? mintInfo?.supplyUi ?? null;
+        let text = null, isReal = false;
+        if (realCirc != null) {
+          text = realCirc.toLocaleString(undefined, { maximumFractionDigits: 4 });
+          isReal = true;
+        } else if (supplyKnown != null) {
+          if (devCandidateAddress == null) text = "Unknown (no disclosed data, no dev/creator wallet identified to estimate from)";
+          else if (devHoldingPct != null) text = (supplyKnown * (1 - devHoldingPct / 100)).toLocaleString(undefined, { maximumFractionDigits: 4 });
+        }
+        return text ? [{ type: "ok", title: isReal ? "Circulating Supply" : "Est. Circulating Supply", value: text }] : [];
+      })(),
       // ✅ FIX: now shows pool count too (up to 6 pools already collected
       // into rep.liq.rows from GoPlus's dex array above) — was previously
       // just a single $ figure or "Found" with no indication of how many
