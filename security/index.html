@@ -2669,8 +2669,8 @@ function initPanels() {
 (function () {
   "use strict";
 
-  const QS_LS_CACHE    = "cx_sec_qs_cache_safe_v6";
-  const QS_LS_HISTORY  = "cx_sec_qs_history_safe_v6";
+  const QS_LS_CACHE    = "cx_sec_qs_cache_safe_v7_shield";
+  const QS_LS_HISTORY  = "cx_sec_qs_history_safe_v7_shield";
   const QS_LS_API_KEYS = "cx_sec_explorer_keys";
 
   const EIP1967_IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
@@ -3531,57 +3531,46 @@ function initPanels() {
   }
 
   async function qsFetchContractAge(net, token, apiKey) {
+    if (!apiKey) return null;
+    // Etherscan V2 Free does not currently provide BSC getcontractcreation;
+    // avoid a guaranteed failure/noise and use oldest DEX pool as trading age.
+    if (net === "bsc") return null;
     try {
       const base = (typeof explorerApiBase === "function") ? explorerApiBase(net) : null;
       if (!base) return null;
-      const keyParam = apiKey ? `&apikey=${apiKey}` : "";
-      const url1 = `${base}?module=contract&action=getcontractcreation&contractaddresses=${token}${keyParam}`;
+      const url1 = `${base}?module=contract&action=getcontractcreation&contractaddresses=${token}&apikey=${apiKey}`;
       const ctrl1 = new AbortController();
       const tmr1 = setTimeout(() => ctrl1.abort(), 7000);
-      let txHash = null;
+      let txHash = null, deployerAddress = null;
       try {
         const r1 = await fetch(url1, { signal: ctrl1.signal });
         clearTimeout(tmr1);
         if (r1.ok) {
           const j1 = await r1.json();
           txHash = j1?.result?.[0]?.txHash || null;
+          deployerAddress = j1?.result?.[0]?.contractCreator || null;
         }
       } catch { clearTimeout(tmr1); }
-      if (!txHash) return null;
+      if (!txHash) return deployerAddress ? { deployerAddress } : null;
       let deployTs = null;
       try {
-        const txData = await withRpcFallback(net, async (provider) => {
-          return await provider.getTransaction(txHash);
-        });
+        const txData = await withRpcFallback(net, async (provider) => provider.getTransaction(txHash));
         if (txData?.blockNumber) {
-          const block = await withRpcFallback(net, async (provider) => {
-            return await provider.getBlock(txData.blockNumber);
-          });
+          const block = await withRpcFallback(net, async (provider) => provider.getBlock(txData.blockNumber));
           if (block?.timestamp) deployTs = Number(block.timestamp);
         }
       } catch {}
-      if (!deployTs) return null;
+      if (!deployTs) return { deployerAddress };
       const ageDays = Math.floor((Date.now() / 1000 - deployTs) / 86400);
-      return { deployTs, ageDays };
+      return { deployTs, ageDays, deployerAddress };
     } catch { return null; }
   }
 
+  // Etherscan tokeninfo does not return holder count and the dedicated holder
+  // count endpoint is PRO. GoPlus already supplies holder_count for free, so
+  // do not spend a request on an endpoint that cannot return the needed field.
   async function qsFetchHolderCount(net, token, apiKey) {
-    if (!apiKey) return null;
-    try {
-      const base = (typeof explorerApiBase === "function") ? explorerApiBase(net) : null;
-      if (!base) return null;
-      const url = `${base}?module=token&action=tokeninfo&contractaddress=${token}&apikey=${apiKey}`;
-      const ctrl = new AbortController();
-      const tmr = setTimeout(() => ctrl.abort(), 7000);
-      const res = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(tmr);
-      if (!res.ok) return null;
-      const j = await res.json();
-      const info = Array.isArray(j?.result) ? j.result[0] : j?.result;
-      const hc = parseInt(info?.holdersCount || info?.holderCount || "0", 10);
-      return (hc > 0) ? hc : null;
-    } catch { return null; }
+    return null;
   }
 
   // ✅ FIX: PinkLock BSC address was truncated by exactly one character
@@ -4071,6 +4060,125 @@ function initPanels() {
     return out || "1";
   }
 
+  const QS_SOLANA_TOKEN_2022_PROGRAM_ID = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+  const QS_TOKEN2022_EXT = Object.freeze({
+    TRANSFER_FEE_CONFIG: 1,
+    MINT_CLOSE_AUTHORITY: 3,
+    CONFIDENTIAL_TRANSFER_MINT: 4,
+    DEFAULT_ACCOUNT_STATE: 6,
+    NON_TRANSFERABLE: 9,
+    PERMANENT_DELEGATE: 12,
+    TRANSFER_HOOK: 14,
+    CONFIDENTIAL_MINT_BURN: 24,
+    SCALED_UI_AMOUNT: 25,
+    PAUSABLE: 26,
+    PERMISSIONED_BURN: 28
+  });
+
+  function qsReadU16LE(bytes, offset) {
+    if (!bytes || offset < 0 || offset + 2 > bytes.length) return null;
+    return bytes[offset] | (bytes[offset + 1] << 8);
+  }
+  function qsReadU64LEBig(bytes, offset) {
+    if (!bytes || offset < 0 || offset + 8 > bytes.length) return null;
+    let n = 0n;
+    for (let i = 7; i >= 0; i--) n = (n << 8n) | BigInt(bytes[offset + i]);
+    return n;
+  }
+  function qsMaybePubkeyFrom32(bytes, offset = 0) {
+    if (!bytes || offset < 0 || offset + 32 > bytes.length) return null;
+    const part = bytes.slice(offset, offset + 32);
+    let any = false;
+    for (const b of part) { if (b !== 0) { any = true; break; } }
+    return any ? qsBase58Encode(part) : null;
+  }
+
+  // Token-2022 mint extensions are TLV encoded after the compatible 82-byte
+  // base mint layout + padding/account-type byte. This mirrors CycleX Scanner's
+  // Solana Shield parser so Full Report and Telegram use the same authority model.
+  function qsParseToken2022MintExtensions(bytes) {
+    const out = {
+      scanned: false, extensionTypes: [],
+      nonTransferable: false,
+      permanentDelegateAddress: null,
+      mintCloseAuthority: null,
+      defaultAccountState: null,
+      defaultAccountStateFrozen: false,
+      transferHookProgramId: null,
+      transferHookAuthority: null,
+      transferFeeConfigAuthority: null,
+      transferFeeWithdrawAuthority: null,
+      olderTransferFeeBps: null, olderTransferFeeEpoch: null,
+      newerTransferFeeBps: null, newerTransferFeeEpoch: null,
+      currentTransferFeePct: null,
+      transferFeeCanChange: false,
+      pausable: false, pauseAuthority: null, paused: false,
+      permissionedBurnAuthority: null,
+      confidentialTransfer: false,
+      confidentialMintBurn: false,
+      scaledUiAmount: false
+    };
+    if (!bytes || bytes.length <= 166) return out;
+    out.scanned = true;
+    let off = 166, guard = 0;
+    while (off + 4 <= bytes.length && guard++ < 64) {
+      const type = qsReadU16LE(bytes, off);
+      const len = qsReadU16LE(bytes, off + 2);
+      if (type == null || len == null || type === 0) break;
+      const valueStart = off + 4, valueEnd = valueStart + len;
+      if (valueEnd > bytes.length) break;
+      const v = bytes.slice(valueStart, valueEnd);
+      out.extensionTypes.push(type);
+      switch (type) {
+        case QS_TOKEN2022_EXT.TRANSFER_FEE_CONFIG:
+          if (v.length >= 108) {
+            out.transferFeeConfigAuthority = qsMaybePubkeyFrom32(v, 0);
+            out.transferFeeWithdrawAuthority = qsMaybePubkeyFrom32(v, 32);
+            const oldEpoch = qsReadU64LEBig(v, 72);
+            const newEpoch = qsReadU64LEBig(v, 90);
+            out.olderTransferFeeEpoch = oldEpoch != null && oldEpoch <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(oldEpoch) : null;
+            out.newerTransferFeeEpoch = newEpoch != null && newEpoch <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(newEpoch) : null;
+            out.olderTransferFeeBps = qsReadU16LE(v, 88);
+            out.newerTransferFeeBps = qsReadU16LE(v, 106);
+            out.transferFeeCanChange = !!out.transferFeeConfigAuthority;
+          }
+          break;
+        case QS_TOKEN2022_EXT.MINT_CLOSE_AUTHORITY:
+          out.mintCloseAuthority = qsMaybePubkeyFrom32(v, 0); break;
+        case QS_TOKEN2022_EXT.DEFAULT_ACCOUNT_STATE:
+          if (v.length >= 1) { out.defaultAccountState = v[0]; out.defaultAccountStateFrozen = v[0] === 2; }
+          break;
+        case QS_TOKEN2022_EXT.NON_TRANSFERABLE:
+          out.nonTransferable = true; break;
+        case QS_TOKEN2022_EXT.PERMANENT_DELEGATE:
+          out.permanentDelegateAddress = qsMaybePubkeyFrom32(v, 0); break;
+        case QS_TOKEN2022_EXT.TRANSFER_HOOK:
+          if (v.length >= 64) {
+            out.transferHookAuthority = qsMaybePubkeyFrom32(v, 0);
+            out.transferHookProgramId = qsMaybePubkeyFrom32(v, 32);
+          }
+          break;
+        case QS_TOKEN2022_EXT.PAUSABLE:
+          if (v.length >= 33) {
+            out.pausable = true;
+            out.pauseAuthority = qsMaybePubkeyFrom32(v, 0);
+            out.paused = v[32] !== 0;
+          }
+          break;
+        case QS_TOKEN2022_EXT.PERMISSIONED_BURN:
+          out.permissionedBurnAuthority = qsMaybePubkeyFrom32(v, 0); break;
+        case QS_TOKEN2022_EXT.CONFIDENTIAL_TRANSFER_MINT:
+          out.confidentialTransfer = true; break;
+        case QS_TOKEN2022_EXT.CONFIDENTIAL_MINT_BURN:
+          out.confidentialMintBurn = true; break;
+        case QS_TOKEN2022_EXT.SCALED_UI_AMOUNT:
+          out.scaledUiAmount = true; break;
+      }
+      off = valueEnd;
+    }
+    return out;
+  }
+
   async function qsFetchSolanaMintInfo(token) {
     try {
       const res = await solanaRpcRequest("getAccountInfo", [token, { encoding: "base64" }], 9000);
@@ -4079,11 +4187,11 @@ function initPanels() {
       const binaryStr = atob(dataArr[0]);
       const bytes = new Uint8Array(binaryStr.length);
       for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-      if (bytes.length < 82) return null; // not a standard Mint account layout
+      if (bytes.length < 82) return null;
 
       function readPubkeyOption(offset) {
         const tag = bytes[offset] | (bytes[offset+1] << 8) | (bytes[offset+2] << 16) | (bytes[offset+3] << 24);
-        if (tag === 0) return null; // None = renounced / never set
+        if (tag === 0) return null;
         return qsBase58Encode(bytes.slice(offset + 4, offset + 36));
       }
 
@@ -4092,13 +4200,36 @@ function initPanels() {
       for (let i = 0; i < 8; i++) supplyBig |= BigInt(bytes[36 + i]) << BigInt(8 * i);
       const decimals = bytes[44];
       const freezeAuthority = readPubkeyOption(46);
+      const tokenProgramAddress = String(res?.value?.owner || "");
+      const isToken2022 = tokenProgramAddress === QS_SOLANA_TOKEN_2022_PROGRAM_ID;
+      const extensions = isToken2022 ? qsParseToken2022MintExtensions(bytes) : null;
+
+      // TransferFeeConfig keeps old/new epoch schedules. Only spend this extra
+      // RPC request for a mint that actually has the extension.
+      if (extensions && extensions.extensionTypes.includes(QS_TOKEN2022_EXT.TRANSFER_FEE_CONFIG)) {
+        const epochInfo = await solanaRpcRequest("getEpochInfo", []).catch(() => null);
+        const epoch = Number(epochInfo?.epoch);
+        let bps = null;
+        if (Number.isFinite(epoch)) {
+          bps = (extensions.newerTransferFeeEpoch != null && epoch >= extensions.newerTransferFeeEpoch)
+            ? extensions.newerTransferFeeBps : extensions.olderTransferFeeBps;
+        }
+        if (!Number.isFinite(bps)) {
+          const candidates = [extensions.olderTransferFeeBps, extensions.newerTransferFeeBps].filter(n => Number.isFinite(n));
+          bps = candidates.length ? Math.max(...candidates) : null;
+        }
+        extensions.currentTransferFeePct = Number.isFinite(bps) ? (bps / 100) : null;
+      }
 
       return {
-        mintAuthority,     // null = renounced/none (verified on-chain)
-        freezeAuthority,   // null = renounced/none (verified on-chain)
+        tokenProgram: isToken2022 ? "Token-2022" : "SPL Token",
+        tokenProgramAddress,
+        mintAuthority,
+        freezeAuthority,
         decimals,
         supplyRaw: supplyBig.toString(),
-        supplyUi: decimals != null ? Number(supplyBig) / Math.pow(10, decimals) : null
+        supplyUi: decimals != null ? Number(supplyBig) / Math.pow(10, decimals) : null,
+        extensions
       };
     } catch (e) {
       console.error("qsFetchSolanaMintInfo threw:", e?.message || e);
@@ -4667,6 +4798,18 @@ function initPanels() {
     const gpTopHolderPct = goplus?.topHolderPct ?? null;
     const gpTop10Pct = goplus?.top10Pct ?? null;
 
+    // Bot parity: concentration should follow the best known deployer/creator,
+    // not only the current owner (which may already be renounced/transferred).
+    const bestDevAddress = contractAge?.deployerAddress || goplus?.creatorAddress || (owner && !ownerIsRenounced ? owner : null) || null;
+    let devHoldingPct = null;
+    if (bestDevAddress && totalSupplyBI > 0n) {
+      try {
+        const bcDev = new E.Contract(token, ERC20_BALANCE_ABI, read);
+        const devBal = BigInt(await bcDev.balanceOf(bestDevAddress).catch(()=> 0n));
+        devHoldingPct = qsPctFromBig(devBal, totalSupplyBI);
+      } catch {}
+    }
+
     const pausedState = await tryReadPaused(net, token);
     const pauseDetected =
       (pausedState !== null) ||
@@ -4765,226 +4908,112 @@ function initPanels() {
     let contractScore = 75;
     const cexListed = !!rep.meta?.cexListed;
 
+    if (isProxy) { contractScore -= 8; rep.redFlags.push(`This is a proxy contract${impl ? ` — implementation: ${impl}` : ""}. Behavior can change without a new token address.`); }
+
+    if (devHoldingPct != null) {
+      if (devHoldingPct >= 50) { contractScore -= 20; rep.redFlags.push(`Owner/dev wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
+      else if (devHoldingPct >= 20) { contractScore -= 10; rep.redFlags.push(`Owner/dev wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
+      else if (devHoldingPct >= 5) contractScore -= 3;
+    }
+
     if (rep.liq?.any) {
       contractScore += 10;
       if (cexListed) contractScore += 5;
-    } else if (cexListed) {
-      contractScore += 8;
-    } else {
-      contractScore -= 30;
-    }
-    if (mintDetected) contractScore -= 22;
-    if (isProxy) contractScore -= 12;
-    else contractScore += 3;
-    if (!owner) contractScore += 0;
-    else if (ownerIsRenounced) contractScore += 5;
-    else contractScore -= 6;
+    } else if (cexListed) contractScore += 8;
+    else contractScore -= 30;
 
-    if (ownerPct !== null) {
-      if (ownerPct >= 50) contractScore -= 20;
-      else if (ownerPct >= 35) contractScore -= 14;
-      else if (ownerPct >= 20) contractScore -= 8;
-      else if (ownerPct >= 10) contractScore -= 3;
-    }
-
-    // ✅ NEW: top-holder (not just owner) concentration penalty.
-    if (gpTopHolderPct != null) {
-      if (gpTopHolderPct >= 50) { contractScore -= 20; rep.redFlags.push(`Top holder controls ${gpTopHolderPct.toFixed(1)}% of supply (may include a DEX pool address).`); }
-      else if (gpTopHolderPct >= 30) contractScore -= 12;
-      else if (gpTopHolderPct >= 15) contractScore -= 6;
-    }
-    if (gpTop10Pct != null) {
-      if (gpTop10Pct >= 80) { contractScore -= 14; rep.redFlags.push(`Top holders together control ${gpTop10Pct.toFixed(1)}% of supply.`); }
-      else if (gpTop10Pct >= 60) contractScore -= 8;
-      else if (gpTop10Pct >= 40) contractScore -= 3;
-    }
+    if (mintDetected) { contractScore -= 22; rep.redFlags.push("Mint function detected."); }
+    if (pausedState === true) { contractScore -= 25; rep.redFlags.push("🚨 Contract is CURRENTLY PAUSED — transfers may be blocked right now."); }
+    else if (pauseDetected) { contractScore -= 6; rep.redFlags.push("Pause capability detected (not currently paused, but could be activated)."); }
 
     if (verified === true) contractScore += 8;
-    if (verified === false) contractScore -= 6;
+    else if (verified === false) { contractScore -= 6; rep.redFlags.push("Contract source code is not verified."); }
+    else if (goplus?.isOpenSource === true) contractScore += 4;
+
+    let evmHardBad = false;
+    if (goplus) {
+      if (goplus.isHoneypot) {
+        evmHardBad = true;
+        rep.redFlags.push("🚨 HONEYPOT DETECTED — tokens may not be sellable.");
+      } else {
+        const st2 = goplus.sellTax ?? 0, bt = goplus.buyTax ?? 0;
+        if (st2 > 0.50) { contractScore -= 40; rep.redFlags.push(`Very high sell tax (${(st2*100).toFixed(1)}%).`); }
+        else if (st2 > 0.15) { contractScore -= 18; rep.redFlags.push(`High sell tax (${(st2*100).toFixed(1)}%).`); }
+        else if (st2 > 0.05) contractScore -= 8;
+        if (bt > 0.15) { contractScore -= 10; rep.redFlags.push(`High buy tax (${(bt*100).toFixed(1)}%).`); }
+        if (goplus.hiddenOwner) { contractScore -= 18; rep.redFlags.push("Hidden owner detected."); }
+        if (goplus.canTakeBackOwnership) { contractScore -= 15; rep.redFlags.push("Owner can reclaim ownership."); }
+        if (goplus.selfdestructDetected) { contractScore -= 20; rep.redFlags.push("Selfdestruct function detected."); }
+        if (goplus.isBlacklisted) { contractScore -= 12; rep.redFlags.push("Blacklist function detected — owner can block addresses from trading."); }
+        if (goplus.slippageModifiable) { contractScore -= 8; rep.redFlags.push("Slippage is modifiable by owner (potential rug vector)."); }
+        if (goplus.transferPausable && !pauseDetected) { contractScore -= 5; rep.redFlags.push("Transfer pausable (per GoPlus)."); }
+        const hc = goplus.holderCount;
+        if (hc != null) {
+          if (hc < 10) contractScore -= 20;
+          else if (hc < 50) contractScore -= 12;
+          else if (hc < 200) contractScore -= 6;
+        }
+        if (gpTopHolderPct != null) {
+          if (gpTopHolderPct >= 50) { contractScore -= 20; rep.redFlags.push(`Top holder controls ${gpTopHolderPct.toFixed(1)}% of supply (may include a DEX pool address).`); }
+          else if (gpTopHolderPct >= 30) contractScore -= 12;
+          else if (gpTopHolderPct >= 15) contractScore -= 6;
+        }
+        if (gpTop10Pct != null) {
+          if (gpTop10Pct >= 80) { contractScore -= 14; rep.redFlags.push(`Top holders together control ${gpTop10Pct.toFixed(1)}% of supply.`); }
+          else if (gpTop10Pct >= 60) contractScore -= 8;
+          else if (gpTop10Pct >= 40) contractScore -= 3;
+        }
+      }
+    }
+
+    // LP protection is part of Contract Score in the bot, not a second
+    // post-blend bonus/penalty. Keep the same placement here for parity.
+    if (rep.liq?.any) {
+      if (lpBurnInfo?.isBurned) {
+        contractScore += 5;
+        rep.redFlags.push(`LP tokens appear burned (~${lpBurnInfo.burnedPct.toFixed(0)}% sent to a dead address) — liquidity can never be pulled.`);
+      } else if (liqLock && liqLock.locked === false && !liqLock.isExpired) {
+        contractScore -= 12;
+        rep.redFlags.push("No active liquidity lock detected, and LP does not appear burned.");
+      }
+    }
+
     if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
     contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
-    // ✅ FIX: rep.meta.liqQuality was previously only written into the final
-    // rep.meta object much later (near the end of this function), but
-    // qsComputeMarketRisk() (called right below) reads rep.meta.liqQuality
-    // to decide its own "+8 healthy liquidity" bonus — at this point in
-    // execution that field was always still undefined, so the bonus could
-    // never actually fire for any token, however healthy its liquidity.
-    // Writing it here, right before the call that needs it, fixes that
-    // without changing anything else about scoring.
-    rep.meta.liqQuality = liqQuality;
-
-    const market = qsComputeMarketRisk(rep);
-    let marketScore = Number(market.marketScore ?? 100);
-    const marketFlags = Array.isArray(market.flags) ? market.flags : [];
+    // Market Score parity with the Telegram bot: market score describes
+    // liquidity/trading behavior; ownership/holder/tax risks live in Contract Score.
+    const liquidityUsdForScore = Number(rep?.meta?.liquidityUsdEst);
+    let marketScore = 100;
+    const marketFlags = [];
+    if (!rep.liq?.any) {
+      if (!cexListed) { marketScore -= 38; marketFlags.push("no_clear_liquidity_signal"); }
+      else marketScore -= 15;
+    } else if (Number.isFinite(liquidityUsdForScore)) {
+      if (liquidityUsdForScore < 25000) marketScore = Math.min(marketScore, 28);
+      else if (liquidityUsdForScore < 250000) marketScore = Math.min(marketScore, 58);
+      else if (liquidityUsdForScore < 500000) marketScore = Math.min(marketScore, 78);
+    }
+    const dsMarket = rep?.meta?.dexscreener;
+    const possibleManipulation = !!(dsMarket && Math.abs(dsMarket.priceChange24h || 0) > 250 && (dsMarket.txns24h || 0) < 30);
+    if (possibleManipulation) { marketScore -= 16; marketFlags.push("possible_manipulated_move"); rep.redFlags.push("Price action suggests possible manipulation (large move with very few trades)."); }
+    const volLiqRatioEvm = (dsMarket?.volumeUsd24h != null && Number.isFinite(liquidityUsdForScore) && liquidityUsdForScore > 0)
+      ? dsMarket.volumeUsd24h / liquidityUsdForScore : null;
+    if (volLiqRatioEvm != null && volLiqRatioEvm > 40) { marketScore -= 18; marketFlags.push("extreme_volume_liquidity_ratio"); rep.redFlags.push("24h volume is extremely high relative to liquidity — pattern consistent with wash trading or extreme volatility."); }
+    else if (volLiqRatioEvm != null && volLiqRatioEvm > 15) { marketScore -= 8; marketFlags.push("high_volume_liquidity_ratio"); rep.redFlags.push("24h volume is unusually high relative to liquidity — worth a closer look."); }
+    marketScore = qsClamp(Math.round(marketScore), 0, 100);
 
     let uiConfidence = "low";
-    const verifiedYes = (verified === true);
-    const ownerKnown = !!owner;
-    const liqAny = !!rep?.liq?.any;
-    const activePoolsNum = Number(rep?.meta?.liqActivePools || 0);
-    const covLow = !!rep?.meta?.liqCoverageLow;
-    const covPartial = !!rep?.meta?.liqCoveragePartial;
-
     let uiConfPoints = 0;
-    if (verifiedYes) uiConfPoints += 2;
-    if (ownerKnown) uiConfPoints += 1;
-    if (liqAny) uiConfPoints += 1;
-    if (activePoolsNum >= 2) uiConfPoints += 1;
-    if (!covLow && !covPartial) uiConfPoints += 1;
-    if (covLow) uiConfPoints -= 2;
-    else if (covPartial) uiConfPoints -= 1;
-
+    if (verified === true) uiConfPoints += 2;
+    if (owner || ownerIsRenounced) uiConfPoints += 1;
+    if (rep.liq?.any) uiConfPoints += 1;
+    if (rep.meta?.holderCount != null) uiConfPoints += 1;
     if (uiConfPoints >= 4) uiConfidence = "high";
     else if (uiConfPoints >= 2) uiConfidence = "medium";
-    else uiConfidence = "low";
-
-    if (liqQuality === "tiny") marketScore = Math.min(marketScore, 28);
-    else if (liqQuality === "low") marketScore = Math.min(marketScore, 58);
-    else if (liqQuality === "medium") marketScore = Math.min(marketScore, 75);
-    marketScore = qsClamp(Math.round(marketScore), 0, 100);
-    // ✅ FIX (duplicate scoring bug, same class as the one already fixed
-    // above with the liqQuality-write-order comment): this exact +8
-    // "healthy liquidity" bonus, same condition, is ALREADY applied
-    // inside qsComputeMarketRisk() (see there) and feeds into marketScore
-    // above via `market.marketScore`. This second copy re-applied it a
-    // second time on the same marketScore value. Removed — the one
-    // inside qsComputeMarketRisk() is the single source of truth for
-    // this bonus now.
 
     let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
-    score = qsApplyScoreGates(score, rep, marketFlags);
-
-    // ✅ FIX (real scoring bug, found via a live report showing 0/100
-    // despite Contract Score 72 / Market Score 28 — those should blend to
-    // ~46, not 0): every flag checked below (possible_manipulated_move,
-    // very_low_liquidity_usd, very_few_holders, extreme_volume_liquidity_
-    // ratio, etc.) is ALREADY subtracted from marketScore INSIDE
-    // qsComputeMarketRisk() above (confirmed by matching each flag name
-    // against that function's own penalty logic) — marketScore then
-    // already feeds into `score` via the 0.60 weight two lines up. This
-    // block re-subtracted the SAME penalties a second time directly from
-    // `score`, on top of the weighted average that already contained them.
-    // Combined with the further liqQuality-based deductions right below,
-    // this could easily push a token's score below 0 before the final
-    // qsClamp(0,100) floor silently absorbed the overshoot — wiping out
-    // otherwise-decent signals (no honeypot, 0% tax, thousands of
-    // holders, CEX-listed) into a flat, uninformative 0/100. Removed
-    // entirely rather than re-tuned, since it was pure duplication, not a
-    // separate intentional penalty.
-    const mFlags = new Set((marketFlags || []).map(s => String(s).toLowerCase()));
-
-    if (liqQuality === "tiny") {
-      if (rep.meta?.liqCoverageLow) {
-        score -= 14;
-        if (score > 54) score = 54;
-        if (!rep.redFlags.includes("Liquidity appears very low, but DEX coverage may be incomplete.")) {
-          rep.redFlags.push("Liquidity appears very low, but DEX coverage may be incomplete.");
-        }
-      } else {
-        score -= 26;
-        if (score > 49) score = 49;
-        if (!rep.redFlags.includes("Very low effective liquidity (thin market, high manipulation risk).")) {
-          rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
-        }
-      }
-    } else if (liqQuality === "low") {
-      if (rep.meta?.liqCoverageLow) { score -= 12; if (score > 62) score = 62; }
-      else { score -= 20; if (score > 58) score = 58; }
-      if (!rep.redFlags.includes("Low effective liquidity detected.")) {
-        rep.redFlags.push("Low effective liquidity detected.");
-      }
-    } else if (liqQuality === "medium") {
-      score -= 4;
-      if (score > 78) score = 78;
-    }
-
-    const hasCritical =
-      mFlags.has("possible_manipulated_move") ||
-      mFlags.has("very_low_liquidity_usd") ||
-      mFlags.has("very_few_holders") ||
-      mFlags.has("extreme_volume_liquidity_ratio");
-    if (hasCritical && score > 69) score = 69;
-
-    if (mFlags.has("holder_concentration_unknown") && rep.meta?.liqCoverageLow && score > 64) {
-      score = 64;
-    }
-
-    const ownerUnknown = !owner;
-    const cexHealthyOverride = cexListed && liqQuality === "healthy";
-    if (verified !== true && ownerUnknown && !cexHealthyOverride && score > 84) score = 84;
-
-    if (!rep?.liq?.any && !cexListed && score > 64) score = 64;
-    if (hasCode && !rep?.liq?.any && !cexListed && score > 54) score = 54;
-
-    const lowConf = (uiConfidence === "low");
-    const hasSeriousMarketFlag =
-      mFlags.has("possible_manipulated_move") ||
-      mFlags.has("very_low_liquidity_usd") ||
-      mFlags.has("very_few_holders") ||
-      mFlags.has("extreme_volume_liquidity_ratio");
-    if (lowConf && hasSeriousMarketFlag && score > 84) score = 84;
-
-    if (liqQuality === "tiny" && score > 49) score = 49;
-    if (liqQuality === "low"  && score > 69) score = 69;
-    if (liqQuality === "medium" && verified !== true && !cexListed && score > 84) score = 84;
-
-    try {
-      const ownerPctNum = (typeof ownerPct === "number") ? ownerPct : null;
-      const ownerConcentrationSerious = (ownerPctNum !== null && ownerPctNum >= 35);
-      if (liqQuality === "healthy" && verified === true && !hasSeriousMarketFlag && !ownerConcentrationSerious) {
-        score = qsClamp(score + 2, 0, 100);
-      }
-    } catch {}
-
-    // ✅ FIX: LP lock scoring now checks burn as an alternative first — a
-    // burned LP is treated as a strong positive, never penalized the same
-    // as "no protection at all". Matches the bot's equivalent fix.
-    if (rep.liq?.any) {
-      if (lpBurnInfo?.isBurned) {
-        score += 8;
-        rep.redFlags.push(`LP tokens appear burned (~${lpBurnInfo.burnedPct.toFixed(0)}% sent to a dead address) — liquidity can never be pulled, arguably stronger than a timed lock.`);
-      } else if (liqLock !== null) {
-        if (liqLock.locked) {
-          score += 8;
-        } else if (liqLock.isExpired) {
-          score -= 10;
-          rep.redFlags.push(`LP lock expired (${liqLock.locker}) — liquidity can now be removed.`);
-        }
-      }
-    }
-
-    if (goplus) {
-      if (goplus.isHoneypot) {
-        score = 3;
-      } else {
-        const st2 = goplus.sellTax ?? 0;
-        const bt = goplus.buyTax  ?? 0;
-        if (st2 > 0.50) score -= 40;
-        else if (st2 > 0.30) score -= 28;
-        else if (st2 > 0.15) score -= 18;
-        else if (st2 > 0.09) score -= 10;
-        else if (st2 > 0.04) score -= 5;
-        if (bt > 0.30) score -= 15;
-        else if (bt > 0.15) score -= 10;
-        else if (bt > 0.09) score -= 5;
-        if (goplus.hiddenOwner) score -= 18;
-        if (goplus.canTakeBackOwnership) score -= 15;
-        if (goplus.selfdestructDetected) score -= 20;
-        if (goplus.isBlacklisted) score -= 12;
-        if (goplus.slippageModifiable) score -= 8;
-        if (goplus.transferPausable && !pauseDetected) score -= 5;
-        const hc = goplus.holderCount;
-        if (hc !== null) {
-          if (hc < 10) score -= 20;
-          else if (hc < 50) score -= 12;
-          else if (hc < 200) score -= 6;
-          else if (hc > 5000) score += 3;
-        }
-        if (verified === null && goplus.isOpenSource === true) score += 4;
-      }
-    }
-
+    if (evmHardBad) score = 3;
     // ✅ NEW (Eyal's decision, 2026-08-23): soft cap — a token whose source
     // code verification is unconfirmed (no explorer key set, or explicitly
     // unverified) can no longer land on a perfect 100/100. Deliberately
@@ -5028,7 +5057,6 @@ function initPanels() {
     // card without recomputing this logic — matches the existing
     // rep.meta.contractAgeDays / rep.meta.tradingAgeDays (Solana) pattern.
     rep.meta.tradingAgeDaysEvm = evmAgeDays;
-    const evmHardBad = !!(goplus?.isHoneypot);
     const evmHoldersUnknown = (rep.meta?.holderCount == null);
     const knownVeryFresh = evmAgeDays != null && evmAgeDays < 1;
     const completeDataBlackout = !dexscreener && !cexListed && contractAge == null && evmHoldersUnknown;
@@ -5041,9 +5069,19 @@ function initPanels() {
     }
     rep.meta.dataBlackout = evmDataBlackout;
 
-    const overallText = evmDataBlackout
+    let overallText = evmDataBlackout
       ? "Too Early To Tell"
       : (score >= 85 ? "Good" : score >= 70 ? "Mixed signals" : score >= 50 ? "Caution" : "High risk");
+
+    const compositePumpPatternEvm = !evmHardBad && !evmDataBlackout
+      && evmAgeDays != null && evmAgeDays < 2
+      && dexscreener?.priceChange24h != null && dexscreener.priceChange24h > 200
+      && Number.isFinite(liquidityUsdForScore) && liquidityUsdForScore > 0 && liquidityUsdForScore < 50000;
+    if (compositePumpPatternEvm) {
+      rep.redFlags.unshift(`⚠️ Pattern match: very fresh token, price +${dexscreener.priceChange24h.toFixed(0)}% in 24h, but only ~$${Math.round(liquidityUsdForScore).toLocaleString()} liquidity — classic pump signature. This is a pattern observation, not proof of a scam.`);
+      score = Math.min(score, 40);
+      overallText = "High risk";
+    }
 
     rep.score = score;
     rep.overallText = overallText;
@@ -5058,6 +5096,8 @@ function initPanels() {
       liqActivePools: Number(rep.meta?.liqActivePools || 0),
       ownerBalance: ownerBal?.toString?.() || "0",
       ownerPct: ownerPct,
+      devHoldingPct: devHoldingPct,
+      devAddress: bestDevAddress,
       marketFlags: Array.from(marketFlags || [])
     };
 
@@ -5079,8 +5119,8 @@ function initPanels() {
       // showed "No/Unknown", indistinguishable from "we checked and it's
       // genuinely not verified". Now says explicitly when the check simply
       // wasn't run at all.
-      { type: verified === true ? "ok" : (useApis ? "warn" : "warn"), title: "Verified",
-        value: verified === true ? "Yes" : (useApis ? "No" : "Not checked (no explorer API key set)") },
+      { type: verified === true ? "ok" : (verified === false ? "warn" : goplus?.isOpenSource ? "warn" : "warn"), title: "Verified",
+        value: verified === true ? "Yes" : verified === false ? "No" : (goplus?.isOpenSource ? "Likely (GoPlus, unconfirmed)" : "Not checked (no explorer API key set)") },
       // "No" here reflects a real, always-performed on-chain check (EIP-1967
       // storage slot read), so it's a genuine negative — not "unknown".
       // ✅ NEW: onChain:true — this check always runs (no API dependency),
@@ -5094,6 +5134,10 @@ function initPanels() {
       // a live balanceOf()/totalSupply() read, same as the bot's Dev/Owner
       // Holds field.
       { type: holderConcType, title: "Holder Concentration", value: holderConcText, onChain: ownerPct != null },
+      { type: devHoldingPct == null ? "warn" : devHoldingPct >= 20 ? "bad" : devHoldingPct >= 5 ? "warn" : "ok",
+        title: "Dev/Owner Holds",
+        value: devHoldingPct != null ? `${devHoldingPct.toFixed(1)}%` : (bestDevAddress ? "Unknown" : "No dev/deployer address identified"),
+        onChain: devHoldingPct != null },
       // ✅ NEW: title/tag now reflect whether this is CoinGecko's real
       // disclosed circulating supply (not on-chain, but real market data)
       // or our own on-chain owner-holding estimate (see above).
@@ -5109,6 +5153,11 @@ function initPanels() {
         type: gpTopHolderPct >= 30 ? "bad" : gpTopHolderPct >= 15 ? "warn" : "ok",
         title: "Top Holder",
         value: `${gpTopHolderPct.toFixed(1)}% (GoPlus data, may incl. LP)`
+      }] : []),
+      ...(gpTop10Pct != null ? [{
+        type: gpTop10Pct >= 80 ? "bad" : gpTop10Pct >= 60 ? "bad" : gpTop10Pct >= 40 ? "warn" : "ok",
+        title: "Top 10 Holders",
+        value: `${gpTop10Pct.toFixed(1)}% (GoPlus data, may incl. LP)`
       }] : []),
       {
         type: !rep.liq?.any ? "warn" : liqQuality === "tiny" ? "bad" : liqQuality === "low" ? "bad" : liqQuality === "medium" ? "warn" : "ok",
@@ -5164,7 +5213,7 @@ function initPanels() {
       // txHash → eth_getTransactionByHash → eth_getBlockByNumber), a
       // genuine on-chain figure, distinct from the DexScreener-estimated
       // "Trading Age" fallback right below (which is NOT tagged on-chain).
-      ...(contractAge !== null ? [{
+      ...(contractAge?.ageDays != null ? [{
         type: contractAge.ageDays < 30 ? "warn" : contractAge.ageDays < 90 ? "warn" : "ok",
         title: "Contract Age",
         value: (() => {
@@ -5177,7 +5226,7 @@ function initPanels() {
       // ✅ NOTE: Trading Age deliberately left untagged — it's DexScreener's
       // pair-creation estimate (off-chain), only used as a fallback when no
       // explorer API key is configured for the real Contract Age above.
-      ...(contractAge === null && evmAgeDays != null ? [{
+      ...(contractAge?.ageDays == null && evmAgeDays != null ? [{
         type: evmAgeDays < 1 ? "bad" : evmAgeDays < 7 ? "warn" : "ok",
         title: "Trading Age",
         value: (() => {
@@ -5293,6 +5342,7 @@ function initPanels() {
         rep.redFlags.push("No clear liquidity signal detected.");
       }
     }
+    rep.redFlags = [...new Set((rep.redFlags || []).filter(Boolean))];
     rep.json = safeJson(rep);
 
     cache[ckey] = { ts: qsNowTs(), rep };
@@ -5418,6 +5468,29 @@ function initPanels() {
     const effFreezeAuthorityAddr = mintInfo?.freezeAuthority ?? null;
     const effFreezeSource = mintInfo ? "on-chain" : (gp ? "GoPlus" : null);
 
+
+    // Solana Shield parity with the Telegram bot: direct Token-2022 controls
+    // override API heuristics whenever the extension is present on-chain.
+    const t22 = mintInfo?.extensions || null;
+    const permanentDelegateAddress = t22?.permanentDelegateAddress || null;
+    const transferHookProgramId = t22?.transferHookProgramId || null;
+    const transferHookAuthority = t22?.transferHookAuthority || null;
+    const transferHookAttached = !!transferHookProgramId || (!t22 && !!gp?.transferHookAttached);
+    const transferHookMutable = !!transferHookAuthority;
+    const transferHookMalicious = transferHookAttached && !!gp?.transferHookMalicious;
+    const defaultAccountFrozen = t22?.defaultAccountStateFrozen === true || (!t22 && !!gp?.defaultAccountStateFrozen);
+    const pauseEnabled = t22?.pausable === true;
+    const pauseActive = t22?.paused === true;
+    const pauseAuthority = t22?.pauseAuthority || null;
+    const mintCloseAuthority = t22?.mintCloseAuthority || null;
+    const permissionedBurnAuthority = t22?.permissionedBurnAuthority || null;
+    const onChainTransferFeePct = Number.isFinite(t22?.currentTransferFeePct) ? t22.currentTransferFeePct : null;
+    const transferFeePct = onChainTransferFeePct != null ? onChainTransferFeePct : (gp?.transferFeePct ?? null);
+    const transferFeeCanChange = t22 ? !!t22.transferFeeCanChange : !!gp?.transferFeeUpgradable;
+    const nonTransferable = t22?.nonTransferable === true || (!t22 && !!gp?.nonTransferable);
+    const mintAuthorityMalicious = effMintActive !== false && !!gp?.mintAuthorityMalicious;
+    const freezeAuthorityMalicious = effFreezeActive !== false && !!gp?.freezeAuthorityMalicious;
+
     // ✅ NEW: surfaced clearly rather than leaving the person to infer it
     // from a wall of individual "Unknown" chips. Mint/Freeze Authority no
     // longer depend solely on GoPlus (see above), so this note is now
@@ -5425,7 +5498,7 @@ function initPanels() {
     // closable, transfer fee/hook, and trusted-token status.
     rep.meta.goplusUnavailable = !gp;
     if (!gp) {
-      rep.redFlags.push("GoPlus security data isn't available yet for this token (common for very new or low-liquidity tokens) — closable, transfer fee/hook, and trusted-token checks below could not be verified. Mint/Freeze Authority above are read directly from the blockchain independently of GoPlus. Liquidity, price, and volume data below also comes from DexScreener independently.");
+      rep.redFlags.push("GoPlus security data isn't available yet for this token. Mint/Freeze and Token-2022 extensions are still checked directly on-chain; GoPlus-only reputation/malicious-address signals may be unavailable. Market data remains independently checked.");
     }
 
     const effTopHolderPct = solHolders?.topHolderPct ?? gp?.topHolderPct ?? null;
@@ -5434,28 +5507,34 @@ function initPanels() {
     const effHoldersSource = solHolders?.accountCount > 0 ? "on-chain" : (gp?.holdersReturned > 0 ? "GoPlus" : null);
 
     let contractScore = 75;
-    const hardBad = !!(gp?.creatorMalicious || gp?.mintAuthorityMalicious || gp?.freezeAuthorityMalicious || gp?.nonTransferable || gp?.transferHookMalicious);
+    let hardBad = !!(
+      gp?.creatorMalicious || mintAuthorityMalicious || freezeAuthorityMalicious ||
+      transferHookMalicious || nonTransferable || pauseActive ||
+      (defaultAccountFrozen && mintInfo && effFreezeActive === false)
+    );
 
-    // ✅ FIX: reduced from a flat -15 whenever GoPlus was missing — now that
-    // Mint/Freeze Authority are independently verified on-chain (see above),
-    // a missing GoPlus response is a smaller gap than before (2 of the ~7
-    // GoPlus-derived checks are covered another way). Still penalized,
-    // since closable/transfer-fee/transfer-hook/trusted-token remain
-    // GoPlus-only with no on-chain fallback — just less harshly than a
-    // token where we truly have zero verification of anything.
-    if (!gp && !mintInfo) contractScore -= 15;
-    else if (!gp) contractScore -= 8;
-
-    if (gp?.nonTransferable) rep.redFlags.push("Token is marked non-transferable — it may not be sellable at all.");
+    if (nonTransferable) rep.redFlags.push("🚨 Token is non-transferable — holders may be unable to sell or move it.");
+    if (pauseActive) {
+      rep.redFlags.push("🚨 Token-2022 global pause is ACTIVE — transfers, minting and burning are currently blocked.");
+    } else if (pauseEnabled && pauseAuthority) {
+      contractScore -= 10;
+      rep.redFlags.push("Global pause authority is active — the token can be paused later, blocking transfers.");
+    }
+    if (defaultAccountFrozen) {
+      contractScore -= effFreezeActive ? 18 : 35;
+      rep.redFlags.push(effFreezeActive
+        ? "New token accounts are created FROZEN by default and require the freeze authority to thaw them."
+        : "🚨 New token accounts are created FROZEN by default, but no active freeze authority was found to thaw them.");
+    }
+    if (permanentDelegateAddress) {
+      contractScore -= 28;
+      rep.redFlags.push("⚠️ Permanent Delegate is active — this authority can transfer or burn tokens from any holder account without the holder's approval.");
+    }
     if (gp?.creatorMalicious) rep.redFlags.push("Creator address is flagged as malicious by GoPlus.");
-    if (gp?.mintAuthorityMalicious) rep.redFlags.push("Mint authority address is flagged as malicious.");
-    if (gp?.freezeAuthorityMalicious) rep.redFlags.push("Freeze authority address is flagged as malicious.");
-    if (gp?.transferHookMalicious) rep.redFlags.push("Transfer hook program is flagged as malicious — it can run arbitrary code on every transfer.");
+    if (mintAuthorityMalicious) rep.redFlags.push("Active mint authority address is flagged as malicious.");
+    if (freezeAuthorityMalicious) rep.redFlags.push("Active freeze authority address is flagged as malicious.");
+    if (transferHookMalicious) rep.redFlags.push("Active transfer hook program is flagged as malicious.");
 
-    // ✅ FIX: now scores off effMintActive/effFreezeActive (on-chain first,
-    // GoPlus fallback) instead of gp?.mintable/gp?.freezable directly — a
-    // token can now be correctly penalized for an active mint/freeze
-    // authority even when GoPlus itself has no data for it.
     if (effMintActive === true) {
       contractScore -= 22;
       rep.redFlags.push(effMintSource === "on-chain"
@@ -5468,46 +5547,52 @@ function initPanels() {
         ? `Freeze authority is active (verified on-chain: ${effFreezeAuthorityAddr}) — holder accounts can be frozen.`
         : "Freeze authority is active — holder accounts can be frozen.");
     }
-    if (gp?.closable)  { contractScore -= 15; rep.redFlags.push("Token program can be closed — could eliminate all assets."); }
+
+    // Mint close is not an instant rug switch: Token-2022 only permits close
+    // after total supply reaches zero. Surface it, but keep the penalty small.
+    if (mintCloseAuthority) {
+      contractScore -= 2;
+      rep.redFlags.push("Mint close authority exists — the mint can only be closed after total supply reaches zero.");
+    } else if (!t22 && gp?.closable) {
+      contractScore -= 5;
+      rep.redFlags.push("A mint-close capability was reported by the security indexer; review the token controls.");
+    }
+
     if (gp?.balanceMutable) { contractScore -= 15; rep.redFlags.push("Balances can reportedly be altered by an authority."); }
-    if (gp?.metadataMutable) contractScore -= 4;
+    if (gp?.metadataMutable) { contractScore -= 4; rep.redFlags.push("Token metadata can be changed by an authority — minor risk, but worth knowing."); }
 
-
-    if (gp?.transferHookAttached && !gp?.transferHookMalicious) {
-      contractScore -= 15;
-      rep.redFlags.push("A transfer hook program is attached — it can run custom logic on every transfer (not confirmed malicious, but review it directly before trusting this token).");
+    if (transferHookAttached && !transferHookMalicious) {
+      contractScore -= transferHookMutable ? 15 : 8;
+      rep.redFlags.push(transferHookMutable
+        ? "A mutable Transfer Hook is attached — custom logic runs on every transfer and its program can be changed by an authority."
+        : "A Transfer Hook is attached — custom on-chain logic runs on every transfer (hook program is not currently mutable).");
     }
-    if (gp?.transferFeeUpgradable) {
-      contractScore -= 6;
-      rep.redFlags.push("The transfer fee can be changed later by an authority — a 0% fee today does not guarantee 0% tomorrow.");
+    if (transferFeeCanChange) {
+      contractScore -= 8;
+      rep.redFlags.push("Transfer-fee authority is active — the fee schedule can be changed later.");
     }
-    if (gp?.defaultAccountStateFrozen) {
-      contractScore -= 10;
-      rep.redFlags.push("New token accounts may be frozen by default (best-effort signal — verify independently before relying on this).");
-    }
-    if (gp?.transferFeePct != null) {
-      const f = gp.transferFeePct;
+    if (transferFeePct != null) {
+      const f = transferFeePct;
       if (f > 15) { contractScore -= 30; rep.redFlags.push(`Very high transfer fee (${f.toFixed(1)}%).`); }
       else if (f > 5) { contractScore -= 15; rep.redFlags.push(`Elevated transfer fee (${f.toFixed(1)}%).`); }
       else if (f > 0) contractScore -= 5;
     }
+    if (permissionedBurnAuthority) {
+      contractScore -= 2;
+      rep.redFlags.push("Permissioned Burn extension is enabled — burn operations require an additional authority.");
+    }
+
     if (effTopHolderPct != null) {
-      if (effTopHolderPct >= 50)      { contractScore -= 20; rep.redFlags.push(`Top holder controls ${effTopHolderPct.toFixed(1)}% of supply.`); }
-      else if (effTopHolderPct >= 30) contractScore -= 12;
-      else if (effTopHolderPct >= 15) contractScore -= 6;
+      if (effTopHolderPct >= 50) { contractScore -= 20; rep.redFlags.push(`Top holder controls ${effTopHolderPct.toFixed(1)}% of supply.`); }
+      else if (effTopHolderPct >= 30) { contractScore -= 12; rep.redFlags.push(`Top holder controls ${effTopHolderPct.toFixed(1)}% of supply — high concentration.`); }
+      else if (effTopHolderPct >= 15) { contractScore -= 6; rep.redFlags.push(`Top holder controls ${effTopHolderPct.toFixed(1)}% of supply — moderate concentration.`); }
     }
     if (effTop10Pct != null) {
-      if (effTop10Pct >= 80) {
-        contractScore -= 14;
-        rep.redFlags.push(`Top holders together control ${effTop10Pct.toFixed(1)}% of supply (source: ${effHoldersSource || "unknown"}).`);
-      } else if (effTop10Pct >= 60) contractScore -= 8;
-      else if (effTop10Pct >= 40) contractScore -= 3;
+      if (effTop10Pct >= 80) { contractScore -= 14; rep.redFlags.push(`Top 10 holders control ${effTop10Pct.toFixed(1)}% of supply — very high concentration.`); }
+      else if (effTop10Pct >= 60) { contractScore -= 8; rep.redFlags.push(`Top 10 holders control ${effTop10Pct.toFixed(1)}% of supply — relatively concentrated.`); }
+      else if (effTop10Pct >= 40) { contractScore -= 3; rep.redFlags.push(`Top 10 holders control ${effTop10Pct.toFixed(1)}% of supply — notable concentration.`); }
     }
-    // ✅ NEW: "Dev/Creator Holds" — see qsFetchSolanaCreatorViaHelius above
-    // for the full rationale. Priority: Helius's Metaplex creator (fast,
-    // survives authority renouncement) > GoPlus's creator_address > current
-    // mint/freeze authority address (weakest — a different concept, and
-    // gone entirely once renounced).
+
     const devCandidateAddress = heliusCreator || gp?.creatorAddress || effMintAuthorityAddr || effFreezeAuthorityAddr || null;
     const devSupplyForPct = solHolders?.supplyUi ?? mintInfo?.supplyUi ?? null;
     const devHoldingPct = (devCandidateAddress && devSupplyForPct)
@@ -5516,7 +5601,7 @@ function initPanels() {
     if (devHoldingPct != null) {
       if (devHoldingPct >= 50) { contractScore -= 20; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
       else if (devHoldingPct >= 20) { contractScore -= 10; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
-      else if (devHoldingPct >= 5) contractScore -= 3;
+      else if (devHoldingPct >= 5) { contractScore -= 3; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply — worth reviewing.`); }
     }
     if (gp?.trustedToken) contractScore += 10;
     contractScore = qsClamp(Math.round(contractScore), 0, 100);
@@ -5550,6 +5635,12 @@ function initPanels() {
     }
     if (ds?.volumeUsd24h != null && ds.volumeUsd24h < 1000) marketScore -= 10;
 
+    const possibleManipulation = !!(ds && Math.abs(ds.priceChange24h || 0) > 250 && (ds.txns24h || 0) < 30);
+    if (possibleManipulation) {
+      marketScore -= 16;
+      rep.redFlags.push("Price action suggests possible manipulation (large move with very few trades).");
+    }
+
     // ✅ NEW: volume/liquidity ratio flag — matches the bot's equivalent,
     // independent of price direction (catches an already-crashed pump too).
     const volLiqRatio = (ds?.volumeUsd24h != null && liqUsd != null && liqUsd > 0) ? (ds.volumeUsd24h / liqUsd) : null;
@@ -5560,17 +5651,40 @@ function initPanels() {
       marketScore -= 8;
     }
     marketScore = qsClamp(Math.round(marketScore), 0, 100);
+    rep.meta.liqQuality = liqUsd == null ? "unknown" : liqUsd < 25000 ? "tiny" : liqUsd < 250000 ? "low" : liqUsd < 500000 ? "medium" : "healthy";
 
     let solAgeDays = null;
-    if (ds?.pairCreatedAt) {
-      const ageMs = Date.now() - Number(ds.pairCreatedAt);
-      if (Number.isFinite(ageMs) && ageMs > 0) solAgeDays = ageMs / 86400000;
+    {
+      const ageCandidates = [ds?.earliestPairCreatedAt, gt?.earliestPoolCreatedAtMs, ds?.pairCreatedAt]
+        .filter(n => Number.isFinite(Number(n)) && Number(n) > 0).map(Number);
+      const earliestMs = ageCandidates.length ? Math.min(...ageCandidates) : null;
+      if (earliestMs) {
+        const ageMs = Date.now() - earliestMs;
+        if (Number.isFinite(ageMs) && ageMs > 0) solAgeDays = ageMs / 86400000;
+      }
     }
     const liqAnyForGuard = !!(liqUsd && liqUsd > 0) || (Array.isArray(gp?.dex) && gp.dex.length > 0);
     const holdersUnknown = !effHoldersKnown;
 
     let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
-    if (hardBad) score = 3;
+    if (hardBad) {
+      score = 3;
+    } else {
+      if (permanentDelegateAddress) score = Math.min(score, 59);
+      if (defaultAccountFrozen) score = Math.min(score, 49);
+      if (transferFeePct != null && transferFeePct > 15) score = Math.min(score, 49);
+      else if (transferFeePct != null && transferFeePct > 5) score = Math.min(score, 64);
+      const powerfulControlCount = [
+        !!effMintActive, !!effFreezeActive, !!permanentDelegateAddress,
+        !!transferHookMutable, !!(pauseEnabled && pauseAuthority), !!transferFeeCanChange
+      ].filter(Boolean).length;
+      if (powerfulControlCount >= 3) {
+        score = Math.min(score, 59);
+        rep.redFlags.push(`Multiple active Token-2022 authorities detected (${powerfulControlCount} powerful controls) — strong centralization/control risk even if market liquidity is healthy.`);
+      } else if (powerfulControlCount === 2) {
+        score = Math.min(score, 69);
+      }
+    }
     score = qsClamp(score, 0, 100);
 
     // ✅ FIX (same class of bug as EVM + the bot): added completeDataBlackout
@@ -5586,17 +5700,28 @@ function initPanels() {
         : "No market data found anywhere (DexScreener, CEX) and no holder data yet — too early to assess either way. Treat with maximum caution.");
     }
 
-    const overallText = dataBlackout
+    let overallText = dataBlackout
       ? "Too Early To Tell"
       : (score >= 85 ? "Good" : score >= 70 ? "Mixed signals" : score >= 50 ? "Caution" : "High risk");
+
+    const compositePumpPattern = !hardBad && !dataBlackout
+      && solAgeDays != null && solAgeDays < 2
+      && ds?.priceChange24h != null && ds.priceChange24h > 200
+      && liqUsd != null && liqUsd > 0 && liqUsd < 50000;
+    if (compositePumpPattern) {
+      rep.redFlags.unshift(`⚠️ Pattern match: very fresh token, price +${ds.priceChange24h.toFixed(0)}% in 24h, but only ~$${Math.round(liqUsd).toLocaleString()} liquidity — classic pump signature. This is a pattern observation, not proof of a scam — but treat with extreme caution.`);
+      score = Math.min(score, 40);
+      overallText = "High risk";
+    }
 
     // ✅ NEW: "Data Coverage" for Solana — EVM already has this chip (how
     // much info we actually found, distinct from the safety score itself),
     // Solana never got an equivalent. Same points-based approach as EVM's
     // uiConfidence calculation, adapted to what's actually available here.
     let solCoveragePoints = 0;
-    if (gp) solCoveragePoints += 2;
-    if (ds) solCoveragePoints += 1;
+    if (gp) solCoveragePoints += 1;
+    if (mintInfo) solCoveragePoints += 1;
+    if (ds || gt) solCoveragePoints += 1;
     if (effHoldersKnown) solCoveragePoints += 1;
     if (liqAnyForGuard) solCoveragePoints += 1;
     if (effTop10Pct != null) solCoveragePoints += 1;
@@ -5615,6 +5740,23 @@ function initPanels() {
     rep.meta.goplusRaw = gp?.raw || null;
     rep.meta.holdersReturned = gp?.holdersReturned ?? null;
     rep.meta.top10ConcentrationPct = gp?.top10ConcentrationPct ?? null;
+    rep.meta.tokenProgram = mintInfo?.tokenProgram || "Unknown";
+    rep.meta.tokenProgramOnChain = !!mintInfo;
+    rep.meta.token2022 = t22 ? {
+      permanentDelegateAddress,
+      transferHookProgramId,
+      transferHookAuthority,
+      transferFeePct,
+      transferFeeCanChange,
+      defaultAccountFrozen,
+      pauseEnabled,
+      pauseActive,
+      pauseAuthority,
+      nonTransferable,
+      mintCloseAuthority,
+      permissionedBurnAuthority,
+      extensionTypes: t22.extensionTypes || []
+    } : null;
 
     // ✅ FIX (major finding, from live testing): GoPlus's dex array was
     // being used as the PRIMARY pool list (capped at 6), with DexScreener
@@ -5732,6 +5874,9 @@ function initPanels() {
       // ✅ NEW: parity with the EVM "Data Coverage" chip — how much info we
       // actually found, not a safety score.
       { type: solDataCoverage === "high" ? "ok" : "warn", title: "Data Coverage", value: `${solDataCoverage} (how much info we found — not a safety score)` },
+      { type: mintInfo ? "ok" : "warn", title: "Token Program",
+        value: mintInfo?.tokenProgram || "Unknown", onChain: !!mintInfo },
+
       // ✅ FIX: these previously colored the chip "ok" (green) whenever gp
       // was null, even though the text correctly said "Unknown" — a green
       // dot next to "Unknown" reads as "checked, safe" when it should read
@@ -5747,25 +5892,29 @@ function initPanels() {
         value: effMintActive === null ? "Unknown" : (effMintActive ? `Active (${effMintSource}${effMintAuthorityAddr ? ": " + qsShortAddr(effMintAuthorityAddr) : ""})` : `Renounced/None (verified ${effMintSource})`) },
       { type: effFreezeActive === null ? "warn" : (effFreezeActive ? "bad" : "ok"), title: "Freeze Authority",
         value: effFreezeActive === null ? "Unknown" : (effFreezeActive ? `Active (${effFreezeSource}${effFreezeAuthorityAddr ? ": " + qsShortAddr(effFreezeAuthorityAddr) : ""})` : `Renounced/None (verified ${effFreezeSource})`) },
-      { type: !gp ? "warn" : (gp.closable?"bad":"ok"), title: "Closable", value: gp?.closable?"Yes":(gp?"No":"Unknown") },
-      // ✅ FIX: "No/Unknown" conflated two very different situations — GoPlus
-      // genuinely has no data at all (gp is null) vs. GoPlus DID respond and
-      // explicitly said this token isn't on its curated trusted-token list
-      // (a real, checked answer, just not a positive one). Now distinguishes
-      // them in the wording.
+      ...(mintInfo?.tokenProgram === "Token-2022" ? [
+        { type: permanentDelegateAddress ? "bad" : "ok", title: "Permanent Delegate",
+          value: permanentDelegateAddress ? `⚠️ Active (${qsShortAddr(permanentDelegateAddress)})` : "None", onChain: true },
+        { type: transferHookMalicious ? "bad" : transferHookAttached ? "warn" : "ok", title: "Transfer Hook",
+          value: transferHookMalicious ? "⚠️ Attached (flagged malicious)" : transferHookAttached ? `Attached${transferHookMutable ? " (mutable)" : " (fixed program)"}` : "None", onChain: true },
+        { type: transferFeePct != null && transferFeePct > 5 ? "bad" : transferFeeCanChange || (transferFeePct || 0) > 0 ? "warn" : "ok", title: "Transfer Fee",
+          value: t22?.extensionTypes?.includes(QS_TOKEN2022_EXT.TRANSFER_FEE_CONFIG)
+            ? `${transferFeePct != null ? transferFeePct.toFixed(1) + "%" : "Configured"}${transferFeeCanChange ? " • mutable" : " • fixed"}` : "None", onChain: true },
+        { type: defaultAccountFrozen ? "bad" : "ok", title: "Default Account State",
+          value: defaultAccountFrozen ? "⚠️ Frozen" : "Normal", onChain: true },
+        { type: pauseActive ? "bad" : (pauseEnabled && pauseAuthority) ? "warn" : "ok", title: "Global Pause",
+          value: pauseActive ? "🚨 PAUSED" : pauseEnabled ? (pauseAuthority ? "Available (authority active)" : "Enabled (no authority)") : "Not enabled", onChain: true },
+        { type: nonTransferable ? "bad" : "ok", title: "Non-Transferable",
+          value: nonTransferable ? "🚨 Yes" : "No", onChain: true }
+      ] : [
+        { type: !gp ? "warn" : (gp.closable ? "warn" : "ok"), title: "Closable", value: gp?.closable ? "Reported" : (gp ? "No" : "Unknown") },
+        { type: !gp ? "warn" : (gp.transferHookMalicious ? "bad" : gp.transferHookAttached ? "warn" : "ok"), title: "Transfer Hook",
+          value: gp?.transferHookMalicious ? "⚠️ Attached (flagged malicious)" : gp?.transferHookAttached ? "Attached (review it)" : (gp ? "None detected" : "Unknown") },
+        { type: !gp ? "warn" : ((gp?.transferFeePct || 0) > 5 ? "bad" : (gp?.transferFeePct || 0) > 0 ? "warn" : "ok"), title: "Transfer Fee",
+          value: !gp ? "Unknown" : (gp?.transferFeePct != null ? `${gp.transferFeePct.toFixed(2)}%` : "None detected") }
+      ]),
       { type: !gp ? "warn" : (gp.trustedToken ? "ok" : "warn"), title: "Trusted Token",
         value: !gp ? "Unknown (GoPlus unavailable)" : (gp.trustedToken ? "Yes (GoPlus)" : "Not on GoPlus's trusted list") },
-      // ✅ FIX: showed "Unknown" even when GoPlus DID respond and simply has
-      // no transfer-fee data to report — true for the vast majority of
-      // tokens, since a transfer fee is a Token-2022-only extension that
-      // legacy SPL Token Program tokens (most tokens, including this one)
-      // don't have at all. "Unknown" implied genuine uncertainty about
-      // something that was actually a checked, known "doesn't apply".
-      { type: !gp ? "warn" : (gp.transferFeePct ? (gp.transferFeePct>5?"bad":"warn") : "ok"), title: "Transfer Fee",
-        value: !gp ? "Unknown (GoPlus unavailable)" : ((gp.transferFeePct !== null && gp.transferFeePct !== undefined) ? `${gp.transferFeePct.toFixed(2)}%` : "None (no fee extension)") },
-      { type: !gp ? "warn" : (gp.transferHookMalicious?"bad":gp.transferHookAttached?"warn":"ok"), title: "Transfer Hook",
-        value: gp?.transferHookMalicious ? "⚠️ Attached (flagged malicious)" : gp?.transferHookAttached ? "Attached (review it)" : (gp?"None detected":"Unknown") },
-      ...(gp?.defaultAccountStateFrozen ? [{ type: "bad", title: "New Accounts", value: "May start frozen (best-effort signal)" }] : []),
       { type: effTopHolderPct==null?"warn":effTopHolderPct>=30?"bad":effTopHolderPct>=15?"warn":"ok", title: "Top Holder",
         value: effTopHolderPct!=null ? `${effTopHolderPct.toFixed(1)}% (${effHoldersSource || "unknown"} data, may incl. LP)` : "Unknown" },
       // ✅ NEW: Dev/Creator Holds — see devCandidateAddress/devHoldingPct
@@ -5842,6 +5991,7 @@ function initPanels() {
       }] : [])
     ];
 
+    rep.redFlags = [...new Set((rep.redFlags || []).filter(Boolean))];
     rep.json = safeJson(rep);
     cache[ckey] = { ts: qsNowTs(), rep };
     saveQsCache(cache);
