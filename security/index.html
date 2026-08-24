@@ -2670,7 +2670,7 @@ function initPanels() {
   "use strict";
 
   const QS_LS_CACHE    = "cx_sec_qs_cache_safe_v7_shield";
-  const QS_LS_HISTORY  = "cx_sec_qs_history_safe_v7_shield";
+  const QS_LS_HISTORY  = "cx_sec_qs_history_safe_v6";
   const QS_LS_API_KEYS = "cx_sec_explorer_keys";
 
   const EIP1967_IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
@@ -3532,9 +3532,6 @@ function initPanels() {
 
   async function qsFetchContractAge(net, token, apiKey) {
     if (!apiKey) return null;
-    // Etherscan V2 Free does not currently provide BSC getcontractcreation;
-    // avoid a guaranteed failure/noise and use oldest DEX pool as trading age.
-    if (net === "bsc") return null;
     try {
       const base = (typeof explorerApiBase === "function") ? explorerApiBase(net) : null;
       if (!base) return null;
@@ -3554,23 +3551,41 @@ function initPanels() {
       if (!txHash) return deployerAddress ? { deployerAddress } : null;
       let deployTs = null;
       try {
-        const txData = await withRpcFallback(net, async (provider) => provider.getTransaction(txHash));
+        const txData = await withRpcFallback(net, async (provider) => {
+          return await provider.getTransaction(txHash);
+        });
         if (txData?.blockNumber) {
-          const block = await withRpcFallback(net, async (provider) => provider.getBlock(txData.blockNumber));
+          const block = await withRpcFallback(net, async (provider) => {
+            return await provider.getBlock(txData.blockNumber);
+          });
           if (block?.timestamp) deployTs = Number(block.timestamp);
         }
       } catch {}
-      if (!deployTs) return { deployerAddress };
+      if (!deployTs) return deployerAddress ? { deployerAddress } : null;
       const ageDays = Math.floor((Date.now() / 1000 - deployTs) / 86400);
       return { deployTs, ageDays, deployerAddress };
     } catch { return null; }
   }
 
-  // Etherscan tokeninfo does not return holder count and the dedicated holder
-  // count endpoint is PRO. GoPlus already supplies holder_count for free, so
-  // do not spend a request on an endpoint that cannot return the needed field.
+  // Explorer holder-count lookup is kept for backwards compatibility with v5.
+  // Unsupported/free endpoints simply return null; GoPlus remains the normal
+  // free fallback, so a failed explorer lookup never breaks the scan.
   async function qsFetchHolderCount(net, token, apiKey) {
-    return null;
+    if (!apiKey) return null;
+    try {
+      const base = (typeof explorerApiBase === "function") ? explorerApiBase(net) : null;
+      if (!base) return null;
+      const url = `${base}?module=token&action=tokeninfo&contractaddress=${token}&apikey=${apiKey}`;
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 7000);
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tmr);
+      if (!res.ok) return null;
+      const j = await res.json();
+      const info = Array.isArray(j?.result) ? j.result[0] : j?.result;
+      const hc = parseInt(info?.holdersCount || info?.holderCount || "0", 10);
+      return (hc > 0) ? hc : null;
+    } catch { return null; }
   }
 
   // ✅ FIX: PinkLock BSC address was truncated by exactly one character
