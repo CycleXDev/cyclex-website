@@ -1,6 +1,3 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -159,50 +156,79 @@
 
   .hero-note-small{font-size:11px;color:rgba(255,255,255,.35);margin-top:12px;letter-spacing:.01em}
 
-  /* ── FIREWALL HERO BLOCK ─────────────────────── */
+  /* ── HERO ACTIONS — Quick Scan first, Firewall second ─────────── */
   .fw-hero-block{
     margin:16px auto 0;
     display:flex;flex-direction:column;align-items:center;gap:10px;
-    max-width:580px;
+    max-width:760px;
   }
-  .btn-firewall-hero{
-    padding:15px 44px !important;
-    font-size:14px !important;
-    font-weight:900 !important;
-    letter-spacing:.09em !important;
-    border-radius:999px !important;
-    background:linear-gradient(135deg,#ff4757,#ff6b6b) !important;
-    border:none !important;
-    color:#fff !important;
-    box-shadow:0 14px 44px rgba(255,71,87,.40),0 4px 12px rgba(0,0,0,.30) !important;
-    animation:none !important;
+  .hero-cta-row{
+    display:flex;align-items:center;justify-content:center;gap:10px;
+    width:100%;
+  }
+  .hero-quick-btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;
+    padding:15px 38px;min-width:360px;
+    border-radius:999px;border:1px solid rgba(0,229,255,.42);
+    background:linear-gradient(135deg,#00e5ff,#78f2ff);
+    color:#02050a;font-family:var(--sans);
+    font-size:14px;font-weight:950;letter-spacing:.085em;text-transform:uppercase;
+    cursor:pointer;white-space:nowrap;
+    box-shadow:0 16px 52px rgba(0,229,255,.27),0 4px 14px rgba(0,0,0,.28);
+    transition:transform .22s ease,box-shadow .22s ease,filter .22s ease;
     position:relative;overflow:hidden;
-    transition:transform .22s ease, box-shadow .22s ease !important;
   }
-  .btn-firewall-hero::after{
+  .hero-quick-btn::after{
     content:"";position:absolute;inset:0;border-radius:999px;
-    background:linear-gradient(180deg,rgba(255,255,255,.14) 0%,transparent 60%);
+    background:linear-gradient(180deg,rgba(255,255,255,.30) 0%,transparent 58%);
     pointer-events:none;
   }
+  .hero-quick-btn:hover{
+    transform:translateY(-2px);filter:saturate(1.08);
+    box-shadow:0 22px 68px rgba(0,229,255,.40),0 6px 18px rgba(0,0,0,.30);
+  }
+  .hero-quick-btn:focus-visible{outline:2px solid rgba(125,242,255,.95);outline-offset:3px}
+  .hero-quick-icon{font-size:16px;line-height:1}
+
+  .btn-firewall-hero{
+    padding:11px 22px !important;
+    font-size:11.5px !important;
+    font-weight:850 !important;
+    letter-spacing:.075em !important;
+    border-radius:999px !important;
+    background:rgba(255,71,87,.09) !important;
+    border:1px solid rgba(255,91,103,.38) !important;
+    color:#ff7d88 !important;
+    box-shadow:0 10px 30px rgba(255,71,87,.12) !important;
+    animation:none !important;
+    position:relative;overflow:hidden;
+    transition:transform .22s ease,box-shadow .22s ease,background .22s ease !important;
+  }
+  .btn-firewall-hero::after{display:none}
   .btn-firewall-hero:hover{
     transform:translateY(-2px) !important;
-    box-shadow:0 22px 64px rgba(255,71,87,.58),0 6px 18px rgba(0,0,0,.30) !important;
+    background:rgba(255,71,87,.15) !important;
+    box-shadow:0 14px 38px rgba(255,71,87,.20) !important;
   }
-  .btn-firewall-hero .fw-dot{
-    background:#fff;
-    opacity:.9;
-  }
+  .btn-firewall-hero .fw-dot{background:#ff5f6d;opacity:1}
   .fw-btn-mobile{display:none}
   .fw-hero-tagline{
-    margin:0;
-    font-size:14px;line-height:1.7;
-    color:rgba(255,255,255,.65);
-    letter-spacing:.01em;
+    margin:0;max-width:680px;
+    font-size:12.5px;line-height:1.6;
+    color:rgba(255,255,255,.52);letter-spacing:.01em;
   }
-  .fw-hero-tagline em{
-    font-style:normal;
-    color:#ff8080;
-    font-weight:600;
+  .fw-hero-tagline em{font-style:normal;color:#ff8a94;font-weight:600}
+
+  .tool-card.tc-quick{
+    border-color:rgba(0,229,255,.30);
+    box-shadow:0 16px 48px rgba(0,0,0,.48),0 0 0 1px rgba(0,229,255,.055),0 0 34px rgba(0,229,255,.07);
+  }
+  .tool-card.tc-quick::before{opacity:.62}
+  .tc-featured{
+    margin-left:auto;padding:3px 8px;border-radius:999px;
+    font-size:8.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+    color:#071014;background:linear-gradient(135deg,#00e5ff,#7df2ff);
+    box-shadow:0 5px 18px rgba(0,229,255,.16);white-space:nowrap;
   }
   .hero-kicker{
     display:inline-flex;align-items:center;gap:8px;
@@ -589,6 +615,22 @@
     .rpc-2btn-row{grid-template-columns:1fr 1fr}
     #qsLiqTable .trow{font-size:10px}
     .top-bar{flex-wrap:wrap;padding:10px 12px;border-radius:18px;gap:8px;margin-bottom:18px}
+    /* ✅ FIX (real bug, reported live on mobile): .top-right (Firewall +
+       Bot + 4-language switch) never wrapped its own children — when the
+       row ran out of horizontal space, buttons were clipped/cut off at
+       the edge (confirmed live: the AR language button was cut mid-way,
+       RU invisible entirely) instead of dropping to a second line. Now
+       wraps and right-aligns, matching how .top-bar itself already wraps
+       at this breakpoint. */
+    /* ⚠️ REVERTED (real regression, reported live): the follow-up refine
+       (lang-switch with flex-basis:100% + order:-1, to put languages on
+       their own row above Firewall/Bot) caused the whole page to shift
+       right on mobile with content clipped on the left edge — a real
+       horizontal-overflow bug, not a rendering preference. Reverted to
+       this simpler, already-confirmed-working wrap (items just wrap in
+       DOM order, no forced full-width row) rather than risk guessing at
+       another flex fix blind. */
+    .top-right{flex-wrap:wrap;justify-content:flex-end;row-gap:8px}
     .brand-sub{display:none}
     .back-link{display:none}
     .modal-backdrop{padding:0;align-items:flex-end}
@@ -598,8 +640,10 @@
     .panel-actions{width:100%;justify-content:flex-end}
     .panel-title{font-size:20px}
     .hero-title{font-size:clamp(28px,8vw,48px)}
-    .fw-hero-block{padding:14px}
-    .btn-firewall-hero{padding:12px 28px !important;font-size:13px !important}
+    .fw-hero-block{padding:10px 6px}
+    .hero-cta-row{flex-direction:column;gap:9px}
+    .hero-quick-btn{width:100%;min-width:0;padding:13px 18px;font-size:12.5px}
+    .btn-firewall-hero{width:100%;justify-content:center;padding:10px 18px !important;font-size:11.5px !important}
     .fw-btn-full{display:none}
     .fw-btn-mobile{display:inline}
     .tool-card{padding:14px 12px}
@@ -607,10 +651,94 @@
     .tx-detail-card,.tx-sum{font-size:11px}
     .tx-detail-k{min-width:60px}
     .rpc-full-btn{font-size:15px;padding:13px}
+
+    /* ✅ MOBILE TOP BAR — match Firewall layout:
+       brand on its own row, languages full-width, then Firewall + Bot side-by-side. */
+    .top-bar{
+      align-items:flex-start;
+    }
+    .top-bar .brand{
+      width:100%;
+      justify-content:flex-start;
+    }
+    .top-right{
+      width:100%;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      gap:10px;
+      align-items:center;
+    }
+    .top-right .lang-switch{
+      grid-column:1 / -1;
+      grid-row:1;
+      width:100%;
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:2px;
+      padding:5px;
+    }
+    .top-right .lang-btn{
+      width:100%;
+      padding:7px 4px;
+      text-align:center;
+    }
+    .top-right .btn-firewall{
+      grid-column:1;
+      grid-row:2;
+      width:100%;
+      justify-content:center;
+      padding:9px 10px;
+    }
+    .top-right .btn-telegram{
+      grid-column:2;
+      grid-row:2;
+      width:100%;
+      justify-content:center;
+      padding:9px 10px;
+    }
+
+    /* ✅ QUICK SCAN — prevent dynamically-rendered results from widening mobile viewport */
+    #panel-quick,
+    #panel-quick .grid-2,
+    #panel-quick .card,
+    #qs-out,
+    #qs-risk,
+    #qs-pairsWrap,
+    #qs-redflagsWrap,
+    .qs-result-card{
+      min-width:0;
+      max-width:100%;
+    }
+    .qs-result-name,
+    .qs-result-meta,
+    .qs-result-meta .mono,
+    #qs-risk .risk,
+    #qs-risk .risk > span{
+      min-width:0;
+      max-width:100%;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+    .qs-result-meta .mono{white-space:normal}
+    #qs-risk .risk > span:last-child{
+      min-width:0;
+      overflow-wrap:anywhere;
+    }
+    #qsLiqTable{
+      width:100%;
+      max-width:100%;
+      overflow-x:auto;
+    }
+    #qsLiqTable .trow{
+      min-width:0;
+      grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1.5fr) minmax(0,2fr);
+    }
+    #qsLiqTable .cell{min-width:0}
+    #panel-quick.panel-shell{overflow-x:hidden}
   }
   @media(max-width:480px){
     #toolGrid{grid-template-columns:1fr 1fr}
-    .fw-hero-tagline{font-size:13px}
+    .fw-hero-tagline{font-size:11.5px}
     .risk-badges{grid-template-columns:1fr}
     .qs-btns-grid{grid-template-columns:1fr 1fr}
   }
@@ -660,16 +788,21 @@
       <p class="hero-sub" data-i18n="hero_subtitle">
         Quick Scan tokens, verify RPC health, decode transactions, and build dev tools — all client-side, no wallet needed.
       </p>
-      <!-- FIREWALL HERO BLOCK -->
+      <!-- PRIMARY HERO ACTION: Quick Scan. Firewall remains secondary. -->
       <div class="fw-hero-block">
-        <a href="/firewall" class="btn-firewall btn-firewall-hero">
-          <span class="fw-dot"></span>
-          <span class="fw-btn-full" data-i18n="fw_hero_btn">🛡️ CycleX Firewall — Protect Your Wallet</span>
-          <span class="fw-btn-mobile">🛡️ CycleX Firewall</span>
-        </a>
-        <p class="fw-hero-tagline" data-i18n="fw_hero_tagline">
-          Real-time wallet scanner — checks approvals, flags risky contracts &amp; sends <em>live alerts</em>.
-          Wallet Passport · Permission Guard · One-click revoke. Your keys, always safe.
+        <div class="hero-cta-row">
+          <button type="button" class="hero-quick-btn" id="heroQuickScanBtn" aria-label="Open Quick Scan">
+            <span class="hero-quick-icon">⚡</span>
+            <span data-i18n="hero_quick_btn">Quick Scan — Scan a Token</span>
+          </button>
+          <a href="/firewall" class="btn-firewall btn-firewall-hero">
+            <span class="fw-dot"></span>
+            <span class="fw-btn-full" data-i18n="fw_hero_btn_compact">🛡️ Firewall — Protect Your Wallet</span>
+            <span class="fw-btn-mobile" data-i18n="fw_hero_btn_mobile">🛡️ CycleX Firewall</span>
+          </a>
+        </div>
+        <p class="fw-hero-tagline" data-i18n="hero_actions_hint">
+          Scan a token instantly · Check wallet permissions with Firewall · Verify on-chain signals.
         </p>
       </div>
       <p class="hero-note-small" data-i18n="hero_note">
@@ -685,7 +818,8 @@
         <!-- Quick Scan -->
         <div class="tool-card tc-quick" data-tool="quick">
           <div class="tc-header"><div class="tc-icon">⚡</div>
-          <div class="tc-name" data-i18n="cube_quick_title">Quick Scan</div></div>
+          <div class="tc-name" data-i18n="cube_quick_title">Quick Scan</div>
+          <span class="tc-featured" data-i18n="quick_start_here">Start Here</span></div>
           <div class="tc-desc" data-i18n="cube_quick_desc">Fast token sanity-check + shareable report + cache.</div>
           <div class="tc-badges">
             <span class="tc-badge" data-i18n="badge_fast">Fast</span>
@@ -756,6 +890,14 @@
               <option value="bsc">BSC (BNB Chain)</option>
               <option value="eth">Ethereum</option>
               <option value="polygon">Polygon</option>
+              <option value="base">Base</option>
+              <option value="arbitrum">Arbitrum</option>
+              <option value="optimism">Optimism</option>
+              <option value="avalanche">Avalanche</option>
+              <option value="linea">Linea</option>
+              <option value="scroll">Scroll</option>
+              <option value="opbnb">opBNB</option>
+              <option value="robinhood">Robinhood</option>
               <option value="solana">Solana</option>
             </select>
           </div>
@@ -855,6 +997,14 @@
               <option value="bsc">BSC (BNB Chain)</option>
               <option value="eth">Ethereum</option>
               <option value="polygon">Polygon</option>
+              <option value="base">Base</option>
+              <option value="arbitrum">Arbitrum</option>
+              <option value="optimism">Optimism</option>
+              <option value="avalanche">Avalanche</option>
+              <option value="linea">Linea</option>
+              <option value="scroll">Scroll</option>
+              <option value="opbnb">opBNB</option>
+              <option value="robinhood">Robinhood</option>
             </select>
           </div>
           <!-- Private RPC inline save -->
@@ -925,6 +1075,14 @@
               <option value="bsc">BSC (BNB Chain)</option>
               <option value="eth">Ethereum</option>
               <option value="polygon">Polygon</option>
+              <option value="base">Base</option>
+              <option value="arbitrum">Arbitrum</option>
+              <option value="optimism">Optimism</option>
+              <option value="avalanche">Avalanche</option>
+              <option value="linea">Linea</option>
+              <option value="scroll">Scroll</option>
+              <option value="opbnb">opBNB</option>
+              <option value="robinhood">Robinhood</option>
             </select>
           </div>
           <div class="field">
@@ -1010,6 +1168,14 @@
               <option value="bsc">BSC (BNB Chain)</option>
               <option value="eth">Ethereum</option>
               <option value="polygon">Polygon</option>
+              <option value="base">Base</option>
+              <option value="arbitrum">Arbitrum</option>
+              <option value="optimism">Optimism</option>
+              <option value="avalanche">Avalanche</option>
+              <option value="linea">Linea</option>
+              <option value="scroll">Scroll</option>
+              <option value="opbnb">opBNB</option>
+              <option value="robinhood">Robinhood</option>
             </select>
           </div>
           <div class="field">
@@ -1091,6 +1257,11 @@ const translations = {
     btn_firewall: "Firewall",
     btn_telegram: "Bot",
     fw_hero_btn: "🛡️ CycleX Firewall — Protect Your Wallet",
+    hero_quick_btn: "Quick Scan — Scan a Token",
+    fw_hero_btn_compact: "🛡️ Firewall — Protect Your Wallet",
+    fw_hero_btn_mobile: "🛡️ CycleX Firewall",
+    hero_actions_hint: "Scan a token instantly · Check wallet permissions with Firewall · Verify on-chain signals.",
+    quick_start_here: "Start Here",
     fw_hero_tagline: "Real-time wallet scanner — checks approvals, flags risky contracts & sends <em>live alerts</em>. Wallet Passport · Permission Guard · One-click revoke. Your keys, always safe.",
     hub_title: "Advanced Security Tools",
     hub_subtitle: "Quick Scan tokens, verify RPC health, decode transactions, and build dev tools — all client-side, no wallet needed.",
@@ -1313,6 +1484,11 @@ const translations = {
     btn_firewall: "防火墙",
     btn_telegram: "机器人",
     fw_hero_btn: "🛡️ CycleX Firewall — 保护您的钱包",
+    hero_quick_btn: "快速扫描 — 扫描代币",
+    fw_hero_btn_compact: "🛡️ Firewall — 保护您的钱包",
+    fw_hero_btn_mobile: "🛡️ CycleX Firewall",
+    hero_actions_hint: "立即扫描代币 · 使用 Firewall 检查钱包权限 · 验证链上信号。",
+    quick_start_here: "从这里开始",
     fw_hero_tagline: "实时钱包扫描器 — 检查授权、标记高风险合约并发送<em>实时警报</em>。钱包护照 · 权限守卫 · 一键撤销。您的私钥，始终安全。",
     hub_title: "高级安全工具",
     hub_subtitle: "快速扫描代币、验证 RPC 健康、解码交易、构建开发工具 — 全部在客户端运行，无需连接钱包。",
@@ -1535,6 +1711,11 @@ const translations = {
     btn_firewall: "جدار الحماية",
     btn_telegram: "البوت",
     fw_hero_btn: "🛡️ CycleX Firewall — احمِ محفظتك",
+    hero_quick_btn: "فحص سريع — افحص توكن",
+    fw_hero_btn_compact: "🛡️ Firewall — احمِ محفظتك",
+    fw_hero_btn_mobile: "🛡️ CycleX Firewall",
+    hero_actions_hint: "افحص توكن فورًا · راجع صلاحيات المحفظة عبر Firewall · تحقق من إشارات البلوكتشين.",
+    quick_start_here: "ابدأ هنا",
     fw_hero_tagline: "ماسح محفظة فوري — يفحص الموافقات، يُحذّر من العقود الخطرة ويُرسل <em>تنبيهات حية</em>. جواز المحفظة · حارس الصلاحيات · إلغاء بنقرة واحدة. مفاتيحك، آمنة دائمًا.",
     hub_title: "أدوات الأمان المتقدمة",
     hub_subtitle: "فحص سريع للتوكنات، التحقق من صحة RPC، فك تشفير المعاملات، وبناء أدوات التطوير — كل ذلك على المتصفح، بدون محفظة.",
@@ -1757,6 +1938,11 @@ const translations = {
     btn_firewall: "Файрвол",
     btn_telegram: "Бот",
     fw_hero_btn: "🛡️ CycleX Firewall — Защитите ваш кошелёк",
+    hero_quick_btn: "Быстрый скан — Проверить токен",
+    fw_hero_btn_compact: "🛡️ Firewall — Защитить кошелёк",
+    fw_hero_btn_mobile: "🛡️ CycleX Firewall",
+    hero_actions_hint: "Мгновенно проверьте токен · Проверьте разрешения кошелька в Firewall · Сверьте ончейн-сигналы.",
+    quick_start_here: "Начать здесь",
     fw_hero_tagline: "Сканер кошелька в реальном времени — проверяет апрувы, выявляет опасные контракты и отправляет <em>живые оповещения</em>. Паспорт кошелька · Защита прав · Отзыв в один клик. Ваши ключи — всегда в безопасности.",
     hub_title: "Продвинутые инструменты безопасности",
     hub_subtitle: "Быстрый скан токенов, проверка RPC, декодирование транзакций и dev-инструменты — всё на клиенте, кошелёк не нужен.",
@@ -2159,65 +2345,124 @@ window.__wallet = wallet;
 function renderWalletLabels() {}
 
 const CHAINS = {
+  // Existing production networks — preserved.
   bsc: {
-    chainId: 56,
-    name: "BSC",
+    chainId: 56, name: "BSC",
     wrapped: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
     usdt: "0x55d398326f99059fF775485246999027B3197955",
     explorer: "https://bscscan.com",
     addressUrl: (a) => `https://bscscan.com/address/${a}`,
     txUrl: (h) => `https://bscscan.com/tx/${h}`,
     publicRpcs: [
-      "https://bsc-dataseed.binance.org",
-      "https://bsc-dataseed1.binance.org",
-      "https://bsc-dataseed2.binance.org",
-      "https://bsc-dataseed3.binance.org",
-      "https://bsc-dataseed4.binance.org",
-      "https://rpc.ankr.com/bsc",
-      "https://bsc-rpc.publicnode.com",
-      "https://bsc.meowrpc.com",
-      "https://bsc.drpc.org",
-      "https://binance.llamarpc.com",
-      "https://1rpc.io/bnb",
+      "https://bsc-dataseed.binance.org", "https://bsc-dataseed1.binance.org",
+      "https://bsc-dataseed2.binance.org", "https://bsc-dataseed3.binance.org",
+      "https://bsc-dataseed4.binance.org", "https://rpc.ankr.com/bsc",
+      "https://bsc-rpc.publicnode.com", "https://bsc.meowrpc.com", "https://bsc.drpc.org",
+      "https://binance.llamarpc.com", "https://1rpc.io/bnb",
       "https://bsc-mainnet.nodereal.io/v1/64a9df0874fb4a93b9d0a3849de012d3"
     ]
   },
   eth: {
-    chainId: 1,
-    name: "Ethereum",
+    chainId: 1, name: "Ethereum",
     wrapped: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
     usdt: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     explorer: "https://etherscan.io",
     addressUrl: (a) => `https://etherscan.io/address/${a}`,
     txUrl: (h) => `https://etherscan.io/tx/${h}`,
     publicRpcs: [
-      "https://ethereum-rpc.publicnode.com",
-      "https://rpc.ankr.com/eth",
-      "https://eth.llamarpc.com",
-      "https://1rpc.io/eth",
-      "https://eth.drpc.org",
-      "https://cloudflare-eth.com",
-      "https://eth.meowrpc.com",
-      "https://rpc.mevblocker.io",
-      "https://mainnet.gateway.tenderly.co"
+      "https://ethereum-rpc.publicnode.com", "https://rpc.ankr.com/eth", "https://eth.llamarpc.com",
+      "https://1rpc.io/eth", "https://eth.drpc.org", "https://cloudflare-eth.com",
+      "https://eth.meowrpc.com", "https://rpc.mevblocker.io", "https://mainnet.gateway.tenderly.co"
     ]
   },
   polygon: {
-    chainId: 137,
-    name: "Polygon",
+    chainId: 137, name: "Polygon",
     wrapped: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
     usdt: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     explorer: "https://polygonscan.com",
     addressUrl: (a) => `https://polygonscan.com/address/${a}`,
     txUrl: (h) => `https://polygonscan.com/tx/${h}`,
     publicRpcs: [
-      "https://polygon.publicnode.com",
-      "https://1rpc.io/matic",
-      "https://polygon-bor-rpc.publicnode.com",
-      "https://rpc.ankr.com/polygon",
-      "https://polygon-rpc.com",
-      "https://polygon.drpc.org"
+      "https://polygon.publicnode.com", "https://1rpc.io/matic", "https://polygon-bor-rpc.publicnode.com",
+      "https://rpc.ankr.com/polygon", "https://polygon-rpc.com", "https://polygon.drpc.org"
     ]
+  },
+
+  // ✅ NEW (v9): added EVM adapters. These are additive only; the existing
+  // BSC/ETH/Polygon configs above and the separate Solana Quick Scan path are
+  // not replaced or refactored.
+  base: {
+    chainId: 8453, name: "Base",
+    wrapped: "0x4200000000000000000000000000000000000006",
+    usdt: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
+    explorer: "https://basescan.org",
+    addressUrl: (a) => `https://basescan.org/address/${a}`,
+    txUrl: (h) => `https://basescan.org/tx/${h}`,
+    // v10 parity: avoid the rate-limited official Base RPC as first choice.
+    publicRpcs: ["https://base-rpc.publicnode.com", "https://base.drpc.org", "https://base.llamarpc.com", "https://mainnet.base.org"]
+  },
+  arbitrum: {
+    chainId: 42161, name: "Arbitrum",
+    wrapped: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+    usdt: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+    explorer: "https://arbiscan.io",
+    addressUrl: (a) => `https://arbiscan.io/address/${a}`,
+    txUrl: (h) => `https://arbiscan.io/tx/${h}`,
+    publicRpcs: ["https://arb1.arbitrum.io/rpc", "https://arbitrum-one-rpc.publicnode.com", "https://arbitrum.llamarpc.com"]
+  },
+  optimism: {
+    chainId: 10, name: "Optimism",
+    wrapped: "0x4200000000000000000000000000000000000006",
+    usdt: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+    explorer: "https://optimistic.etherscan.io",
+    addressUrl: (a) => `https://optimistic.etherscan.io/address/${a}`,
+    txUrl: (h) => `https://optimistic.etherscan.io/tx/${h}`,
+    publicRpcs: ["https://mainnet.optimism.io", "https://optimism-rpc.publicnode.com", "https://optimism.llamarpc.com"]
+  },
+  avalanche: {
+    chainId: 43114, name: "Avalanche",
+    wrapped: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
+    usdt: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+    explorer: "https://snowtrace.io",
+    addressUrl: (a) => `https://snowtrace.io/address/${a}`,
+    txUrl: (h) => `https://snowtrace.io/tx/${h}`,
+    publicRpcs: ["https://api.avax.network/ext/bc/C/rpc", "https://avalanche-c-chain-rpc.publicnode.com", "https://avalanche.drpc.org"]
+  },
+  linea: {
+    chainId: 59144, name: "Linea",
+    wrapped: "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f",
+    usdt: "0xA219439258ca9da29E9Cc4cE5596924745e12B93",
+    explorer: "https://lineascan.build",
+    addressUrl: (a) => `https://lineascan.build/address/${a}`,
+    txUrl: (h) => `https://lineascan.build/tx/${h}`,
+    publicRpcs: ["https://rpc.linea.build", "https://linea-rpc.publicnode.com", "https://linea.drpc.org"]
+  },
+  scroll: {
+    chainId: 534352, name: "Scroll",
+    wrapped: "0x5300000000000000000000000000000000000004",
+    usdt: "0xf55BEC9cafDbE8730f096Aa55dad6D22d44099Df",
+    explorer: "https://scrollscan.com",
+    addressUrl: (a) => `https://scrollscan.com/address/${a}`,
+    txUrl: (h) => `https://scrollscan.com/tx/${h}`,
+    publicRpcs: ["https://rpc.scroll.io", "https://scroll-rpc.publicnode.com", "https://scroll.drpc.org"]
+  },
+  opbnb: {
+    chainId: 204, name: "opBNB",
+    wrapped: "0x4200000000000000000000000000000000000006",
+    usdt: "0x9e5AAC1Ba1a2e6aEd6b32689DFcF62A509Ca96f3",
+    explorer: "https://opbnb.bscscan.com",
+    addressUrl: (a) => `https://opbnb.bscscan.com/address/${a}`,
+    txUrl: (h) => `https://opbnb.bscscan.com/tx/${h}`,
+    publicRpcs: ["https://opbnb-mainnet-rpc.bnbchain.org", "https://opbnb-rpc.publicnode.com", "https://opbnb.drpc.org"]
+  },
+  robinhood: {
+    chainId: 4663, name: "Robinhood",
+    wrapped: "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
+    usdt: "",
+    explorer: "https://robinhoodchain.blockscout.com",
+    addressUrl: (a) => `https://robinhoodchain.blockscout.com/address/${a}`,
+    txUrl: (h) => `https://robinhoodchain.blockscout.com/tx/${h}`,
+    publicRpcs: ["https://robinhood-rpc.publicnode.com", "https://rpc.mainnet.chain.robinhood.com"]
   }
 };
 
@@ -2400,9 +2645,8 @@ window.getReadProvider = getReadProvider;
 
 function netFromSelect(selId) {
   const v = ($(selId)?.value || "bsc").toLowerCase();
-  if (v === "eth") return "eth";
-  if (v === "polygon") return "polygon";
   if (v === "solana") return "solana";
+  if (CHAINS?.[v]) return v;
   return "bsc";
 }
 
@@ -2419,8 +2663,9 @@ function explorerApiBase(net) {
 async function explorerGetSource(net, addr, apiKey, isUnified) {
   const keyTrim = String(apiKey || "").trim();
   const v2Base = "https://api.etherscan.io/v2/api";
-  const chainid = (net === "bsc") ? "56" : (net === "polygon") ? "137" : "1";
-  const useV2 = !!isUnified;
+  const chainid = String(CHAINS?.[net]?.chainId || (net === "bsc" ? 56 : net === "polygon" ? 137 : 1));
+  const isLegacyExplorerRoute = net === "bsc" || net === "eth" || net === "polygon";
+  const useV2 = !!isUnified || !isLegacyExplorerRoute;
   const u = new URL(useV2 ? v2Base : explorerApiBase(net));
   if (useV2) u.searchParams.set("chainid", chainid);
   u.searchParams.set("module", "contract");
@@ -2557,6 +2802,7 @@ function initPanels() {
 
   window.showPanel = showPanel;
   toolCards.forEach((card) => card.addEventListener("click", () => showPanel(card.dataset.tool)));
+  document.querySelector("#heroQuickScanBtn")?.addEventListener("click", () => showPanel("quick"));
 
   ["btnCloseQuick","btnCloseRpc","btnCloseTx","btnCloseDev"].forEach(id => {
     document.querySelector("#" + id)?.addEventListener("click", () => showPanel(null));
@@ -2572,7 +2818,7 @@ function initPanels() {
 (function () {
   "use strict";
 
-  const QS_LS_CACHE    = "cx_sec_qs_cache_safe_v6";
+  const QS_LS_CACHE    = "cx_sec_qs_cache_safe_v10_bot_parity";
   const QS_LS_HISTORY  = "cx_sec_qs_history_safe_v6";
   const QS_LS_API_KEYS = "cx_sec_explorer_keys";
 
@@ -2622,6 +2868,7 @@ function initPanels() {
       name: "BSC (BNB Chain)",
       wrapped: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
       usdt:    "0x55d398326f99059ff775485246999027b3197955",
+      usdc:    "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
       busd:    "0xe9e7cea3dedca5984780bafc599bd69add087d56",
       v2Factory: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73",
       v3Factory: "0x0bfbcf9fa4f9c56b0f40a671ad40e0805a091865",
@@ -2641,6 +2888,7 @@ function initPanels() {
       name: "Ethereum",
       wrapped: "0xc02aa39b223fe8d0a0e5c4f27ead9083c756cc2",
       usdt:    "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      usdc:    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       v2Factory: "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f",
       v3Factory: "0x1f98431c8ad98523631ae4a59f267346ea31f984",
       v2Factories: [
@@ -2668,13 +2916,66 @@ function initPanels() {
         { name: "Uniswap V3",   addr: "0x1f98431c8ad98523631ae4a59f267346ea31f984" }
       ],
       addressUrl: (a)=> `https://polygonscan.com/address/${a}`
+    },
+
+    // New EVM networks use the same contract/security score engine. Their
+    // liquidity is intentionally aggregator-first: DexScreener + GeckoTerminal
+    // are merged into the report and USD score, instead of hard-coding a single
+    // DEX factory and risking false "no liquidity" results on newer DEX designs.
+    base: {
+      name: "Base", wrapped: "0x4200000000000000000000000000000000000006",
+      usdt: "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2", usdc: "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      v2Factories: [], v3Factories: [], addressUrl: (a)=> `https://basescan.org/address/${a}`
+    },
+    arbitrum: {
+      name: "Arbitrum", wrapped: "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      usdt: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9", usdc: "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      v2Factories: [], v3Factories: [], addressUrl: (a)=> `https://arbiscan.io/address/${a}`
+    },
+    optimism: {
+      name: "Optimism", wrapped: "0x4200000000000000000000000000000000000006",
+      usdt: "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58", usdc: "0x7f5c764cbc14f9669b88837ca1490cca17c31607",
+      v2Factories: [], v3Factories: [], addressUrl: (a)=> `https://optimistic.etherscan.io/address/${a}`
+    },
+    avalanche: {
+      name: "Avalanche", wrapped: "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
+      usdt: "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7", usdc: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      v2Factories: [], v3Factories: [], addressUrl: (a)=> `https://snowtrace.io/address/${a}`
+    },
+    linea: {
+      name: "Linea", wrapped: "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f",
+      usdt: "0xa219439258ca9da29e9cc4ce5596924745e12b93", usdc: "",
+      v2Factories: [], v3Factories: [], addressUrl: (a)=> `https://lineascan.build/address/${a}`
+    },
+    scroll: {
+      name: "Scroll", wrapped: "0x5300000000000000000000000000000000000004",
+      usdt: "0xf55bec9cafdbe8730f096aa55dad6d22d44099df", usdc: "",
+      v2Factories: [], v3Factories: [], addressUrl: (a)=> `https://scrollscan.com/address/${a}`
+    },
+    opbnb: {
+      name: "opBNB", wrapped: "0x4200000000000000000000000000000000000006",
+      usdt: "0x9e5aac1ba1a2e6aed6b32689dfcf62a509ca96f3", usdc: "",
+      v2Factories: [], v3Factories: [], addressUrl: (a)=> `https://opbnb.bscscan.com/address/${a}`
+    },
+    robinhood: {
+      name: "Robinhood", wrapped: "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      usdt: "", usdc: "",
+      v2Factories: [], v3Factories: [], addressUrl: (a)=> `https://robinhoodchain.blockscout.com/address/${a}`
     }
   };
 
   const QS_LIQ_FLOOR = {
-    bsc:     { wrappedTiny: 0.03,  wrappedLow: 0.30,  usdtTiny: 80,   usdtLow: 800 },
-    eth:     { wrappedTiny: 0.015, wrappedLow: 0.15,  usdtTiny: 120,  usdtLow: 1200 },
-    polygon: { wrappedTiny: 50,    wrappedLow: 500,   usdtTiny: 80,   usdtLow: 800 }
+    bsc:     { wrappedTiny: 0.03,  wrappedLow: 0.30,  usdtTiny: 80,  usdtLow: 800 },
+    eth:     { wrappedTiny: 0.015, wrappedLow: 0.15,  usdtTiny: 120, usdtLow: 1200 },
+    polygon: { wrappedTiny: 50,    wrappedLow: 500,   usdtTiny: 80,  usdtLow: 800 },
+    base:    { wrappedTiny: 0.015, wrappedLow: 0.15,  usdtTiny: 100, usdtLow: 1000 },
+    arbitrum:{ wrappedTiny: 0.015, wrappedLow: 0.15,  usdtTiny: 100, usdtLow: 1000 },
+    optimism:{ wrappedTiny: 0.015, wrappedLow: 0.15,  usdtTiny: 100, usdtLow: 1000 },
+    avalanche:{wrappedTiny: 0.5,   wrappedLow: 5,     usdtTiny: 100, usdtLow: 1000 },
+    linea:   { wrappedTiny: 0.015, wrappedLow: 0.15,  usdtTiny: 100, usdtLow: 1000 },
+    scroll:  { wrappedTiny: 0.015, wrappedLow: 0.15,  usdtTiny: 100, usdtLow: 1000 },
+    opbnb:   { wrappedTiny: 0.03,  wrappedLow: 0.30,  usdtTiny: 80,  usdtLow: 800 },
+    robinhood:{wrappedTiny: 0.015, wrappedLow: 0.15,  usdtTiny: 100, usdtLow: 1000 }
   };
 
   function qsLower(x) { return String(x || "").toLowerCase(); }
@@ -3012,6 +3313,33 @@ function initPanels() {
     } catch { return ""; }
   }
 
+
+
+  // v17 parity: bytecode alone is not enough (smart accounts can have code).
+  // Require standard ERC-20 read behavior before assigning a Token Score.
+  async function qsProbeErc20Contract(token, provider){
+    if (!provider || !token) return false;
+    try {
+      const c = new E.Contract(token, [
+        "function totalSupply() view returns (uint256)",
+        "function balanceOf(address) view returns (uint256)",
+        "function decimals() view returns (uint8)"
+      ], provider);
+      const [supply, bal, dec] = await Promise.all([c.totalSupply(), c.balanceOf(token), c.decimals()]);
+      const supplyBI = _qsToBI(supply);
+      const balBI = _qsToBI(bal);
+      const d = Number(dec);
+      return supplyBI > 0n && balBI >= 0n && Number.isFinite(d) && d >= 0 && d <= 255;
+    } catch { return false; }
+  }
+
+  async function qsReadCodeWithFallback(net, address){
+    if (!address) return "0x";
+    try {
+      return await cxReadWithFallback(net, async (p) => await p.getCode(address));
+    } catch { return "0x"; }
+  }
+
   const QS_ERC20_META_ABI = [
     "function decimals() view returns (uint8)",
     "function symbol() view returns (string)",
@@ -3089,11 +3417,11 @@ function initPanels() {
       { label: "Wrapped", addr: qsSafeAddr(cfg.wrapped) },
       { label: "USDT",    addr: qsSafeAddr(cfg.usdt) },
       { label: "BUSD",    addr: net === "bsc" ? qsSafeAddr("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56") : "" },
-      { label: "USDC",    addr: net === "bsc"
-          ? qsSafeAddr("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d")
+      { label: "USDC",    addr: qsSafeAddr(cfg.usdc || (net === "bsc"
+          ? "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d"
           : net === "polygon"
-            ? qsSafeAddr("0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359")
-            : qsSafeAddr("0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48") },
+            ? "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"
+            : net === "eth" ? "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" : "")) },
       { label: "FDUSD",   addr: net === "bsc" ? qsSafeAddr("0xc5f0f7b66764f6ec8c8dff7ba683102295e16409") : "" }
     ].filter(t => !!t.addr);
 
@@ -3302,7 +3630,8 @@ function initPanels() {
       : qsShortAddr(rep.token);
     const chainLabel = rep.chainName || (rep.net || "").toUpperCase();
     const net = rep.net || "";
-    const hashNet = net === "bsc" ? "#BSC" : net === "eth" ? "#ETH" : net === "polygon" ? "#Polygon" : net === "solana" ? "#Solana" : "";
+    const hashNetMap = { bsc:"#BSC", eth:"#ETH", polygon:"#Polygon", solana:"#Solana", base:"#Base", arbitrum:"#Arbitrum", optimism:"#Optimism", avalanche:"#Avalanche", linea:"#Linea", scroll:"#Scroll", opbnb:"#opBNB", robinhood:"#Robinhood" };
+    const hashNet = hashNetMap[net] || "";
     const liqChip = (rep.mini || []).find(c => c.title === "Liquidity");
     const cexChip = (rep.mini || []).find(c => c.title === "CEX Listed");
     const mktChip = (rep.mini || []).find(c => c.title === "Market Score");
@@ -3344,7 +3673,11 @@ function initPanels() {
   const QS_CEX_TOP8 = new Set([
     "binance","coinbase exchange","coinbase","kraken","okx","bybit","kucoin","gate.io","bitget"
   ]);
-  const QS_CEX_PLATFORM = { bsc: "binance-smart-chain", eth: "ethereum", polygon: "polygon-pos", solana: "solana" };
+  const QS_CEX_PLATFORM = {
+    bsc: "binance-smart-chain", eth: "ethereum", polygon: "polygon-pos", solana: "solana",
+    base: "base", arbitrum: "arbitrum-one", optimism: "optimistic-ethereum", avalanche: "avalanche",
+    linea: "linea", scroll: "scroll", opbnb: "opbnb", robinhood: "robinhood"
+  };
 
   // ✅ FIX: added console.error logging on failure (was completely silent
   // before) and CEX volume extraction (data was already in the response,
@@ -3415,7 +3748,11 @@ function initPanels() {
     }
   }
 
-  const QS_CGK_IDS = { bsc: "binancecoin", eth: "ethereum", polygon: "matic-network" };
+  const QS_CGK_IDS = {
+    bsc: "binancecoin", eth: "ethereum", polygon: "matic-network",
+    base: "ethereum", arbitrum: "ethereum", optimism: "ethereum", linea: "ethereum", scroll: "ethereum",
+    avalanche: "avalanche-2", opbnb: "binancecoin", robinhood: "ethereum"
+  };
 
   async function qsFetchNativePrice(net) {
     const id = QS_CGK_IDS[net];
@@ -3433,44 +3770,160 @@ function initPanels() {
     } catch { clearTimeout(tmr); return null; }
   }
 
+
+  // =========================================================================
+  // v10 BOT PARITY — capability-aware Blockscout enrichment
+  // =========================================================================
+  // Base/Optimism/Robinhood can be enriched from their public Blockscout v2
+  // address profile. This avoids unsupported Etherscan free-tier creation calls
+  // and lets Robinhood work without putting any secret/API key in this HTML.
+  const QS_BLOCKSCOUT_V2 = Object.freeze({
+    base: "https://base.blockscout.com/api/v2",
+    optimism: "https://optimism.blockscout.com/api/v2",
+    robinhood: "https://robinhoodchain.blockscout.com/api/v2"
+  });
+  const _qsBlockscoutProfileMem = new Map();
+  const _qsBlockscoutInflight = new Map();
+  const _qsBlockscoutCooldown = new Map();
+
+  function qsBlockscoutStorageKey(net, token){
+    return `cx_qs_bs_profile_v1:${net}:${qsLower(token)}`;
+  }
+  function qsReadStoredBlockscoutProfile(net, token, maxAgeMs){
+    try {
+      const raw = localStorage.getItem(qsBlockscoutStorageKey(net, token));
+      if (!raw) return null;
+      const o = JSON.parse(raw);
+      if (!o?.profile || !Number.isFinite(Number(o?.ts))) return null;
+      if (Date.now() - Number(o.ts) > maxAgeMs) return null;
+      return o.profile;
+    } catch { return null; }
+  }
+  function qsStoreBlockscoutProfile(net, token, profile){
+    try {
+      localStorage.setItem(qsBlockscoutStorageKey(net, token), JSON.stringify({ ts: Date.now(), profile }));
+    } catch {}
+  }
+  async function qsFetchBlockscoutProfile(net, token){
+    const base = QS_BLOCKSCOUT_V2[net];
+    if (!base) return null;
+    const addr = qsLower(token);
+    const k = `${net}:${addr}`;
+    const mem = _qsBlockscoutProfileMem.get(k);
+    if (mem && Date.now() - mem.ts < 600000) return mem.profile;
+
+    const cooldownUntil = Number(_qsBlockscoutCooldown.get(net) || 0);
+    if (cooldownUntil > Date.now()) {
+      return qsReadStoredBlockscoutProfile(net, addr, 3600000);
+    }
+    if (_qsBlockscoutInflight.has(k)) return await _qsBlockscoutInflight.get(k);
+
+    const task = (async () => {
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 6500);
+      try {
+        const res = await fetch(`${base.replace(/\/$/, "")}/addresses/${token}`, {
+          signal: ctrl.signal,
+          headers: { "accept": "application/json" }
+        });
+        if (res.status === 429) {
+          let retry = Number(res.headers.get("retry-after"));
+          if (!Number.isFinite(retry) || retry <= 0) retry = 45;
+          retry = Math.max(20, Math.min(180, retry));
+          _qsBlockscoutCooldown.set(net, Date.now() + retry * 1000);
+          console.warn(`Blockscout rate-limited on ${net}; cooldown ${retry}s`);
+          return qsReadStoredBlockscoutProfile(net, addr, 3600000);
+        }
+        if (!res.ok) return qsReadStoredBlockscoutProfile(net, addr, 3600000);
+        const j = await res.json().catch(() => null);
+        if (!j || typeof j !== "object") return null;
+        const hc = Number(j?.token?.holders_count);
+        const profile = {
+          verified: j?.is_verified === true,
+          contractName: String(j?.name || j?.token?.name || ""),
+          creatorAddress: qsSafeAddr(j?.creator_address_hash || "") || null,
+          creationTxHash: /^0x[0-9a-fA-F]{64}$/.test(String(j?.creation_transaction_hash || "")) ? String(j.creation_transaction_hash) : null,
+          holdersCount: Number.isFinite(hc) && hc > 0 ? Math.trunc(hc) : null,
+          implementationAddress: qsSafeAddr(j?.implementation_address || "") || null
+        };
+        _qsBlockscoutProfileMem.set(k, { ts: Date.now(), profile });
+        qsStoreBlockscoutProfile(net, addr, profile);
+        return profile;
+      } catch {
+        return qsReadStoredBlockscoutProfile(net, addr, 3600000);
+      } finally {
+        clearTimeout(tmr);
+      }
+    })();
+
+    _qsBlockscoutInflight.set(k, task);
+    try { return await task; }
+    finally { _qsBlockscoutInflight.delete(k); }
+  }
+
   async function qsFetchContractAge(net, token, apiKey) {
     try {
-      const base = (typeof explorerApiBase === "function") ? explorerApiBase(net) : null;
+      // Public Blockscout profile path — no user key required.
+      if (QS_BLOCKSCOUT_V2[net]) {
+        const p = await qsFetchBlockscoutProfile(net, token);
+        const deployerAddress = p?.creatorAddress || null;
+        const txHash = p?.creationTxHash || null;
+        if (!txHash) return deployerAddress ? { deployerAddress, holdersCount: p?.holdersCount ?? null } : null;
+        let deployTs = null;
+        try {
+          const txData = await withRpcFallback(net, async (provider) => await provider.getTransaction(txHash));
+          if (txData?.blockNumber) {
+            const block = await withRpcFallback(net, async (provider) => await provider.getBlock(txData.blockNumber));
+            if (block?.timestamp) deployTs = Number(block.timestamp);
+          }
+        } catch {}
+        if (!deployTs) return deployerAddress ? { deployerAddress, holdersCount: p?.holdersCount ?? null } : null;
+        const ageDays = Math.floor((Date.now() / 1000 - deployTs) / 86400);
+        return { deployTs, ageDays, deployerAddress, holdersCount: p?.holdersCount ?? null };
+      }
+
+      if (!apiKey) return null;
+      // Avalanche free creation lookup was confirmed unavailable in production;
+      // use trading age rather than knowingly firing a failing explorer call.
+      if (net === "avalanche") return null;
+
+      const addedEvm = !(net === "bsc" || net === "eth" || net === "polygon");
+      const base = addedEvm ? "https://api.etherscan.io/v2/api" : ((typeof explorerApiBase === "function") ? explorerApiBase(net) : null);
       if (!base) return null;
-      const keyParam = apiKey ? `&apikey=${apiKey}` : "";
-      const url1 = `${base}?module=contract&action=getcontractcreation&contractaddresses=${token}${keyParam}`;
+      const chainPart = addedEvm ? `&chainid=${encodeURIComponent(String(CHAINS?.[net]?.chainId || ""))}` : "";
+      const url1 = `${base}?module=contract&action=getcontractcreation&contractaddresses=${token}${chainPart}&apikey=${apiKey}`;
       const ctrl1 = new AbortController();
       const tmr1 = setTimeout(() => ctrl1.abort(), 7000);
-      let txHash = null;
+      let txHash = null, deployerAddress = null;
       try {
         const r1 = await fetch(url1, { signal: ctrl1.signal });
-        clearTimeout(tmr1);
         if (r1.ok) {
           const j1 = await r1.json();
           txHash = j1?.result?.[0]?.txHash || null;
+          deployerAddress = j1?.result?.[0]?.contractCreator || null;
         }
-      } catch { clearTimeout(tmr1); }
-      if (!txHash) return null;
+      } catch {} finally { clearTimeout(tmr1); }
+      if (!txHash) return deployerAddress ? { deployerAddress } : null;
       let deployTs = null;
       try {
-        const txData = await withRpcFallback(net, async (provider) => {
-          return await provider.getTransaction(txHash);
-        });
+        const txData = await withRpcFallback(net, async (provider) => await provider.getTransaction(txHash));
         if (txData?.blockNumber) {
-          const block = await withRpcFallback(net, async (provider) => {
-            return await provider.getBlock(txData.blockNumber);
-          });
+          const block = await withRpcFallback(net, async (provider) => await provider.getBlock(txData.blockNumber));
           if (block?.timestamp) deployTs = Number(block.timestamp);
         }
       } catch {}
-      if (!deployTs) return null;
+      if (!deployTs) return deployerAddress ? { deployerAddress } : null;
       const ageDays = Math.floor((Date.now() / 1000 - deployTs) / 86400);
-      return { deployTs, ageDays };
+      return { deployTs, ageDays, deployerAddress };
     } catch { return null; }
   }
 
+  // Explorer holder-count lookup is kept for backwards compatibility with v5.
+  // Unsupported/free endpoints simply return null; GoPlus remains the normal
+  // free fallback, so a failed explorer lookup never breaks the scan.
   async function qsFetchHolderCount(net, token, apiKey) {
     if (!apiKey) return null;
+    if (!(net === "bsc" || net === "eth" || net === "polygon")) return null;
     try {
       const base = (typeof explorerApiBase === "function") ? explorerApiBase(net) : null;
       if (!base) return null;
@@ -3594,11 +4047,143 @@ function initPanels() {
     } catch { return null; }
   }
 
-  const QS_DS_CHAIN = { bsc: "bsc", eth: "ethereum", polygon: "polygon", solana: "solana" };
+  const QS_DS_CHAIN = {
+    bsc: "bsc", eth: "ethereum", polygon: "polygon", solana: "solana",
+    base: "base", arbitrum: "arbitrum", optimism: "optimism", avalanche: "avalanche",
+    linea: "linea", scroll: "scroll", opbnb: "opbnb", robinhood: "robinhood"
+  };
   // GeckoTerminal network IDs differ from DexScreener's — eth (not
   // "ethereum"), polygon_pos (not "polygon"). Verified against
   // GeckoTerminal API docs.
-  const QS_GT_CHAIN = { bsc: "bsc", eth: "eth", polygon: "polygon_pos", solana: "solana" };
+  const QS_GT_CHAIN = {
+    bsc: "bsc", eth: "eth", polygon: "polygon_pos", solana: "solana",
+    base: "base", arbitrum: "arbitrum", optimism: "optimism", avalanche: "avax",
+    linea: "linea", scroll: "scroll", opbnb: "opbnb", robinhood: "robinhood"
+  };
+
+
+  // v19/v27 parity for newly-added EVMs. Browser-side cooldown never waits;
+  // it simply skips DexScreener during a 429 window and lets GeckoTerminal
+  // continue. Legacy BSC/ETH/Polygon/Solana keep their old direct path.
+  const QS_NEW_EVM_MARKET_NETS = new Set(["base","arbitrum","optimism","avalanche","linea","scroll","opbnb","robinhood"]);
+  const _qsDsMem = new Map();
+  const _qsDsCooldown = new Map();
+
+  function qsDsStripVolatile(snapshot){
+    if (!snapshot) return null;
+    return {
+      ...snapshot,
+      stale: true,
+      priceChange24h: null,
+      volumeUsd24h: null,
+      txns24h: null,
+      allPairs: Array.isArray(snapshot.allPairs) ? snapshot.allPairs.map(p => ({...p, priceChange24h:null, volumeUsd24h:null, txns24h:null, stale:true})) : []
+    };
+  }
+  function qsV27Median(values){
+    const xs = (values || []).filter(Number.isFinite).sort((a,b)=>a-b);
+    return xs.length ? xs[Math.floor((xs.length - 1) / 2)] : null;
+  }
+  function qsV27ActivityScore(p){
+    const liq = Math.max(0, Number(p?.liquidityUsd)||0);
+    const vol = Math.max(0, Number(p?.volumeUsd24h)||0);
+    const tx = Math.max(0, Number(p?.txns24h)||0);
+    return Math.log10(1+liq)*1.25 + Math.log10(1+vol)*1.50 + Math.log10(1+tx)*0.55;
+  }
+  function qsCombineNewEvmMarket(net, ds, gt){
+    if (!QS_NEW_EVM_MARKET_NETS.has(net)) return null;
+    const sources = [];
+    if (ds) sources.push({source:"DexScreener", pools:Array.isArray(ds.allPairs)?ds.allPairs:[], sumLiquidityUsd:Number(ds.sumLiquidityUsd)||0, stale:!!ds.stale});
+    if (gt) sources.push({source:"GeckoTerminal", pools:Array.isArray(gt.allPairs)?gt.allPairs:[], sumLiquidityUsd:Number(gt.sumLiquidityUsd)||0, stale:!!gt.stale});
+    const fresh = sources.filter(s => !s.stale);
+    const usable = fresh.length ? fresh : sources;
+
+    const byAddr = new Map();
+    let anon = 0;
+    for (const s of usable) {
+      for (const p0 of (s.pools || [])) {
+        const p = {...p0, source:s.source, stale:!!s.stale};
+        const key = qsLower(p.pairAddress || "") || `anon:${anon++}`;
+        const cur = Number.isFinite(Number(p.liquidityUsd)) ? Number(p.liquidityUsd) : null;
+        const obs = { source:s.source, liquidityUsd:cur, pool:p };
+        const prev = byAddr.get(key);
+        if (!prev) {
+          byAddr.set(key, {...p, liquidityUsd:cur, sourceCount:1, observations:[obs]});
+          continue;
+        }
+        const observations = [...(prev.observations||[]), obs];
+        const liqs = observations.map(o=>o.liquidityUsd).filter(v=>Number.isFinite(v)&&v>0).sort((a,b)=>a-b);
+        let merged = prev.liquidityUsd;
+        if (liqs.length === 1) merged = liqs[0];
+        else if (liqs.length >= 2) merged = liqs[liqs.length-1] / Math.max(liqs[0],1) > 3 ? qsV27Median(liqs) : liqs[liqs.length-1];
+        const obsPools = observations.map(o=>o.pool);
+        const marketObs = [...obsPools].sort((a,b)=>qsV27ActivityScore(b)-qsV27ActivityScore(a))[0] || p;
+        const liqObs = [...obsPools].sort((a,b)=>(Number(b?.liquidityUsd)||0)-(Number(a?.liquidityUsd)||0))[0] || p;
+        byAddr.set(key, {
+          ...liqObs,
+          liquidityUsd: merged,
+          priceChange24h: marketObs?.priceChange24h ?? liqObs?.priceChange24h ?? null,
+          volumeUsd24h: marketObs?.volumeUsd24h ?? liqObs?.volumeUsd24h ?? null,
+          txns24h: marketObs?.txns24h ?? liqObs?.txns24h ?? null,
+          sourceCount: new Set(observations.map(o=>o.source)).size,
+          observations
+        });
+      }
+    }
+
+    const uniquePools = [...byAddr.values()];
+    const priced = uniquePools.filter(p=>Number.isFinite(p.liquidityUsd)&&p.liquidityUsd>0).sort((a,b)=>b.liquidityUsd-a.liquidityUsd);
+    const rawLiquidityUsd = priced.length ? priced.slice(0,10).reduce((a,p)=>a+p.liquidityUsd,0) : null;
+    const sourceTotals = fresh.map(s => {
+      const direct = Number(s.sumLiquidityUsd);
+      if (Number.isFinite(direct) && direct > 0) return direct;
+      return (s.pools||[]).map(p=>Number(p?.liquidityUsd)||0).filter(v=>v>0).sort((a,b)=>b-a).slice(0,10).reduce((a,b)=>a+b,0);
+    }).filter(v=>v>0);
+    const reference = sourceTotals.length >= 2 ? qsV27Median(sourceTotals) : null;
+    const maxTotal = sourceTotals.length ? Math.max(...sourceTotals) : null;
+    const severe = reference != null && maxTotal != null && maxTotal > reference*4 && (maxTotal-reference) > 250000;
+    let liquidityUsd = rawLiquidityUsd;
+    let liquiditySanityAdjusted = false;
+    let consensusLiquidityUsd = null;
+    if (severe) {
+      const nonOutliers = sourceTotals.filter(v=>v<=reference*4);
+      consensusLiquidityUsd = nonOutliers.length ? Math.max(...nonOutliers) : reference;
+      if (rawLiquidityUsd != null && consensusLiquidityUsd > 0 && rawLiquidityUsd > consensusLiquidityUsd*2.5) {
+        liquidityUsd = consensusLiquidityUsd;
+        liquiditySanityAdjusted = true;
+      }
+    }
+    const crediblePools = liquiditySanityAdjusted && consensusLiquidityUsd > 0
+      ? uniquePools.filter(p => (p.sourceCount||1)>=2 || !Number.isFinite(p.liquidityUsd) || p.liquidityUsd <= consensusLiquidityUsd*2)
+      : uniquePools;
+    const marketPools = crediblePools.filter(p=>!p.stale && (p.priceChange24h!=null || p.volumeUsd24h!=null || p.txns24h!=null));
+    const deep = marketPools.filter(p=>(Number(p?.liquidityUsd)||0)>=5000);
+    const candidates = deep.length ? deep : marketPools;
+    const bestMarket = [...candidates].sort((a,b)=>qsV27ActivityScore(b)-qsV27ActivityScore(a))[0] || null;
+    const crediblePriced = crediblePools.filter(p=>Number.isFinite(p.liquidityUsd)&&p.liquidityUsd>0).sort((a,b)=>b.liquidityUsd-a.liquidityUsd);
+    const earliestSet = crediblePools.length ? crediblePools : uniquePools;
+    const earliest = earliestSet.map(p=>p.createdAtMs).filter(n=>Number.isFinite(n)&&n>0).sort((a,b)=>a-b)[0] ?? null;
+    return {
+      liquidityUsd,
+      rawLiquidityUsd,
+      liquiditySanityAdjusted,
+      consensusLiquidityUsd,
+      hasPools: uniquePools.length>0,
+      pairCount: uniquePools.length,
+      bestPairAddress: crediblePriced[0]?.pairAddress || crediblePools[0]?.pairAddress || null,
+      earliestPoolCreatedAtMs: earliest,
+      uniquePools,
+      crediblePools,
+      marketData: bestMarket ? {
+        priceChange24h: bestMarket.priceChange24h ?? null,
+        volumeUsd24h: bestMarket.volumeUsd24h ?? null,
+        txns24h: bestMarket.txns24h ?? null,
+        pairCount: uniquePools.length,
+        pairAddress: bestMarket.pairAddress || null,
+        source: bestMarket.source || null
+      } : null
+    };
+  }
 
   // ✅ FIX: DexScreener's response includes baseToken.name/symbol, which
   // wasn't being captured — meaning if GoPlus Solana data is unavailable
@@ -3610,62 +4195,68 @@ function initPanels() {
     try {
       const chain = QS_DS_CHAIN[net];
       if (!chain) return null;
+      const guarded = QS_NEW_EVM_MARKET_NETS.has(net);
+      const key = `${chain}:${qsLower(token)}`;
+      const now = Date.now();
+      const cached = _qsDsMem.get(key);
+      if (guarded && cached && now - cached.ts < 120000) return cached.value;
+      if (guarded && Number(_qsDsCooldown.get(chain)||0) > now) {
+        return (cached && now - cached.ts < 1800000) ? qsDsStripVolatile(cached.value) : null;
+      }
+
       const url = `https://api.dexscreener.com/latest/dex/tokens/${token}`;
       const ctrl = new AbortController();
       const tmr = setTimeout(() => ctrl.abort(), 8000);
-      const res = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(tmr);
+      let res;
+      try { res = await fetch(url, { signal: ctrl.signal }); }
+      finally { clearTimeout(tmr); }
+      if (guarded && res.status === 429) {
+        let retry = Number(res.headers.get("retry-after"));
+        if (!Number.isFinite(retry) || retry <= 0) retry = 30;
+        retry = Math.max(15, Math.min(90, retry));
+        _qsDsCooldown.set(chain, Date.now() + retry*1000);
+        console.warn(`DexScreener rate-limited (${chain}); cooldown ${retry}s activated`);
+        return (cached && now - cached.ts < 1800000) ? qsDsStripVolatile(cached.value) : null;
+      }
       if (!res.ok) return null;
       const j = await res.json();
-      const pairs = Array.isArray(j?.pairs)
-        ? j.pairs.filter(p => (p?.chainId || "").toLowerCase() === chain)
-        : [];
+      const pairs = Array.isArray(j?.pairs) ? j.pairs.filter(p => (p?.chainId || "").toLowerCase() === chain) : [];
       if (!pairs.length) return null;
-      const sorted = pairs.sort((a,b) => (b?.liquidity?.usd||0) - (a?.liquidity?.usd||0));
-      const best = sorted[0];
       const safeNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
-      // ✅ FIX (real bug, confirmed live: KII/Kiichain — a real 4-month-old
-      // token showed "Trading Age: 9d"): pairCreatedAt was only ever taken
-      // from `best` (the highest-LIQUIDITY pair). For a token whose original
-      // pool is small/old but a much bigger pool was created recently (e.g.
-      // a new PancakeSwap v4 CL pool), `best` picks the NEW big pool, so its
-      // pairCreatedAt reflects the new pool's age, not the token's actual
-      // trading history. Age should come from the OLDEST pool, not the
-      // biggest one — computed here across every pair DexScreener returned.
-      const allCreatedAt = pairs.map(p => Number(p?.pairCreatedAt)).filter(n => Number.isFinite(n) && n > 0);
+      const sorted = [...pairs].sort((a,b)=>(b?.liquidity?.usd||0)-(a?.liquidity?.usd||0));
+      const best = sorted[0];
+      const allCreatedAt = pairs.map(p=>Number(p?.pairCreatedAt)).filter(n=>Number.isFinite(n)&&n>0);
       const earliestPairCreatedAt = allCreatedAt.length ? Math.min(...allCreatedAt) : null;
-      return {
-        priceUsd:       safeNum(best?.priceUsd),
+      const allPairs = sorted.slice(0,10).map(p => ({
+        dex: p?.dexId || "DEX",
+        pairAddress: p?.pairAddress || "",
+        quoteSymbol: p?.quoteToken?.symbol || "",
+        liquidityUsd: safeNum(p?.liquidity?.usd),
+        volumeUsd24h: safeNum(p?.volume?.h24),
+        priceChange24h: safeNum(p?.priceChange?.h24),
+        txns24h: (p?.txns?.h24?.buys || 0) + (p?.txns?.h24?.sells || 0),
+        createdAtMs: Number.isFinite(Number(p?.pairCreatedAt)) ? Number(p.pairCreatedAt) : null,
+        source: "DexScreener"
+      }));
+      const value = {
+        priceUsd: safeNum(best?.priceUsd),
         priceChange24h: safeNum(best?.priceChange?.h24),
-        volumeUsd24h:   safeNum(best?.volume?.h24),
-        liquidityUsd:   safeNum(best?.liquidity?.usd),
-        txns24h:        (best?.txns?.h24?.buys || 0) + (best?.txns?.h24?.sells || 0),
-        pairCount:      pairs.length,
-        dexId:          best?.dexId || null,
-        pairAddress:    best?.pairAddress || null,
-        pairCreatedAt:  Number.isFinite(Number(best?.pairCreatedAt)) ? Number(best.pairCreatedAt) : null,
-        // ✅ NEW: use this one for age calculations instead of pairCreatedAt
-        // above (kept as-is since other code may rely on it meaning "the
-        // main/best pair's" creation time specifically, e.g. LP-lock lookups).
+        volumeUsd24h: safeNum(best?.volume?.h24),
+        liquidityUsd: safeNum(best?.liquidity?.usd),
+        txns24h: (best?.txns?.h24?.buys || 0) + (best?.txns?.h24?.sells || 0),
+        pairCount: pairs.length,
+        dexId: best?.dexId || null,
+        pairAddress: best?.pairAddress || null,
+        pairCreatedAt: Number.isFinite(Number(best?.pairCreatedAt)) ? Number(best.pairCreatedAt) : null,
         earliestPairCreatedAt,
-        symbol:         best?.baseToken?.symbol ? String(best.baseToken.symbol).trim() : null,
-        name:           best?.baseToken?.name ? String(best.baseToken.name).trim() : null,
-        // ✅ FIX (major finding): DexScreener's response includes EVERY
-        // indexed pool for this token — the code was fetching all of them
-        // and then throwing away every pair except the single largest one
-        // (`sorted[0]`) before this fix. A token with 9+ real pools across
-        // PumpSwap/Meteora/Orca was showing "1 pool" in the report even
-        // though the full list was sitting right there in the API
-        // response the whole time. Now keeps up to 10, used to build the
-        // full pool table below instead of a single collapsed figure.
-        allPairs: sorted.slice(0, 10).map(p => ({
-          dex:          p?.dexId || "DEX",
-          pairAddress:  p?.pairAddress || "",
-          quoteSymbol:  p?.quoteToken?.symbol || "",
-          liquidityUsd: safeNum(p?.liquidity?.usd),
-          volumeUsd24h: safeNum(p?.volume?.h24)
-        }))
+        symbol: best?.baseToken?.symbol ? String(best.baseToken.symbol).trim() : null,
+        name: best?.baseToken?.name ? String(best.baseToken.name).trim() : null,
+        allPairs,
+        sumLiquidityUsd: allPairs.reduce((a,p)=>a+(Number(p?.liquidityUsd)||0),0),
+        stale:false
       };
+      if (guarded) _qsDsMem.set(key, { ts:Date.now(), value });
+      return value;
     } catch { return null; }
   }
 
@@ -3691,36 +4282,37 @@ function initPanels() {
         const res = await fetch(url, { signal: ctrl.signal });
         if (res.ok) j = await res.json();
         else console.error("GeckoTerminal call failed, status:", res.status);
-      } finally {
-        clearTimeout(tmr);
-      }
+      } finally { clearTimeout(tmr); }
       if (!j || !Array.isArray(j.data) || !j.data.length) return null;
-
       const safeNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
-      const allPairs = j.data.slice(0, 10).map(p => ({
-        dex:          p?.relationships?.dex?.data?.id || "DEX",
-        pairAddress:  p?.attributes?.address || "",
-        quoteSymbol:  "", // not directly given per-pool without an extra fetch; omitted rather than guessed
-        liquidityUsd: safeNum(p?.attributes?.reserve_in_usd),
-        volumeUsd24h: safeNum(p?.attributes?.volume_usd?.h24)
-      }));
-      const sorted = [...allPairs].sort((a,b) => (b.liquidityUsd||0) - (a.liquidityUsd||0));
+      const allPairs = j.data.slice(0,10).map(p => {
+        const a = p?.attributes || {};
+        const h24 = a?.transactions?.h24 || {};
+        const buys = Number(h24?.buys) || 0, sells = Number(h24?.sells) || 0;
+        return {
+          dex: p?.relationships?.dex?.data?.id || "DEX",
+          pairAddress: a?.address || "",
+          quoteSymbol: "",
+          liquidityUsd: safeNum(a?.reserve_in_usd),
+          volumeUsd24h: safeNum(a?.volume_usd?.h24),
+          priceChange24h: safeNum(a?.price_change_percentage?.h24),
+          txns24h: buys + sells,
+          createdAtMs: (()=>{ const n=Date.parse(a?.pool_created_at||""); return Number.isFinite(n)&&n>0?n:null; })(),
+          source: "GeckoTerminal"
+        };
+      });
+      const sorted = [...allPairs].sort((a,b)=>(b.liquidityUsd||0)-(a.liquidityUsd||0));
       const best = sorted[0] || null;
-      // ✅ NEW: same "oldest pool, not biggest pool" age fix as DexScreener's
-      // earliestPairCreatedAt — GeckoTerminal's pool_created_at is an ISO
-      // string per pool, across the full (unsliced) response.
-      const allCreatedAtMs = j.data
-        .map(p => Date.parse(p?.attributes?.pool_created_at || ""))
-        .filter(n => Number.isFinite(n) && n > 0);
-      const earliestPoolCreatedAtMs = allCreatedAtMs.length ? Math.min(...allCreatedAtMs) : null;
-
+      const allCreatedAtMs = j.data.map(p=>Date.parse(p?.attributes?.pool_created_at||"")).filter(n=>Number.isFinite(n)&&n>0);
       return {
         liquidityUsd: best?.liquidityUsd ?? null,
-        pairAddress:  best?.pairAddress || null,
-        dexId:        best?.dex || null,
-        pairCount:    allPairs.length,
-        earliestPoolCreatedAtMs,
-        allPairs
+        pairAddress: best?.pairAddress || null,
+        dexId: best?.dex || null,
+        pairCount: allPairs.length,
+        earliestPoolCreatedAtMs: allCreatedAtMs.length ? Math.min(...allCreatedAtMs) : null,
+        allPairs,
+        sumLiquidityUsd: allPairs.reduce((a,p)=>a+(Number(p?.liquidityUsd)||0),0),
+        stale:false
       };
     } catch { return null; }
   }
@@ -3759,7 +4351,10 @@ function initPanels() {
     } catch { return null; }
   }
 
-  const QS_GOPLUS_CHAIN = { bsc: "56", eth: "1", polygon: "137" };
+  const QS_GOPLUS_CHAIN = {
+    bsc: "56", eth: "1", polygon: "137", base: "8453", arbitrum: "42161", optimism: "10",
+    avalanche: "43114", linea: "59144", scroll: "534352", opbnb: "204", robinhood: "4663"
+  };
 
   // ✅ FIX: now also extracts holders (top1/top10 concentration, matching
   // the bot's equivalent addition — confirmed present in a live GoPlus EVM
@@ -3777,7 +4372,6 @@ function initPanels() {
     const tmr = setTimeout(() => ctrl.abort(), 9000);
     try {
       const res = await fetch(url, { signal: ctrl.signal });
-      clearTimeout(tmr);
       if (!res.ok) { console.error("GoPlus EVM call failed, status:", res.status); return null; }
       const j = await res.json();
       if (j?.code !== 1) { console.error("GoPlus EVM call returned non-1 code:", JSON.stringify(j).slice(0,200)); return null; }
@@ -3785,35 +4379,118 @@ function initPanels() {
       if (!d) return null;
       const gp1 = v => v === "1" || v === 1;
       const gpNum = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+      const gpPct100 = v => {
+        const n = gpNum(v);
+        if (n == null || n < 0) return null;
+        return qsClamp(n <= 1 ? n * 100 : n, 0, 100);
+      };
+
       const holdersArr = Array.isArray(d?.holders) ? d.holders : [];
       const topHolderPct = holdersArr.length ? gpNum(holdersArr[0]?.percent) : null;
       const top10Pct = holdersArr.length ? holdersArr.slice(0, 10).reduce((acc, h) => acc + (gpNum(h?.percent) || 0), 0) : null;
+
+      // v21 parity: holder_count=0 from an indexer means "not indexed yet",
+      // not proof that a traded token literally has zero holders.
+      const holderCountRaw = gpNum(d.holder_count);
+      const holderCount = holderCountRaw != null && holderCountRaw > 0 ? holderCountRaw : null;
+      const holderCountUnindexed = holderCountRaw === 0;
+
+      // v24 parity: B20 is parsed if GoPlus returns it in this SAME response.
+      // The website never embeds GoPlus secrets; if anonymous GoPlus omits B20,
+      // absence remains unknown and no B20 score assumption is made.
+      const b20Raw = d?.b20_token && typeof d.b20_token === "object" ? d.b20_token : null;
+      const b20Info = b20Raw?.b20_info && typeof b20Raw.b20_info === "object" ? b20Raw.b20_info : null;
+      const b20Entry = name => {
+        const x = b20Info?.[name];
+        if (!x || typeof x !== "object") return { known:false, status:false, admins:[] };
+        const sr = x?.status;
+        const known = sr === "0" || sr === 0 || sr === "1" || sr === 1;
+        const admins = [...new Set((Array.isArray(x?.admin) ? x.admin : [])
+          .map(a => String(a || "").trim().toLowerCase())
+          .filter(a => /^0x[0-9a-f]{40}$/.test(a) && a !== "0x0000000000000000000000000000000000000000"))];
+        return { known, status: gp1(sr), admins };
+      };
+      const b20Mintable = b20Entry("mintable");
+      const b20TransferPausable = b20Entry("transfer_pausable");
+      const b20OwnerChangeBalance = b20Entry("owner_change_balance");
+      const b20MetadataModifiable = b20Entry("metadata_modifiable");
+      const b20Blacklist = b20Entry("blacklist");
+      const b20Whitelist = b20Entry("whitelist");
+      const b20CannotSell = b20Entry("cannot_sell");
+      const b20CannotBuy = b20Entry("cannot_buy");
+      const b20Entries = [b20Mintable,b20TransferPausable,b20OwnerChangeBalance,b20MetadataModifiable,b20Blacklist,b20Whitelist,b20CannotSell,b20CannotBuy];
+      const b20Admins = [...new Set(b20Entries.flatMap(x => x.admins))];
+      const b20AnyKnown = b20Entries.some(x => x.known);
+
+      // v22 parity: positive LP-lock evidence from lp_holders. Missing data is
+      // not interpreted as unlocked.
+      const lpHoldersArr = Array.isArray(d?.lp_holders) ? d.lp_holders : [];
+      const lpLockedPct = qsClamp(lpHoldersArr.reduce((acc,h) => acc + (gp1(h?.is_locked) ? (gpPct100(h?.percent) || 0) : 0), 0), 0, 100);
+      const lpTrackedPct = qsClamp(lpHoldersArr.reduce((acc,h) => acc + (gpPct100(h?.percent) || 0), 0), 0, 100);
+
+      const dexRows = Array.isArray(d?.dex) ? d.dex : [];
+      const liquidityTypes = [...new Set(dexRows.map(x => String(x?.liquidity_type || "").trim()).filter(Boolean))];
+      const poolFeePct = v => {
+        const n = gpNum(v);
+        return (n != null && n >= 0 && n <= 1) ? n * 100 : null;
+      };
+      const dexPools = dexRows.map(x => ({
+        pairAddress: String(x?.pair || "").trim() || null,
+        liquidityType: String(x?.liquidity_type || "").trim() || null,
+        name: String(x?.name || "").trim() || null,
+        poolFeePct: poolFeePct(x?.pool_fee)
+      })).filter(x => x.pairAddress);
+      const poolFeesPct = [...new Set(dexPools.map(x => x.poolFeePct).filter(Number.isFinite).map(v => Number(v.toFixed(6))))].sort((a,b)=>a-b);
+
       return {
         isHoneypot:           gp1(d.is_honeypot),
         buyTax:               gpNum(d.buy_tax),
         sellTax:              gpNum(d.sell_tax),
-        isBlacklisted:        gp1(d.is_blacklisted),
+        isBlacklisted:        gp1(d.is_blacklisted) || b20Blacklist.status,
         hiddenOwner:          gp1(d.hidden_owner),
         canTakeBackOwnership: gp1(d.can_take_back_ownership),
         selfdestructDetected: gp1(d.selfdestruct),
-        transferPausable:     gp1(d.transfer_pausable),
+        transferPausable:     gp1(d.transfer_pausable) || b20TransferPausable.status,
         slippageModifiable:   gp1(d.slippage_modifiable),
         antiWhale:            gp1(d.is_anti_whale),
         tradingCooldown:      gp1(d.trading_cooldown),
         isOpenSource:         gp1(d.is_open_source),
-        holderCount:          gpNum(d.holder_count),
+        holderCount,
+        holderCountRaw,
+        holderCountUnindexed,
         lpHolderCount:        gpNum(d.lp_holder_count),
-        isMintableFlag:       gp1(d.is_mintable),
+        isMintableFlag:       gp1(d.is_mintable) || b20Mintable.status,
         creatorAddress:       d.creator_address || null,
         topHolderPct,
         top10Pct,
         holdersReturned:      holdersArr.length,
+        lpLockedPct,
+        lpTrackedPct,
+        lpLockDataKnown:      lpHoldersArr.length > 0,
+        lpHoldersReturned:    lpHoldersArr.length,
+        liquidityTypes,
+        dexPools,
+        poolFeesPct,
+        b20: {
+          available: !!b20Info && (b20AnyKnown || b20Raw?.is_b20 === "0" || b20Raw?.is_b20 === 0 || b20Raw?.is_b20 === "1" || b20Raw?.is_b20 === 1),
+          isB20: gp1(b20Raw?.is_b20),
+          mintable: b20Mintable.status,
+          transferPausable: b20TransferPausable.status,
+          ownerChangeBalance: b20OwnerChangeBalance.status,
+          metadataModifiable: b20MetadataModifiable.status,
+          blacklist: b20Blacklist.status,
+          whitelist: b20Whitelist.status,
+          cannotSell: b20CannotSell.status,
+          cannotBuy: b20CannotBuy.status,
+          admins: b20Admins
+        },
         raw: d
       };
     } catch (e) {
-      clearTimeout(tmr);
       console.error("qsFetchGoPlus threw:", e?.message || e);
       return null;
+    } finally {
+      clearTimeout(tmr);
     }
   }
 
@@ -3974,6 +4651,125 @@ function initPanels() {
     return out || "1";
   }
 
+  const QS_SOLANA_TOKEN_2022_PROGRAM_ID = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+  const QS_TOKEN2022_EXT = Object.freeze({
+    TRANSFER_FEE_CONFIG: 1,
+    MINT_CLOSE_AUTHORITY: 3,
+    CONFIDENTIAL_TRANSFER_MINT: 4,
+    DEFAULT_ACCOUNT_STATE: 6,
+    NON_TRANSFERABLE: 9,
+    PERMANENT_DELEGATE: 12,
+    TRANSFER_HOOK: 14,
+    CONFIDENTIAL_MINT_BURN: 24,
+    SCALED_UI_AMOUNT: 25,
+    PAUSABLE: 26,
+    PERMISSIONED_BURN: 28
+  });
+
+  function qsReadU16LE(bytes, offset) {
+    if (!bytes || offset < 0 || offset + 2 > bytes.length) return null;
+    return bytes[offset] | (bytes[offset + 1] << 8);
+  }
+  function qsReadU64LEBig(bytes, offset) {
+    if (!bytes || offset < 0 || offset + 8 > bytes.length) return null;
+    let n = 0n;
+    for (let i = 7; i >= 0; i--) n = (n << 8n) | BigInt(bytes[offset + i]);
+    return n;
+  }
+  function qsMaybePubkeyFrom32(bytes, offset = 0) {
+    if (!bytes || offset < 0 || offset + 32 > bytes.length) return null;
+    const part = bytes.slice(offset, offset + 32);
+    let any = false;
+    for (const b of part) { if (b !== 0) { any = true; break; } }
+    return any ? qsBase58Encode(part) : null;
+  }
+
+  // Token-2022 mint extensions are TLV encoded after the compatible 82-byte
+  // base mint layout + padding/account-type byte. This mirrors CycleX Scanner's
+  // Solana Shield parser so Full Report and Telegram use the same authority model.
+  function qsParseToken2022MintExtensions(bytes) {
+    const out = {
+      scanned: false, extensionTypes: [],
+      nonTransferable: false,
+      permanentDelegateAddress: null,
+      mintCloseAuthority: null,
+      defaultAccountState: null,
+      defaultAccountStateFrozen: false,
+      transferHookProgramId: null,
+      transferHookAuthority: null,
+      transferFeeConfigAuthority: null,
+      transferFeeWithdrawAuthority: null,
+      olderTransferFeeBps: null, olderTransferFeeEpoch: null,
+      newerTransferFeeBps: null, newerTransferFeeEpoch: null,
+      currentTransferFeePct: null,
+      transferFeeCanChange: false,
+      pausable: false, pauseAuthority: null, paused: false,
+      permissionedBurnAuthority: null,
+      confidentialTransfer: false,
+      confidentialMintBurn: false,
+      scaledUiAmount: false
+    };
+    if (!bytes || bytes.length <= 166) return out;
+    out.scanned = true;
+    let off = 166, guard = 0;
+    while (off + 4 <= bytes.length && guard++ < 64) {
+      const type = qsReadU16LE(bytes, off);
+      const len = qsReadU16LE(bytes, off + 2);
+      if (type == null || len == null || type === 0) break;
+      const valueStart = off + 4, valueEnd = valueStart + len;
+      if (valueEnd > bytes.length) break;
+      const v = bytes.slice(valueStart, valueEnd);
+      out.extensionTypes.push(type);
+      switch (type) {
+        case QS_TOKEN2022_EXT.TRANSFER_FEE_CONFIG:
+          if (v.length >= 108) {
+            out.transferFeeConfigAuthority = qsMaybePubkeyFrom32(v, 0);
+            out.transferFeeWithdrawAuthority = qsMaybePubkeyFrom32(v, 32);
+            const oldEpoch = qsReadU64LEBig(v, 72);
+            const newEpoch = qsReadU64LEBig(v, 90);
+            out.olderTransferFeeEpoch = oldEpoch != null && oldEpoch <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(oldEpoch) : null;
+            out.newerTransferFeeEpoch = newEpoch != null && newEpoch <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(newEpoch) : null;
+            out.olderTransferFeeBps = qsReadU16LE(v, 88);
+            out.newerTransferFeeBps = qsReadU16LE(v, 106);
+            out.transferFeeCanChange = !!out.transferFeeConfigAuthority;
+          }
+          break;
+        case QS_TOKEN2022_EXT.MINT_CLOSE_AUTHORITY:
+          out.mintCloseAuthority = qsMaybePubkeyFrom32(v, 0); break;
+        case QS_TOKEN2022_EXT.DEFAULT_ACCOUNT_STATE:
+          if (v.length >= 1) { out.defaultAccountState = v[0]; out.defaultAccountStateFrozen = v[0] === 2; }
+          break;
+        case QS_TOKEN2022_EXT.NON_TRANSFERABLE:
+          out.nonTransferable = true; break;
+        case QS_TOKEN2022_EXT.PERMANENT_DELEGATE:
+          out.permanentDelegateAddress = qsMaybePubkeyFrom32(v, 0); break;
+        case QS_TOKEN2022_EXT.TRANSFER_HOOK:
+          if (v.length >= 64) {
+            out.transferHookAuthority = qsMaybePubkeyFrom32(v, 0);
+            out.transferHookProgramId = qsMaybePubkeyFrom32(v, 32);
+          }
+          break;
+        case QS_TOKEN2022_EXT.PAUSABLE:
+          if (v.length >= 33) {
+            out.pausable = true;
+            out.pauseAuthority = qsMaybePubkeyFrom32(v, 0);
+            out.paused = v[32] !== 0;
+          }
+          break;
+        case QS_TOKEN2022_EXT.PERMISSIONED_BURN:
+          out.permissionedBurnAuthority = qsMaybePubkeyFrom32(v, 0); break;
+        case QS_TOKEN2022_EXT.CONFIDENTIAL_TRANSFER_MINT:
+          out.confidentialTransfer = true; break;
+        case QS_TOKEN2022_EXT.CONFIDENTIAL_MINT_BURN:
+          out.confidentialMintBurn = true; break;
+        case QS_TOKEN2022_EXT.SCALED_UI_AMOUNT:
+          out.scaledUiAmount = true; break;
+      }
+      off = valueEnd;
+    }
+    return out;
+  }
+
   async function qsFetchSolanaMintInfo(token) {
     try {
       const res = await solanaRpcRequest("getAccountInfo", [token, { encoding: "base64" }], 9000);
@@ -3982,11 +4778,11 @@ function initPanels() {
       const binaryStr = atob(dataArr[0]);
       const bytes = new Uint8Array(binaryStr.length);
       for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-      if (bytes.length < 82) return null; // not a standard Mint account layout
+      if (bytes.length < 82) return null;
 
       function readPubkeyOption(offset) {
         const tag = bytes[offset] | (bytes[offset+1] << 8) | (bytes[offset+2] << 16) | (bytes[offset+3] << 24);
-        if (tag === 0) return null; // None = renounced / never set
+        if (tag === 0) return null;
         return qsBase58Encode(bytes.slice(offset + 4, offset + 36));
       }
 
@@ -3995,13 +4791,36 @@ function initPanels() {
       for (let i = 0; i < 8; i++) supplyBig |= BigInt(bytes[36 + i]) << BigInt(8 * i);
       const decimals = bytes[44];
       const freezeAuthority = readPubkeyOption(46);
+      const tokenProgramAddress = String(res?.value?.owner || "");
+      const isToken2022 = tokenProgramAddress === QS_SOLANA_TOKEN_2022_PROGRAM_ID;
+      const extensions = isToken2022 ? qsParseToken2022MintExtensions(bytes) : null;
+
+      // TransferFeeConfig keeps old/new epoch schedules. Only spend this extra
+      // RPC request for a mint that actually has the extension.
+      if (extensions && extensions.extensionTypes.includes(QS_TOKEN2022_EXT.TRANSFER_FEE_CONFIG)) {
+        const epochInfo = await solanaRpcRequest("getEpochInfo", []).catch(() => null);
+        const epoch = Number(epochInfo?.epoch);
+        let bps = null;
+        if (Number.isFinite(epoch)) {
+          bps = (extensions.newerTransferFeeEpoch != null && epoch >= extensions.newerTransferFeeEpoch)
+            ? extensions.newerTransferFeeBps : extensions.olderTransferFeeBps;
+        }
+        if (!Number.isFinite(bps)) {
+          const candidates = [extensions.olderTransferFeeBps, extensions.newerTransferFeeBps].filter(n => Number.isFinite(n));
+          bps = candidates.length ? Math.max(...candidates) : null;
+        }
+        extensions.currentTransferFeePct = Number.isFinite(bps) ? (bps / 100) : null;
+      }
 
       return {
-        mintAuthority,     // null = renounced/none (verified on-chain)
-        freezeAuthority,   // null = renounced/none (verified on-chain)
+        tokenProgram: isToken2022 ? "Token-2022" : "SPL Token",
+        tokenProgramAddress,
+        mintAuthority,
+        freezeAuthority,
         decimals,
         supplyRaw: supplyBig.toString(),
-        supplyUi: decimals != null ? Number(supplyBig) / Math.pow(10, decimals) : null
+        supplyUi: decimals != null ? Number(supplyBig) / Math.pow(10, decimals) : null,
+        extensions
       };
     } catch (e) {
       console.error("qsFetchSolanaMintInfo threw:", e?.message || e);
@@ -4218,6 +5037,20 @@ function initPanels() {
       return;
     }
 
+    const isErc20Token = await qsProbeErc20Contract(token, read);
+    if (!isErc20Token) {
+      rep.score = 0;
+      rep.overallText = "Not a token";
+      rep.redFlags.push("Contract bytecode exists, but required ERC-20 read methods could not be validated. Smart wallet / non-token contracts are not scored as tokens.");
+      rep.json = safeJson(rep);
+      cache[ckey] = { ts: qsNowTs(), rep };
+      saveQsCache(cache);
+      addQsHistory(net, token);
+      setStatus(st, "warn", "Contract found, but it does not validate as an ERC-20 token.");
+      render(rep);
+      return;
+    }
+
     try {
       const meta = await cxReadWithFallback(net, async (read) => {
         let name = "", symbol = "", decimals = 18, totalSupply = 0n;
@@ -4296,13 +5129,13 @@ function initPanels() {
       const wrappedAddr = qsLower(netCfg.wrapped || "");
       const usdtAddr    = qsLower(netCfg.usdt || "");
       const busdAddr    = qsLower(netCfg.busd || "");
-      const usdcAddr = qsLower(
+      const usdcAddr = qsLower(netCfg.usdc || (
         net === "bsc"
           ? "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d"
           : net === "polygon"
             ? "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359"
-            : "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
-      );
+            : net === "eth" ? "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" : ""
+      ));
       const fdusdAddr = qsLower(net === "bsc" ? "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409" : "");
 
       let wrappedAmt = 0, usdtAmt = 0, usdcAmt = 0, busdAmt = 0, fdusdAmt = 0;
@@ -4396,6 +5229,15 @@ function initPanels() {
     const geckoterminal     = geckoterminalSettled.status === "fulfilled" ? geckoterminalSettled.value : null;
     const gtInfo            = gtInfoSettled.status      === "fulfilled" ? gtInfoSettled.value        : null;
 
+    const newEvmMarketAgg = QS_NEW_EVM_MARKET_NETS.has(net) ? qsCombineNewEvmMarket(net, dexscreener, geckoterminal) : null;
+    const marketSnapshot = QS_NEW_EVM_MARKET_NETS.has(net)
+      ? (newEvmMarketAgg?.marketData || (dexscreener ? {
+          priceChange24h:dexscreener.priceChange24h, volumeUsd24h:dexscreener.volumeUsd24h,
+          txns24h:dexscreener.txns24h, pairCount:newEvmMarketAgg?.pairCount || dexscreener.pairCount || 0,
+          pairAddress:dexscreener.pairAddress || null, source:"DexScreener"
+        } : null))
+      : dexscreener;
+
     // ✅ NEW: merge in any pool DexScreener knows about that our fixed
     // 5-factory on-chain scan (Pancake V2/V3, Four.meme, Biswap, ApeSwap,
     // Bakery) doesn't cover — e.g. a token trading on a smaller/newer DEX
@@ -4469,44 +5311,63 @@ function initPanels() {
     // into liquidityUsdEst/liqQuality — this closes that gap by taking
     // the larger of (our on-chain estimate) and (DexScreener's own
     // reported liquidity, including the newly-merged pools above).
-    const dsBestLiquidityUsd = Number(dexscreener?.liquidityUsd);
-    const dsAllPairsLiquidityUsd = Array.isArray(dexscreener?.allPairs)
-      ? dexscreener.allPairs.reduce((acc, p) => acc + (Number(p?.liquidityUsd) || 0), 0)
-      : 0;
-    // ✅ NEW: fold GeckoTerminal's figures into the same max() so a pool
-    // it alone found (e.g. PancakeSwap Infinity/V4) can raise
-    // liquidityUsdEst/liqQuality the same way a DexScreener-only pool
-    // already could.
-    const gtBestLiquidityUsd = Number(geckoterminal?.liquidityUsd);
-    const gtAllPairsLiquidityUsd = Array.isArray(geckoterminal?.allPairs)
-      ? geckoterminal.allPairs.reduce((acc, p) => acc + (Number(p?.liquidityUsd) || 0), 0)
-      : 0;
-    const dsLiquidityUsd = Math.max(
-      Number.isFinite(dsBestLiquidityUsd) ? dsBestLiquidityUsd : 0,
-      dsAllPairsLiquidityUsd,
-      Number.isFinite(gtBestLiquidityUsd) ? gtBestLiquidityUsd : 0,
-      gtAllPairsLiquidityUsd
-    );
-    if (dsLiquidityUsd > 0) {
-      const onChainEst = Number.isFinite(rep.meta?.liquidityUsdEst) ? rep.meta.liquidityUsdEst : 0;
-      const correctedLiquidityUsdEst = Math.max(onChainEst, dsLiquidityUsd);
-      rep.meta.liquidityUsdEst = correctedLiquidityUsdEst;
-      if (correctedLiquidityUsdEst < 25000) liqQuality = "tiny";
-      else if (correctedLiquidityUsdEst < 250000) liqQuality = "low";
-      else if (correctedLiquidityUsdEst < 500000) liqQuality = "medium";
-      else liqQuality = "healthy";
-      rep.liq.any = true;
+    if (QS_NEW_EVM_MARKET_NETS.has(net)) {
+      const correctedLiquidityUsdEst = Number(newEvmMarketAgg?.liquidityUsd);
+      if (Number.isFinite(correctedLiquidityUsdEst) && correctedLiquidityUsdEst > 0) {
+        rep.meta.liquidityUsdEst = correctedLiquidityUsdEst;
+        rep.meta.liqActivePools = Number(newEvmMarketAgg?.pairCount || rep.meta?.liqActivePools || 0);
+        rep.liq.any = true;
+        if (correctedLiquidityUsdEst < 25000) liqQuality = "tiny";
+        else if (correctedLiquidityUsdEst < 250000) liqQuality = "low";
+        else if (correctedLiquidityUsdEst < 500000) liqQuality = "medium";
+        else liqQuality = "healthy";
+      }
+      if (newEvmMarketAgg?.liquiditySanityAdjusted) {
+        rep.meta.liquiditySanityAdjusted = true;
+        rep.redFlags.push("Market providers disagreed sharply on liquidity; using a conservative cross-source estimate instead of the outlier.");
+      }
+    } else {
+      const dsBestLiquidityUsd = Number(dexscreener?.liquidityUsd);
+      const dsAllPairsLiquidityUsd = Array.isArray(dexscreener?.allPairs)
+        ? dexscreener.allPairs.reduce((acc, p) => acc + (Number(p?.liquidityUsd) || 0), 0)
+        : 0;
+      // ✅ NEW: fold GeckoTerminal's figures into the same max() so a pool
+      // it alone found (e.g. PancakeSwap Infinity/V4) can raise
+      // liquidityUsdEst/liqQuality the same way a DexScreener-only pool
+      // already could.
+      const gtBestLiquidityUsd = Number(geckoterminal?.liquidityUsd);
+      const gtAllPairsLiquidityUsd = Array.isArray(geckoterminal?.allPairs)
+        ? geckoterminal.allPairs.reduce((acc, p) => acc + (Number(p?.liquidityUsd) || 0), 0)
+        : 0;
+      const dsLiquidityUsd = Math.max(
+        Number.isFinite(dsBestLiquidityUsd) ? dsBestLiquidityUsd : 0,
+        dsAllPairsLiquidityUsd,
+        Number.isFinite(gtBestLiquidityUsd) ? gtBestLiquidityUsd : 0,
+        gtAllPairsLiquidityUsd
+      );
+      if (dsLiquidityUsd > 0) {
+        const onChainEst = Number.isFinite(rep.meta?.liquidityUsdEst) ? rep.meta.liquidityUsdEst : 0;
+        const correctedLiquidityUsdEst = Math.max(onChainEst, dsLiquidityUsd);
+        rep.meta.liquidityUsdEst = correctedLiquidityUsdEst;
+        if (correctedLiquidityUsdEst < 25000) liqQuality = "tiny";
+        else if (correctedLiquidityUsdEst < 250000) liqQuality = "low";
+        else if (correctedLiquidityUsdEst < 500000) liqQuality = "medium";
+        else liqQuality = "healthy";
+        rep.liq.any = true;
+      }
     }
 
-    // Liquidity lock — run after dexscreener resolves (needs pairAddress)
+    // v22 parity: choose a V2-style LP only when it is actually appropriate.
+    // Do not call ERC20 LP-burn methods on V3/V4 concentrated-liquidity pools.
     let liqLock = null;
     let lpBurnInfo = null;
+    const gpV2Pair = goplus?.dexPools?.find(p => String(p?.liquidityType||"").toLowerCase() === "univ2")?.pairAddress || null;
+    const gpLiqTypes = Array.isArray(goplus?.liquidityTypes) ? goplus.liquidityTypes.map(x=>String(x).toLowerCase()) : [];
+    const gpOnlyConcentrated = gpLiqTypes.length > 0 && !gpLiqTypes.includes("univ2") && gpLiqTypes.every(x=>x==="univ3" || x==="univ4");
+    const lpAddr = gpV2Pair || (!gpOnlyConcentrated ? (newEvmMarketAgg?.bestPairAddress || dexscreener?.pairAddress || null) : null);
     try {
-      const lpAddr = dexscreener?.pairAddress || null;
       if (lpAddr) {
         liqLock = await qsFetchLiquidityLock(net, lpAddr);
-        // ✅ NEW: check LP-burn as an alternative to a registry lock —
-        // matches the bot's equivalent feature.
         lpBurnInfo = await qsCheckLpBurned(net, lpAddr, read);
       }
     } catch {}
@@ -4518,25 +5379,32 @@ function initPanels() {
     rep.meta.contractAgeDays  = contractAge?.ageDays    ?? null;
     rep.meta.contractDeployTs = contractAge?.deployTs   ?? null;
     if (explorerHolderCount)  rep.meta.holderCount      = explorerHolderCount;
-    if (dexscreener)          rep.meta.dexscreener      = dexscreener;
+    if (contractAge?.holdersCount && !rep.meta.holderCount) rep.meta.holderCount = contractAge.holdersCount;
+    if (marketSnapshot)       rep.meta.dexscreener      = marketSnapshot;
+    if (newEvmMarketAgg)      rep.meta.marketPairCount  = newEvmMarketAgg.pairCount || 0;
     if (liqLock)              rep.meta.liqLock          = liqLock;
     rep.meta.goplus = goplus ? {
       isHoneypot: goplus.isHoneypot, buyTax: goplus.buyTax, sellTax: goplus.sellTax,
       isBlacklisted: goplus.isBlacklisted, hiddenOwner: goplus.hiddenOwner,
       canTakeBackOwnership: goplus.canTakeBackOwnership, selfdestructDetected: goplus.selfdestructDetected,
       transferPausable: goplus.transferPausable, slippageModifiable: goplus.slippageModifiable,
-      holderCount: goplus.holderCount, isOpenSource: goplus.isOpenSource
+      holderCount: goplus.holderCount, holderCountUnindexed: goplus.holderCountUnindexed,
+      isOpenSource: goplus.isOpenSource, lpLockedPct: goplus.lpLockedPct,
+      lpLockDataKnown: goplus.lpLockDataKnown, liquidityTypes: goplus.liquidityTypes,
+      poolFeesPct: goplus.poolFeesPct, b20: goplus.b20
     } : null;
     // ✅ NEW: surface holder-count from GoPlus's own field even when explorer
     // key isn't configured, so downstream "holders" checks can use it.
-    if (!rep.meta.holderCount && goplus?.holderCount != null) rep.meta.holderCount = goplus.holderCount;
+    if (rep.meta.holderCount == null && goplus?.holderCount != null) rep.meta.holderCount = goplus.holderCount;
 
     let impl = await tryEip1967Impl(net, token);
     let isProxy = !!impl;
 
     const owner = await tryReadOwner(net, token);
     const ownerIsRenounced = owner && DEAD_ADDRESSES.has(qsLower(owner));
-    const ownerShown = owner ? qsShortAddr(owner) : "No/Unknown";
+    const ownerShown = owner ? (ownerIsRenounced ? "Renounced/None" : qsShortAddr(owner)) : "Unknown";
+    let implementationCode = "0x";
+    if (impl) implementationCode = await qsReadCodeWithFallback(net, impl);
 
     let ownerBal = 0n;
     let ownerPct = null;
@@ -4570,71 +5438,91 @@ function initPanels() {
     const gpTopHolderPct = goplus?.topHolderPct ?? null;
     const gpTop10Pct = goplus?.top10Pct ?? null;
 
-    const pausedState = await tryReadPaused(net, token);
-    const pauseDetected =
-      (pausedState !== null) ||
-      anySelector(code, SEL.pause) ||
-      anySelector(code, SEL.unpause) ||
-      anySelector(code, SEL.paused);
-    // ✅ FIX: clearer wording, matching the bot's equivalent fix — "No/Unknown"
-    // was ambiguous (didn't check vs. checked-and-found-nothing), even though
-    // this check ALWAYS runs (bytecode selectors + a live paused() eth_call
-    // are unconditional above, no API dependency at all).
-    const pauseText = pausedState === true ? "⚠️ Currently paused" : pauseDetected ? "Pausable (not active now)" : "No pause function found";
+    // Bot parity: concentration should follow the best known deployer/creator,
+    // not only the current owner (which may already be renounced/transferred).
+    const bestDevAddress = contractAge?.deployerAddress || goplus?.creatorAddress || (owner && !ownerIsRenounced ? owner : null) || null;
+    let devHoldingPct = null;
+    if (bestDevAddress && totalSupplyBI > 0n) {
+      try {
+        const bcDev = new E.Contract(token, ERC20_BALANCE_ABI, read);
+        const devBal = BigInt(await bcDev.balanceOf(bestDevAddress).catch(()=> 0n));
+        devHoldingPct = qsPctFromBig(devBal, totalSupplyBI);
+      } catch {}
+    }
 
-    // ✅ FIX: combine bytecode heuristic with GoPlus's own direct is_mintable
-    // flag — OR'd together so this can only catch MORE real mint functions
-    // than before, never fewer (bytecode-only can miss obfuscated code).
-    // ✅ NEW: tracked separately (mintBytecodeDetected) so the report can
-    // show whether "Detected" came from our own on-chain bytecode scan
-    // (always run, no API needed) vs. only GoPlus's flag — matches the
-    // bot's equivalent fix.
-    const mintBytecodeDetected = anySelector(code, SEL.mint);
+    const pausedState = await tryReadPaused(net, token);
+    const pauseProxyDetected = anySelector(code, SEL.pause) || anySelector(code, SEL.unpause) || anySelector(code, SEL.paused);
+    const pauseImplementationDetected = !!impl && implementationCode && implementationCode !== "0x" &&
+      (anySelector(implementationCode, SEL.pause) || anySelector(implementationCode, SEL.unpause) || anySelector(implementationCode, SEL.paused));
+    const pauseDetected = (pausedState !== null) || pauseProxyDetected || pauseImplementationDetected;
+    const pauseText = pausedState === true
+      ? "⚠️ Currently paused"
+      : pauseDetected
+        ? (pauseImplementationDetected && !pauseProxyDetected ? "Pausable via implementation (not active now)" : "Pausable (not active now)")
+        : "No pause function found";
+
+    const mintProxyBytecodeDetected = anySelector(code, SEL.mint);
+    const mintImplementationBytecodeDetected = !!impl && implementationCode && implementationCode !== "0x" && anySelector(implementationCode, SEL.mint);
+    const mintBytecodeDetected = mintProxyBytecodeDetected || mintImplementationBytecodeDetected;
     const mintDetected = mintBytecodeDetected || goplus?.isMintableFlag === true;
-    const mintText = mintBytecodeDetected
-      ? "Detected"
-      : (goplus?.isMintableFlag === true ? "Possibly (flagged by GoPlus only — not found in bytecode)" : "Not detected");
-    // ✅ NEW: on-chain tag applies whenever the bytecode scan itself is
-    // what's being reported — true for BOTH "Detected" (bytecode found it)
-    // and "Not detected" (bytecode search ran and found nothing), false
-    // only for the GoPlus-only "Possibly" case (bytecode said no, GoPlus
-    // said yes — not confirmed on-chain by us).
+    const mintText = mintImplementationBytecodeDetected && !mintProxyBytecodeDetected
+      ? "Detected in implementation"
+      : mintBytecodeDetected
+        ? "Detected"
+        : (goplus?.isMintableFlag === true
+          ? (goplus?.b20?.mintable ? "Possibly (GoPlus B20; not found in bytecode)" : "Possibly (flagged by GoPlus only — not found in bytecode)")
+          : "Not detected");
     const mintOnChain = mintBytecodeDetected || goplus?.isMintableFlag !== true;
 
-    // ✅ FIX (real design gap, reported live): this used to ALWAYS mean
-    // "total supply minus the current owner wallet's balance" — a
-    // reasonable on-chain-only proxy, but not the actual "circulating
-    // supply" concept (how much is trading in the market right now, e.g.
-    // what a CoinGecko/CMC coin page shows for XRP — total supply minus
-    // locked/reserved/unvested tokens, which usually sit in a treasury or
-    // vesting contract, NOT the current "owner" address this scanner
-    // tracks). Now prefers CoinGecko's own disclosed circulating_supply
-    // (see qsFetchCexListing) when the token is one CoinGecko tracks
-    // market data for — real data, not an approximation. Falls back to the
-    // on-chain owner-holding estimate only when CoinGecko has nothing,
-    // clearly labeled either way so the two are never confused.
+    // v21 parity: external circulating supply can be global/asset-level for
+    // multi-chain tokens. Never display a number larger than this contract's
+    // totalSupply as chain-local circulating supply. 2% tolerance = rounding lag.
     let estCirculatingSupplyText = null;
     let circSupplyIsReal = false;
-    const cgCirculating = cexResult?.circulatingSupplyReal;
-    const gtCirculating = gtInfo?.circulatingSupplyReal;
-    const realCirculating = (Number.isFinite(cgCirculating) && cgCirculating > 0)
-      ? cgCirculating
-      : (Number.isFinite(gtCirculating) && gtCirculating > 0 ? gtCirculating : null);
-    if (realCirculating != null) {
-      estCirculatingSupplyText = realCirculating.toLocaleString(undefined, { maximumFractionDigits: 4 });
+    let globalCirculatingSupplyText = null;
+    let globalCirculatingSource = null;
+    const decForSupply = Number(rep?.meta?.decimals ?? 18);
+    let totalSupplyUi = null;
+    try {
+      const n = Number(E.formatUnits(totalSupplyBI, decForSupply));
+      if (Number.isFinite(n) && n > 0) totalSupplyUi = n;
+    } catch {}
+    const cgCirculating = Number(cexResult?.circulatingSupplyReal);
+    const gtCirculating = Number(gtInfo?.circulatingSupplyReal);
+    const externalCirc = Number.isFinite(cgCirculating) && cgCirculating > 0
+      ? { value:cgCirculating, source:"CoinGecko" }
+      : (Number.isFinite(gtCirculating) && gtCirculating > 0 ? { value:gtCirculating, source:"GeckoTerminal" } : null);
+    const externalLooksGlobal = !!(externalCirc && totalSupplyUi != null && externalCirc.value > totalSupplyUi * 1.02);
+    if (externalCirc && !externalLooksGlobal) {
+      const localReal = totalSupplyUi != null ? Math.min(externalCirc.value, totalSupplyUi) : externalCirc.value;
+      estCirculatingSupplyText = localReal.toLocaleString(undefined,{maximumFractionDigits:4});
       circSupplyIsReal = true;
-    } else if (totalSupplyBI > 0n) {
-      if (ownerIsRenounced) {
-        estCirculatingSupplyText = "Same as Total Supply (owner renounced)";
-      } else if (ownerPct != null) {
-        const circBI = totalSupplyBI - ownerBal;
-        const dec = Number(rep?.meta?.decimals ?? 18);
-        estCirculatingSupplyText = qsFmtBig(circBI > 0n ? circBI : 0n, dec, 4);
-      }
+    } else if (externalLooksGlobal) {
+      globalCirculatingSupplyText = externalCirc.value.toLocaleString(undefined,{maximumFractionDigits:4});
+      globalCirculatingSource = externalCirc.source;
+    }
+    // If external data is absent/global, estimate only when we actually know a
+    // dev/deployer holding. Renounced ownership alone does NOT prove all supply circulates.
+    if (!estCirculatingSupplyText && totalSupplyUi != null && devHoldingPct != null) {
+      const est = Math.max(0, totalSupplyUi * (1 - devHoldingPct / 100));
+      estCirculatingSupplyText = est.toLocaleString(undefined,{maximumFractionDigits:4});
+      circSupplyIsReal = false;
     }
 
     let verified = null;
-    if (useApis) {
+    let blockscoutProfile = null;
+    if (QS_BLOCKSCOUT_V2[net]) {
+      blockscoutProfile = await qsFetchBlockscoutProfile(net, token);
+      if (blockscoutProfile) {
+        verified = blockscoutProfile.verified === true;
+        if (!impl && blockscoutProfile.implementationAddress) {
+          impl = blockscoutProfile.implementationAddress;
+          isProxy = true;
+        }
+        if (rep.meta.holderCount == null && blockscoutProfile.holdersCount != null) rep.meta.holderCount = blockscoutProfile.holdersCount;
+      }
+    }
+    if (useApis && verified === null) {
       const ui = qsUiExplorerKeyFor(net);
       let apiKey = ui.key;
       let isUnified = ui.isUnified;
@@ -4668,226 +5556,125 @@ function initPanels() {
     let contractScore = 75;
     const cexListed = !!rep.meta?.cexListed;
 
+    if (isProxy) { contractScore -= 8; rep.redFlags.push(`This is a proxy contract${impl ? ` — implementation: ${impl}` : ""}. Behavior can change without a new token address.`); }
+
+    if (devHoldingPct != null) {
+      if (devHoldingPct >= 50) { contractScore -= 20; rep.redFlags.push(`Owner/dev wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
+      else if (devHoldingPct >= 20) { contractScore -= 10; rep.redFlags.push(`Owner/dev wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
+      else if (devHoldingPct >= 5) contractScore -= 3;
+    }
+
     if (rep.liq?.any) {
       contractScore += 10;
       if (cexListed) contractScore += 5;
-    } else if (cexListed) {
-      contractScore += 8;
-    } else {
-      contractScore -= 30;
-    }
-    if (mintDetected) contractScore -= 22;
-    if (isProxy) contractScore -= 12;
-    else contractScore += 3;
-    if (!owner) contractScore += 0;
-    else if (ownerIsRenounced) contractScore += 5;
-    else contractScore -= 6;
+    } else if (cexListed) contractScore += 8;
+    else contractScore -= 30;
 
-    if (ownerPct !== null) {
-      if (ownerPct >= 50) contractScore -= 20;
-      else if (ownerPct >= 35) contractScore -= 14;
-      else if (ownerPct >= 20) contractScore -= 8;
-      else if (ownerPct >= 10) contractScore -= 3;
+    if (mintDetected) {
+      contractScore -= 22;
+      rep.redFlags.push(mintImplementationBytecodeDetected && !mintProxyBytecodeDetected
+        ? "Mint function detected in proxy implementation bytecode."
+        : (mintBytecodeDetected ? "Mint function detected in bytecode." : (goplus?.b20?.mintable ? "Mint capability flagged by GoPlus B20." : "Mint capability flagged by GoPlus.")));
     }
-
-    // ✅ NEW: top-holder (not just owner) concentration penalty.
-    if (gpTopHolderPct != null) {
-      if (gpTopHolderPct >= 50) { contractScore -= 20; rep.redFlags.push(`Top holder controls ${gpTopHolderPct.toFixed(1)}% of supply (may include a DEX pool address).`); }
-      else if (gpTopHolderPct >= 30) contractScore -= 12;
-      else if (gpTopHolderPct >= 15) contractScore -= 6;
-    }
-    if (gpTop10Pct != null) {
-      if (gpTop10Pct >= 80) { contractScore -= 14; rep.redFlags.push(`Top holders together control ${gpTop10Pct.toFixed(1)}% of supply.`); }
-      else if (gpTop10Pct >= 60) contractScore -= 8;
-      else if (gpTop10Pct >= 40) contractScore -= 3;
-    }
+    if (pausedState === true) { contractScore -= 25; rep.redFlags.push("🚨 Contract is CURRENTLY PAUSED — transfers may be blocked right now."); }
+    else if (pauseDetected) { contractScore -= 6; rep.redFlags.push("Pause capability detected (not currently paused, but could be activated)."); }
 
     if (verified === true) contractScore += 8;
-    if (verified === false) contractScore -= 6;
+    else if (verified === false) { contractScore -= 6; rep.redFlags.push("Contract source code is not verified."); }
+    else if (goplus?.isOpenSource === true) contractScore += 4;
+
+    let evmHardBad = false;
+    if (goplus) {
+      if (goplus.isHoneypot) {
+        evmHardBad = true;
+        rep.redFlags.push("🚨 HONEYPOT DETECTED — tokens may not be sellable.");
+      } else {
+        const st2 = goplus.sellTax ?? 0, bt = goplus.buyTax ?? 0;
+        if (st2 > 0.50) { contractScore -= 40; rep.redFlags.push(`Very high sell tax (${(st2*100).toFixed(1)}%).`); }
+        else if (st2 > 0.15) { contractScore -= 18; rep.redFlags.push(`High sell tax (${(st2*100).toFixed(1)}%).`); }
+        else if (st2 > 0.05) contractScore -= 8;
+        if (bt > 0.15) { contractScore -= 10; rep.redFlags.push(`High buy tax (${(bt*100).toFixed(1)}%).`); }
+        if (goplus.hiddenOwner) { contractScore -= 18; rep.redFlags.push("Hidden owner detected."); }
+        if (goplus.canTakeBackOwnership) { contractScore -= 15; rep.redFlags.push("Owner can reclaim ownership."); }
+        if (goplus.selfdestructDetected) { contractScore -= 20; rep.redFlags.push("Selfdestruct function detected."); }
+        if (goplus.isBlacklisted) { contractScore -= 12; rep.redFlags.push("Blacklist function detected — owner can block addresses from trading."); }
+        if (goplus.slippageModifiable) { contractScore -= 8; rep.redFlags.push("Slippage is modifiable by owner (potential rug vector)."); }
+        if (goplus.transferPausable && !pauseDetected) { contractScore -= 5; rep.redFlags.push(goplus?.b20?.transferPausable ? "Transfer pausable (GoPlus B20)." : "Transfer pausable (per GoPlus)."); }
+        if (goplus?.b20?.ownerChangeBalance) { contractScore -= 25; rep.redFlags.push("🚨 Admin can modify token-holder balances (GoPlus B20)."); }
+        if (goplus?.b20?.metadataModifiable) { contractScore -= 4; rep.redFlags.push("Token metadata can be modified by an admin (GoPlus B20)."); }
+        if (goplus?.b20?.whitelist) { contractScore -= 6; rep.redFlags.push("Whitelist-based trading controls detected (GoPlus B20)."); }
+        if (goplus?.b20?.cannotSell) {
+          if (goplus.sellTax == null || goplus.sellTax <= 0.50) contractScore -= 30;
+          rep.redFlags.push("🚨 Sell restriction detected — normal users may be unable to sell (GoPlus B20).");
+        }
+        if (goplus?.b20?.cannotBuy) {
+          if (goplus.buyTax == null || goplus.buyTax <= 0.15) contractScore -= 10;
+          rep.redFlags.push("Buy restriction detected — token may not be directly buyable (GoPlus B20).");
+        }
+        const hc = goplus.holderCount;
+        if (hc != null) {
+          if (hc < 10) contractScore -= 20;
+          else if (hc < 50) contractScore -= 12;
+          else if (hc < 200) contractScore -= 6;
+        }
+        if (gpTopHolderPct != null) {
+          if (gpTopHolderPct >= 50) { contractScore -= 20; rep.redFlags.push(`Top holder controls ${gpTopHolderPct.toFixed(1)}% of supply (may include a DEX pool address).`); }
+          else if (gpTopHolderPct >= 30) contractScore -= 12;
+          else if (gpTopHolderPct >= 15) contractScore -= 6;
+        }
+        if (gpTop10Pct != null) {
+          if (gpTop10Pct >= 80) { contractScore -= 14; rep.redFlags.push(`Top holders together control ${gpTop10Pct.toFixed(1)}% of supply.`); }
+          else if (gpTop10Pct >= 60) contractScore -= 8;
+          else if (gpTop10Pct >= 40) contractScore -= 3;
+        }
+      }
+    }
+
+    // LP protection is part of Contract Score in the bot, not a second
+    // post-blend bonus/penalty. Keep the same placement here for parity.
+    if (rep.liq?.any) {
+      if (lpBurnInfo?.isBurned) {
+        contractScore += 5;
+        rep.redFlags.push(`LP tokens appear burned (~${lpBurnInfo.burnedPct.toFixed(0)}% sent to a dead address) — liquidity can never be pulled.`);
+      }
+    }
+
     if (!rep?.meta?.symbol && !rep?.meta?.name) contractScore -= 5;
     contractScore = qsClamp(Math.round(contractScore), 0, 100);
 
-    // ✅ FIX: rep.meta.liqQuality was previously only written into the final
-    // rep.meta object much later (near the end of this function), but
-    // qsComputeMarketRisk() (called right below) reads rep.meta.liqQuality
-    // to decide its own "+8 healthy liquidity" bonus — at this point in
-    // execution that field was always still undefined, so the bonus could
-    // never actually fire for any token, however healthy its liquidity.
-    // Writing it here, right before the call that needs it, fixes that
-    // without changing anything else about scoring.
-    rep.meta.liqQuality = liqQuality;
-
-    const market = qsComputeMarketRisk(rep);
-    let marketScore = Number(market.marketScore ?? 100);
-    const marketFlags = Array.isArray(market.flags) ? market.flags : [];
+    // Market Score parity with the Telegram bot: market score describes
+    // liquidity/trading behavior; ownership/holder/tax risks live in Contract Score.
+    const liquidityUsdForScore = Number(rep?.meta?.liquidityUsdEst);
+    let marketScore = 100;
+    const marketFlags = [];
+    if (!rep.liq?.any) {
+      if (!cexListed) { marketScore -= 38; marketFlags.push("no_clear_liquidity_signal"); }
+      else marketScore -= 15;
+    } else if (Number.isFinite(liquidityUsdForScore)) {
+      if (liquidityUsdForScore < 25000) marketScore = Math.min(marketScore, 28);
+      else if (liquidityUsdForScore < 250000) marketScore = Math.min(marketScore, 58);
+      else if (liquidityUsdForScore < 500000) marketScore = Math.min(marketScore, 78);
+    }
+    const dsMarket = rep?.meta?.dexscreener;
+    const possibleManipulation = !!(dsMarket && Math.abs(dsMarket.priceChange24h || 0) > 250 && (dsMarket.txns24h || 0) < 30);
+    if (possibleManipulation) { marketScore -= 16; marketFlags.push("possible_manipulated_move"); rep.redFlags.push("Price action suggests possible manipulation (large move with very few trades)."); }
+    const volLiqRatioEvm = (dsMarket?.volumeUsd24h != null && Number.isFinite(liquidityUsdForScore) && liquidityUsdForScore > 0)
+      ? dsMarket.volumeUsd24h / liquidityUsdForScore : null;
+    if (volLiqRatioEvm != null && volLiqRatioEvm > 40) { marketScore -= 18; marketFlags.push("extreme_volume_liquidity_ratio"); rep.redFlags.push("24h volume is extremely high relative to liquidity — pattern consistent with wash trading or extreme volatility."); }
+    else if (volLiqRatioEvm != null && volLiqRatioEvm > 15) { marketScore -= 8; marketFlags.push("high_volume_liquidity_ratio"); rep.redFlags.push("24h volume is unusually high relative to liquidity — worth a closer look."); }
+    marketScore = qsClamp(Math.round(marketScore), 0, 100);
 
     let uiConfidence = "low";
-    const verifiedYes = (verified === true);
-    const ownerKnown = !!owner;
-    const liqAny = !!rep?.liq?.any;
-    const activePoolsNum = Number(rep?.meta?.liqActivePools || 0);
-    const covLow = !!rep?.meta?.liqCoverageLow;
-    const covPartial = !!rep?.meta?.liqCoveragePartial;
-
     let uiConfPoints = 0;
-    if (verifiedYes) uiConfPoints += 2;
-    if (ownerKnown) uiConfPoints += 1;
-    if (liqAny) uiConfPoints += 1;
-    if (activePoolsNum >= 2) uiConfPoints += 1;
-    if (!covLow && !covPartial) uiConfPoints += 1;
-    if (covLow) uiConfPoints -= 2;
-    else if (covPartial) uiConfPoints -= 1;
-
+    if (verified === true) uiConfPoints += 2;
+    if (owner || ownerIsRenounced) uiConfPoints += 1;
+    if (rep.liq?.any) uiConfPoints += 1;
+    if (rep.meta?.holderCount != null) uiConfPoints += 1;
     if (uiConfPoints >= 4) uiConfidence = "high";
     else if (uiConfPoints >= 2) uiConfidence = "medium";
-    else uiConfidence = "low";
-
-    if (liqQuality === "tiny") marketScore = Math.min(marketScore, 28);
-    else if (liqQuality === "low") marketScore = Math.min(marketScore, 58);
-    else if (liqQuality === "medium") marketScore = Math.min(marketScore, 75);
-    marketScore = qsClamp(Math.round(marketScore), 0, 100);
-    // ✅ FIX (duplicate scoring bug, same class as the one already fixed
-    // above with the liqQuality-write-order comment): this exact +8
-    // "healthy liquidity" bonus, same condition, is ALREADY applied
-    // inside qsComputeMarketRisk() (see there) and feeds into marketScore
-    // above via `market.marketScore`. This second copy re-applied it a
-    // second time on the same marketScore value. Removed — the one
-    // inside qsComputeMarketRisk() is the single source of truth for
-    // this bonus now.
 
     let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
-    score = qsApplyScoreGates(score, rep, marketFlags);
-
-    // ✅ FIX (real scoring bug, found via a live report showing 0/100
-    // despite Contract Score 72 / Market Score 28 — those should blend to
-    // ~46, not 0): every flag checked below (possible_manipulated_move,
-    // very_low_liquidity_usd, very_few_holders, extreme_volume_liquidity_
-    // ratio, etc.) is ALREADY subtracted from marketScore INSIDE
-    // qsComputeMarketRisk() above (confirmed by matching each flag name
-    // against that function's own penalty logic) — marketScore then
-    // already feeds into `score` via the 0.60 weight two lines up. This
-    // block re-subtracted the SAME penalties a second time directly from
-    // `score`, on top of the weighted average that already contained them.
-    // Combined with the further liqQuality-based deductions right below,
-    // this could easily push a token's score below 0 before the final
-    // qsClamp(0,100) floor silently absorbed the overshoot — wiping out
-    // otherwise-decent signals (no honeypot, 0% tax, thousands of
-    // holders, CEX-listed) into a flat, uninformative 0/100. Removed
-    // entirely rather than re-tuned, since it was pure duplication, not a
-    // separate intentional penalty.
-    const mFlags = new Set((marketFlags || []).map(s => String(s).toLowerCase()));
-
-    if (liqQuality === "tiny") {
-      if (rep.meta?.liqCoverageLow) {
-        score -= 14;
-        if (score > 54) score = 54;
-        if (!rep.redFlags.includes("Liquidity appears very low, but DEX coverage may be incomplete.")) {
-          rep.redFlags.push("Liquidity appears very low, but DEX coverage may be incomplete.");
-        }
-      } else {
-        score -= 26;
-        if (score > 49) score = 49;
-        if (!rep.redFlags.includes("Very low effective liquidity (thin market, high manipulation risk).")) {
-          rep.redFlags.push("Very low effective liquidity (thin market, high manipulation risk).");
-        }
-      }
-    } else if (liqQuality === "low") {
-      if (rep.meta?.liqCoverageLow) { score -= 12; if (score > 62) score = 62; }
-      else { score -= 20; if (score > 58) score = 58; }
-      if (!rep.redFlags.includes("Low effective liquidity detected.")) {
-        rep.redFlags.push("Low effective liquidity detected.");
-      }
-    } else if (liqQuality === "medium") {
-      score -= 4;
-      if (score > 78) score = 78;
-    }
-
-    const hasCritical =
-      mFlags.has("possible_manipulated_move") ||
-      mFlags.has("very_low_liquidity_usd") ||
-      mFlags.has("very_few_holders") ||
-      mFlags.has("extreme_volume_liquidity_ratio");
-    if (hasCritical && score > 69) score = 69;
-
-    if (mFlags.has("holder_concentration_unknown") && rep.meta?.liqCoverageLow && score > 64) {
-      score = 64;
-    }
-
-    const ownerUnknown = !owner;
-    const cexHealthyOverride = cexListed && liqQuality === "healthy";
-    if (verified !== true && ownerUnknown && !cexHealthyOverride && score > 84) score = 84;
-
-    if (!rep?.liq?.any && !cexListed && score > 64) score = 64;
-    if (hasCode && !rep?.liq?.any && !cexListed && score > 54) score = 54;
-
-    const lowConf = (uiConfidence === "low");
-    const hasSeriousMarketFlag =
-      mFlags.has("possible_manipulated_move") ||
-      mFlags.has("very_low_liquidity_usd") ||
-      mFlags.has("very_few_holders") ||
-      mFlags.has("extreme_volume_liquidity_ratio");
-    if (lowConf && hasSeriousMarketFlag && score > 84) score = 84;
-
-    if (liqQuality === "tiny" && score > 49) score = 49;
-    if (liqQuality === "low"  && score > 69) score = 69;
-    if (liqQuality === "medium" && verified !== true && !cexListed && score > 84) score = 84;
-
-    try {
-      const ownerPctNum = (typeof ownerPct === "number") ? ownerPct : null;
-      const ownerConcentrationSerious = (ownerPctNum !== null && ownerPctNum >= 35);
-      if (liqQuality === "healthy" && verified === true && !hasSeriousMarketFlag && !ownerConcentrationSerious) {
-        score = qsClamp(score + 2, 0, 100);
-      }
-    } catch {}
-
-    // ✅ FIX: LP lock scoring now checks burn as an alternative first — a
-    // burned LP is treated as a strong positive, never penalized the same
-    // as "no protection at all". Matches the bot's equivalent fix.
-    if (rep.liq?.any) {
-      if (lpBurnInfo?.isBurned) {
-        score += 8;
-        rep.redFlags.push(`LP tokens appear burned (~${lpBurnInfo.burnedPct.toFixed(0)}% sent to a dead address) — liquidity can never be pulled, arguably stronger than a timed lock.`);
-      } else if (liqLock !== null) {
-        if (liqLock.locked) {
-          score += 8;
-        } else if (liqLock.isExpired) {
-          score -= 10;
-          rep.redFlags.push(`LP lock expired (${liqLock.locker}) — liquidity can now be removed.`);
-        }
-      }
-    }
-
-    if (goplus) {
-      if (goplus.isHoneypot) {
-        score = 3;
-      } else {
-        const st2 = goplus.sellTax ?? 0;
-        const bt = goplus.buyTax  ?? 0;
-        if (st2 > 0.50) score -= 40;
-        else if (st2 > 0.30) score -= 28;
-        else if (st2 > 0.15) score -= 18;
-        else if (st2 > 0.09) score -= 10;
-        else if (st2 > 0.04) score -= 5;
-        if (bt > 0.30) score -= 15;
-        else if (bt > 0.15) score -= 10;
-        else if (bt > 0.09) score -= 5;
-        if (goplus.hiddenOwner) score -= 18;
-        if (goplus.canTakeBackOwnership) score -= 15;
-        if (goplus.selfdestructDetected) score -= 20;
-        if (goplus.isBlacklisted) score -= 12;
-        if (goplus.slippageModifiable) score -= 8;
-        if (goplus.transferPausable && !pauseDetected) score -= 5;
-        const hc = goplus.holderCount;
-        if (hc !== null) {
-          if (hc < 10) score -= 20;
-          else if (hc < 50) score -= 12;
-          else if (hc < 200) score -= 6;
-          else if (hc > 5000) score += 3;
-        }
-        if (verified === null && goplus.isOpenSource === true) score += 4;
-      }
-    }
-
+    if (evmHardBad) score = 3;
     // ✅ NEW (Eyal's decision, 2026-08-23): soft cap — a token whose source
     // code verification is unconfirmed (no explorer key set, or explicitly
     // unverified) can no longer land on a perfect 100/100. Deliberately
@@ -4918,6 +5705,7 @@ function initPanels() {
       // token look freshly created. See earliestPairCreatedAt /
       // earliestPoolCreatedAtMs at their source for the full explanation.
       const candidates = [
+        newEvmMarketAgg?.earliestPoolCreatedAtMs,
         dexscreener?.earliestPairCreatedAt,
         geckoterminal?.earliestPoolCreatedAtMs
       ].filter(n => Number.isFinite(n) && n > 0);
@@ -4931,7 +5719,6 @@ function initPanels() {
     // card without recomputing this logic — matches the existing
     // rep.meta.contractAgeDays / rep.meta.tradingAgeDays (Solana) pattern.
     rep.meta.tradingAgeDaysEvm = evmAgeDays;
-    const evmHardBad = !!(goplus?.isHoneypot);
     const evmHoldersUnknown = (rep.meta?.holderCount == null);
     const knownVeryFresh = evmAgeDays != null && evmAgeDays < 1;
     const completeDataBlackout = !dexscreener && !cexListed && contractAge == null && evmHoldersUnknown;
@@ -4944,9 +5731,19 @@ function initPanels() {
     }
     rep.meta.dataBlackout = evmDataBlackout;
 
-    const overallText = evmDataBlackout
+    let overallText = evmDataBlackout
       ? "Too Early To Tell"
       : (score >= 85 ? "Good" : score >= 70 ? "Mixed signals" : score >= 50 ? "Caution" : "High risk");
+
+    const compositePumpPatternEvm = !evmHardBad && !evmDataBlackout
+      && evmAgeDays != null && evmAgeDays < 2
+      && dsMarket?.priceChange24h != null && dsMarket.priceChange24h > 200
+      && Number.isFinite(liquidityUsdForScore) && liquidityUsdForScore > 0 && liquidityUsdForScore < 50000;
+    if (compositePumpPatternEvm) {
+      rep.redFlags.unshift(`⚠️ Pattern match: very fresh token, price +${dsMarket.priceChange24h.toFixed(0)}% in 24h, but only ~$${Math.round(liquidityUsdForScore).toLocaleString()} liquidity — classic pump signature. This is a pattern observation, not proof of a scam.`);
+      score = Math.min(score, 40);
+      overallText = "High risk";
+    }
 
     rep.score = score;
     rep.overallText = overallText;
@@ -4961,6 +5758,11 @@ function initPanels() {
       liqActivePools: Number(rep.meta?.liqActivePools || 0),
       ownerBalance: ownerBal?.toString?.() || "0",
       ownerPct: ownerPct,
+      devHoldingPct: devHoldingPct,
+      devAddress: bestDevAddress,
+      globalCirculatingSupply: globalCirculatingSupplyText,
+      globalCirculatingSource,
+      marketDataSource: dsMarket?.source || null,
       marketFlags: Array.from(marketFlags || [])
     };
 
@@ -4982,8 +5784,8 @@ function initPanels() {
       // showed "No/Unknown", indistinguishable from "we checked and it's
       // genuinely not verified". Now says explicitly when the check simply
       // wasn't run at all.
-      { type: verified === true ? "ok" : (useApis ? "warn" : "warn"), title: "Verified",
-        value: verified === true ? "Yes" : (useApis ? "No" : "Not checked (no explorer API key set)") },
+      { type: verified === true ? "ok" : "warn", title: "Verified",
+        value: verified === true ? "Yes" : verified === false ? "No" : (goplus?.isOpenSource ? "Likely (GoPlus, unconfirmed)" : (QS_BLOCKSCOUT_V2[net] ? "Not confirmed (explorer unavailable)" : "Not checked (no explorer API key set)")) },
       // "No" here reflects a real, always-performed on-chain check (EIP-1967
       // storage slot read), so it's a genuine negative — not "unknown".
       // ✅ NEW: onChain:true — this check always runs (no API dependency),
@@ -4997,6 +5799,10 @@ function initPanels() {
       // a live balanceOf()/totalSupply() read, same as the bot's Dev/Owner
       // Holds field.
       { type: holderConcType, title: "Holder Concentration", value: holderConcText, onChain: ownerPct != null },
+      { type: devHoldingPct == null ? "warn" : devHoldingPct >= 20 ? "bad" : devHoldingPct >= 5 ? "warn" : "ok",
+        title: "Dev/Owner Holds",
+        value: devHoldingPct != null ? `${devHoldingPct.toFixed(1)}%` : (bestDevAddress ? "Unknown" : "No dev/deployer address identified"),
+        onChain: devHoldingPct != null },
       // ✅ NEW: title/tag now reflect whether this is CoinGecko's real
       // disclosed circulating supply (not on-chain, but real market data)
       // or our own on-chain owner-holding estimate (see above).
@@ -5006,12 +5812,22 @@ function initPanels() {
         value: estCirculatingSupplyText,
         onChain: !circSupplyIsReal
       }] : []),
+      ...(globalCirculatingSupplyText ? [{
+        type: "warn",
+        title: "Global Circulating Supply",
+        value: `${globalCirculatingSupplyText} (${globalCirculatingSource || "external"}, not chain-local)`
+      }] : []),
       // ✅ NEW: top-holder chip (distinct from owner-only concentration above).
       // Not tagged on-chain — this is GoPlus's off-chain holders data.
       ...(gpTopHolderPct != null ? [{
         type: gpTopHolderPct >= 30 ? "bad" : gpTopHolderPct >= 15 ? "warn" : "ok",
         title: "Top Holder",
         value: `${gpTopHolderPct.toFixed(1)}% (GoPlus data, may incl. LP)`
+      }] : []),
+      ...(gpTop10Pct != null ? [{
+        type: gpTop10Pct >= 80 ? "bad" : gpTop10Pct >= 60 ? "bad" : gpTop10Pct >= 40 ? "warn" : "ok",
+        title: "Top 10 Holders",
+        value: `${gpTop10Pct.toFixed(1)}% (GoPlus data, may incl. LP)`
       }] : []),
       {
         type: !rep.liq?.any ? "warn" : liqQuality === "tiny" ? "bad" : liqQuality === "low" ? "bad" : liqQuality === "medium" ? "warn" : "ok",
@@ -5067,7 +5883,7 @@ function initPanels() {
       // txHash → eth_getTransactionByHash → eth_getBlockByNumber), a
       // genuine on-chain figure, distinct from the DexScreener-estimated
       // "Trading Age" fallback right below (which is NOT tagged on-chain).
-      ...(contractAge !== null ? [{
+      ...(contractAge?.ageDays != null ? [{
         type: contractAge.ageDays < 30 ? "warn" : contractAge.ageDays < 90 ? "warn" : "ok",
         title: "Contract Age",
         value: (() => {
@@ -5080,7 +5896,7 @@ function initPanels() {
       // ✅ NOTE: Trading Age deliberately left untagged — it's DexScreener's
       // pair-creation estimate (off-chain), only used as a fallback when no
       // explorer API key is configured for the real Contract Age above.
-      ...(contractAge === null && evmAgeDays != null ? [{
+      ...(contractAge?.ageDays == null && evmAgeDays != null ? [{
         type: evmAgeDays < 1 ? "bad" : evmAgeDays < 7 ? "warn" : "ok",
         title: "Trading Age",
         value: (() => {
@@ -5090,7 +5906,7 @@ function initPanels() {
         })()
       }] : []),
       ...(() => {
-        const hc = explorerHolderCount ?? goplus?.holderCount ?? null;
+        const hc = rep.meta?.holderCount ?? null;
         if (hc === null) return [];
         return [{
           type: hc < 50 ? "bad" : hc < 200 ? "warn" : hc < 1000 ? "warn" : "ok",
@@ -5104,34 +5920,35 @@ function initPanels() {
       ...(lpBurnInfo?.isBurned ? [{
         type: "ok", title: "LP Burned", value: `🔥 ~${lpBurnInfo.burnedPct.toFixed(0)}% sent to dead address`, onChain: true
       }] : []),
-      // ✅ NEW: onChain:true — unlike the bot (which uses GoPlus's locker
-      // API), this site reads the locker CONTRACT (PinkLock/Unicrypt)
-      // directly via RPC, so this is genuinely on-chain data regardless of
-      // whether a lock was found or not.
-      ...(liqLock ? [{
-        type: liqLock.locked ? "ok" : liqLock.isExpired ? "bad" : "warn",
-        title: "LP Lock",
-        value: liqLock.locked
-          ? `✅ ${liqLock.locker} • until ${liqLock.unlockDateStr}`
-          : liqLock.isExpired ? `⚠️ ${liqLock.locker} expired` : "Not detected",
-        onChain: true
+      // v22 parity: positive evidence is surfaced; absence is explicitly
+      // "not verified", never proof that liquidity is unlocked.
+      ...(liqLock?.locked ? [{
+        type:"ok", title:"LP Lock", value:`✅ ${liqLock.locker} • until ${liqLock.unlockDateStr}`, onChain:true
+      }] : liqLock?.isExpired ? [{
+        type:"warn", title:"LP Lock", value:`⚠️ ${liqLock.locker} expired`, onChain:true
+      }] : (goplus?.lpLockDataKnown && Number(goplus?.lpLockedPct) > 0) ? [{
+        type:"ok", title:"LP Lock", value:`~${Number(goplus.lpLockedPct).toFixed(0)}% tracked liquidity locked (GoPlus LP holders)`
+      }] : gpOnlyConcentrated ? [{
+        type:"warn", title:"LP Lock", value:"Not verified (V3/V4 position liquidity)"
+      }] : rep.liq?.any ? [{
+        type:"warn", title:"LP Lock", value:"No tracked lock signal (not proof of unlocked LP)"
       }] : []),
-      ...(dexscreener ? [
-        ...(dexscreener.volumeUsd24h !== null ? [{
-          type: dexscreener.volumeUsd24h < 1000 ? "bad" : dexscreener.volumeUsd24h < 10000 ? "warn" : "ok",
+      ...(dsMarket ? [
+        ...(dsMarket.volumeUsd24h !== null ? [{
+          type: dsMarket.volumeUsd24h < 1000 ? "bad" : dsMarket.volumeUsd24h < 10000 ? "warn" : "ok",
           title: "Vol 24h",
-          value: dexscreener.volumeUsd24h >= 1000000 ? `$${(dexscreener.volumeUsd24h/1000000).toFixed(1)}M`
-            : dexscreener.volumeUsd24h >= 1000 ? `$${(dexscreener.volumeUsd24h/1000).toFixed(0)}K`
-            : `$${dexscreener.volumeUsd24h.toFixed(0)}`
+          value: dsMarket.volumeUsd24h >= 1000000 ? `$${(dsMarket.volumeUsd24h/1000000).toFixed(1)}M`
+            : dsMarket.volumeUsd24h >= 1000 ? `$${(dsMarket.volumeUsd24h/1000).toFixed(0)}K`
+            : `$${dsMarket.volumeUsd24h.toFixed(0)}`
         }] : []),
-        ...(dexscreener.priceChange24h !== null ? [{
-          type: dexscreener.priceChange24h < -30 ? "bad" : dexscreener.priceChange24h > 0 ? "ok" : "warn",
+        ...(dsMarket.priceChange24h !== null ? [{
+          type: dsMarket.priceChange24h < -30 ? "bad" : dsMarket.priceChange24h > 0 ? "ok" : "warn",
           title: "Price 24h",
-          value: `${dexscreener.priceChange24h > 0 ? "+" : ""}${dexscreener.priceChange24h.toFixed(1)}%`
+          value: `${dsMarket.priceChange24h > 0 ? "+" : ""}${dsMarket.priceChange24h.toFixed(1)}%`
         }] : []),
-        ...(dexscreener.txns24h > 0 ? [{
-          type: dexscreener.txns24h < 10 ? "bad" : dexscreener.txns24h < 100 ? "warn" : "ok",
-          title: "Txns 24h", value: dexscreener.txns24h.toLocaleString()
+        ...(dsMarket.txns24h > 0 ? [{
+          type: dsMarket.txns24h < 10 ? "bad" : dsMarket.txns24h < 100 ? "warn" : "ok",
+          title: "Txns 24h", value: dsMarket.txns24h.toLocaleString()
         }] : [])
       ] : []),
       ...(goplus ? [
@@ -5144,21 +5961,40 @@ function initPanels() {
         // value as 0%/safe (`goplus.sellTax ?? 0`) — the text just hadn't
         // caught up, so a green dot sat next to the word "Unknown".
         {
-          type: (() => { const st3 = goplus.sellTax ?? 0; if (st3 > 0.15) return "bad"; if (st3 > 0.05) return "warn"; return "ok"; })(),
-          title: "Sell Tax", value: (goplus.sellTax !== null && goplus.sellTax !== undefined) ? `${(goplus.sellTax * 100).toFixed(1)}%` : "0% (not reported by GoPlus)"
+          type: goplus.sellTax == null ? "warn" : (() => { const st3 = goplus.sellTax; if (st3 > 0.15) return "bad"; if (st3 > 0.05) return "warn"; return "ok"; })(),
+          title: "Sell Tax", value: goplus.sellTax != null ? `${(goplus.sellTax * 100).toFixed(1)}%` : "Unknown"
         },
         {
-          type: (() => { const bt2 = goplus.buyTax ?? 0; if (bt2 > 0.15) return "bad"; if (bt2 > 0.05) return "warn"; return "ok"; })(),
-          title: "Buy Tax", value: (goplus.buyTax !== null && goplus.buyTax !== undefined) ? `${(goplus.buyTax * 100).toFixed(1)}%` : "0% (not reported by GoPlus)"
+          type: goplus.buyTax == null ? "warn" : (() => { const bt2 = goplus.buyTax; if (bt2 > 0.15) return "bad"; if (bt2 > 0.05) return "warn"; return "ok"; })(),
+          title: "Buy Tax", value: goplus.buyTax != null ? `${(goplus.buyTax * 100).toFixed(1)}%` : "Unknown"
         },
+        ...(Array.isArray(goplus.poolFeesPct) && goplus.poolFeesPct.length ? [{
+          type:"ok", title:"DEX Pool Fee", value:goplus.poolFeesPct.map(v=>`${Number(v.toFixed(4))}%`).join(", ")
+        }] : []),
+        ...(goplus?.b20?.available ? [{
+          type:(goplus.b20.ownerChangeBalance || goplus.b20.cannotSell) ? "bad" : (goplus.b20.whitelist || goplus.b20.metadataModifiable || goplus.b20.cannotBuy) ? "warn" : "ok",
+          title:"Advanced Controls (B20)",
+          value:[
+            goplus.b20.mintable ? "mint" : null,
+            goplus.b20.transferPausable ? "pause" : null,
+            goplus.b20.ownerChangeBalance ? "balance edit" : null,
+            goplus.b20.metadataModifiable ? "metadata edit" : null,
+            goplus.b20.blacklist ? "blacklist" : null,
+            goplus.b20.whitelist ? "whitelist" : null
+          ].filter(Boolean).join(", ") || "No flagged advanced controls"
+        }] : []),
+        ...(goplus?.b20?.available && (goplus.b20.cannotSell || goplus.b20.cannotBuy) ? [{
+          type:goplus.b20.cannotSell ? "bad" : "warn", title:"Trade Restrictions (B20)",
+          value:[goplus.b20.cannotSell ? "sell restricted" : null, goplus.b20.cannotBuy ? "buy restricted" : null].filter(Boolean).join(", ")
+        }] : []),
         ...(goplus.hiddenOwner ? [{ type: "bad", title: "Hidden Owner", value: "Detected" }] : []),
         ...(goplus.canTakeBackOwnership ? [{ type: "bad", title: "Ownership Risk", value: "Can reclaim" }] : []),
         ...(goplus.selfdestructDetected ? [{ type: "bad", title: "Selfdestruct", value: "Detected" }] : [])
       ] : [])
     ];
 
-    if (mintDetected) rep.redFlags.push("Mint surface detected (supply risk).");
-    if (isProxy) rep.redFlags.push("Proxy detected (upgrade risk).");
+    if (mintDetected && !rep.redFlags.some(x => String(x).toLowerCase().includes("mint function") || String(x).toLowerCase().includes("mint capability"))) rep.redFlags.push("Mint surface detected (supply risk).");
+    if (isProxy && !rep.redFlags.some(x => String(x).toLowerCase().includes("proxy contract"))) rep.redFlags.push("Proxy detected (upgrade risk).");
     if (!rep.liq?.any && !cexListed) rep.redFlags.push("No clear DEX liquidity signal detected.");
 
     if (goplus) {
@@ -5196,6 +6032,7 @@ function initPanels() {
         rep.redFlags.push("No clear liquidity signal detected.");
       }
     }
+    rep.redFlags = [...new Set((rep.redFlags || []).filter(Boolean))];
     rep.json = safeJson(rep);
 
     cache[ckey] = { ts: qsNowTs(), rep };
@@ -5321,6 +6158,29 @@ function initPanels() {
     const effFreezeAuthorityAddr = mintInfo?.freezeAuthority ?? null;
     const effFreezeSource = mintInfo ? "on-chain" : (gp ? "GoPlus" : null);
 
+
+    // Solana Shield parity with the Telegram bot: direct Token-2022 controls
+    // override API heuristics whenever the extension is present on-chain.
+    const t22 = mintInfo?.extensions || null;
+    const permanentDelegateAddress = t22?.permanentDelegateAddress || null;
+    const transferHookProgramId = t22?.transferHookProgramId || null;
+    const transferHookAuthority = t22?.transferHookAuthority || null;
+    const transferHookAttached = !!transferHookProgramId || (!t22 && !!gp?.transferHookAttached);
+    const transferHookMutable = !!transferHookAuthority;
+    const transferHookMalicious = transferHookAttached && !!gp?.transferHookMalicious;
+    const defaultAccountFrozen = t22?.defaultAccountStateFrozen === true || (!t22 && !!gp?.defaultAccountStateFrozen);
+    const pauseEnabled = t22?.pausable === true;
+    const pauseActive = t22?.paused === true;
+    const pauseAuthority = t22?.pauseAuthority || null;
+    const mintCloseAuthority = t22?.mintCloseAuthority || null;
+    const permissionedBurnAuthority = t22?.permissionedBurnAuthority || null;
+    const onChainTransferFeePct = Number.isFinite(t22?.currentTransferFeePct) ? t22.currentTransferFeePct : null;
+    const transferFeePct = onChainTransferFeePct != null ? onChainTransferFeePct : (gp?.transferFeePct ?? null);
+    const transferFeeCanChange = t22 ? !!t22.transferFeeCanChange : !!gp?.transferFeeUpgradable;
+    const nonTransferable = t22?.nonTransferable === true || (!t22 && !!gp?.nonTransferable);
+    const mintAuthorityMalicious = effMintActive !== false && !!gp?.mintAuthorityMalicious;
+    const freezeAuthorityMalicious = effFreezeActive !== false && !!gp?.freezeAuthorityMalicious;
+
     // ✅ NEW: surfaced clearly rather than leaving the person to infer it
     // from a wall of individual "Unknown" chips. Mint/Freeze Authority no
     // longer depend solely on GoPlus (see above), so this note is now
@@ -5328,7 +6188,7 @@ function initPanels() {
     // closable, transfer fee/hook, and trusted-token status.
     rep.meta.goplusUnavailable = !gp;
     if (!gp) {
-      rep.redFlags.push("GoPlus security data isn't available yet for this token (common for very new or low-liquidity tokens) — closable, transfer fee/hook, and trusted-token checks below could not be verified. Mint/Freeze Authority above are read directly from the blockchain independently of GoPlus. Liquidity, price, and volume data below also comes from DexScreener independently.");
+      rep.redFlags.push("GoPlus security data isn't available yet for this token. Mint/Freeze and Token-2022 extensions are still checked directly on-chain; GoPlus-only reputation/malicious-address signals may be unavailable. Market data remains independently checked.");
     }
 
     const effTopHolderPct = solHolders?.topHolderPct ?? gp?.topHolderPct ?? null;
@@ -5337,28 +6197,34 @@ function initPanels() {
     const effHoldersSource = solHolders?.accountCount > 0 ? "on-chain" : (gp?.holdersReturned > 0 ? "GoPlus" : null);
 
     let contractScore = 75;
-    const hardBad = !!(gp?.creatorMalicious || gp?.mintAuthorityMalicious || gp?.freezeAuthorityMalicious || gp?.nonTransferable || gp?.transferHookMalicious);
+    let hardBad = !!(
+      gp?.creatorMalicious || mintAuthorityMalicious || freezeAuthorityMalicious ||
+      transferHookMalicious || nonTransferable || pauseActive ||
+      (defaultAccountFrozen && mintInfo && effFreezeActive === false)
+    );
 
-    // ✅ FIX: reduced from a flat -15 whenever GoPlus was missing — now that
-    // Mint/Freeze Authority are independently verified on-chain (see above),
-    // a missing GoPlus response is a smaller gap than before (2 of the ~7
-    // GoPlus-derived checks are covered another way). Still penalized,
-    // since closable/transfer-fee/transfer-hook/trusted-token remain
-    // GoPlus-only with no on-chain fallback — just less harshly than a
-    // token where we truly have zero verification of anything.
-    if (!gp && !mintInfo) contractScore -= 15;
-    else if (!gp) contractScore -= 8;
-
-    if (gp?.nonTransferable) rep.redFlags.push("Token is marked non-transferable — it may not be sellable at all.");
+    if (nonTransferable) rep.redFlags.push("🚨 Token is non-transferable — holders may be unable to sell or move it.");
+    if (pauseActive) {
+      rep.redFlags.push("🚨 Token-2022 global pause is ACTIVE — transfers, minting and burning are currently blocked.");
+    } else if (pauseEnabled && pauseAuthority) {
+      contractScore -= 10;
+      rep.redFlags.push("Global pause authority is active — the token can be paused later, blocking transfers.");
+    }
+    if (defaultAccountFrozen) {
+      contractScore -= effFreezeActive ? 18 : 35;
+      rep.redFlags.push(effFreezeActive
+        ? "New token accounts are created FROZEN by default and require the freeze authority to thaw them."
+        : "🚨 New token accounts are created FROZEN by default, but no active freeze authority was found to thaw them.");
+    }
+    if (permanentDelegateAddress) {
+      contractScore -= 28;
+      rep.redFlags.push("⚠️ Permanent Delegate is active — this authority can transfer or burn tokens from any holder account without the holder's approval.");
+    }
     if (gp?.creatorMalicious) rep.redFlags.push("Creator address is flagged as malicious by GoPlus.");
-    if (gp?.mintAuthorityMalicious) rep.redFlags.push("Mint authority address is flagged as malicious.");
-    if (gp?.freezeAuthorityMalicious) rep.redFlags.push("Freeze authority address is flagged as malicious.");
-    if (gp?.transferHookMalicious) rep.redFlags.push("Transfer hook program is flagged as malicious — it can run arbitrary code on every transfer.");
+    if (mintAuthorityMalicious) rep.redFlags.push("Active mint authority address is flagged as malicious.");
+    if (freezeAuthorityMalicious) rep.redFlags.push("Active freeze authority address is flagged as malicious.");
+    if (transferHookMalicious) rep.redFlags.push("Active transfer hook program is flagged as malicious.");
 
-    // ✅ FIX: now scores off effMintActive/effFreezeActive (on-chain first,
-    // GoPlus fallback) instead of gp?.mintable/gp?.freezable directly — a
-    // token can now be correctly penalized for an active mint/freeze
-    // authority even when GoPlus itself has no data for it.
     if (effMintActive === true) {
       contractScore -= 22;
       rep.redFlags.push(effMintSource === "on-chain"
@@ -5371,46 +6237,52 @@ function initPanels() {
         ? `Freeze authority is active (verified on-chain: ${effFreezeAuthorityAddr}) — holder accounts can be frozen.`
         : "Freeze authority is active — holder accounts can be frozen.");
     }
-    if (gp?.closable)  { contractScore -= 15; rep.redFlags.push("Token program can be closed — could eliminate all assets."); }
+
+    // Mint close is not an instant rug switch: Token-2022 only permits close
+    // after total supply reaches zero. Surface it, but keep the penalty small.
+    if (mintCloseAuthority) {
+      contractScore -= 2;
+      rep.redFlags.push("Mint close authority exists — the mint can only be closed after total supply reaches zero.");
+    } else if (!t22 && gp?.closable) {
+      contractScore -= 5;
+      rep.redFlags.push("A mint-close capability was reported by the security indexer; review the token controls.");
+    }
+
     if (gp?.balanceMutable) { contractScore -= 15; rep.redFlags.push("Balances can reportedly be altered by an authority."); }
-    if (gp?.metadataMutable) contractScore -= 4;
+    if (gp?.metadataMutable) { contractScore -= 4; rep.redFlags.push("Token metadata can be changed by an authority — minor risk, but worth knowing."); }
 
-
-    if (gp?.transferHookAttached && !gp?.transferHookMalicious) {
-      contractScore -= 15;
-      rep.redFlags.push("A transfer hook program is attached — it can run custom logic on every transfer (not confirmed malicious, but review it directly before trusting this token).");
+    if (transferHookAttached && !transferHookMalicious) {
+      contractScore -= transferHookMutable ? 15 : 8;
+      rep.redFlags.push(transferHookMutable
+        ? "A mutable Transfer Hook is attached — custom logic runs on every transfer and its program can be changed by an authority."
+        : "A Transfer Hook is attached — custom on-chain logic runs on every transfer (hook program is not currently mutable).");
     }
-    if (gp?.transferFeeUpgradable) {
-      contractScore -= 6;
-      rep.redFlags.push("The transfer fee can be changed later by an authority — a 0% fee today does not guarantee 0% tomorrow.");
+    if (transferFeeCanChange) {
+      contractScore -= 8;
+      rep.redFlags.push("Transfer-fee authority is active — the fee schedule can be changed later.");
     }
-    if (gp?.defaultAccountStateFrozen) {
-      contractScore -= 10;
-      rep.redFlags.push("New token accounts may be frozen by default (best-effort signal — verify independently before relying on this).");
-    }
-    if (gp?.transferFeePct != null) {
-      const f = gp.transferFeePct;
+    if (transferFeePct != null) {
+      const f = transferFeePct;
       if (f > 15) { contractScore -= 30; rep.redFlags.push(`Very high transfer fee (${f.toFixed(1)}%).`); }
       else if (f > 5) { contractScore -= 15; rep.redFlags.push(`Elevated transfer fee (${f.toFixed(1)}%).`); }
       else if (f > 0) contractScore -= 5;
     }
+    if (permissionedBurnAuthority) {
+      contractScore -= 2;
+      rep.redFlags.push("Permissioned Burn extension is enabled — burn operations require an additional authority.");
+    }
+
     if (effTopHolderPct != null) {
-      if (effTopHolderPct >= 50)      { contractScore -= 20; rep.redFlags.push(`Top holder controls ${effTopHolderPct.toFixed(1)}% of supply.`); }
-      else if (effTopHolderPct >= 30) contractScore -= 12;
-      else if (effTopHolderPct >= 15) contractScore -= 6;
+      if (effTopHolderPct >= 50) { contractScore -= 20; rep.redFlags.push(`Top holder controls ${effTopHolderPct.toFixed(1)}% of supply.`); }
+      else if (effTopHolderPct >= 30) { contractScore -= 12; rep.redFlags.push(`Top holder controls ${effTopHolderPct.toFixed(1)}% of supply — high concentration.`); }
+      else if (effTopHolderPct >= 15) { contractScore -= 6; rep.redFlags.push(`Top holder controls ${effTopHolderPct.toFixed(1)}% of supply — moderate concentration.`); }
     }
     if (effTop10Pct != null) {
-      if (effTop10Pct >= 80) {
-        contractScore -= 14;
-        rep.redFlags.push(`Top holders together control ${effTop10Pct.toFixed(1)}% of supply (source: ${effHoldersSource || "unknown"}).`);
-      } else if (effTop10Pct >= 60) contractScore -= 8;
-      else if (effTop10Pct >= 40) contractScore -= 3;
+      if (effTop10Pct >= 80) { contractScore -= 14; rep.redFlags.push(`Top 10 holders control ${effTop10Pct.toFixed(1)}% of supply — very high concentration.`); }
+      else if (effTop10Pct >= 60) { contractScore -= 8; rep.redFlags.push(`Top 10 holders control ${effTop10Pct.toFixed(1)}% of supply — relatively concentrated.`); }
+      else if (effTop10Pct >= 40) { contractScore -= 3; rep.redFlags.push(`Top 10 holders control ${effTop10Pct.toFixed(1)}% of supply — notable concentration.`); }
     }
-    // ✅ NEW: "Dev/Creator Holds" — see qsFetchSolanaCreatorViaHelius above
-    // for the full rationale. Priority: Helius's Metaplex creator (fast,
-    // survives authority renouncement) > GoPlus's creator_address > current
-    // mint/freeze authority address (weakest — a different concept, and
-    // gone entirely once renounced).
+
     const devCandidateAddress = heliusCreator || gp?.creatorAddress || effMintAuthorityAddr || effFreezeAuthorityAddr || null;
     const devSupplyForPct = solHolders?.supplyUi ?? mintInfo?.supplyUi ?? null;
     const devHoldingPct = (devCandidateAddress && devSupplyForPct)
@@ -5419,7 +6291,7 @@ function initPanels() {
     if (devHoldingPct != null) {
       if (devHoldingPct >= 50) { contractScore -= 20; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
       else if (devHoldingPct >= 20) { contractScore -= 10; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply.`); }
-      else if (devHoldingPct >= 5) contractScore -= 3;
+      else if (devHoldingPct >= 5) { contractScore -= 3; rep.redFlags.push(`Dev/creator wallet holds ${devHoldingPct.toFixed(1)}% of total supply — worth reviewing.`); }
     }
     if (gp?.trustedToken) contractScore += 10;
     contractScore = qsClamp(Math.round(contractScore), 0, 100);
@@ -5453,6 +6325,12 @@ function initPanels() {
     }
     if (ds?.volumeUsd24h != null && ds.volumeUsd24h < 1000) marketScore -= 10;
 
+    const possibleManipulation = !!(ds && Math.abs(ds.priceChange24h || 0) > 250 && (ds.txns24h || 0) < 30);
+    if (possibleManipulation) {
+      marketScore -= 16;
+      rep.redFlags.push("Price action suggests possible manipulation (large move with very few trades).");
+    }
+
     // ✅ NEW: volume/liquidity ratio flag — matches the bot's equivalent,
     // independent of price direction (catches an already-crashed pump too).
     const volLiqRatio = (ds?.volumeUsd24h != null && liqUsd != null && liqUsd > 0) ? (ds.volumeUsd24h / liqUsd) : null;
@@ -5463,17 +6341,40 @@ function initPanels() {
       marketScore -= 8;
     }
     marketScore = qsClamp(Math.round(marketScore), 0, 100);
+    rep.meta.liqQuality = liqUsd == null ? "unknown" : liqUsd < 25000 ? "tiny" : liqUsd < 250000 ? "low" : liqUsd < 500000 ? "medium" : "healthy";
 
     let solAgeDays = null;
-    if (ds?.pairCreatedAt) {
-      const ageMs = Date.now() - Number(ds.pairCreatedAt);
-      if (Number.isFinite(ageMs) && ageMs > 0) solAgeDays = ageMs / 86400000;
+    {
+      const ageCandidates = [ds?.earliestPairCreatedAt, gt?.earliestPoolCreatedAtMs, ds?.pairCreatedAt]
+        .filter(n => Number.isFinite(Number(n)) && Number(n) > 0).map(Number);
+      const earliestMs = ageCandidates.length ? Math.min(...ageCandidates) : null;
+      if (earliestMs) {
+        const ageMs = Date.now() - earliestMs;
+        if (Number.isFinite(ageMs) && ageMs > 0) solAgeDays = ageMs / 86400000;
+      }
     }
     const liqAnyForGuard = !!(liqUsd && liqUsd > 0) || (Array.isArray(gp?.dex) && gp.dex.length > 0);
     const holdersUnknown = !effHoldersKnown;
 
     let score = Math.round(contractScore * 0.40 + marketScore * 0.60);
-    if (hardBad) score = 3;
+    if (hardBad) {
+      score = 3;
+    } else {
+      if (permanentDelegateAddress) score = Math.min(score, 59);
+      if (defaultAccountFrozen) score = Math.min(score, 49);
+      if (transferFeePct != null && transferFeePct > 15) score = Math.min(score, 49);
+      else if (transferFeePct != null && transferFeePct > 5) score = Math.min(score, 64);
+      const powerfulControlCount = [
+        !!effMintActive, !!effFreezeActive, !!permanentDelegateAddress,
+        !!transferHookMutable, !!(pauseEnabled && pauseAuthority), !!transferFeeCanChange
+      ].filter(Boolean).length;
+      if (powerfulControlCount >= 3) {
+        score = Math.min(score, 59);
+        rep.redFlags.push(`Multiple active Token-2022 authorities detected (${powerfulControlCount} powerful controls) — strong centralization/control risk even if market liquidity is healthy.`);
+      } else if (powerfulControlCount === 2) {
+        score = Math.min(score, 69);
+      }
+    }
     score = qsClamp(score, 0, 100);
 
     // ✅ FIX (same class of bug as EVM + the bot): added completeDataBlackout
@@ -5489,17 +6390,28 @@ function initPanels() {
         : "No market data found anywhere (DexScreener, CEX) and no holder data yet — too early to assess either way. Treat with maximum caution.");
     }
 
-    const overallText = dataBlackout
+    let overallText = dataBlackout
       ? "Too Early To Tell"
       : (score >= 85 ? "Good" : score >= 70 ? "Mixed signals" : score >= 50 ? "Caution" : "High risk");
+
+    const compositePumpPattern = !hardBad && !dataBlackout
+      && solAgeDays != null && solAgeDays < 2
+      && ds?.priceChange24h != null && ds.priceChange24h > 200
+      && liqUsd != null && liqUsd > 0 && liqUsd < 50000;
+    if (compositePumpPattern) {
+      rep.redFlags.unshift(`⚠️ Pattern match: very fresh token, price +${ds.priceChange24h.toFixed(0)}% in 24h, but only ~$${Math.round(liqUsd).toLocaleString()} liquidity — classic pump signature. This is a pattern observation, not proof of a scam — but treat with extreme caution.`);
+      score = Math.min(score, 40);
+      overallText = "High risk";
+    }
 
     // ✅ NEW: "Data Coverage" for Solana — EVM already has this chip (how
     // much info we actually found, distinct from the safety score itself),
     // Solana never got an equivalent. Same points-based approach as EVM's
     // uiConfidence calculation, adapted to what's actually available here.
     let solCoveragePoints = 0;
-    if (gp) solCoveragePoints += 2;
-    if (ds) solCoveragePoints += 1;
+    if (gp) solCoveragePoints += 1;
+    if (mintInfo) solCoveragePoints += 1;
+    if (ds || gt) solCoveragePoints += 1;
     if (effHoldersKnown) solCoveragePoints += 1;
     if (liqAnyForGuard) solCoveragePoints += 1;
     if (effTop10Pct != null) solCoveragePoints += 1;
@@ -5518,6 +6430,23 @@ function initPanels() {
     rep.meta.goplusRaw = gp?.raw || null;
     rep.meta.holdersReturned = gp?.holdersReturned ?? null;
     rep.meta.top10ConcentrationPct = gp?.top10ConcentrationPct ?? null;
+    rep.meta.tokenProgram = mintInfo?.tokenProgram || "Unknown";
+    rep.meta.tokenProgramOnChain = !!mintInfo;
+    rep.meta.token2022 = t22 ? {
+      permanentDelegateAddress,
+      transferHookProgramId,
+      transferHookAuthority,
+      transferFeePct,
+      transferFeeCanChange,
+      defaultAccountFrozen,
+      pauseEnabled,
+      pauseActive,
+      pauseAuthority,
+      nonTransferable,
+      mintCloseAuthority,
+      permissionedBurnAuthority,
+      extensionTypes: t22.extensionTypes || []
+    } : null;
 
     // ✅ FIX (major finding, from live testing): GoPlus's dex array was
     // being used as the PRIMARY pool list (capped at 6), with DexScreener
@@ -5635,6 +6564,9 @@ function initPanels() {
       // ✅ NEW: parity with the EVM "Data Coverage" chip — how much info we
       // actually found, not a safety score.
       { type: solDataCoverage === "high" ? "ok" : "warn", title: "Data Coverage", value: `${solDataCoverage} (how much info we found — not a safety score)` },
+      { type: mintInfo ? "ok" : "warn", title: "Token Program",
+        value: mintInfo?.tokenProgram || "Unknown", onChain: !!mintInfo },
+
       // ✅ FIX: these previously colored the chip "ok" (green) whenever gp
       // was null, even though the text correctly said "Unknown" — a green
       // dot next to "Unknown" reads as "checked, safe" when it should read
@@ -5650,25 +6582,29 @@ function initPanels() {
         value: effMintActive === null ? "Unknown" : (effMintActive ? `Active (${effMintSource}${effMintAuthorityAddr ? ": " + qsShortAddr(effMintAuthorityAddr) : ""})` : `Renounced/None (verified ${effMintSource})`) },
       { type: effFreezeActive === null ? "warn" : (effFreezeActive ? "bad" : "ok"), title: "Freeze Authority",
         value: effFreezeActive === null ? "Unknown" : (effFreezeActive ? `Active (${effFreezeSource}${effFreezeAuthorityAddr ? ": " + qsShortAddr(effFreezeAuthorityAddr) : ""})` : `Renounced/None (verified ${effFreezeSource})`) },
-      { type: !gp ? "warn" : (gp.closable?"bad":"ok"), title: "Closable", value: gp?.closable?"Yes":(gp?"No":"Unknown") },
-      // ✅ FIX: "No/Unknown" conflated two very different situations — GoPlus
-      // genuinely has no data at all (gp is null) vs. GoPlus DID respond and
-      // explicitly said this token isn't on its curated trusted-token list
-      // (a real, checked answer, just not a positive one). Now distinguishes
-      // them in the wording.
+      ...(mintInfo?.tokenProgram === "Token-2022" ? [
+        { type: permanentDelegateAddress ? "bad" : "ok", title: "Permanent Delegate",
+          value: permanentDelegateAddress ? `⚠️ Active (${qsShortAddr(permanentDelegateAddress)})` : "None", onChain: true },
+        { type: transferHookMalicious ? "bad" : transferHookAttached ? "warn" : "ok", title: "Transfer Hook",
+          value: transferHookMalicious ? "⚠️ Attached (flagged malicious)" : transferHookAttached ? `Attached${transferHookMutable ? " (mutable)" : " (fixed program)"}` : "None", onChain: true },
+        { type: transferFeePct != null && transferFeePct > 5 ? "bad" : transferFeeCanChange || (transferFeePct || 0) > 0 ? "warn" : "ok", title: "Transfer Fee",
+          value: t22?.extensionTypes?.includes(QS_TOKEN2022_EXT.TRANSFER_FEE_CONFIG)
+            ? `${transferFeePct != null ? transferFeePct.toFixed(1) + "%" : "Configured"}${transferFeeCanChange ? " • mutable" : " • fixed"}` : "None", onChain: true },
+        { type: defaultAccountFrozen ? "bad" : "ok", title: "Default Account State",
+          value: defaultAccountFrozen ? "⚠️ Frozen" : "Normal", onChain: true },
+        { type: pauseActive ? "bad" : (pauseEnabled && pauseAuthority) ? "warn" : "ok", title: "Global Pause",
+          value: pauseActive ? "🚨 PAUSED" : pauseEnabled ? (pauseAuthority ? "Available (authority active)" : "Enabled (no authority)") : "Not enabled", onChain: true },
+        { type: nonTransferable ? "bad" : "ok", title: "Non-Transferable",
+          value: nonTransferable ? "🚨 Yes" : "No", onChain: true }
+      ] : [
+        { type: !gp ? "warn" : (gp.closable ? "warn" : "ok"), title: "Closable", value: gp?.closable ? "Reported" : (gp ? "No" : "Unknown") },
+        { type: !gp ? "warn" : (gp.transferHookMalicious ? "bad" : gp.transferHookAttached ? "warn" : "ok"), title: "Transfer Hook",
+          value: gp?.transferHookMalicious ? "⚠️ Attached (flagged malicious)" : gp?.transferHookAttached ? "Attached (review it)" : (gp ? "None detected" : "Unknown") },
+        { type: !gp ? "warn" : ((gp?.transferFeePct || 0) > 5 ? "bad" : (gp?.transferFeePct || 0) > 0 ? "warn" : "ok"), title: "Transfer Fee",
+          value: !gp ? "Unknown" : (gp?.transferFeePct != null ? `${gp.transferFeePct.toFixed(2)}%` : "None detected") }
+      ]),
       { type: !gp ? "warn" : (gp.trustedToken ? "ok" : "warn"), title: "Trusted Token",
         value: !gp ? "Unknown (GoPlus unavailable)" : (gp.trustedToken ? "Yes (GoPlus)" : "Not on GoPlus's trusted list") },
-      // ✅ FIX: showed "Unknown" even when GoPlus DID respond and simply has
-      // no transfer-fee data to report — true for the vast majority of
-      // tokens, since a transfer fee is a Token-2022-only extension that
-      // legacy SPL Token Program tokens (most tokens, including this one)
-      // don't have at all. "Unknown" implied genuine uncertainty about
-      // something that was actually a checked, known "doesn't apply".
-      { type: !gp ? "warn" : (gp.transferFeePct ? (gp.transferFeePct>5?"bad":"warn") : "ok"), title: "Transfer Fee",
-        value: !gp ? "Unknown (GoPlus unavailable)" : ((gp.transferFeePct !== null && gp.transferFeePct !== undefined) ? `${gp.transferFeePct.toFixed(2)}%` : "None (no fee extension)") },
-      { type: !gp ? "warn" : (gp.transferHookMalicious?"bad":gp.transferHookAttached?"warn":"ok"), title: "Transfer Hook",
-        value: gp?.transferHookMalicious ? "⚠️ Attached (flagged malicious)" : gp?.transferHookAttached ? "Attached (review it)" : (gp?"None detected":"Unknown") },
-      ...(gp?.defaultAccountStateFrozen ? [{ type: "bad", title: "New Accounts", value: "May start frozen (best-effort signal)" }] : []),
       { type: effTopHolderPct==null?"warn":effTopHolderPct>=30?"bad":effTopHolderPct>=15?"warn":"ok", title: "Top Holder",
         value: effTopHolderPct!=null ? `${effTopHolderPct.toFixed(1)}% (${effHoldersSource || "unknown"} data, may incl. LP)` : "Unknown" },
       // ✅ NEW: Dev/Creator Holds — see devCandidateAddress/devHoldingPct
@@ -5745,6 +6681,7 @@ function initPanels() {
       }] : [])
     ];
 
+    rep.redFlags = [...new Set((rep.redFlags || []).filter(Boolean))];
     rep.json = safeJson(rep);
     cache[ckey] = { ts: qsNowTs(), rep };
     saveQsCache(cache);
@@ -6777,7 +7714,17 @@ function bmGenerate(){
       }
       var isTx=/\\/tx\\//i.test(u.pathname);
       var v=href.split("/").pop().split("?")[0].split("#")[0];
-      var net=/etherscan\\.io/i.test(host) ? "eth" : /polygonscan\\.com/i.test(host) ? "polygon" : "bsc";
+      var net = /robinhoodchain\\.blockscout\\.com/i.test(host) ? "robinhood"
+        : /opbnb\\.bscscan\\.com/i.test(host) ? "opbnb"
+        : /basescan\\.org|base\\.blockscout\\.com/i.test(host) ? "base"
+        : /arbiscan\\.io|arbitrum\\.blockscout\\.com/i.test(host) ? "arbitrum"
+        : /optimistic\\.etherscan\\.io|optimism\\.blockscout\\.com/i.test(host) ? "optimism"
+        : /snowtrace\\.io/i.test(host) ? "avalanche"
+        : /lineascan\\.build/i.test(host) ? "linea"
+        : /scrollscan\\.com/i.test(host) ? "scroll"
+        : /polygonscan\\.com/i.test(host) ? "polygon"
+        : /etherscan\\.io/i.test(host) ? "eth"
+        : "bsc";
       hub.searchParams.set("tool", isTx ? "tx" : "quick");
       hub.searchParams.set("net", net);
       if(isTx) hub.searchParams.set("tx", v);
