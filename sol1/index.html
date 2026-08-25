@@ -1,3 +1,6 @@
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -647,6 +650,10 @@
     .fw-btn-full{display:none}
     .fw-btn-mobile{display:inline}
     .tool-card{padding:14px 12px}
+    /* Mobile polish: the desktop-only "Start Here" badge crowds the 2-column
+       card header on narrow screens. The primary Quick Scan CTA above already
+       provides the mobile emphasis, so hide only this badge on mobile. */
+    .tc-featured{display:none}
     .qs-main-btn-row{gap:6px}
     .tx-detail-card,.tx-sum{font-size:11px}
     .tx-detail-k{min-width:60px}
@@ -5968,9 +5975,6 @@ function initPanels() {
           type: goplus.buyTax == null ? "warn" : (() => { const bt2 = goplus.buyTax; if (bt2 > 0.15) return "bad"; if (bt2 > 0.05) return "warn"; return "ok"; })(),
           title: "Buy Tax", value: goplus.buyTax != null ? `${(goplus.buyTax * 100).toFixed(1)}%` : "Unknown"
         },
-        ...(Array.isArray(goplus.poolFeesPct) && goplus.poolFeesPct.length ? [{
-          type:"ok", title:"DEX Pool Fee", value:goplus.poolFeesPct.map(v=>`${Number(v.toFixed(4))}%`).join(", ")
-        }] : []),
         ...(goplus?.b20?.available ? [{
           type:(goplus.b20.ownerChangeBalance || goplus.b20.cannotSell) ? "bad" : (goplus.b20.whitelist || goplus.b20.metadataModifiable || goplus.b20.cannotBuy) ? "warn" : "ok",
           title:"Advanced Controls (B20)",
