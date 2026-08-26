@@ -3367,7 +3367,189 @@ function initPanels() {
     }
   }
 
-  async function qsLiqCheckBasic(net, token, provider) {
+  
+  /* ── BSC QUICK SCAN SPEED PATH ─────────────────────────────────────
+     Same factories / quote tokens / fee tiers / pool reads as legacy.
+     Only scheduling changes: bounded concurrency + deterministic output order.
+     Other networks keep the legacy path. */
+  async function qsRunLimitedOrdered(tasks, limit = 4){
+    const out = new Array(tasks.length);
+    let next = 0;
+    const workers = Math.max(1, Math.min(Number(limit) || 1, tasks.length || 1));
+    async function runner(){
+      while (true) {
+        const i = next++;
+        if (i >= tasks.length) return;
+        try { out[i] = await tasks[i](); }
+        catch { out[i] = null; }
+      }
+    }
+    await Promise.all(Array.from({ length: workers }, () => runner()));
+    return out;
+  }
+
+  async function qsLiqCheckBasicBscFast(net, token, provider){
+    const cfg = QS_NET?.[net];
+    if (!cfg || !provider) return { any:false, hint:"none", rows:[] };
+
+    const ZERO = "0x0000000000000000000000000000000000000000";
+    const tok = qsSafeAddr(token);
+    if (!tok) return { any:false, hint:"none", rows:[] };
+
+    const targets = [
+      { label: "Wrapped", addr: qsSafeAddr(cfg.wrapped) },
+      { label: "USDT",    addr: qsSafeAddr(cfg.usdt) },
+      { label: "BUSD",    addr: qsSafeAddr("0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56") },
+      { label: "USDC",    addr: qsSafeAddr(cfg.usdc || "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d") },
+      { label: "FDUSD",   addr: qsSafeAddr("0xc5f0f7b66764f6ec8c8dff7ba683102295e16409") }
+    ].filter(t => !!t.addr);
+
+    const v2Factories = Array.isArray(cfg.v2Factories) && cfg.v2Factories.length
+      ? cfg.v2Factories
+      : (cfg.v2Factory ? [{ name: "V2", addr: cfg.v2Factory }] : []);
+    const v3Factories = Array.isArray(cfg.v3Factories) && cfg.v3Factories.length
+      ? cfg.v3Factories
+      : (cfg.v3Factory ? [{ name: "V3", addr: cfg.v3Factory }] : []);
+    const feeTiers = [100, 500, 2500, 3000, 10000];
+    const tasks = [];
+
+    for (const vf of v2Factories) {
+      const vfAddr = qsSafeAddr(vf?.addr);
+      if (!vfAddr) continue;
+      for (const t of targets) {
+        tasks.push(async () => {
+          let fac;
+          try { fac = new E.Contract(vfAddr, QS_V2_FACTORY_ABI, provider); }
+          catch { return null; }
+
+          let pair = ZERO;
+          try { pair = await fac.getPair(tok, t.addr); } catch {}
+          if (!pair || pair === ZERO) return null;
+
+          try {
+            const p = new E.Contract(pair, QS_V2_PAIR_ABI, provider);
+            const [token0Raw, token1Raw, reservesRaw] = await Promise.all([
+              p.token0().catch(() => tok),
+              p.token1().catch(() => t.addr),
+              p.getReserves().catch(() => [0n, 0n])
+            ]);
+            const token0 = token0Raw || tok;
+            const token1 = token1Raw || t.addr;
+            const r0 = _qsToBI(reservesRaw?.[0] ?? 0n);
+            const r1 = _qsToBI(reservesRaw?.[1] ?? 0n);
+
+            const [m0, m1] = await Promise.all([
+              _qsGetErc20Meta(token0, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token0)})),
+              _qsGetErc20Meta(token1, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token1)}))
+            ]);
+
+            const ok = (r0 > 0n || r1 > 0n);
+            return {
+              type: `V2${vf?.name ? " • " + vf.name : ""}`,
+              target: t.label,
+              addr: pair,
+              ok,
+              note: ok
+                ? `reserves: ${_qsFmtUnits(r0, m0.decimals, 2)} ${m0.symbol} / ${_qsFmtUnits(r1, m1.decimals, 2)} ${m1.symbol}`
+                : "reserves: 0",
+              token0: qsNormAddr(token0),
+              token1: qsNormAddr(token1),
+              symbol0: String(m0.symbol || ""),
+              symbol1: String(m1.symbol || ""),
+              decimals0: Number(m0.decimals ?? 18),
+              decimals1: Number(m1.decimals ?? 18),
+              raw0: r0.toString(),
+              raw1: r1.toString()
+            };
+          } catch {
+            return {
+              type: `V2 • ${vf.name || "V2"}`,
+              target: t.label,
+              addr: qsShortAddr(pair),
+              ok: false,
+              note: "pair read failed"
+            };
+          }
+        });
+      }
+    }
+
+    for (const vf of v3Factories) {
+      const vfAddr = qsSafeAddr(vf?.addr);
+      if (!vfAddr) continue;
+      for (const t of targets) {
+        for (const fee of feeTiers) {
+          tasks.push(async () => {
+            let fac3;
+            try { fac3 = new E.Contract(vfAddr, QS_V3_FACTORY_ABI, provider); }
+            catch { return null; }
+
+            let pool = ZERO;
+            try { pool = await fac3.getPool(tok, t.addr, fee); } catch {}
+            if (!pool || pool === ZERO) return null;
+
+            try {
+              const p = new E.Contract(pool, QS_V3_POOL_ABI, provider);
+              const [token0Raw, token1Raw] = await Promise.all([
+                p.token0().catch(() => tok),
+                p.token1().catch(() => t.addr)
+              ]);
+              const token0 = token0Raw || tok;
+              const token1 = token1Raw || t.addr;
+
+              const [m0, m1] = await Promise.all([
+                _qsGetErc20Meta(token0, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token0)})),
+                _qsGetErc20Meta(token1, provider).catch(()=>({decimals:18,symbol:qsShortAddr(token1)}))
+              ]);
+
+              const c0 = new E.Contract(token0, QS_ERC20_META_ABI, provider);
+              const c1 = new E.Contract(token1, QS_ERC20_META_ABI, provider);
+              const [b0Raw, b1Raw] = await Promise.all([
+                c0.balanceOf(pool).catch(() => 0n),
+                c1.balanceOf(pool).catch(() => 0n)
+              ]);
+              const b0 = _qsToBI(b0Raw), b1 = _qsToBI(b1Raw);
+              const ok = (b0 > 0n && b1 > 0n);
+
+              return {
+                type: `V3 ${fee}${vf?.name ? " • " + vf.name : ""}`,
+                target: t.label,
+                addr: pool,
+                ok,
+                note: ok
+                  ? `balances: ${_qsFmtUnits(b0, m0.decimals, 2)} ${m0.symbol} / ${_qsFmtUnits(b1, m1.decimals, 2)} ${m1.symbol}`
+                  : "balances: 0",
+                token0: qsNormAddr(token0),
+                token1: qsNormAddr(token1),
+                symbol0: String(m0.symbol || ""),
+                symbol1: String(m1.symbol || ""),
+                decimals0: Number(m0.decimals ?? 18),
+                decimals1: Number(m1.decimals ?? 18),
+                raw0: b0.toString(),
+                raw1: b1.toString()
+              };
+            } catch {
+              return {
+                type: `V3 ${fee} • ${vf.name || "V3"}`,
+                target: t.label,
+                addr: qsShortAddr(pool),
+                ok: false,
+                note: "pool read failed"
+              };
+            }
+          });
+        }
+      }
+    }
+
+    const results = await qsRunLimitedOrdered(tasks, 4);
+    const rows = results.filter(Boolean);
+    const any = rows.some(r => !!r?.ok);
+    return { any, hint: any ? "liquidity found" : "none", rows };
+  }
+
+async function qsLiqCheckBasic(net, token, provider) {
+    if (net === "bsc") return qsLiqCheckBasicBscFast(net, token, provider);
     const cfg = QS_NET?.[net];
     if (!cfg || !provider) return { any:false, hint:"none", rows:[] };
     const rows = [];
@@ -4990,6 +5172,19 @@ function initPanels() {
       rep.meta = meta;
     } catch {}
 
+    const explorerKey = (typeof qsExplorerKeyFor === "function") ? qsExplorerKeyFor(net)?.key : null;
+    const qsExternalFetches = () => Promise.allSettled([
+      qsFetchCexListing(net, token),
+      qsFetchNativePrice(net),
+      qsFetchContractAge(net, token, explorerKey),
+      qsFetchHolderCount(net, token, explorerKey),
+      qsFetchGoPlus(net, token),
+      qsFetchDexScreener(net, token),
+      qsFetchGeckoTerminal(net, token),
+      qsFetchGeckoTerminalTokenInfo(net, token)
+    ]);
+    const bscExternalPrefetch = net === "bsc" ? qsExternalFetches() : null;
+
     try {
       const liqFn =
         window.CX?.modules?.qs?.qsLiqCheckBasic ||
@@ -5088,20 +5283,9 @@ function initPanels() {
       }
     } catch {}
 
-    const explorerKey = (typeof qsExplorerKeyFor === "function") ? qsExplorerKeyFor(net)?.key : null;
     const [
       cexSettled, priceSettled, ageSettled, holderSettled, goplusSettled, dexscreenerSettled, geckoterminalSettled, gtInfoSettled
-    ] = await Promise.allSettled([
-      qsFetchCexListing(net, token),
-      qsFetchNativePrice(net),
-      qsFetchContractAge(net, token, explorerKey),
-      qsFetchHolderCount(net, token, explorerKey),
-      qsFetchGoPlus(net, token),
-      qsFetchDexScreener(net, token),
-      qsFetchGeckoTerminal(net, token),
-      // ✅ NEW: real circulating supply, wider coverage than CoinGecko alone.
-      qsFetchGeckoTerminalTokenInfo(net, token)
-    ]);
+    ] = await (bscExternalPrefetch || qsExternalFetches());
 
     const cexResult         = cexSettled.status         === "fulfilled" ? (cexSettled.value         || { listed: false, exchanges: [] }) : { listed: false, exchanges: [] };
     const livePrice         = priceSettled.status       === "fulfilled" ? priceSettled.value         : null;
