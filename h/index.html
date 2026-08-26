@@ -1300,6 +1300,12 @@ const translations = {
     qs_new_contract_note: "⚠️ New contract — age alone doesn't determine quality. Review all signals carefully.",
     qs_redflags_title: "⚠️ Points to Review",
     qs_no_review_points: "No additional points to review were detected in this scan.",
+    qs_review_clear_title: "✓ Points to Review",
+    qs_review_found: "What we found",
+    qs_review_why: "Why it matters",
+    qs_review_high: "High attention",
+    qs_review_review: "Review",
+    qs_review_context: "Context",
     badge_pairs: "Pairs",
     badge_wallet: "Wallet",
     badge_safe: "Safe",
@@ -1528,6 +1534,12 @@ const translations = {
     qs_new_contract_note: "⚠️ 新合约——合约年龄本身不决定其安全性，请综合评估所有信号。",
     qs_redflags_title: "⚠️ 需要关注的问题",
     qs_no_review_points: "本次扫描未检测到其他需要关注的问题。",
+    qs_review_clear_title: "✓ 需要关注的问题",
+    qs_review_found: "检测到的内容",
+    qs_review_why: "为什么重要",
+    qs_review_high: "高度关注",
+    qs_review_review: "建议复核",
+    qs_review_context: "背景信息",
     badge_pairs: "交易对",
     badge_wallet: "钱包",
     badge_safe: "安全",
@@ -1756,6 +1768,12 @@ const translations = {
     qs_new_contract_note: "⚠️ عقد جديد — العمر وحده لا يحدد الجودة، راجع جميع الإشارات بعناية.",
     qs_redflags_title: "⚠️ نقاط تستحق المراجعة",
     qs_no_review_points: "لم يتم اكتشاف نقاط إضافية تستحق المراجعة في هذا الفحص.",
+    qs_review_clear_title: "✓ نقاط تستحق المراجعة",
+    qs_review_found: "ما تم اكتشافه",
+    qs_review_why: "لماذا هذا مهم",
+    qs_review_high: "اهتمام مرتفع",
+    qs_review_review: "مراجعة",
+    qs_review_context: "سياق",
     badge_pairs: "أزواج",
     badge_wallet: "محفظة",
     badge_safe: "آمن",
@@ -1984,6 +2002,12 @@ const translations = {
     qs_new_contract_note: "⚠️ Новый контракт — возраст не определяет качество. Изучите все сигналы.",
     qs_redflags_title: "⚠️ На что стоит обратить внимание",
     qs_no_review_points: "В этом сканировании не обнаружено дополнительных пунктов для проверки.",
+    qs_review_clear_title: "✓ На что стоит обратить внимание",
+    qs_review_found: "Что обнаружено",
+    qs_review_why: "Почему это важно",
+    qs_review_high: "Высокое внимание",
+    qs_review_review: "Проверить",
+    qs_review_context: "Контекст",
     badge_pairs: "Пары",
     badge_wallet: "Кошелёк",
     badge_safe: "Безопасно",
@@ -6478,6 +6502,170 @@ async function qsLiqCheckBasic(net, token, provider) {
     render(rep);
   }
 
+  function qsReviewGuideCopy(lang = currentLang){
+    const en = {
+      genericTitle: "Review this signal",
+      genericWhy: "This signal adds context to the token's risk profile. Read it together with liquidity, ownership, market activity and the overall score.",
+      proxyTitle: "Upgradeable / proxy contract",
+      proxyWhy: "The token address can stay the same while the implementation logic changes. Future behavior may therefore differ from what is visible today.",
+      mintTitle: "Mint authority / capability",
+      mintWhy: "If minting remains possible, new supply can be created later. That can dilute holders or change the token's economics.",
+      pauseTitle: "Pause control",
+      pauseWhy: "A pause authority can stop transfers or other token actions. If the pause is active, normal movement of tokens may already be restricted.",
+      honeypotTitle: "Sell / transfer restriction",
+      honeypotWhy: "Restrictions on selling or transferring can prevent holders from exiting normally. This is one of the highest-priority signals to verify.",
+      taxTitle: "Trading tax",
+      taxWhy: "High or changeable taxes can make buying or selling expensive and, at extreme levels, can make a practical exit difficult.",
+      adminTitle: "Administrative control",
+      adminWhy: "Privileged controls can change trading conditions or contract behavior after launch. The more powerful the control, the more trust is placed in the administrator.",
+      balanceTitle: "Holder-balance control",
+      balanceWhy: "An authority that can modify holder balances has unusually strong control over user funds and deserves very close review.",
+      destroyTitle: "Contract destruction capability",
+      destroyWhy: "A self-destruct capability can materially change or disable contract behavior. Verify how and by whom it can be triggered.",
+      concentrationTitle: "Holder concentration",
+      concentrationWhy: "Large ownership concentration gives a small number of wallets more influence over supply and can increase sell-pressure or governance risk.",
+      liquidityTitle: "Liquidity / market depth",
+      liquidityWhy: "Thin, missing or uncertain liquidity can create large slippage and make it harder to exit a position at the displayed market price.",
+      verificationTitle: "Source verification",
+      verificationWhy: "Unverified source code is harder to independently inspect and compare with the deployed bytecode, reducing transparency.",
+      marketTitle: "Market-behavior pattern",
+      marketWhy: "Unusual price, volume or transaction patterns can indicate unstable trading, wash activity or manipulation. A pattern is a warning signal, not proof by itself.",
+      dataTitle: "Data coverage",
+      dataWhy: "When key market or holder data is missing or providers disagree, confidence in the assessment is lower. Treat the score as less complete until more data is available.",
+      token2022Title: "Token-2022 authority",
+      token2022Why: "Token-2022 extensions can give authorities additional powers over transfers, fees, freezing or token accounts. Verify which controls are active and who holds them.",
+      delegateTitle: "Permanent Delegate",
+      delegateWhy: "A Permanent Delegate can have exceptional authority over holder accounts. This is a powerful control that should be understood before relying on the token.",
+      lpBurnTitle: "Liquidity burn signal",
+      lpBurnWhy: "Burned LP tokens are positive evidence that those specific LP tokens cannot be withdrawn by their former holder. It does not guarantee every pool is locked or safe.",
+      metadataTitle: "Mutable token settings",
+      metadataWhy: "Changeable metadata or related settings are usually lower-risk than transfer controls, but they show that some token properties remain administratively mutable.",
+    };
+
+    // The original engine findings are currently English in every language.
+    // Explanations are localized enough to make the section usable without
+    // changing any underlying engine text or security semantics.
+    const local = {
+      zh: {
+        genericTitle:"复核此信号", genericWhy:"该信号为代币风险提供额外背景。请结合流动性、所有权、市场活动和总评分一起判断。",
+        proxyTitle:"可升级 / 代理合约", proxyWhy:"代币地址可以保持不变，但实现逻辑可能被替换，因此未来行为可能与当前不同。",
+        mintTitle:"增发权限 / 能力", mintWhy:"如果仍可增发，未来可以创建新的供应量，可能稀释持有人或改变代币经济。",
+        pauseTitle:"暂停控制", pauseWhy:"暂停权限可以停止转账或其他代币操作；若已启用，正常转移可能已经受限。",
+        honeypotTitle:"卖出 / 转账限制", honeypotWhy:"卖出或转账限制可能阻止持有人正常退出，这是需要优先核实的高风险信号。",
+        taxTitle:"交易税", taxWhy:"高额或可修改的税费会提高买卖成本，极端情况下可能让退出变得困难。",
+        adminTitle:"管理权限", adminWhy:"特权控制可能在上线后改变交易条件或合约行为；控制越强，对管理员的信任要求越高。",
+        balanceTitle:"持有人余额控制", balanceWhy:"能够修改持有人余额的权限非常强，应重点核实。",
+        destroyTitle:"合约销毁能力", destroyWhy:"自毁能力可能显著改变或终止合约行为，需要确认触发条件和控制者。",
+        concentrationTitle:"持币集中度", concentrationWhy:"供应量高度集中会让少数钱包拥有更大影响力，并增加集中抛售或治理风险。",
+        liquidityTitle:"流动性 / 市场深度", liquidityWhy:"流动性薄弱、缺失或不确定会增加滑点，并可能让用户难以按显示价格退出。",
+        verificationTitle:"源码验证", verificationWhy:"未验证源码更难独立审查并与链上字节码核对，透明度更低。",
+        marketTitle:"市场行为模式", marketWhy:"异常价格、成交量或交易数量可能反映不稳定交易、刷量或操纵；模式本身并不是骗局证明。",
+        dataTitle:"数据覆盖", dataWhy:"关键市场/持有人数据缺失或数据源冲突时，评估置信度会下降。",
+        token2022Title:"Token-2022 权限", token2022Why:"Token-2022 扩展可赋予转账、费用、冻结或账户方面的额外权限，需要确认哪些控制仍然有效。",
+        delegateTitle:"Permanent Delegate", delegateWhy:"Permanent Delegate 对持有人账户可能拥有非常强的权限，使用该代币前应明确理解其能力。",
+        lpBurnTitle:"流动性销毁信号", lpBurnWhy:"LP 代币被销毁是正面证据，说明这些特定 LP 无法被原持有人提走，但不代表所有池都已锁定或安全。",
+        metadataTitle:"可修改的代币设置", metadataWhy:"可修改元数据通常比转账控制风险低，但说明部分代币属性仍可被管理员改变。"
+      },
+      ar: {
+        genericTitle:"راجع هذه الإشارة", genericWhy:"تضيف هذه الإشارة سياقًا إلى مخاطر التوكن. اقرأها مع السيولة والملكية ونشاط السوق والنتيجة الإجمالية.",
+        proxyTitle:"عقد قابل للترقية / Proxy", proxyWhy:"يمكن أن يبقى عنوان التوكن ثابتًا بينما تتغير منطقية التنفيذ، لذلك قد يتغير السلوك لاحقًا.",
+        mintTitle:"صلاحية / قدرة السك", mintWhy:"إذا بقي السك ممكنًا فيمكن إنشاء عرض جديد لاحقًا، ما قد يخفف حصة المالكين أو يغيّر اقتصاد التوكن.",
+        pauseTitle:"صلاحية الإيقاف", pauseWhy:"يمكن لصلاحية الإيقاف تعطيل التحويلات أو وظائف أخرى، وقد تكون الحركة الطبيعية مقيدة إذا كان الإيقاف نشطًا.",
+        honeypotTitle:"قيود البيع / التحويل", honeypotWhy:"قد تمنع قيود البيع أو التحويل المالكين من الخروج بشكل طبيعي، وهي من أهم الإشارات التي يجب التحقق منها.",
+        taxTitle:"ضريبة التداول", taxWhy:"الضرائب العالية أو القابلة للتعديل قد تجعل الشراء أو البيع مكلفًا، وقد تجعل الخروج صعبًا عند المستويات القصوى.",
+        adminTitle:"تحكم إداري", adminWhy:"الصلاحيات المميزة قد تغيّر شروط التداول أو سلوك العقد بعد الإطلاق؛ كلما زادت القوة زادت الحاجة للثقة بالمشرف.",
+        balanceTitle:"التحكم بأرصدة المالكين", balanceWhy:"القدرة على تعديل أرصدة المالكين صلاحية قوية جدًا وتستحق مراجعة دقيقة.",
+        destroyTitle:"إمكانية تدمير العقد", destroyWhy:"قد تغيّر خاصية self-destruct سلوك العقد أو توقفه؛ تحقق ممن يستطيع تفعيلها وكيف.",
+        concentrationTitle:"تركيز الحيازة", concentrationWhy:"التركيز العالي يمنح عددًا قليلاً من المحافظ تأثيرًا أكبر على العرض ويزيد مخاطر ضغط البيع أو السيطرة.",
+        liquidityTitle:"السيولة / عمق السوق", liquidityWhy:"السيولة الضعيفة أو غير المؤكدة قد تسبب انزلاقًا كبيرًا وتجعل الخروج بالسعر الظاهر أصعب.",
+        verificationTitle:"التحقق من المصدر", verificationWhy:"الكود غير الموثق أصعب في المراجعة والمقارنة مع البايت كود المنشور، ما يقلل الشفافية.",
+        marketTitle:"نمط سلوك السوق", marketWhy:"أنماط السعر أو الحجم أو عدد الصفقات غير المعتادة قد تشير إلى تداول غير مستقر أو wash trading أو تلاعب، لكنها ليست إثباتًا وحدها.",
+        dataTitle:"تغطية البيانات", dataWhy:"عند غياب بيانات مهمة أو اختلاف المصادر تقل الثقة في التقييم حتى تتوفر معلومات أفضل.",
+        token2022Title:"صلاحية Token-2022", token2022Why:"امتدادات Token-2022 قد تمنح سلطات إضافية على التحويلات والرسوم والتجميد والحسابات؛ تحقق من الصلاحيات النشطة.",
+        delegateTitle:"Permanent Delegate", delegateWhy:"قد يمتلك Permanent Delegate صلاحيات استثنائية على حسابات المالكين، لذلك يجب فهم هذه القدرة بوضوح.",
+        lpBurnTitle:"إشارة حرق السيولة", lpBurnWhy:"حرق LP دليل إيجابي على أن رموز LP المحددة لا يمكن سحبها من مالكها السابق، لكنه لا يضمن أن كل السيولة مقفلة أو آمنة.",
+        metadataTitle:"إعدادات توكن قابلة للتعديل", metadataWhy:"تعديل البيانات الوصفية عادة أقل خطورة من التحكم بالتحويلات، لكنه يعني أن بعض خصائص التوكن ما زالت قابلة للتغيير."
+      },
+      ru: {
+        genericTitle:"Проверьте этот сигнал", genericWhy:"Этот сигнал добавляет контекст к риску токена. Оценивайте его вместе с ликвидностью, владением, рыночной активностью и общей оценкой.",
+        proxyTitle:"Обновляемый / proxy-контракт", proxyWhy:"Адрес токена может остаться тем же, а логика реализации — измениться. Поэтому поведение в будущем может отличаться от текущего.",
+        mintTitle:"Право / возможность минта", mintWhy:"Если минт остаётся доступным, позже можно создать новый объём предложения, что может размыть доли держателей.",
+        pauseTitle:"Контроль паузы", pauseWhy:"Полномочие паузы может остановить переводы или другие действия токена; при активной паузе нормальное движение уже может быть ограничено.",
+        honeypotTitle:"Ограничение продажи / перевода", honeypotWhy:"Ограничения продажи или перевода могут помешать держателям нормально выйти из позиции. Это один из наиболее приоритетных сигналов.",
+        taxTitle:"Торговый налог", taxWhy:"Высокие или изменяемые налоги повышают стоимость покупки/продажи и в крайних случаях могут затруднить выход.",
+        adminTitle:"Административный контроль", adminWhy:"Привилегированные функции могут менять условия торговли или поведение контракта после запуска; чем сильнее контроль, тем больше доверия требуется к администратору.",
+        balanceTitle:"Контроль балансов держателей", balanceWhy:"Возможность изменять балансы держателей — необычно сильное полномочие и требует особой проверки.",
+        destroyTitle:"Возможность уничтожения контракта", destroyWhy:"Selfdestruct может существенно изменить или отключить поведение контракта. Проверьте, кто и как может его вызвать.",
+        concentrationTitle:"Концентрация держателей", concentrationWhy:"Высокая концентрация предложения усиливает влияние небольшого числа кошельков и повышает риск давления продаж или контроля.",
+        liquidityTitle:"Ликвидность / глубина рынка", liquidityWhy:"Низкая, отсутствующая или неопределённая ликвидность увеличивает проскальзывание и может затруднить выход по отображаемой цене.",
+        verificationTitle:"Верификация исходного кода", verificationWhy:"Неверифицированный код сложнее независимо проверить и сопоставить с развернутым байткодом, что снижает прозрачность.",
+        marketTitle:"Рыночный паттерн", marketWhy:"Необычные движения цены, объёма или числа сделок могут указывать на нестабильность, wash trading или манипуляцию. Сам паттерн не является доказательством.",
+        dataTitle:"Покрытие данных", dataWhy:"Если ключевые данные отсутствуют или источники расходятся, уверенность в оценке ниже до появления более полной информации.",
+        token2022Title:"Полномочия Token-2022", token2022Why:"Расширения Token-2022 могут давать дополнительные полномочия над переводами, комиссиями, заморозкой и аккаунтами. Проверьте активные права.",
+        delegateTitle:"Permanent Delegate", delegateWhy:"Permanent Delegate может иметь исключительные полномочия над аккаунтами держателей, поэтому этот контроль нужно понимать заранее.",
+        lpBurnTitle:"Сигнал сжигания ликвидности", lpBurnWhy:"Сожжённые LP-токены — положительный сигнал: конкретные LP нельзя вывести прежним владельцем. Это не гарантирует, что все пулы заблокированы или безопасны.",
+        metadataTitle:"Изменяемые настройки токена", metadataWhy:"Изменяемые метаданные обычно менее рискованны, чем контроль переводов, но показывают, что часть свойств токена остаётся управляемой."
+      }
+    };
+    return { ...en, ...(local?.[lang] || {}) };
+  }
+
+  function qsExplainReviewFlag(flag){
+    const s = String(flag || "").trim();
+    const l = s.toLowerCase();
+    const c = qsReviewGuideCopy(currentLang);
+
+    let level = "review";
+    let title = c.genericTitle;
+    let why = c.genericWhy;
+
+    const set = (lev, t, w) => { level = lev; title = t; why = w; };
+
+    if (/honeypot|cannot be sold|unable to sell|sell restriction|non-transferable/.test(l)) {
+      set("high", c.honeypotTitle, c.honeypotWhy);
+    } else if (/currently paused|global pause is active|currently blocked/.test(l)) {
+      set("high", c.pauseTitle, c.pauseWhy);
+    } else if (/permanent delegate/.test(l)) {
+      set("high", c.delegateTitle, c.delegateWhy);
+    } else if (/modify token-holder balances|altered by an authority|modify holder balances/.test(l)) {
+      set("high", c.balanceTitle, c.balanceWhy);
+    } else if (/selfdestruct|contract can be destroyed/.test(l)) {
+      set("high", c.destroyTitle, c.destroyWhy);
+    } else if (/malicious/.test(l)) {
+      set("high", c.adminTitle, c.adminWhy);
+    } else if (/classic pump|possible manipulation|wash trading|extreme volume|volume is .*x the liquidity|unusually high relative to liquidity/.test(l)) {
+      set("high", c.marketTitle, c.marketWhy);
+    } else if (/under 24h old|too early to assess|no market data found anywhere|data blackout/.test(l)) {
+      set("high", c.dataTitle, c.dataWhy);
+    } else if (/proxy contract|implementation bytecode/.test(l)) {
+      set("review", c.proxyTitle, c.proxyWhy);
+    } else if (/mint function|mint capability|mint authority/.test(l)) {
+      set("review", c.mintTitle, c.mintWhy);
+    } else if (/pause capability|pausable|global pause authority/.test(l)) {
+      set("review", c.pauseTitle, c.pauseWhy);
+    } else if (/sell tax|buy tax|transfer fee|fee schedule/.test(l)) {
+      set(/very high|high .*tax|exit may be impossible/.test(l) ? "high" : "review", c.taxTitle, c.taxWhy);
+    } else if (/hidden owner|reclaim ownership|blacklist|whitelist|slippage|administrative|powerful controls|active token-2022 authorities/.test(l)) {
+      set("review", c.adminTitle, c.adminWhy);
+    } else if (/top holder|top holders|owner wallet concentration|owner\/dev wallet holds|dev\/creator wallet holds|few holders/.test(l)) {
+      set("review", c.concentrationTitle, c.concentrationWhy);
+    } else if (/no clear dex liquidity|no dex liquidity|thin liquidity|liquidity signal/.test(l)) {
+      set("review", c.liquidityTitle, c.liquidityWhy);
+    } else if (/source code is not verified|not verified/.test(l)) {
+      set("review", c.verificationTitle, c.verificationWhy);
+    } else if (/token-2022|freeze authority|transfer hook|mint close authority|permissioned burn/.test(l)) {
+      set("review", c.token2022Title, c.token2022Why);
+    } else if (/metadata can be|metadata.*modified/.test(l)) {
+      set("context", c.metadataTitle, c.metadataWhy);
+    } else if (/lp tokens appear burned|sent to a dead address/.test(l)) {
+      set("context", c.lpBurnTitle, c.lpBurnWhy);
+    } else if (/goplus.*isn't available|providers disagreed|geckoterminal shows higher|using the larger figure|could not retrieve/.test(l)) {
+      set("context", c.dataTitle, c.dataWhy);
+    }
+
+    return { level, title, why };
+  }
+
   function render(rep){
     const out = $("#qs-out");
     const chipsWrap = $("#qs-risk");
@@ -6557,23 +6745,62 @@ async function qsLiqCheckBasic(net, token, provider) {
     if (redflagsWrap){
       const flags = Array.isArray(rep.redFlags) ? rep.redFlags : [];
       if (flags.length) {
-        const items = flags.map(f => `<li>${qsEscapeHtml(f)}</li>`).join("");
+        const guideCopy = qsReviewGuideCopy(currentLang);
+        const explained = flags.map(f => ({ raw:String(f || ""), ...qsExplainReviewFlag(f) }));
+        const hasHigh = explained.some(x => x.level === "high");
+
+        const levelUi = {
+          high: {
+            label: t(currentLang, "qs_review_high") || guideCopy.high || "High attention",
+            fg: "#ff8290", bg: "rgba(255,71,87,.10)", border: "rgba(255,71,87,.28)"
+          },
+          review: {
+            label: t(currentLang, "qs_review_review") || guideCopy.review || "Review",
+            fg: "#ffd568", bg: "rgba(255,190,51,.08)", border: "rgba(255,190,51,.24)"
+          },
+          context: {
+            label: t(currentLang, "qs_review_context") || guideCopy.context || "Context",
+            fg: "#7debd4", bg: "rgba(74,220,190,.06)", border: "rgba(74,220,190,.20)"
+          }
+        };
+
+        const foundLabel = t(currentLang, "qs_review_found") || "What we found";
+        const whyLabel = t(currentLang, "qs_review_why") || "Why it matters";
+
+        const items = explained.map(x => {
+          const ui = levelUi[x.level] || levelUi.review;
+          return `
+            <div style="padding:12px 13px;border:1px solid ${ui.border};background:${ui.bg};border-radius:12px;">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:7px;">
+                <span style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid ${ui.border};color:${ui.fg};font-size:9px;font-weight:900;letter-spacing:.075em;text-transform:uppercase;">${qsEscapeHtml(ui.label)}</span>
+                <strong style="font-size:12.5px;color:var(--text);">${qsEscapeHtml(x.title)}</strong>
+              </div>
+              <div style="font-size:12px;line-height:1.55;color:var(--text);">
+                <span style="color:var(--muted);font-weight:800;">${qsEscapeHtml(foundLabel)}:</span>
+                ${qsEscapeHtml(x.raw)}
+              </div>
+              <div style="margin-top:5px;font-size:12px;line-height:1.55;color:var(--muted);">
+                <span style="font-weight:800;color:${ui.fg};">${qsEscapeHtml(whyLabel)}:</span>
+                ${qsEscapeHtml(x.why)}
+              </div>
+            </div>`;
+        }).join("");
+
         redflagsWrap.innerHTML = `
-          <div class="card" style="border-color:rgba(255,71,87,.22);background:rgba(255,71,87,.04);">
-            <h3 style="color:#ff7a8a" data-i18n="qs_redflags_title">Points to Review</h3>
-            <ul style="margin:0;padding-left:18px;line-height:1.6;font-size:12.5px;color:var(--text)">${items}</ul>
+          <div class="card" style="border-color:${hasHigh ? "rgba(255,71,87,.24)" : "rgba(255,190,51,.18)"};background:rgba(255,255,255,.018);">
+            <h3 style="color:${hasHigh ? "#ff7a8a" : "#ffd568"}" data-i18n="qs_redflags_title">Points to Review</h3>
+            <div style="display:grid;gap:9px;">${items}</div>
           </div>`;
         const h = redflagsWrap.querySelector("[data-i18n='qs_redflags_title']");
         if (h) { const tv = t(currentLang, "qs_redflags_title"); if (tv) h.textContent = tv; }
       } else {
         const noReviewText = t(currentLang, "qs_no_review_points") || "No additional points to review were detected in this scan.";
+        const clearTitle = t(currentLang, "qs_review_clear_title") || "✓ Points to Review";
         redflagsWrap.innerHTML = `
           <div class="card" style="border-color:rgba(67,255,176,.20);background:rgba(67,255,176,.035);">
-            <h3 style="color:#64f7bd" data-i18n="qs_redflags_title">Points to Review</h3>
+            <h3 style="color:#64f7bd">${qsEscapeHtml(clearTitle)}</h3>
             <div style="line-height:1.6;font-size:12.5px;color:var(--muted)">${qsEscapeHtml(noReviewText)}</div>
           </div>`;
-        const h = redflagsWrap.querySelector("[data-i18n='qs_redflags_title']");
-        if (h) { const tv = t(currentLang, "qs_redflags_title"); if (tv) h.textContent = tv; }
       }
     }
   }
