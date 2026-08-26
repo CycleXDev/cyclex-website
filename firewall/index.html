@@ -1451,9 +1451,9 @@
             <button class="btn-passport secondary" id="btnDownloadCard">📥 Download Share Card</button>
             <button class="btn-passport secondary" id="btnCopyPassport">📋 Copy Passport Text</button>
 
-            <!-- PASS only: Worker-signed Verified Passport -->
+            <!-- Full Access only: Worker-signed Verified Passport -->
             <div id="passportPassSection" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)">
-              <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800;margin-bottom:8px">✅ PASS Holder — Verified Passport</div>
+              <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800;margin-bottom:8px">✅ Full Access — Verified Passport</div>
               <button class="btn-passport sign" id="btnGetPassport">🪪 Get Verified Passport</button>
               <button class="btn-passport sign" id="btnSignPassport" style="margin-top:8px">✍ Sign Passport (EIP-712)</button>
               <div class="pp-signed-badge" id="ppSignedBadge">
@@ -1466,18 +1466,18 @@
               </div>
             </div>
 
-            <!-- Free tier: unlock CTA + blurred PASS preview -->
+            <!-- Free tier: unlock CTA + blurred Full Access preview -->
             <div id="passportUnlockSection" style="display:none;margin-top:14px">
-              <button class="btn-full-access" onclick="requestFullAccess()" style="width:100%;font-size:12px;padding:11px 18px">🔓 Unlock PASS Features</button>
+              <button class="btn-full-access" onclick="requestFullAccess()" style="width:100%;font-size:12px;padding:11px 18px">🔓 Unlock Full Access</button>
               <div style="margin-top:10px;padding:14px;border-radius:12px;border:1px solid rgba(124,92,255,.2);background:rgba(124,92,255,.05);position:relative;overflow:hidden">
                 <div style="filter:blur(3px);pointer-events:none;opacity:.45">
-                  <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800;margin-bottom:10px">✅ PASS Holder — Verified Passport</div>
+                  <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800;margin-bottom:10px">✅ Full Access — Verified Passport</div>
                   <div style="height:36px;border-radius:999px;background:rgba(124,92,255,.25);margin-bottom:8px"></div>
                   <div style="height:36px;border-radius:999px;background:rgba(124,92,255,.18)"></div>
                 </div>
                 <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:6px">
                   <span style="font-size:13px">🔒</span>
-                  <span style="font-size:11px;color:rgba(174,138,255,.9);font-weight:700;letter-spacing:.08em;text-transform:uppercase">PASS Required</span>
+                  <span style="font-size:11px;color:rgba(174,138,255,.9);font-weight:700;letter-spacing:.08em;text-transform:uppercase">Full Access Required</span>
                 </div>
               </div>
             </div>
@@ -1536,7 +1536,7 @@
           <!-- CTA shown when locked -->
           <div class="fw-export-unlock-cta" id="fwExportCTA">
             <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
-              🔒 Export requires <strong style="color:var(--cyan)">Full Access</strong> — hold 1 PASS token to unlock CSV, JSON &amp; report export.
+              🔒 Export requires <strong style="color:var(--cyan)">Full Access</strong> — hold 1 PASS or at least 100 CYCX to unlock CSV, JSON &amp; report export.
             </div>
             <button class="btn-full-access" style="font-size:11px;padding:9px 20px" onclick="requestFullAccess()">
               🔑 Unlock Export
@@ -1907,7 +1907,7 @@ async function fwFetchWalletTxs(net, address) {
     const ctrl = new AbortController();
     const timer = setTimeout(()=>ctrl.abort(), 14000);
     try {
-      const res = await fetch(u.toString(), {method:"GET", signal:ctrl.signal});
+      const res = await fetch(u.toString(), {method:"GET", headers:_fwAccessToken ? { "Authorization": `Bearer ${_fwAccessToken}` } : {}, signal:ctrl.signal});
       if (!res.ok) return [];
       const data = await res.json();
       return Array.isArray(data) ? data : (data?.result || data?.data || []);
@@ -2521,6 +2521,10 @@ const _fwNonce = (() => {
 // 2. Verified state — stored in closure, NOT on window
 let _fwAccessVerified = false;
 let _fwValidatedWallet = null;
+let _fwAccessToken = null;
+let _fwAccessHasPass = false;
+let _fwAccessHasCycx = false;
+let _fwAccessExpiresAt = 0;
 
 // 3. Protect fwAccessTier via Object.defineProperty — block direct assignment
 (function protectAccessTier() {
@@ -2531,7 +2535,7 @@ let _fwValidatedWallet = null;
       set: (v) => {
         // Only allow setting to "full" if internal verification passed
         if (v === "full" && !_fwAccessVerified) {
-          console.warn("[CycleX] Access tier change blocked. Connect a wallet with PASS to unlock.");
+          console.warn("[CycleX] Access tier change blocked. Verify an eligible wallet (1 PASS or 100 CYCX) to unlock.");
           return;
         }
         _tier = v;
@@ -2746,8 +2750,10 @@ async function _fwApiFetch(url, timeoutMs=18000) {
   const ctrl = new AbortController();
   const t    = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { method:"GET", signal:ctrl.signal });
+    const headers = _fwAccessToken ? { "Authorization": `Bearer ${_fwAccessToken}` } : {};
+    const res = await fetch(url, { method:"GET", headers, signal:ctrl.signal });
     if (res.status === 429) { const e=new Error("RATE_LIMIT"); e.status=429; throw e; }
+    if (res.status === 401 || res.status === 403) { const e=new Error("FULL_ACCESS_REQUIRED"); e.status=res.status; throw e; }
     if (!res.ok)            { const e=new Error(`API_${res.status}`); e.status=res.status; throw e; }
     return await res.json();
   } finally { clearTimeout(t); }
@@ -3118,6 +3124,87 @@ function setGateStatus(msg, color="#a0a0b0") {
   if (el) { el.textContent = msg; el.style.color = color; }
 }
 
+async function fwCreateServerAccessSession() {
+  const wallet = String(window.wallet?.address || "").trim();
+  const provider =
+    window.wallet?.providerRaw?.request ? window.wallet.providerRaw :
+    window.CxAppKitModal?.getWalletProvider?.()?.request ? window.CxAppKitModal.getWalletProvider() :
+    window.ethereum?.request ? window.ethereum :
+    null;
+
+  if (!wallet || !provider?.request) {
+    return { ok:false, reason:"provider_missing", message:"Wallet provider unavailable." };
+  }
+
+  try {
+    const challengeUrl = new URL("/api/accessChallenge", API_BASE);
+    challengeUrl.searchParams.set("wallet", wallet);
+
+    const challengeRes = await fetch(challengeUrl.toString(), {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    });
+    const challenge = await challengeRes.json().catch(() => null);
+    if (!challengeRes.ok || !challenge?.nonce || !challenge?.messageHex) {
+      return {
+        ok:false,
+        reason:challengeRes.status === 404 ? "AUTH_ROUTE_MISSING" : (challenge?.error || "challenge_failed"),
+        message:challenge?.message || challenge?.error || "Could not start secure access verification."
+      };
+    }
+
+    let signature;
+    try {
+      signature = await provider.request({
+        method: "personal_sign",
+        params: [challenge.messageHex, wallet]
+      });
+    } catch (e) {
+      if (/reject|cancel|denied|4001/i.test(String(e?.message || e))) {
+        return { ok:false, reason:"sign_cancelled", message:"Signature cancelled." };
+      }
+      throw e;
+    }
+
+    const sessionRes = await fetch(`${API_BASE}/api/accessSession`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wallet,
+        nonce: challenge.nonce,
+        signature
+      })
+    });
+    const session = await sessionRes.json().catch(() => null);
+
+    if (!sessionRes.ok || !session?.token) {
+      return {
+        ok:false,
+        reason:session?.error || "session_failed",
+        message:session?.message || session?.error || "Secure Full Access verification failed."
+      };
+    }
+
+    _fwAccessToken = session.token;
+    _fwAccessHasPass = session.hasPass === true;
+    _fwAccessHasCycx = session.hasCycx === true;
+    _fwAccessExpiresAt = Number(session.expiresAt || 0);
+
+    return {
+      ok:true,
+      hasPass:_fwAccessHasPass,
+      hasCycx:_fwAccessHasCycx,
+      expiresAt:_fwAccessExpiresAt
+    };
+  } catch (e) {
+    return {
+      ok:false,
+      reason:"auth_error",
+      message:String(e?.message || e || "Secure access verification failed.").slice(0,120)
+    };
+  }
+}
+
 async function checkCycxPass() {
   const Eth = getE() || window.ethers;
   if (!Eth?.Contract) return { eligible:false, reason:"ethers_missing" };
@@ -3156,58 +3243,89 @@ async function checkCycxPass() {
 }
 
 async function requestFullAccess() {
-  if (fwAccessTier === "full") return;
+  if (fwAccessTier === "full" && _fwAccessVerified && _fwAccessToken && Date.now() < _fwAccessExpiresAt) return;
+
+  // Reset any stale access state before a new verification attempt.
+  _fwAccessVerified = false;
+  _fwAccessToken = null;
+  _fwAccessHasPass = false;
+  _fwAccessHasCycx = false;
+  _fwAccessExpiresAt = 0;
+
   setGateStatus("Loading wallet module…", "#a87eff");
 
   let appkit;
-  try {
-    appkit = await fwLoadAppKit();
-  } catch(e) {
-    setGateStatus("Could not load wallet module. Check your connection.", "#ff7a8a");
-    return;
-  }
+  try { appkit = await fwLoadAppKit(); }
+  catch { setGateStatus("Could not load wallet module. Check connection.", "#ff7a8a"); return; }
 
   if (!window.wallet?.address) {
     try {
       setGateStatus("Opening wallet connect…", "#a87eff");
       await appkit.open();
       const addr = await fwWaitForWallet(20000);
-      if (!addr) { setGateStatus("Wallet not connected. Please try again.", "#ff9a6b"); return; }
-    } catch(e) {
-      setGateStatus("Connect cancelled or failed.", "#ff9a6b");
-      return;
-    }
+      if (!addr) { setGateStatus("Wallet not connected. Try again.", "#ff9a6b"); return; }
+    } catch { setGateStatus("Connect cancelled.", "#ff9a6b"); return; }
   }
 
-  setGateStatus("Checking CYCX / PASS on BSC…", "#a87eff");
-  const res = await checkCycxPass();
-  const eligible = res.eligible === true || (res.ok && res.eligible);
+  setGateStatus("Checking 100 CYCX / PASS on BSC…", "#a87eff");
+  const local = await checkCycxPassRobust();
+  const locallyEligible = local.eligible === true || (local.ok && local.eligible);
 
-  if (eligible) {
-    const why = res.hasPass ? "PASS ✓" : `${Number(CYCX_MIN)} CYCX ✓`;
-    setGateStatus(`Eligible (${why}) — unlocking!`, "#5dffb2");
-    await wait(700);
-    // Set _fwAccessVerified before unlockFull — this is the only legit path
-    _fwAccessVerified = true;
-    _fwValidatedWallet = window.wallet?.address || null;
-    unlockFull();
-    // Re-fetch with full approvals (preview had no addresses / stripped rows)
-    if (fwWallet && fwWallet !== DEMO_WALLET && fwNet) {
-      // Auto-rescan immediately — user should not need to press anything
-      fwRescanFull();
-    } else if (fwScanData) {
-      renderDashboard(fwWallet, fwScanData, "full");
-    }
+  if (!locallyEligible) {
+    const msg =
+      local.reason === "no_wallet"      ? "Wallet not detected." :
+      local.reason === "ethers_missing" ? "Ethers.js not loaded. Refresh and try again." :
+      local.reason === "rpc_failed"     ? "BSC RPC unavailable. Try again in a moment." :
+      `Not eligible. You need ≥${Number(CYCX_MIN)} CYCX or 1 PASS on BSC.`;
+    setGateStatus(msg, "#ff7a8a");
     return;
   }
 
-  const msg =
-    res.reason === "no_wallet"      ? "Wallet not detected." :
-    res.reason === "ethers_missing" ? "Ethers.js not loaded. Refresh and try again." :
-    res.reason === "rpc_failed"     ? "BSC RPC check failed. Try again." :
-    res.reason === "no_rpc"         ? "BSC RPC unavailable. Try again." :
-    `Not eligible. Need ≥${Number(CYCX_MIN)} CYCX or 1 PASS on BSC.`;
-  setGateStatus(msg, "#ff7a8a");
+  setGateStatus("Confirm secure Full Access in your wallet…", "#a87eff");
+  const auth = await fwCreateServerAccessSession();
+
+  if (!auth.ok) {
+    // Safe rollout bridge: if the new Worker auth routes are not deployed yet
+    // (404 only), keep the current local entitlement flow working. As soon as
+    // the hardened Worker is live, this branch is no longer reachable.
+    if (auth.reason === "AUTH_ROUTE_MISSING") {
+      _fwAccessHasPass = local.hasPass === true;
+      _fwAccessHasCycx = local.hasCycx === true;
+      _fwAccessVerified = true;
+      _fwValidatedWallet = window.wallet?.address || null;
+      const whyLegacy = _fwAccessHasPass ? "PASS ✓" : `${Number(CYCX_MIN)} CYCX ✓`;
+      setGateStatus(`Eligible (${whyLegacy}) — unlocking!`, "#5dffb2");
+      unlockFull();
+      if (fwWallet && fwWallet !== DEMO_WALLET && fwNet) {
+        await fwRescanFull();
+      } else if (fwScanData) {
+        renderDashboard(fwWallet, fwScanData, "full");
+      }
+      return;
+    }
+
+    const msg =
+      auth.reason === "sign_cancelled" ? "Signature cancelled. Full Access was not unlocked." :
+      auth.reason === "NOT_ELIGIBLE"   ? `Not eligible. You need ≥${Number(CYCX_MIN)} CYCX or 1 PASS on BSC.` :
+      auth.message || "Secure Full Access verification failed.";
+    setGateStatus(msg, "#ff7a8a");
+    return;
+  }
+
+  const why = auth.hasPass ? "PASS ✓" : `${Number(CYCX_MIN)} CYCX ✓`;
+  setGateStatus(`Eligible (${why}) — unlocking!`, "#5dffb2");
+  await new Promise(r => setTimeout(r, 500));
+
+  _fwAccessVerified = true;
+  _fwValidatedWallet = window.wallet?.address || null;
+  unlockFull();
+
+  // Re-fetch with server-authorized full approvals.
+  if (fwWallet && fwWallet !== DEMO_WALLET && fwNet) {
+    await fwRescanFull();
+  } else if (fwScanData) {
+    renderDashboard(fwWallet, fwScanData, "full");
+  }
 }
 
 // ── PASS POPUP ────────────────────────────────────────────────────
@@ -3875,6 +3993,12 @@ async function fwVerifyPassport(encoded) {
       document.getElementById("fvTitle").textContent = "Passport Expired";
       document.getElementById("fvSub").innerHTML     =
         `Valid signature from <strong>${fwShort(wallet)}</strong> — passport has expired. Ask the wallet owner to re-sign.`;
+    } else if (state === "notpass") {
+      modal.classList.add("fv-invalid");
+      document.getElementById("fvIcon").textContent  = "🔒";
+      document.getElementById("fvTitle").textContent = "Full Access Verification Failed";
+      document.getElementById("fvSub").textContent   =
+        "The wallet signature is valid, but this wallet does not currently meet Full Access eligibility (1 PASS or at least 100 CYCX on BSC).";
     } else if (state === "invalid") {
       modal.classList.add("fv-invalid");
       document.getElementById("fvIcon").textContent  = "❌";
@@ -3888,8 +4012,8 @@ async function fwVerifyPassport(encoded) {
     const data = JSON.parse(fwFromBase64url(encoded));
     if (!data?.wallet) throw new Error("Invalid passport data");
 
-    // ── BRANCH A: Worker HMAC passport (cx-passport-v1) ─────────────
-    if (data.version === "cx-passport-v1" && data.sig && data.payload) {
+    // ── BRANCH A: Worker HMAC passport (v1 legacy / v2 server-recomputed) ─
+    if ((data.version === "cx-passport-v1" || data.version === "cx-passport-v2") && data.sig && data.payload) {
       const { wallet, payload, issuedAt, sig } = data;
       const net   = payload?.net || "bsc";
       const score = payload?.score ?? "—";
@@ -3908,10 +4032,12 @@ async function fwVerifyPassport(encoded) {
           body: JSON.stringify({ passport: data })
         });
         const json = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(json?.error || "Verification service error");
         valid = json?.valid === true;
       } catch {
-        // Worker unreachable — fall back to basic presence check
-        valid = !!sig && !!wallet;
+        // Fail closed: a Passport is never shown as verified unless the Worker
+        // cryptographically validates the HMAC signature.
+        throw new Error("CycleX verification service unavailable");
       }
 
       _fvPopulate(
@@ -3960,15 +4086,28 @@ async function fwVerifyPassport(encoded) {
 
     const isValid = recovered.toLowerCase() === wallet.toLowerCase();
 
+    let hasFullAccess = false;
+    if (isValid) {
+      const passUrl = new URL("/api/passStatus", API_BASE);
+      passUrl.searchParams.set("wallet", wallet);
+      const passRes = await fetch(passUrl.toString(), { method:"GET" });
+      const passData = await passRes.json().catch(() => null);
+      if (!passRes.ok) throw new Error("Could not verify Full Access status");
+      hasFullAccess = passData?.eligible === true ||
+                      passData?.hasPass === true ||
+                      passData?.hasCycx === true;
+    }
+
     _fvPopulate(
       wallet, network, score,
       `${unlimited} unlimited`, `${highRisk} high-risk`,
       tsMs, expiryMs
     );
 
-    if (!isValid)   _fvResult("invalid", wallet, network, score);
-    else if (expired) _fvResult("expired", wallet, network, score);
-    else            _fvResult("valid",   wallet, network, score);
+    if (!isValid)       _fvResult("invalid",  wallet, network, score);
+    else if (!hasFullAccess) _fvResult("notpass", wallet, network, score);
+    else if (expired)   _fvResult("expired",  wallet, network, score);
+    else                _fvResult("valid",    wallet, network, score);
 
   } catch(e) {
     modal.classList.add("fv-invalid");
@@ -4979,17 +5118,17 @@ function renderPassport(wallet, d, tier) {
     statusEl.style.cssText = "border-color:rgba(93,255,178,.35);color:var(--green);background:rgba(93,255,178,.08)";
   }
 
-  // Watermark: show for free, hide for full
+  // Passport policy: Full Access is identical whether unlocked by
+  // 1 PASS or at least 100 CYCX. Both remove the watermark and enable signing.
+  const isFullAccess = tier === "full" && _fwAccessVerified;
   const wm = document.getElementById("ppWatermark");
-  if (wm) wm.style.display = tier === "free" ? "flex" : "none";
+  if (wm) wm.style.display = isFullAccess ? "none" : "flex";
 
-  // PASS section: only visible for full-tier holders
   const passSection = document.getElementById("passportPassSection");
-  if (passSection) passSection.style.display = tier === "full" ? "block" : "none";
+  if (passSection) passSection.style.display = isFullAccess ? "block" : "none";
 
-  // Unlock section: only visible for free tier
   const unlockSection = document.getElementById("passportUnlockSection");
-  if (unlockSection) unlockSection.style.display = tier === "free" ? "block" : "none";
+  if (unlockSection) unlockSection.style.display = isFullAccess ? "none" : "block";
 
   // Ensure passport section is always visible (card shown to all)
   const wrap = document.getElementById("passportWrap");
@@ -5024,6 +5163,7 @@ async function fwGetWorkerPassport() {
   const btn = document.getElementById("btnGetPassport");
   if (!fwScanData || !fwWallet) { showPassportMsg("⚠ Run a scan first."); return; }
   if (!_fwAccessVerified) { requestFullAccess(); return; }
+  if (!fwCheckWalletMatch(btn)) return;
   const origText = btn?.textContent || "🪪 Get Verified Passport";
   if (btn) { btn.disabled = true; btn.textContent = "Issuing…"; }
   try {
@@ -5041,13 +5181,16 @@ async function fwGetWorkerPassport() {
     };
     const res = await fetch(`${API_BASE}/api/issuePassport`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${_fwAccessToken}`
+      },
       body: JSON.stringify({ wallet: fwWallet, payload })
     });
     const data = await res.json().catch(() => null);
     if (!res.ok) {
       showPassportMsg(data?.error === "NOT_ELIGIBLE"
-        ? "❌ Wallet does not hold a CycleX PASS."
+        ? "❌ Full Access requires 1 PASS or at least 100 CYCX on BSC."
         : `⚠ ${data?.message || data?.error || "Failed."}`);
       return;
     }
@@ -5082,7 +5225,7 @@ function fwDownloadShareCard() {
   const chain     = document.getElementById("ppChain")?.textContent    || fwNet.toUpperCase();
   const dateStr   = document.getElementById("ppDateText")?.textContent || ("Scanned: " + today());
   const walletStr = fwShort(fwWallet) + " · " + chain;
-  const isFree    = fwAccessTier !== "full";
+  const isFree    = !_fwAccessHasPass;
   const isSigned  = document.getElementById("ppSigChip")?.style.display === "flex";
 
   const sCol = score < 45 ? "#ff4757" : score < 70 ? "#ffd166" : "#3cffb0";
@@ -6075,13 +6218,13 @@ const FW_TRANSLATIONS = {
     title_map:"🗺 Exposure Map", map_sub:"Wallet → Spenders → Tokens. Node size = risk weight.",
     title_threats:"🎯 Top Threats",
     // fix mode
-    fix_lock_msg:"Bulk revoke &amp; full cleanup require Full Access<br>(hold 1 PASS token)",
+    fix_lock_msg:"Bulk revoke &amp; full cleanup require Full Access<br>(hold 1 PASS or at least 100 CYCX)",
     btn_unlock_fix:"Unlock Full Cleanup",
     fix_title:"🛠 Fix Mode",
     fix_sub:"Complete these actions to improve your Firewall Score.",
     fix1_title:"Revoke Top Spender", fix2_title:"Revoke All Unlimited", fix3_title:"Lock Risky dApp",
     // passport
-    passport_lock_msg:"Verified Wallet Passport requires Full Access",
+    passport_lock_msg:"Verified Wallet Passport requires Full Access (1 PASS or at least 100 CYCX)",
     passport_share_title:"Share your Wallet Passport",
     // watch
     watch_title:"Track Multiple Wallets",
@@ -6091,7 +6234,7 @@ const FW_TRANSLATIONS = {
     // Scan notice
     scan_running:"Scanning wallet…",
     // access gate
-    gate_msg:'Free: remove your biggest threat. <strong style="color:var(--cyan)">Full Access:</strong> clean the rest — bulk revoke, full Blast Radius, Wallet Passport, exports, and advanced protection.',
+    gate_msg:'Free: remove your biggest threat. <strong style="color:var(--cyan)">Full Access:</strong> clean the rest — bulk revoke, full Blast Radius, Verified Passport, exports, and advanced protection. <strong style="color:var(--green)">Unlock with 1 PASS or at least 100 CYCX.</strong>',
     btn_rescan:"Scan another wallet",
     fix_impact:"The 3 most impactful actions to secure your wallet.",
     passport_copy_sub:"Your cryptographic proof of security. Share to prove you've secured your wallet.",
@@ -6117,16 +6260,16 @@ const FW_TRANSLATIONS = {
     drain_sub:"暴露资产的预估清空时间",
     title_map:"🗺 风险地图", map_sub:"钱包 → 授权方 → 代币。节点大小 = 风险权重。",
     title_threats:"🎯 主要威胁",
-    fix_lock_msg:"批量撤销和完整清理需要完整访问权限<br>（持有1个PASS代币）",
+    fix_lock_msg:"批量撤销和完整清理需要完整访问权限<br>（持有1个PASS或至少100个CYCX）",
     btn_unlock_fix:"解锁完整清理",
     fix_title:"🛠 修复模式",
     fix_sub:"完成以下操作以提升您的防火墙评分。",
     fix1_title:"撤销顶级授权方", fix2_title:"撤销所有无限授权", fix3_title:"锁定高风险DApp",
-    passport_lock_msg:"完整验证钱包护照需要完整访问权限",
+    passport_lock_msg:"验证钱包护照需要完整访问权限（持有1个 PASS 或至少100个 CYCX）",
     passport_share_title:"分享您的钱包护照",
     watch_title:"追踪多个钱包",
     score_protected:"受保护", score_exposed:"已暴露", score_vulnerable:"存在漏洞", score_critical:"危急",
-    gate_msg:'免费：撤销最高风险授权。<strong style="color:var(--cyan)">完整访问：</strong>批量撤销、完整爆炸半径、钱包护照、导出及高级保护工具。',
+    gate_msg:'免费：撤销最高风险授权。<strong style="color:var(--cyan)">完整访问：</strong>批量撤销、完整爆炸半径、验证钱包护照、导出及高级保护工具。<strong style="color:var(--green)">持有1个 PASS 或至少100个 CYCX 即可解锁。</strong>',
     btn_rescan:"扫描其他钱包",
     fix_impact:"以下3项操作将显著提升您的安全评分。",
     passport_copy_sub:"您的安全加密证明。分享以证明您已保护好钱包。",
@@ -6152,16 +6295,16 @@ const FW_TRANSLATIONS = {
     drain_sub:"الوقت المقدر لتصفية الأصول المكشوفة",
     title_map:"🗺 خريطة التعرض", map_sub:"المحفظة ← المفوَّضون ← الرموز. حجم العقدة = وزن المخاطر.",
     title_threats:"🎯 أبرز التهديدات",
-    fix_lock_msg:"الإلغاء الجماعي والتنظيف الكامل يتطلبان وصولاً كاملاً<br>（امتلك رمز PASS واحداً）",
+    fix_lock_msg:"الإلغاء الجماعي والتنظيف الكامل يتطلبان وصولاً كاملاً<br>(امتلك PASS واحداً أو 100 CYCX على الأقل)",
     btn_unlock_fix:"فتح التنظيف الكامل",
     fix_title:"🛠 وضع الإصلاح",
     fix_sub:"أكمل هذه الإجراءات لتحسين نقاط الجدار.",
     fix1_title:"إلغاء أكبر مفوَّض", fix2_title:"إلغاء كل الموافقات غير المحدودة", fix3_title:"حظر DApp عالي الخطورة",
-    passport_lock_msg:"جواز المحفظة الموثق يتطلب وصولاً كاملاً",
+    passport_lock_msg:"جواز المحفظة الموثق يتطلب وصولاً كاملاً (PASS واحد أو 100 CYCX على الأقل)",
     passport_share_title:"شارك جواز محفظتك",
     watch_title:"تتبع محافظ متعددة",
     score_protected:"محمي", score_exposed:"مكشوف", score_vulnerable:"ضعيف", score_critical:"حرج",
-    gate_msg:'مجاناً: إلغاء أكبر تهديد. <strong style="color:var(--cyan)">الوصول الكامل:</strong> التنظيف الشامل — الإلغاء الجماعي ونطاق الضرر الكامل وجواز المحفظة والتصدير.',
+    gate_msg:'مجاناً: إلغاء أكبر تهديد. <strong style="color:var(--cyan)">الوصول الكامل:</strong> التنظيف الشامل — الإلغاء الجماعي ونطاق الضرر الكامل وجواز المحفظة الموثق والتصدير وأدوات الحماية المتقدمة. <strong style="color:var(--green)">يُفتح بامتلاك PASS واحد أو 100 CYCX على الأقل.</strong>',
     btn_rescan:"فحص محفظة أخرى",
     fix_impact:"الإجراءات الثلاثة الأكثر تأثيراً لتأمين محفظتك.",
     passport_copy_sub:"إثباتك التشفيري على الأمان. شاركه لإثبات أنك أمّنت محفظتك.",
@@ -6188,16 +6331,16 @@ const FW_TRANSLATIONS = {
     drain_sub:"расчётное время опустошения открытых активов",
     title_map:"🗺 Карта Рисков", map_sub:"Кошелёк → Получатели → Токены. Размер узла = вес риска.",
     title_threats:"🎯 Топ Угроз",
-    fix_lock_msg:"Массовый отзыв и полная очистка требуют полного доступа<br>（нужен 1 PASS-токен）",
+    fix_lock_msg:"Массовый отзыв и полная очистка требуют полного доступа<br>(нужен 1 PASS или минимум 100 CYCX)",
     btn_unlock_fix:"Полная очистка",
     fix_title:"🛠 3-шаговый план защиты",
     fix_sub:"Выполни эти действия, чтобы улучшить оценку файрвола.",
     fix1_title:"Отозвать главный доступ", fix2_title:"Отозвать все безлимитные доступы", fix3_title:"Заблокировать опасный dApp",
-    passport_lock_msg:"Верифицированный Паспорт кошелька требует полного доступа",
+    passport_lock_msg:"Верифицированный Паспорт кошелька требует полного доступа (1 PASS или минимум 100 CYCX)",
     passport_share_title:"Поделиться паспортом кошелька",
     watch_title:"Отслеживать несколько кошельков",
     score_protected:"Защищён", score_exposed:"Уязвим", score_vulnerable:"Критический", score_critical:"Опасность",
-    gate_msg:'Бесплатно: удали главную угрозу. <strong style="color:var(--cyan)">Полный доступ:</strong> полная очистка — массовый отзыв, полная зона риска, Паспорт, экспорт и расширенные инструменты защиты.',
+    gate_msg:'Бесплатно: удали главную угрозу. <strong style="color:var(--cyan)">Полный доступ:</strong> полная очистка — массовый отзыв, полная зона риска, Верифицированный Паспорт, экспорт и расширенные инструменты защиты. <strong style="color:var(--green)">Открывается при наличии 1 PASS или минимум 100 CYCX.</strong>',
     btn_rescan:"Сканировать другой кошелёк",
     fix_impact:"3 наиболее важных действия для защиты кошелька.",
     passport_copy_sub:"Твоё криптографическое доказательство безопасности. Поделись, чтобы подтвердить, что кошелёк защищён.",
@@ -6884,48 +7027,6 @@ document.getElementById("btnCopyPassAddr")?.addEventListener("click", () => {
     if (btn) { const prev = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => btn.textContent = prev, 1500); }
   }).catch(() => {});
 });
-
-// ── PATCH requestFullAccess to use robust RPC check ───────────────
-window.requestFullAccess = async function() {
-  if (fwAccessTier === "full") return;
-  setGateStatus("Loading wallet module…", "#a87eff");
-
-  let appkit;
-  try { appkit = await fwLoadAppKit(); }
-  catch { setGateStatus("Could not load wallet module. Check connection.", "#ff7a8a"); return; }
-
-  if (!window.wallet?.address) {
-    try {
-      setGateStatus("Opening wallet connect…", "#a87eff");
-      await appkit.open();
-      const addr = await fwWaitForWallet(20000);
-      if (!addr) { setGateStatus("Wallet not connected. Try again.", "#ff9a6b"); return; }
-    } catch { setGateStatus("Connect cancelled.", "#ff9a6b"); return; }
-  }
-
-  setGateStatus("Checking PASS on BSC…", "#a87eff");
-  const res = await checkCycxPassRobust();
-  const eligible = res.eligible === true || (res.ok && res.eligible);
-
-  if (eligible) {
-    const why = res.hasPass ? "PASS ✓" : "CYCX ✓";
-    setGateStatus(`Eligible (${why}) — unlocking!`, "#5dffb2");
-    await new Promise(r => setTimeout(r, 700));
-    // Verify path — mark as legitimately checked before unlocking
-    _fwAccessVerified = true;
-    _fwValidatedWallet = window.wallet?.address || null;
-    unlockFull();
-    if (fwScanData) renderDashboard(fwWallet, fwScanData, "full");
-    return;
-  }
-
-  const msg =
-    res.reason === "no_wallet"      ? "Wallet not detected." :
-    res.reason === "ethers_missing" ? "Ethers.js not loaded. Refresh and try again." :
-    res.reason === "rpc_failed"     ? "BSC RPC unavailable. Try again in a moment." :
-    "Not eligible. You need 1 PASS token on BSC.";
-  setGateStatus(msg, "#ff7a8a");
-};
 
 // Remove old CYCX disabled tooltip listener if any
 // (btnGetCycx was removed from HTML)
