@@ -1299,6 +1299,7 @@ const translations = {
     badge_dex: "DEX",
     qs_new_contract_note: "⚠️ New contract — age alone doesn't determine quality. Review all signals carefully.",
     qs_redflags_title: "⚠️ Points to Review",
+    qs_no_review_points: "No additional points to review were detected in this scan.",
     badge_pairs: "Pairs",
     badge_wallet: "Wallet",
     badge_safe: "Safe",
@@ -1526,6 +1527,7 @@ const translations = {
     badge_dex: "DEX",
     qs_new_contract_note: "⚠️ 新合约——合约年龄本身不决定其安全性，请综合评估所有信号。",
     qs_redflags_title: "⚠️ 需要关注的问题",
+    qs_no_review_points: "本次扫描未检测到其他需要关注的问题。",
     badge_pairs: "交易对",
     badge_wallet: "钱包",
     badge_safe: "安全",
@@ -1753,6 +1755,7 @@ const translations = {
     badge_dex: "DEX",
     qs_new_contract_note: "⚠️ عقد جديد — العمر وحده لا يحدد الجودة، راجع جميع الإشارات بعناية.",
     qs_redflags_title: "⚠️ نقاط تستحق المراجعة",
+    qs_no_review_points: "لم يتم اكتشاف نقاط إضافية تستحق المراجعة في هذا الفحص.",
     badge_pairs: "أزواج",
     badge_wallet: "محفظة",
     badge_safe: "آمن",
@@ -1980,6 +1983,7 @@ const translations = {
     badge_dex: "DEX",
     qs_new_contract_note: "⚠️ Новый контракт — возраст не определяет качество. Изучите все сигналы.",
     qs_redflags_title: "⚠️ На что стоит обратить внимание",
+    qs_no_review_points: "В этом сканировании не обнаружено дополнительных пунктов для проверки.",
     badge_pairs: "Пары",
     badge_wallet: "Кошелёк",
     badge_safe: "Безопасно",
@@ -6562,7 +6566,14 @@ async function qsLiqCheckBasic(net, token, provider) {
         const h = redflagsWrap.querySelector("[data-i18n='qs_redflags_title']");
         if (h) { const tv = t(currentLang, "qs_redflags_title"); if (tv) h.textContent = tv; }
       } else {
-        redflagsWrap.innerHTML = "";
+        const noReviewText = t(currentLang, "qs_no_review_points") || "No additional points to review were detected in this scan.";
+        redflagsWrap.innerHTML = `
+          <div class="card" style="border-color:rgba(67,255,176,.20);background:rgba(67,255,176,.035);">
+            <h3 style="color:#64f7bd" data-i18n="qs_redflags_title">Points to Review</h3>
+            <div style="line-height:1.6;font-size:12.5px;color:var(--muted)">${qsEscapeHtml(noReviewText)}</div>
+          </div>`;
+        const h = redflagsWrap.querySelector("[data-i18n='qs_redflags_title']");
+        if (h) { const tv = t(currentLang, "qs_redflags_title"); if (tv) h.textContent = tv; }
       }
     }
   }
