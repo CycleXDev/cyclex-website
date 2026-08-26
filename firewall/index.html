@@ -2122,7 +2122,7 @@ window.fwExportCSV = function() {
       q(r.allow||'—'), q(r.displayRisk||r.risk||'—'),
       q(r.compositeRisk??'—'), q(r.contractLabel||'—'),
       q(r.drainLabel||'—'), q(r.approvalLabel||'—'),
-      q(r.verified?'Yes':'No'), q(r.decimals??18),
+      q(r.verified === true ? 'Yes' : r.verified === false ? 'No' : 'Unknown'), q(r.decimals??18),
       q(r.lastUpdated&&r.lastUpdated!=='—'?new Date(r.lastUpdated).toISOString().slice(0,19).replace('T',' '):'—'),
       q(daysOpen)
     ].join(',')+'\n';
@@ -2136,7 +2136,7 @@ window.fwExportCSV = function() {
       const fd = rel.firstSeen?new Date(rel.firstSeen).toLocaleDateString():'—';
       const ld = rel.lastSeen?new Date(rel.lastSeen).toLocaleDateString():'—';
       const tags = (rel.entity.tags||[]).join('|');
-      const trusted = (rel.entity.tags||[]).includes('trusted')||'verified' ? 'Verified/Trusted' : 'Unverified';
+      const trusted = (rel.entity.tags||[]).includes('trusted') || (rel.entity.tags||[]).includes('verified') ? 'Verified/Trusted' : 'Unverified';
       const relLower = (rel.address||'').toLowerCase();
       const threat = (typeof FW_THREATS!=='undefined')
         ? (FW_THREATS.find(t=>t.spenders?.some(s=>s.toLowerCase()===relLower))?.title||'None')
@@ -2200,7 +2200,7 @@ window.fwExportJSON = function() {
       contractType:    r.contractLabel||null,
       drainRisk:       r.drainLabel||null,
       approvalType:    r.approvalLabel||null,
-      verified:        !!r.verified,
+      verified:        r.verified === true ? true : r.verified === false ? false : null,
       decimals:        r.decimals??18,
       approvalDate:    (r.lastUpdated&&r.lastUpdated!=='—')?r.lastUpdated:null,
       daysOpen:        (r.lastUpdated&&r.lastUpdated!=='—')
@@ -2276,7 +2276,7 @@ TOP THREATS:
 ${threats||"  None detected"}
 
 ${rels?"WALLET RELATIONS:\n"+rels+"\n":""}
-Scan your wallet: https://cyclex.io/firewall
+Scan your wallet: https://cyclex.network/firewall
 `;
   navigator.clipboard.writeText(text)
     .then(()=>fwSetExportStatus("✅ Report copied to clipboard!","#5dffb2"))
@@ -5012,7 +5012,7 @@ Network: ${net}
 ⏱ Drain Time: ${drain}
 🎯 Risky Approvals: ${risky}
 
-Scan your wallet → https://cyclex.io/firewall
+Scan your wallet → https://cyclex.network/firewall
 #CycleX #WalletSecurity #DeFi`;
 }
 
