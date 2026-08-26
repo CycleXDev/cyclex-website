@@ -1306,6 +1306,7 @@ const translations = {
     qs_review_high: "High attention",
     qs_review_review: "Review",
     qs_review_context: "Context",
+    qs_review_group: "Review & Context",
     badge_pairs: "Pairs",
     badge_wallet: "Wallet",
     badge_safe: "Safe",
@@ -1540,6 +1541,7 @@ const translations = {
     qs_review_high: "高度关注",
     qs_review_review: "建议复核",
     qs_review_context: "背景信息",
+    qs_review_group: "复核与背景",
     badge_pairs: "交易对",
     badge_wallet: "钱包",
     badge_safe: "安全",
@@ -1774,6 +1776,7 @@ const translations = {
     qs_review_high: "اهتمام مرتفع",
     qs_review_review: "مراجعة",
     qs_review_context: "سياق",
+    qs_review_group: "مراجعة وسياق",
     badge_pairs: "أزواج",
     badge_wallet: "محفظة",
     badge_safe: "آمن",
@@ -2008,6 +2011,7 @@ const translations = {
     qs_review_high: "Высокое внимание",
     qs_review_review: "Проверить",
     qs_review_context: "Контекст",
+    qs_review_group: "Проверка и контекст",
     badge_pairs: "Пары",
     badge_wallet: "Кошелёк",
     badge_safe: "Безопасно",
@@ -6623,7 +6627,10 @@ async function qsLiqCheckBasic(net, token, provider) {
 
     if (/honeypot|cannot be sold|unable to sell|sell restriction|non-transferable/.test(l)) {
       set("high", c.honeypotTitle, c.honeypotWhy);
-    } else if (/currently paused|global pause is active|currently blocked/.test(l)) {
+    } else if (
+      (/\bcurrently paused\b|global pause is active|currently blocked/.test(l)) &&
+      !/\bnot currently paused\b|not active now|could be activated/.test(l)
+    ) {
       set("high", c.pauseTitle, c.pauseWhy);
     } else if (/permanent delegate/.test(l)) {
       set("high", c.delegateTitle, c.delegateWhy);
@@ -6647,6 +6654,8 @@ async function qsLiqCheckBasic(net, token, provider) {
       set(/very high|high .*tax|exit may be impossible/.test(l) ? "high" : "review", c.taxTitle, c.taxWhy);
     } else if (/hidden owner|reclaim ownership|blacklist|whitelist|slippage|administrative|powerful controls|active token-2022 authorities/.test(l)) {
       set("review", c.adminTitle, c.adminWhy);
+    } else if (/extreme concentration|very few holders/.test(l)) {
+      set("high", c.concentrationTitle, c.concentrationWhy);
     } else if (/top holder|top holders|owner wallet concentration|owner\/dev wallet holds|dev\/creator wallet holds|few holders/.test(l)) {
       set("review", c.concentrationTitle, c.concentrationWhy);
     } else if (/no clear dex liquidity|no dex liquidity|thin liquidity|liquidity signal/.test(l)) {
@@ -6745,54 +6754,76 @@ async function qsLiqCheckBasic(net, token, provider) {
     if (redflagsWrap){
       const flags = Array.isArray(rep.redFlags) ? rep.redFlags : [];
       if (flags.length) {
-        const guideCopy = qsReviewGuideCopy(currentLang);
         const explained = flags.map(f => ({ raw:String(f || ""), ...qsExplainReviewFlag(f) }));
-        const hasHigh = explained.some(x => x.level === "high");
+        const highItems = explained.filter(x => x.level === "high");
+        const reviewItems = explained.filter(x => x.level !== "high");
 
-        const levelUi = {
-          high: {
-            label: t(currentLang, "qs_review_high") || guideCopy.high || "High attention",
-            fg: "#ff8290", bg: "rgba(255,71,87,.10)", border: "rgba(255,71,87,.28)"
-          },
-          review: {
-            label: t(currentLang, "qs_review_review") || guideCopy.review || "Review",
-            fg: "#ffd568", bg: "rgba(255,190,51,.08)", border: "rgba(255,190,51,.24)"
-          },
-          context: {
-            label: t(currentLang, "qs_review_context") || guideCopy.context || "Context",
-            fg: "#7debd4", bg: "rgba(74,220,190,.06)", border: "rgba(74,220,190,.20)"
-          }
-        };
-
-        const foundLabel = t(currentLang, "qs_review_found") || "What we found";
+        const highLabel = t(currentLang, "qs_review_high") || "High attention";
+        const reviewGroupLabel = t(currentLang, "qs_review_group") || "Review & Context";
         const whyLabel = t(currentLang, "qs_review_why") || "Why it matters";
 
-        const items = explained.map(x => {
-          const ui = levelUi[x.level] || levelUi.review;
+        const summaryText = (() => {
+          const total = explained.length;
+          const high = highItems.length;
+          if (currentLang === "zh") return `${total} 个复核点 · ${high} 个高度关注`;
+          if (currentLang === "ar") return `${total} نقاط للمراجعة · ${high} اهتمام مرتفع`;
+          if (currentLang === "ru") return `${total} пунктов для проверки · ${high} высокого внимания`;
+          return `${total} point${total === 1 ? "" : "s"} to review · ${high} high attention`;
+        })();
+
+        const compactItem = (x, accent, divider) => `
+          <div style="padding:9px 0;${divider ? `border-top:1px solid ${divider};` : ""}">
+            <div style="font-size:12px;line-height:1.5;color:var(--text);">
+              <strong style="color:${accent};">${qsEscapeHtml(x.title)}</strong>
+              <span style="color:var(--muted);"> — ${qsEscapeHtml(x.raw)}</span>
+            </div>
+            <div style="margin-top:3px;font-size:11.5px;line-height:1.45;color:var(--muted);">
+              <span style="font-weight:800;color:${accent};">${qsEscapeHtml(whyLabel)}:</span>
+              ${qsEscapeHtml(x.why)}
+            </div>
+          </div>`;
+
+        const buildGroup = (items, isHigh) => {
+          if (!items.length) return "";
+          const accent = isHigh ? "#ff8290" : "#ffd568";
+          const border = isHigh ? "rgba(255,71,87,.28)" : "rgba(255,190,51,.24)";
+          const bg = isHigh ? "rgba(255,71,87,.055)" : "rgba(255,190,51,.045)";
+          const label = isHigh ? highLabel : reviewGroupLabel;
+          const icon = isHigh ? "🔴" : "🟡";
+
           return `
-            <div style="padding:12px 13px;border:1px solid ${ui.border};background:${ui.bg};border-radius:12px;">
-              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:7px;">
-                <span style="display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;border:1px solid ${ui.border};color:${ui.fg};font-size:9px;font-weight:900;letter-spacing:.075em;text-transform:uppercase;">${qsEscapeHtml(ui.label)}</span>
-                <strong style="font-size:12.5px;color:var(--text);">${qsEscapeHtml(x.title)}</strong>
+            <div style="border:1px solid ${border};background:${bg};border-radius:13px;padding:11px 14px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px;">
+                <div style="font-size:10.5px;font-weight:950;letter-spacing:.075em;text-transform:uppercase;color:${accent};">
+                  ${icon} ${qsEscapeHtml(label)}
+                </div>
+                <span style="font-size:10px;font-weight:900;color:${accent};border:1px solid ${border};border-radius:999px;padding:2px 7px;">
+                  ${items.length}
+                </span>
               </div>
-              <div style="font-size:12px;line-height:1.55;color:var(--text);">
-                <span style="color:var(--muted);font-weight:800;">${qsEscapeHtml(foundLabel)}:</span>
-                ${qsEscapeHtml(x.raw)}
-              </div>
-              <div style="margin-top:5px;font-size:12px;line-height:1.55;color:var(--muted);">
-                <span style="font-weight:800;color:${ui.fg};">${qsEscapeHtml(whyLabel)}:</span>
-                ${qsEscapeHtml(x.why)}
+              <div>
+                ${items.map((x,i) => compactItem(x, accent, i ? border : "")).join("")}
               </div>
             </div>`;
-        }).join("");
+        };
 
         redflagsWrap.innerHTML = `
-          <div class="card" style="border-color:${hasHigh ? "rgba(255,71,87,.24)" : "rgba(255,190,51,.18)"};background:rgba(255,255,255,.018);">
-            <h3 style="color:${hasHigh ? "#ff7a8a" : "#ffd568"}" data-i18n="qs_redflags_title">Points to Review</h3>
-            <div style="display:grid;gap:9px;">${items}</div>
+          <div class="card" style="border-color:rgba(255,255,255,.10);background:rgba(255,255,255,.015);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px;">
+              <h3 style="margin:0;color:${highItems.length ? "#ff7a8a" : "#ffd568"}" data-i18n="qs_redflags_title">Points to Review</h3>
+              <span style="font-size:10.5px;color:var(--muted);">${qsEscapeHtml(summaryText)}</span>
+            </div>
+            <div style="display:grid;gap:9px;">
+              ${buildGroup(highItems, true)}
+              ${buildGroup(reviewItems, false)}
+            </div>
           </div>`;
+
         const h = redflagsWrap.querySelector("[data-i18n='qs_redflags_title']");
-        if (h) { const tv = t(currentLang, "qs_redflags_title"); if (tv) h.textContent = tv; }
+        if (h) {
+          const tv = t(currentLang, "qs_redflags_title");
+          if (tv) h.textContent = tv;
+        }
       } else {
         const noReviewText = t(currentLang, "qs_no_review_points") || "No additional points to review were detected in this scan.";
         const clearTitle = t(currentLang, "qs_review_clear_title") || "✓ Points to Review";
