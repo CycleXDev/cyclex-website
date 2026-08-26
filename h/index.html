@@ -3367,11 +3367,6 @@ function initPanels() {
     }
   }
 
-  
-  /* ── BSC QUICK SCAN SPEED PATH ─────────────────────────────────────
-     Same factories / quote tokens / fee tiers / pool reads as legacy.
-     Only scheduling changes: bounded concurrency + deterministic output order.
-     Other networks keep the legacy path. */
   async function qsRunLimitedOrdered(tasks, limit = 4){
     const out = new Array(tasks.length);
     let next = 0;
@@ -5172,19 +5167,6 @@ async function qsLiqCheckBasic(net, token, provider) {
       rep.meta = meta;
     } catch {}
 
-    const explorerKey = (typeof qsExplorerKeyFor === "function") ? qsExplorerKeyFor(net)?.key : null;
-    const qsExternalFetches = () => Promise.allSettled([
-      qsFetchCexListing(net, token),
-      qsFetchNativePrice(net),
-      qsFetchContractAge(net, token, explorerKey),
-      qsFetchHolderCount(net, token, explorerKey),
-      qsFetchGoPlus(net, token),
-      qsFetchDexScreener(net, token),
-      qsFetchGeckoTerminal(net, token),
-      qsFetchGeckoTerminalTokenInfo(net, token)
-    ]);
-    const bscExternalPrefetch = net === "bsc" ? qsExternalFetches() : null;
-
     try {
       const liqFn =
         window.CX?.modules?.qs?.qsLiqCheckBasic ||
@@ -5283,9 +5265,20 @@ async function qsLiqCheckBasic(net, token, provider) {
       }
     } catch {}
 
+    const explorerKey = (typeof qsExplorerKeyFor === "function") ? qsExplorerKeyFor(net)?.key : null;
     const [
       cexSettled, priceSettled, ageSettled, holderSettled, goplusSettled, dexscreenerSettled, geckoterminalSettled, gtInfoSettled
-    ] = await (bscExternalPrefetch || qsExternalFetches());
+    ] = await Promise.allSettled([
+      qsFetchCexListing(net, token),
+      qsFetchNativePrice(net),
+      qsFetchContractAge(net, token, explorerKey),
+      qsFetchHolderCount(net, token, explorerKey),
+      qsFetchGoPlus(net, token),
+      qsFetchDexScreener(net, token),
+      qsFetchGeckoTerminal(net, token),
+      // ✅ NEW: real circulating supply, wider coverage than CoinGecko alone.
+      qsFetchGeckoTerminalTokenInfo(net, token)
+    ]);
 
     const cexResult         = cexSettled.status         === "fulfilled" ? (cexSettled.value         || { listed: false, exchanges: [] }) : { listed: false, exchanges: [] };
     const livePrice         = priceSettled.status       === "fulfilled" ? priceSettled.value         : null;
