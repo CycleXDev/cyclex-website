@@ -2,6 +2,7 @@
 
 
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3171,7 +3172,8 @@ function initPanels() {
     try { localStorage.setItem(QS_LS_HISTORY, JSON.stringify(arr || [])); } catch {}
   }
   function qsCacheKey(net, token, useApis){
-    return `${net}:${qsLower(token)}:${useApis ? 1 : 0}`;
+    const solanaSchema = net === "solana" ? ":holders-v3" : "";
+    return `${net}:${qsLower(token)}:${useApis ? 1 : 0}${solanaSchema}`;
   }
   function addQsHistory(net, token){
     try{
@@ -4645,7 +4647,7 @@ async function qsLiqCheckBasic(net, token, provider) {
         top10ConcentrationPct: (() => {
           const arr = Array.isArray(d?.holders) ? d.holders : [];
           if (!arr.length) return null;
-          const sum = arr.reduce((acc, h) => acc + (Number(h?.percent) || 0), 0);
+          const sum = arr.slice(0, 10).reduce((acc, h) => acc + (Number(h?.percent) || 0), 0);
           return Number.isFinite(sum) ? sum : null;
         })(),
         holdersReturned: Array.isArray(d?.holders) ? d.holders.length : 0,
@@ -4921,15 +4923,53 @@ async function qsLiqCheckBasic(net, token, provider) {
     }
   }
 
-  // ✅ FIX: accepts an optional pre-fetched supply value so the caller can
-  // skip the redundant getTokenSupply call when qsFetchSolanaMintInfo's
-  // getAccountInfo read (which also returns supply) already succeeded —
-  // reduces concurrent RPC calls hitting the single public endpoint from 2
-  // down to 1 for this function, which matters since a burst of 3
-  // simultaneous calls to a free/public RPC (mint info + largest accounts +
-  // supply) was observed in testing to sometimes let 2 of 3 through while
-  // the 3rd (this one) came back empty.
+  // Solana holder analysis v3. Primary path is CycleX's server-side API so
+  // the Helius key never reaches the browser. It distinguishes raw TOKEN
+  // ACCOUNT concentration from reliably-classified wallet concentration.
+  // If the backend is temporarily unavailable, keep the old browser RPC as a
+  // graceful RAW-only fallback — but never relabel that fallback as wallets.
   async function qsFetchSolanaHolderDistribution(token, knownSupplyUi = null) {
+    try {
+      const ctrl = new AbortController();
+      const tmr = setTimeout(() => ctrl.abort(), 10000);
+      try {
+        const res = await fetch(`${QS_API_BASE}/api/solanaHolders?token=${encodeURIComponent(token)}`, {
+          signal: ctrl.signal, cache: "no-store"
+        });
+        if (res.ok) {
+          const j = await res.json().catch(() => null);
+          if (j && j.token === token) {
+            const num = v => { const n = Number(v); return Number.isFinite(n) ? n : null; };
+            return {
+              supplyUi: num(j.supplyUi) ?? (Number.isFinite(knownSupplyUi) ? knownSupplyUi : null),
+              largestTokenAccountPct: num(j.largestTokenAccountPct),
+              top10TokenAccountsPct: num(j.top10TokenAccountsPct),
+              walletTopHolderPct: num(j.walletTopHolderPct),
+              walletTop10Pct: num(j.walletTop10Pct),
+              holderAnalysisReliable: j.holderAnalysisReliable === true,
+              ownerAnalysisComplete: j.ownerAnalysisComplete === true,
+              classificationCoveragePct: num(j.classificationCoveragePct),
+              nonWalletAuthorityPct: num(j.nonWalletAuthorityPct),
+              unknownAuthorityPct: num(j.unknownAuthorityPct),
+              holderCount: num(j.holderCount),
+              tokenAccountCount: num(j.tokenAccountCount),
+              source: String(j.source || "cyclex-api"),
+              rawSource: String(j.rawSource || "on-chain RPC")
+            };
+          }
+        } else {
+          console.warn("CycleX Solana holder API returned", res.status);
+        }
+      } finally {
+        clearTimeout(tmr);
+      }
+    } catch (e) {
+      console.warn("CycleX Solana holder API unavailable; using raw RPC fallback:", e?.message || e);
+    }
+
+    // RAW fallback only. getTokenLargestAccounts returns token accounts, not
+    // verified human wallets; these values are context-only and are not sent
+    // to the scoring engine as wallet concentration.
     try {
       let largest, supplyUi;
       if (Number.isFinite(knownSupplyUi) && knownSupplyUi > 0) {
@@ -4941,20 +4981,29 @@ async function qsLiqCheckBasic(net, token, provider) {
           solanaRpcRequest("getTokenSupply", [token])
         ]);
         largest = l;
-        supplyUi = Number(s?.value?.uiAmount);
+        supplyUi = Number(s?.value?.uiAmountString ?? s?.value?.uiAmount);
       }
       const accounts = Array.isArray(largest?.value) ? largest.value : [];
       if (!accounts.length || !Number.isFinite(supplyUi) || supplyUi <= 0) return null;
       const rows = accounts.map(a => {
-        const ui = Number(a?.uiAmount) || 0;
-        return { address: a?.address || "", uiAmount: ui, pct: (ui / supplyUi) * 100 };
+        const ui = Number(a?.uiAmountString ?? a?.uiAmount) || 0;
+        return { pct: (ui / supplyUi) * 100 };
       });
       return {
         supplyUi,
-        topAccounts: rows,
-        topHolderPct: rows[0]?.pct ?? null,
-        top10Pct: rows.slice(0, 10).reduce((acc, r) => acc + r.pct, 0),
-        accountCount: rows.length
+        largestTokenAccountPct: rows[0]?.pct ?? null,
+        top10TokenAccountsPct: rows.slice(0, 10).reduce((acc, r) => acc + r.pct, 0),
+        walletTopHolderPct: null,
+        walletTop10Pct: null,
+        holderAnalysisReliable: false,
+        ownerAnalysisComplete: false,
+        classificationCoveragePct: null,
+        nonWalletAuthorityPct: null,
+        unknownAuthorityPct: null,
+        holderCount: null,
+        tokenAccountCount: rows.length,
+        source: "browser-rpc-raw",
+        rawSource: "on-chain RPC"
       };
     } catch {
       return null;
@@ -6141,10 +6190,21 @@ async function qsLiqCheckBasic(net, token, provider) {
       rep.redFlags.push("GoPlus security data isn't available yet for this token. Mint/Freeze and Token-2022 extensions are still checked directly on-chain; GoPlus-only reputation/malicious-address signals may be unavailable. Market data remains independently checked.");
     }
 
-    const effTopHolderPct = solHolders?.topHolderPct ?? gp?.topHolderPct ?? null;
-    const effTop10Pct = solHolders?.top10Pct ?? gp?.top10ConcentrationPct ?? null;
-    const effHoldersKnown = !!(solHolders?.accountCount > 0) || !!(gp?.holdersReturned > 0);
-    const effHoldersSource = solHolders?.accountCount > 0 ? "on-chain" : (gp?.holdersReturned > 0 ? "GoPlus" : null);
+    // Raw token-account concentration and wallet concentration are separate
+    // concepts on Solana. GoPlus's holders array is kept only as a RAW
+    // token-account fallback because it may also include LP/protocol accounts.
+    const rawTopTokenAccountPct = solHolders?.largestTokenAccountPct ?? gp?.topHolderPct ?? null;
+    const rawTop10TokenAccountsPct = solHolders?.top10TokenAccountsPct ?? gp?.top10ConcentrationPct ?? null;
+    const rawHolderSource = solHolders?.largestTokenAccountPct != null ? (solHolders?.rawSource || "on-chain RPC") : (gp?.holdersReturned > 0 ? "GoPlus" : null);
+    const rawHolderSourceLabel = rawHolderSource === "helius" ? "Helius RPC"
+      : rawHolderSource === "solanatracker" ? "SolanaTracker RPC"
+      : rawHolderSource === "solana-public" ? "Solana RPC"
+      : rawHolderSource === "publicnode" ? "PublicNode RPC"
+      : rawHolderSource;
+    const walletTopHolderPct = solHolders?.holderAnalysisReliable ? (solHolders?.walletTopHolderPct ?? null) : null;
+    const walletTop10Pct = solHolders?.holderAnalysisReliable ? (solHolders?.walletTop10Pct ?? null) : null;
+    const holderAnalysisReliable = solHolders?.holderAnalysisReliable === true;
+    const effHoldersKnown = rawTopTokenAccountPct != null || rawTop10TokenAccountsPct != null || !!(gp?.holdersReturned > 0);
 
     const devCandidateAddress = heliusCreator || gp?.creatorAddress || effMintAuthorityAddr || effFreezeAuthorityAddr || null;
     const devSupplyForPct = solHolders?.supplyUi ?? mintInfo?.supplyUi ?? null;
@@ -6167,8 +6227,18 @@ async function qsLiqCheckBasic(net, token, provider) {
         hasGeckoTerminal: !!gt,
         cexListed: !!cex?.listed,
         holdersKnown: !!effHoldersKnown,
-        topHolderPct: effTopHolderPct,
-        top10Pct: effTop10Pct,
+        // v3: raw token-account concentration is context only. Strong holder
+        // penalties use wallet fields only when backend classification is reliable.
+        rawTopTokenAccountPct,
+        rawTop10TokenAccountsPct,
+        walletTopHolderPct,
+        walletTop10Pct,
+        holderAnalysisReliable,
+        // Backward-compatible bridge: if the HTML is deployed before the
+        // protected engine, the old engine's legacy fields receive ONLY the
+        // classified wallet metrics — never raw token-account concentration.
+        topHolderPct: holderAnalysisReliable ? walletTopHolderPct : null,
+        top10Pct: holderAnalysisReliable ? walletTop10Pct : null,
         devHoldingPct,
         mintAuthorityMalicious: !!mintAuthorityMalicious,
         freezeAuthorityMalicious: !!freezeAuthorityMalicious,
@@ -6244,8 +6314,21 @@ async function qsLiqCheckBasic(net, token, provider) {
     rep.meta.dataBlackout = dataBlackout;
     rep.meta.secureEngine = secureEval.version || "protected";
     rep.meta.goplusRaw = gp?.raw || null;
-    rep.meta.holdersReturned = gp?.holdersReturned ?? null;
-    rep.meta.top10ConcentrationPct = gp?.top10ConcentrationPct ?? null;
+    rep.meta.holdersReturned = solHolders?.holderCount ?? gp?.holdersReturned ?? null;
+    rep.meta.top10ConcentrationPct = rawTop10TokenAccountsPct;
+    rep.meta.solanaHolderAnalysis = {
+      reliable: holderAnalysisReliable,
+      rawTopTokenAccountPct,
+      rawTop10TokenAccountsPct,
+      walletTopHolderPct,
+      walletTop10Pct,
+      classificationCoveragePct: solHolders?.classificationCoveragePct ?? null,
+      nonWalletAuthorityPct: solHolders?.nonWalletAuthorityPct ?? null,
+      unknownAuthorityPct: solHolders?.unknownAuthorityPct ?? null,
+      holderCount: solHolders?.holderCount ?? null,
+      tokenAccountCount: solHolders?.tokenAccountCount ?? null,
+      source: rawHolderSource
+    };
     rep.meta.tokenProgram = mintInfo?.tokenProgram || "Unknown";
     rep.meta.tokenProgramOnChain = !!mintInfo;
     rep.meta.token2022 = t22 ? {
@@ -6421,8 +6504,26 @@ async function qsLiqCheckBasic(net, token, provider) {
       ]),
       { type: !gp ? "warn" : (gp.trustedToken ? "ok" : "warn"), title: "Trusted Token",
         value: !gp ? "Unknown (GoPlus unavailable)" : (gp.trustedToken ? "Yes (GoPlus)" : "Not on GoPlus's trusted list") },
-      { type: effTopHolderPct==null?"warn":effTopHolderPct>=30?"bad":effTopHolderPct>=15?"warn":"ok", title: "Top Holder",
-        value: effTopHolderPct!=null ? `${effTopHolderPct.toFixed(1)}% (${effHoldersSource || "unknown"} data, may incl. LP)` : "Unknown" },
+      { type: !holderAnalysisReliable ? "warn" : walletTopHolderPct>=30 ? "bad" : walletTopHolderPct>=15 ? "warn" : "ok",
+        title: "Largest Wallet Holder",
+        value: holderAnalysisReliable && walletTopHolderPct != null
+          ? `${walletTopHolderPct.toFixed(1)}% (classified on-chain)`
+          : "Unknown (wallet classification incomplete)" },
+      ...(holderAnalysisReliable && walletTop10Pct != null ? [{
+        type: walletTop10Pct>=60?"bad":walletTop10Pct>=40?"warn":"ok",
+        title: "Top 10 Wallet Holders",
+        value: `${walletTop10Pct.toFixed(1)}% (classified on-chain)`
+      }] : []),
+      ...(rawTopTokenAccountPct != null ? [{
+        type: rawTopTokenAccountPct >= 30 ? "warn" : "ok",
+        title: "Largest Token Account",
+        value: `${rawTopTokenAccountPct.toFixed(1)}% (${rawHolderSourceLabel || "raw"}; may be pool/protocol)`
+      }] : []),
+      ...(rawTop10TokenAccountsPct != null ? [{
+        type: rawTop10TokenAccountsPct>=60?"warn":"ok",
+        title: "Top 10 Token Accounts",
+        value: `${rawTop10TokenAccountsPct.toFixed(1)}% (${rawHolderSourceLabel || "raw"}; may include pools/protocols)`
+      }] : []),
       // ✅ NEW: Dev/Creator Holds — see devCandidateAddress/devHoldingPct
       // above (this whole feature previously only existed in the bot).
       { type: devHoldingPct==null ? "warn" : devHoldingPct>=20 ? "bad" : devHoldingPct>=5 ? "warn" : "ok",
@@ -6466,11 +6567,7 @@ async function qsLiqCheckBasic(net, token, provider) {
           ? `${cex.exchanges.slice(0,3).join(", ")||"Yes"}${rep.meta?.cexVolume24hUsd ? ` (~$${Math.round(rep.meta.cexVolume24hUsd).toLocaleString()}/24h)` : ""}`
           : "Not found"
       },
-      ...(effTop10Pct != null ? [{
-        type: effTop10Pct>=60?"bad":effTop10Pct>=40?"warn":"ok",
-        title: "Top 10 Holders",
-        value: `${effTop10Pct.toFixed(1)}% (${effHoldersSource || "unknown"} data, may incl. LP)`
-      }] : []),
+
       ...(solAgeDays != null ? [{
         type: solAgeDays < 1 ? "bad" : solAgeDays < 7 ? "warn" : "ok",
         title: "Trading Age",
@@ -6667,7 +6764,11 @@ async function qsLiqCheckBasic(net, token, provider) {
       set("review", c.adminTitle, c.adminWhy);
     } else if (/extreme concentration|very few holders/.test(l)) {
       set("high", c.concentrationTitle, c.concentrationWhy);
-    } else if (/top holder|top holders|owner wallet concentration|owner\/dev wallet holds|dev\/creator wallet holds|few holders/.test(l)) {
+    } else if (/token-account concentration|top token accounts/.test(l)) {
+      // Raw Solana token-account concentration may be a pool/PDA/vault, so
+      // do not explain it as if a small number of human wallets were proven.
+      set("context", c.genericTitle, c.genericWhy);
+    } else if (/largest confirmed wallet|top 10 confirmed wallets|top holder|top holders|owner wallet concentration|owner\/dev wallet holds|dev\/creator wallet holds|few holders/.test(l)) {
       set("review", c.concentrationTitle, c.concentrationWhy);
     } else if (/young token|limited trading history|limited contract history/.test(l)) {
       set("review", c.ageTitle, c.ageWhy);
