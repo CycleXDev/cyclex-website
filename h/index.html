@@ -4945,6 +4945,7 @@ async function qsLiqCheckBasic(net, token, provider) {
               largestTokenAccountPct: num(j.largestTokenAccountPct),
               top10TokenAccountsPct: num(j.top10TokenAccountsPct),
               walletTopHolderPct: num(j.walletTopHolderPct),
+              walletTopHolderAmountUi: num(j.walletTopHolderAmountUi),
               walletTop10Pct: num(j.walletTop10Pct),
               holderAnalysisReliable: j.holderAnalysisReliable === true,
               ownerAnalysisComplete: j.ownerAnalysisComplete === true,
@@ -4953,6 +4954,10 @@ async function qsLiqCheckBasic(net, token, provider) {
               unknownAuthorityPct: num(j.unknownAuthorityPct),
               holderCount: num(j.holderCount),
               tokenAccountCount: num(j.tokenAccountCount),
+              tokenAccountCoveragePct: num(j.tokenAccountCoveragePct),
+              creatorKnown: j.creatorKnown === true,
+              creatorHoldingPct: num(j.creatorHoldingPct),
+              creatorHoldingAmountUi: num(j.creatorHoldingAmountUi),
               source: String(j.source || "cyclex-api"),
               rawSource: String(j.rawSource || "on-chain RPC")
             };
@@ -4994,6 +4999,7 @@ async function qsLiqCheckBasic(net, token, provider) {
         largestTokenAccountPct: rows[0]?.pct ?? null,
         top10TokenAccountsPct: rows.slice(0, 10).reduce((acc, r) => acc + r.pct, 0),
         walletTopHolderPct: null,
+        walletTopHolderAmountUi: null,
         walletTop10Pct: null,
         holderAnalysisReliable: false,
         ownerAnalysisComplete: false,
@@ -5002,6 +5008,10 @@ async function qsLiqCheckBasic(net, token, provider) {
         unknownAuthorityPct: null,
         holderCount: null,
         tokenAccountCount: rows.length,
+        tokenAccountCoveragePct: null,
+        creatorKnown: false,
+        creatorHoldingPct: null,
+        creatorHoldingAmountUi: null,
         source: "browser-rpc-raw",
         rawSource: "on-chain RPC"
       };
@@ -6202,15 +6212,22 @@ async function qsLiqCheckBasic(net, token, provider) {
       : rawHolderSource === "publicnode" ? "PublicNode RPC"
       : rawHolderSource;
     const walletTopHolderPct = solHolders?.holderAnalysisReliable ? (solHolders?.walletTopHolderPct ?? null) : null;
+    const walletTopHolderAmountUi = solHolders?.holderAnalysisReliable ? (solHolders?.walletTopHolderAmountUi ?? null) : null;
     const walletTop10Pct = solHolders?.holderAnalysisReliable ? (solHolders?.walletTop10Pct ?? null) : null;
     const holderAnalysisReliable = solHolders?.holderAnalysisReliable === true;
     const effHoldersKnown = rawTopTokenAccountPct != null || rawTop10TokenAccountsPct != null || !!(gp?.holdersReturned > 0);
 
     const devCandidateAddress = heliusCreator || gp?.creatorAddress || effMintAuthorityAddr || effFreezeAuthorityAddr || null;
     const devSupplyForPct = solHolders?.supplyUi ?? mintInfo?.supplyUi ?? null;
-    const devHoldingPct = (devCandidateAddress && devSupplyForPct)
-      ? await qsFetchSolanaWalletHoldingPct(devCandidateAddress, token, devSupplyForPct)
-      : null;
+    const apiDevHoldingPct = Number.isFinite(Number(solHolders?.creatorHoldingPct)) ? Number(solHolders.creatorHoldingPct) : null;
+    const apiDevHoldingAmountUi = Number.isFinite(Number(solHolders?.creatorHoldingAmountUi)) ? Number(solHolders.creatorHoldingAmountUi) : null;
+    let devHoldingPct = apiDevHoldingPct;
+    if (devHoldingPct == null && devCandidateAddress && devSupplyForPct) {
+      devHoldingPct = await qsFetchSolanaWalletHoldingPct(devCandidateAddress, token, devSupplyForPct);
+    }
+    const devHoldingAmountUi = apiDevHoldingAmountUi != null
+      ? apiDevHoldingAmountUi
+      : (devHoldingPct != null && devSupplyForPct != null ? devSupplyForPct * (devHoldingPct / 100) : null);
 
     const dsSumSol = Array.isArray(ds?.allPairs)
       ? ds.allPairs.reduce((a,p)=>a+(Number(p?.liquidityUsd)||0),0) : 0;
@@ -6312,6 +6329,7 @@ async function qsLiqCheckBasic(net, token, provider) {
     rep.meta.liqQuality = secureEval.liqQuality || "unknown";
     rep.meta.tradingAgeDays = solAgeDays;
     rep.meta.dataBlackout = dataBlackout;
+    rep.meta.suspiciousMarketPattern = secureEval.suspiciousMarketPattern === true;
     rep.meta.secureEngine = secureEval.version || "protected";
     rep.meta.goplusRaw = gp?.raw || null;
     rep.meta.holdersReturned = solHolders?.holderCount ?? gp?.holdersReturned ?? null;
@@ -6321,12 +6339,17 @@ async function qsLiqCheckBasic(net, token, provider) {
       rawTopTokenAccountPct,
       rawTop10TokenAccountsPct,
       walletTopHolderPct,
+      walletTopHolderAmountUi,
       walletTop10Pct,
       classificationCoveragePct: solHolders?.classificationCoveragePct ?? null,
+      tokenAccountCoveragePct: solHolders?.tokenAccountCoveragePct ?? null,
       nonWalletAuthorityPct: solHolders?.nonWalletAuthorityPct ?? null,
       unknownAuthorityPct: solHolders?.unknownAuthorityPct ?? null,
       holderCount: solHolders?.holderCount ?? null,
       tokenAccountCount: solHolders?.tokenAccountCount ?? null,
+      creatorKnown: solHolders?.creatorKnown === true || !!devCandidateAddress,
+      creatorHoldingPct: devHoldingPct,
+      creatorHoldingAmountUi: devHoldingAmountUi,
       source: rawHolderSource
     };
     rep.meta.tokenProgram = mintInfo?.tokenProgram || "Unknown";
@@ -6504,11 +6527,25 @@ async function qsLiqCheckBasic(net, token, provider) {
       ]),
       { type: !gp ? "warn" : (gp.trustedToken ? "ok" : "warn"), title: "Trusted Token",
         value: !gp ? "Unknown (GoPlus unavailable)" : (gp.trustedToken ? "Yes (GoPlus)" : "Not on GoPlus's trusted list") },
+      ...(solHolders?.holderCount != null ? [{
+        type: "ok",
+        title: "Token Account Owners",
+        value: Number(solHolders.holderCount).toLocaleString()
+      }] : []),
+      ...(solHolders?.classificationCoveragePct != null ? [{
+        type: holderAnalysisReliable ? "ok" : "warn",
+        title: "Holder Analysis",
+        value: holderAnalysisReliable
+          ? `${Number(solHolders.classificationCoveragePct).toFixed(1)}% classified (wallet vs protocol)`
+          : `${Number(solHolders.classificationCoveragePct).toFixed(1)}% classified${solHolders?.unknownAuthorityPct != null ? ` • ${Number(solHolders.unknownAuthorityPct).toFixed(1)}% unresolved` : ""}`
+      }] : []),
       { type: !holderAnalysisReliable ? "warn" : walletTopHolderPct>=30 ? "bad" : walletTopHolderPct>=15 ? "warn" : "ok",
         title: "Largest Wallet Holder",
         value: holderAnalysisReliable && walletTopHolderPct != null
-          ? `${walletTopHolderPct.toFixed(1)}% (classified on-chain)`
-          : "Unknown (wallet classification incomplete)" },
+          ? `${walletTopHolderAmountUi != null ? qsFmtNum(walletTopHolderAmountUi, 4) + " · " : ""}${walletTopHolderPct.toFixed(2)}% (classified on-chain)`
+          : (solHolders?.classificationCoveragePct != null
+              ? `Unknown (${Number(solHolders.classificationCoveragePct).toFixed(1)}% classified; below reliability threshold)`
+              : "Unknown (wallet classification incomplete)") },
       ...(holderAnalysisReliable && walletTop10Pct != null ? [{
         type: walletTop10Pct>=60?"bad":walletTop10Pct>=40?"warn":"ok",
         title: "Top 10 Wallet Holders",
@@ -6528,7 +6565,9 @@ async function qsLiqCheckBasic(net, token, provider) {
       // above (this whole feature previously only existed in the bot).
       { type: devHoldingPct==null ? "warn" : devHoldingPct>=20 ? "bad" : devHoldingPct>=5 ? "warn" : "ok",
         title: "Dev/Creator Holds",
-        value: devHoldingPct != null ? `${devHoldingPct.toFixed(1)}%` : (devCandidateAddress ? "Unknown" : "No dev/creator address identified") },
+        value: devHoldingPct != null
+          ? `${devHoldingAmountUi != null ? qsFmtNum(devHoldingAmountUi, 4) + " · " : ""}${devHoldingPct.toFixed(2)}%`
+          : (devCandidateAddress || solHolders?.creatorKnown ? "Unknown" : "No dev/creator address identified") },
       // ✅ FIX: Circulating Supply — now also tries GeckoTerminal's derived
       // figure (market_cap_usd / price_usd, wider coverage than CoinGecko
       // alone) before falling back to the on-chain estimate. Also fixed
@@ -6748,7 +6787,7 @@ async function qsLiqCheckBasic(net, token, provider) {
       set("high", c.destroyTitle, c.destroyWhy);
     } else if (/malicious/.test(l)) {
       set("high", c.adminTitle, c.adminWhy);
-    } else if (/classic pump|possible manipulation|wash trading|extreme volume|volume is .*x the liquidity|unusually high relative to liquidity/.test(l)) {
+    } else if (/suspicious market pattern|classic pump|possible manipulation|wash trading|extreme volume|volume is .*x the liquidity|unusually high relative to liquidity/.test(l)) {
       set("high", c.marketTitle, c.marketWhy);
     } else if (/under 24h old|too early to assess|no market data found anywhere|data blackout/.test(l)) {
       set("high", c.dataTitle, c.dataWhy);
@@ -6820,6 +6859,12 @@ async function qsLiqCheckBasic(net, token, provider) {
     const thinLiqWarn = (rep?.meta?.liqQuality === "tiny")
       ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);border-radius:10px;font-size:12px;color:#ff8a8a;font-weight:700;">⚠️ Thin liquidity — price impact/slippage may be extreme</div>`
       : "";
+    const suspiciousMarketWarn = rep?.meta?.suspiciousMarketPattern
+      ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(255,76,96,.11);border:1px solid rgba(255,76,96,.42);border-radius:10px;color:#ff7d8d;">
+           <div style="font-size:12px;font-weight:900;letter-spacing:.01em;">🚨 Suspicious market pattern — strong warning</div>
+           <div style="margin-top:4px;font-size:11px;line-height:1.45;color:var(--muted);">Fresh token + sharp price move + limited liquidity + incomplete holder/creator transparency. Pattern-based warning — not proof of a scam.</div>
+         </div>`
+      : "";
 
     // ✅ NEW: compact age badge for the header card — requested so the
     // token's age is visible immediately without scanning down to the
@@ -6852,6 +6897,7 @@ async function qsLiqCheckBasic(net, token, provider) {
           <div>Explorer: <a href="${qsEscapeHtml(rep.explorer)}" target="_blank" rel="noopener">open ↗</a></div>
         </div>
         ${thinLiqWarn}
+        ${suspiciousMarketWarn}
       </div>
     `;
 
