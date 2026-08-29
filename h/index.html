@@ -2923,7 +2923,7 @@ function initPanels() {
     },
     eth: {
       name: "Ethereum",
-      wrapped: "0xc02aa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      wrapped: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
       usdt:    "0xdac17f958d2ee523a2206206994597c13d831ec7",
       usdc:    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       v2Factory: "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f",
@@ -3170,7 +3170,7 @@ function initPanels() {
   function qsCacheKey(net, token, useApis){
     // Keep Solana's existing holder schema. EVM gets a new suffix so a cached
     // pre-wallet-classification report cannot hide the holder upgrade for 10m.
-    const holderSchema = net === "solana" ? ":holders-v3" : ":evm-holders-v31";
+    const holderSchema = net === "solana" ? ":holders-v3" : ":evm-holders-v31-wrapfix1";
     return `${net}:${qsLower(token)}:${useApis ? 1 : 0}${holderSchema}`;
   }
   function addQsHistory(net, token){
@@ -5825,14 +5825,32 @@ async function qsLiqCheckBasic(net, token, provider) {
     const mintImplementationBytecodeDetected = !!impl && implementationCode && implementationCode !== "0x" && anySelector(implementationCode, SEL.mint);
     const mintBytecodeDetected = mintProxyBytecodeDetected || mintImplementationBytecodeDetected;
     const mintDetected = mintBytecodeDetected || goplus?.isMintableFlag === true;
-    const mintText = mintImplementationBytecodeDetected && !mintProxyBytecodeDetected
-      ? "Detected in implementation"
-      : mintBytecodeDetected
-        ? "Detected"
-        : (goplus?.isMintableFlag === true
-          ? (goplus?.b20?.mintable ? "Possibly (GoPlus B20; not found in bytecode)" : "Possibly (flagged by GoPlus only — not found in bytecode)")
-          : "Not detected");
-    const mintOnChain = mintBytecodeDetected || goplus?.isMintableFlag !== true;
+
+    // Canonical wrapped-native tokens (WETH/WBNB/WAVAX/etc.) legitimately
+    // create wrapped supply when native coins are deposited. A provider-only
+    // "mintable" flag is therefore not equivalent to an arbitrary admin mint.
+    // We suppress ONLY provider-only mint warnings for the exact canonical
+    // wrapped address configured for this chain. Real bytecode/implementation
+    // mint selectors are never suppressed. The protected engine independently
+    // verifies the same address rule before changing scoring.
+    const isCanonicalWrappedNative = qsLower(token) === qsLower(QS_NET?.[net]?.wrapped || "");
+    const wrappedNativeProviderMintExpected = !!(
+      isCanonicalWrappedNative &&
+      !mintBytecodeDetected &&
+      goplus?.isMintableFlag === true
+    );
+    const mintRiskDetected = mintDetected && !wrappedNativeProviderMintExpected;
+
+    const mintText = wrappedNativeProviderMintExpected
+      ? "Native wrapping behavior (expected for canonical wrapped token)"
+      : mintImplementationBytecodeDetected && !mintProxyBytecodeDetected
+        ? "Detected in implementation"
+        : mintBytecodeDetected
+          ? "Detected"
+          : (goplus?.isMintableFlag === true
+            ? (goplus?.b20?.mintable ? "Possibly (GoPlus B20; not found in bytecode)" : "Possibly (flagged by GoPlus only — not found in bytecode)")
+            : "Not detected");
+    const mintOnChain = wrappedNativeProviderMintExpected ? false : (mintBytecodeDetected || goplus?.isMintableFlag !== true);
 
     // Raw supply observations only. The chain-local/global decision and
     // circulating-supply sanity rule are evaluated inside the protected engine.
@@ -5950,6 +5968,8 @@ async function qsLiqCheckBasic(net, token, provider) {
         cexListed,
         mintDetected,
         mintSource,
+        network: net,
+        tokenAddress: token,
         pausedState,
         pauseDetected,
         verified,
@@ -6172,7 +6192,7 @@ async function qsLiqCheckBasic(net, token, provider) {
       // ✅ FIX: onChain flag set per the mintOnChain rule above — true for
       // both "Detected" (bytecode) and "Not detected" (bytecode searched,
       // found nothing), false for the GoPlus-only "Possibly" case.
-      { type: mintDetected ? "bad" : "ok", title: "Mint", value: mintText, onChain: mintOnChain },
+      { type: mintRiskDetected ? "bad" : "ok", title: "Mint", value: mintText, onChain: mintOnChain },
       // ✅ FIX (real bug, not just wording): type was HARDCODED to "ok"
       // (green) regardless of pauseText's actual content — a token that IS
       // currently paused would still show a green dot next to "Detected
