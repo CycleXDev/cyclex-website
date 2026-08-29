@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3167,8 +3168,10 @@ function initPanels() {
     try { localStorage.setItem(QS_LS_HISTORY, JSON.stringify(arr || [])); } catch {}
   }
   function qsCacheKey(net, token, useApis){
-    const solanaSchema = net === "solana" ? ":holders-v3" : "";
-    return `${net}:${qsLower(token)}:${useApis ? 1 : 0}${solanaSchema}`;
+    // Keep Solana's existing holder schema. EVM gets a new suffix so a cached
+    // pre-wallet-classification report cannot hide the holder upgrade for 10m.
+    const holderSchema = net === "solana" ? ":holders-v3" : ":evm-holders-v31";
+    return `${net}:${qsLower(token)}:${useApis ? 1 : 0}${holderSchema}`;
   }
   function addQsHistory(net, token){
     try{
@@ -4031,6 +4034,189 @@ async function qsLiqCheckBasic(net, token, provider) {
     finally { _qsBlockscoutInflight.delete(k); }
   }
 
+  // EVM holder semantics: separate ordinary-wallet concentration from raw
+  // holder accounts. CEX/treasury/pool/protocol/contract rows remain useful
+  // context, but are never scored as if they were a single human whale.
+  const QS_EVM_NON_WALLET_TAG_RE = /(binance|coinbase|okx|bybit|kucoin|kraken|bitget|mexc|gate\.?io|crypto\.?com|exchange|hot\s*wallet|cold\s*wallet|custod|liquidity|\blp\b|pool|poolmanager|router|amm|dex|pair|vault|locker|vesting|escrow|staking|stake|bridge|gateway|treasury|\bdao\b|foundation|protocol|airdrop|safe|multisig|burn|dead\s*address|black\s*hole|null)/i;
+  const QS_EVM_BURN_ADDRESSES = new Set([
+    "0x0000000000000000000000000000000000000000",
+    "0x000000000000000000000000000000000000dead",
+    "0x0000000000000000000000000000000000000001"
+  ]);
+  // Holder-only Blockscout fallbacks. This is deliberately separate from
+  // QS_BLOCKSCOUT_V2 so existing Verified/Contract-Age behavior is untouched.
+  const QS_HOLDER_BLOCKSCOUT_V2 = Object.freeze({
+    eth: "https://eth.blockscout.com/api/v2",
+    polygon: "https://polygon.blockscout.com/api/v2",
+    base: "https://base.blockscout.com/api/v2",
+    arbitrum: "https://arbitrum.blockscout.com/api/v2",
+    optimism: "https://explorer.optimism.io/api/v2",
+    avalanche: "https://avalanche.blockscout.com/api/v2",
+    linea: "https://linea.blockscout.com/api/v2",
+    scroll: "https://scroll.blockscout.com/api/v2",
+    robinhood: "https://robinhoodchain.blockscout.com/api/v2"
+  });
+  const _qsEvmHolderMem = new Map();
+
+  function qsClassifyEvmHolderRow(row){
+    const addr = String(row?.address || "").toLowerCase();
+    const tagText = String(row?.tagText || "");
+    if (QS_EVM_BURN_ADDRESSES.has(addr) || QS_EVM_NON_WALLET_TAG_RE.test(tagText)) return "non_wallet";
+    if (row?.isLocked === true) return "non_wallet";
+    const v = row?.isContract;
+    if (v === true || v === 1 || v === "1") return "non_wallet";
+    if (v === false || v === 0 || v === "0") return "wallet";
+    return "unknown";
+  }
+
+  function qsAnalyzeEvmHolderRows(rows, source, holderCount = null){
+    const clean = (Array.isArray(rows) ? rows : [])
+      .map(r => ({ ...r, pct: Number(r?.pct) }))
+      .filter(r => Number.isFinite(r.pct) && r.pct >= 0)
+      .sort((a,b) => b.pct - a.pct)
+      .slice(0, 50)
+      .map(r => ({ ...r, holderType: qsClassifyEvmHolderRow(r) }));
+    if (!clean.length) return null;
+    const trackedCount = clean.length;
+    const classifiedCount = clean.filter(r => r.holderType !== "unknown").length;
+    // Conservative rule: call a Largest Wallet Holder "confirmed" only when
+    // every row in the fetched holder window was classifiable.
+    const holderAnalysisReliable = classifiedCount === trackedCount;
+    const walletRows = clean.filter(r => r.holderType === "wallet").sort((a,b)=>b.pct-a.pct);
+    const rawTopHolderAccountPct = clean[0]?.pct ?? null;
+    const rawTop10HolderAccountsPct = clean.slice(0,10).reduce((a,r)=>a+r.pct,0);
+    const walletTopHolderPct = holderAnalysisReliable ? (walletRows[0]?.pct ?? null) : null;
+    // Ten raw rows are NOT the same as ten wallet rows. Claim exact Top-10
+    // wallet concentration only when ten classified wallet rows are present.
+    const walletTop10Reliable = holderAnalysisReliable && walletRows.length >= 10;
+    const walletTop10Pct = walletTop10Reliable ? walletRows.slice(0,10).reduce((a,r)=>a+r.pct,0) : null;
+    return {
+      source: String(source || "holder source"),
+      holderCount: Number.isFinite(Number(holderCount)) && Number(holderCount) > 0 ? Math.trunc(Number(holderCount)) : null,
+      trackedCount, classifiedCount, holderAnalysisReliable, walletTop10Reliable,
+      walletTopHolderPct, walletTop10Pct, rawTopHolderAccountPct, rawTop10HolderAccountsPct
+    };
+  }
+
+  function qsPctRawEvm(valueRaw, totalRaw){
+    try {
+      const v = BigInt(String(valueRaw || "0"));
+      const t = BigInt(String(totalRaw || "0"));
+      if (v < 0n || t <= 0n) return null;
+      const scale = 1000000n;
+      return Number((v * 100n * scale) / t) / Number(scale);
+    } catch { return null; }
+  }
+
+  async function qsFetchJsonTimeout(url, timeoutMs = 5000){
+    const ctrl = new AbortController();
+    const tmr = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { signal:ctrl.signal, headers:{ accept:"application/json" } });
+      if (!res.ok) return null;
+      return await res.json().catch(() => null);
+    } catch { return null; }
+    finally { clearTimeout(tmr); }
+  }
+
+  async function qsFetchBlockscoutHolderAnalysis(net, token, totalSupplyBI, knownHolderCount = null){
+    const base = QS_HOLDER_BLOCKSCOUT_V2[net];
+    if (!base || !totalSupplyBI || totalSupplyBI <= 0n) return null;
+    const k = `${net}:${qsLower(token)}`;
+    const mem = _qsEvmHolderMem.get(k);
+    if (mem && Date.now() - mem.ts < 300000) return mem.value;
+
+    let publicHolderCount = Number.isFinite(Number(knownHolderCount)) && Number(knownHolderCount) > 0
+      ? Math.trunc(Number(knownHolderCount)) : null;
+    let publicAnalysis = null;
+
+    // PRIMARY: existing/public Blockscout. Nothing about Robinhood's working
+    // public path is replaced; the keyed route below is backup-only.
+    const [metaJson, holdersJson] = await Promise.all([
+      publicHolderCount == null
+        ? qsFetchJsonTimeout(`${base.replace(/\/$/, "")}/tokens/${token}`, 5000)
+        : Promise.resolve(null),
+      qsFetchJsonTimeout(`${base.replace(/\/$/, "")}/tokens/${token}/holders`, 5500)
+    ]);
+
+    if (publicHolderCount == null) {
+      const hc = Number(metaJson?.holders_count ?? metaJson?.token_holders_count);
+      if (Number.isFinite(hc) && hc > 0) publicHolderCount = Math.trunc(hc);
+    }
+    if (holdersJson && Array.isArray(holdersJson?.items)) {
+      const rows = holdersJson.items.slice(0,50).map(x => ({
+        address: String(x?.address?.hash || "").trim() || null,
+        pct: qsPctRawEvm(x?.value, totalSupplyBI),
+        isContract: x?.address?.is_contract,
+        tagText: [
+          x?.address?.name,
+          x?.address?.metadata?.name,
+          ...(Array.isArray(x?.address?.public_tags) ? x.address.public_tags.map(t => t?.display_name || t?.label || t?.name || t?.slug || t) : []),
+          ...(Array.isArray(x?.address?.private_tags) ? x.address.private_tags.map(t => t?.display_name || t?.label || t?.name || t?.slug || t) : []),
+          ...(Array.isArray(x?.address?.metadata?.tags) ? x.address.metadata.tags.map(t => t?.name || t?.slug || t?.meta?.main_entity || "") : [])
+        ].filter(Boolean).join(" ")
+      }));
+      publicAnalysis = qsAnalyzeEvmHolderRows(rows, "Blockscout", publicHolderCount);
+    }
+
+    // If public data is complete, stop here. This is the normal path.
+    if (publicAnalysis?.holderAnalysisReliable && publicHolderCount != null) {
+      publicAnalysis.holderCount = publicHolderCount;
+      _qsEvmHolderMem.set(k, { ts:Date.now(), value:publicAnalysis });
+      return publicAnalysis;
+    }
+
+    // BACKUP: Robinhood only. The API Worker stores BLOCKSCOUT_API_KEY as a
+    // secret and calls Blockscout PRO server-to-server. The key never enters
+    // this HTML/browser. Use only to fill data the public path could not supply.
+    if (net === "robinhood") {
+      try {
+        const ctrl = new AbortController();
+        const tmr = setTimeout(() => ctrl.abort(), 8000);
+        try {
+          const res = await fetch(`${QS_API_BASE}/api/blockscoutHolderBackup?net=robinhood&token=${encodeURIComponent(token)}`, {
+            signal:ctrl.signal, headers:{ accept:"application/json" }
+          });
+          if (res.ok) {
+            const j = await res.json().catch(() => null);
+            if (j && !j.error) {
+              const num = v => { if (v === null || v === undefined || v === "") return null; const n=Number(v); return Number.isFinite(n) ? n : null; };
+              const backup = {
+                source: "Blockscout",
+                holderCount: num(j.holderCount) ?? publicHolderCount,
+                trackedCount: num(j.trackedCount) || 0,
+                classifiedCount: num(j.classifiedCount) || 0,
+                holderAnalysisReliable: j.holderAnalysisReliable === true,
+                walletTop10Reliable: j.walletTop10Reliable === true,
+                walletTopHolderPct: num(j.walletTopHolderPct),
+                walletTop10Pct: num(j.walletTop10Pct),
+                rawTopHolderAccountPct: num(j.rawTopHolderAccountPct),
+                rawTop10HolderAccountsPct: num(j.rawTop10HolderAccountsPct)
+              };
+              // Prefer backup rows when they are better; otherwise keep public
+              // classification and only fill the missing holder count.
+              const value = backup.holderAnalysisReliable
+                ? backup
+                : (publicAnalysis ? { ...publicAnalysis, holderCount: publicHolderCount ?? backup.holderCount } : backup);
+              _qsEvmHolderMem.set(k, { ts:Date.now(), value });
+              return value;
+            }
+          }
+        } finally { clearTimeout(tmr); }
+      } catch (e) {
+        console.warn("Robinhood Blockscout PRO backup unavailable:", e?.message || e);
+      }
+    }
+
+    const partial = publicAnalysis || (publicHolderCount != null ? {
+      source:"Blockscout", holderCount:publicHolderCount, trackedCount:0, classifiedCount:0,
+      holderAnalysisReliable:false, walletTop10Reliable:false, walletTopHolderPct:null,
+      walletTop10Pct:null, rawTopHolderAccountPct:null, rawTop10HolderAccountsPct:null
+    } : null);
+    if (partial) _qsEvmHolderMem.set(k, { ts:Date.now(), value:partial });
+    return partial;
+  }
+
   async function qsFetchContractAge(net, token, apiKey) {
     try {
       // Public Blockscout profile path — no user key required.
@@ -4476,14 +4662,27 @@ async function qsLiqCheckBasic(net, token, provider) {
       };
 
       const holdersArr = Array.isArray(d?.holders) ? d.holders : [];
-      const topHolderPct = holdersArr.length ? gpNum(holdersArr[0]?.percent) : null;
-      const top10Pct = holdersArr.length ? holdersArr.slice(0, 10).reduce((acc, h) => acc + (gpNum(h?.percent) || 0), 0) : null;
+      // GoPlus documents holder.percent as a 0..1 fraction (1 = 100%).
+      const topHolderPct = holdersArr.length ? gpPct100(holdersArr[0]?.percent) : null;
+      const top10Pct = holdersArr.length ? holdersArr.slice(0, 10).reduce((acc, h) => acc + (gpPct100(h?.percent) || 0), 0) : null;
 
       // v21 parity: holder_count=0 from an indexer means "not indexed yet",
       // not proof that a traded token literally has zero holders.
       const holderCountRaw = gpNum(d.holder_count);
       const holderCount = holderCountRaw != null && holderCountRaw > 0 ? holderCountRaw : null;
       const holderCountUnindexed = holderCountRaw === 0;
+
+      // Reuse metadata already present in the SAME GoPlus response — no extra
+      // request. This is what lets all EVM chains distinguish wallets from
+      // contracts/CEX/pools where GoPlus has enough classification metadata.
+      const holderAnalysis = qsAnalyzeEvmHolderRows(holdersArr.map(h => ({
+        address: String(h?.address || "").trim() || null,
+        pct: gpPct100(h?.percent),
+        isContract: h?.is_contract === "1" || h?.is_contract === 1
+          ? true : (h?.is_contract === "0" || h?.is_contract === 0 ? false : null),
+        isLocked: h?.is_locked === "1" || h?.is_locked === 1,
+        tagText: [h?.tag, h?.address_tag, h?.name, h?.label].filter(Boolean).join(" ")
+      })), "GoPlus", holderCount);
 
       // v24 parity: B20 is parsed if GoPlus returns it in this SAME response.
       // The website never embeds GoPlus secrets; if anonymous GoPlus omits B20,
@@ -4554,6 +4753,7 @@ async function qsLiqCheckBasic(net, token, provider) {
         topHolderPct,
         top10Pct,
         holdersReturned:      holdersArr.length,
+        holderAnalysis,
         lpLockedPct,
         lpTrackedPct,
         lpLockDataKnown:      lpHoldersArr.length > 0,
@@ -5689,6 +5889,46 @@ async function qsLiqCheckBasic(net, token, provider) {
       }
     }
 
+    // Prefer explicit wallet-vs-account classification when available.
+    // GoPlus is free/fast and covers every EVM chain; Blockscout is consulted
+    // only on supported chains when GoPlus cannot classify the tracked rows or
+    // holder count is still missing. Robinhood keeps its public Blockscout path
+    // first and uses the server-side PRO key only as a backup.
+    let evmHolderAnalysis = goplus?.holderAnalysis || null;
+    if (QS_HOLDER_BLOCKSCOUT_V2[net] && (!evmHolderAnalysis?.holderAnalysisReliable || rep.meta?.holderCount == null)) {
+      const bsHolderAnalysis = await qsFetchBlockscoutHolderAnalysis(net, token, totalSupplyBI, rep.meta?.holderCount ?? null);
+      if (bsHolderAnalysis) {
+        if (rep.meta?.holderCount == null && bsHolderAnalysis.holderCount != null) rep.meta.holderCount = bsHolderAnalysis.holderCount;
+        const currentTracked = Number(evmHolderAnalysis?.trackedCount || 0);
+        const backupTracked = Number(bsHolderAnalysis?.trackedCount || 0);
+        if (!evmHolderAnalysis) {
+          evmHolderAnalysis = bsHolderAnalysis;
+        } else if (bsHolderAnalysis.holderAnalysisReliable && !evmHolderAnalysis.holderAnalysisReliable) {
+          evmHolderAnalysis = bsHolderAnalysis;
+        } else if (bsHolderAnalysis.holderAnalysisReliable === evmHolderAnalysis.holderAnalysisReliable && backupTracked > currentTracked) {
+          evmHolderAnalysis = bsHolderAnalysis;
+        }
+      }
+    }
+
+    const evmRawTopHolderAccountPct = evmHolderAnalysis?.rawTopHolderAccountPct ?? gpTopHolderPct ?? null;
+    const evmRawTop10HolderAccountsPct = evmHolderAnalysis?.rawTop10HolderAccountsPct ?? gpTop10Pct ?? null;
+    const evmHolderAnalysisReliable = evmHolderAnalysis?.holderAnalysisReliable === true;
+    const evmWalletTopHolderPct = evmHolderAnalysisReliable ? (evmHolderAnalysis?.walletTopHolderPct ?? null) : null;
+    const evmWalletTop10Reliable = evmHolderAnalysis?.walletTop10Reliable === true;
+    const evmWalletTop10Pct = evmWalletTop10Reliable ? (evmHolderAnalysis?.walletTop10Pct ?? null) : null;
+    rep.meta.evmHolderAnalysis = evmHolderAnalysis ? {
+      source: evmHolderAnalysis.source || null,
+      trackedCount: evmHolderAnalysis.trackedCount ?? null,
+      classifiedCount: evmHolderAnalysis.classifiedCount ?? null,
+      holderAnalysisReliable: evmHolderAnalysisReliable,
+      walletTop10Reliable: evmWalletTop10Reliable,
+      walletTopHolderPct: evmWalletTopHolderPct,
+      walletTop10Pct: evmWalletTop10Pct,
+      rawTopHolderAccountPct: evmRawTopHolderAccountPct,
+      rawTop10HolderAccountsPct: evmRawTop10HolderAccountsPct
+    } : null;
+
     const cexListed = !!rep.meta?.cexListed;
     const liquidityUsdForScore = Number(rep?.meta?.liquidityUsdEst);
     const dsMarket = rep?.meta?.dexscreener || null;
@@ -5734,6 +5974,16 @@ async function qsLiqCheckBasic(net, token, provider) {
         totalSupplyUi,
         cgCirculating: Number.isFinite(cgCirculating) ? cgCirculating : null,
         gtCirculating: Number.isFinite(gtCirculating) ? gtCirculating : null,
+        // Raw account concentration is context only. Wallet concentration is
+        // scored only when the tracked top-holder rows were explicitly classified.
+        rawTopHolderAccountPct: evmRawTopHolderAccountPct,
+        rawTop10HolderAccountsPct: evmRawTop10HolderAccountsPct,
+        walletTopHolderPct: evmWalletTopHolderPct,
+        walletTop10Pct: evmWalletTop10Pct,
+        holderAnalysisReliable: evmHolderAnalysisReliable,
+        walletTop10Reliable: evmWalletTop10Reliable,
+        // legacy fields retained for engine/client compatibility, but the new
+        // engine treats them as raw account context rather than wallet proof.
         gpTopHolderPct,
         gpTop10Pct,
         lpBurnInfo: lpBurnInfo ? { isBurned: !!lpBurnInfo.isBurned, burnedPct: lpBurnInfo.burnedPct ?? null } : null,
@@ -5862,17 +6112,32 @@ async function qsLiqCheckBasic(net, token, provider) {
         title: "Global Circulating Supply",
         value: `${globalCirculatingSupplyText} (${globalCirculatingSource || "external"}, not chain-local)`
       }] : []),
-      // ✅ NEW: top-holder chip (distinct from owner-only concentration above).
-      // Not tagged on-chain — this is GoPlus's off-chain holders data.
-      ...(gpTopHolderPct != null ? [{
-        type: gpTopHolderPct >= 30 ? "bad" : gpTopHolderPct >= 15 ? "warn" : "ok",
-        title: "Top Holder",
-        value: `${gpTopHolderPct.toFixed(1)}% (GoPlus data, may incl. LP)`
+      // Wallet-level concentration is distinct from raw holder-account
+      // concentration. Pools/CEX/treasuries/protocol contracts stay visible as
+      // context but are not mislabeled as a single human wallet.
+      ...(evmHolderAnalysis ? [{
+        type: !evmHolderAnalysisReliable ? "warn" : evmWalletTopHolderPct >= 30 ? "bad" : evmWalletTopHolderPct >= 15 ? "warn" : "ok",
+        title: "Largest Wallet Holder",
+        value: evmHolderAnalysisReliable && evmWalletTopHolderPct != null
+          ? `${evmWalletTopHolderPct.toFixed(1)}% (${Number(evmHolderAnalysis.classifiedCount||0)}/${Number(evmHolderAnalysis.trackedCount||0)} tracked classified via ${evmHolderAnalysis.source || "source"})`
+          : evmHolderAnalysisReliable
+            ? `Unknown (${Number(evmHolderAnalysis.classifiedCount||0)}/${Number(evmHolderAnalysis.trackedCount||0)} tracked classified; no ordinary wallet in tracked window)`
+            : "Unknown (holder-account classification incomplete)"
       }] : []),
-      ...(gpTop10Pct != null ? [{
-        type: gpTop10Pct >= 80 ? "bad" : gpTop10Pct >= 60 ? "bad" : gpTop10Pct >= 40 ? "warn" : "ok",
-        title: "Top 10 Holders",
-        value: `${gpTop10Pct.toFixed(1)}% (GoPlus data, may incl. LP)`
+      ...(evmHolderAnalysis ? [{
+        type: evmWalletTop10Pct == null ? "warn" : evmWalletTop10Pct >= 80 ? "bad" : evmWalletTop10Pct >= 60 ? "bad" : evmWalletTop10Pct >= 40 ? "warn" : "ok",
+        title: "Top 10 Wallet Holders",
+        value: evmWalletTop10Pct != null ? `${evmWalletTop10Pct.toFixed(1)}%` : "Unknown (not enough classified wallet rows)"
+      }] : []),
+      ...(evmRawTopHolderAccountPct != null ? [{
+        type: evmRawTopHolderAccountPct >= 50 ? "warn" : "ok",
+        title: "Largest Holder Account",
+        value: `${evmRawTopHolderAccountPct.toFixed(1)}% (may be CEX/treasury/pool/protocol)`
+      }] : []),
+      ...(evmRawTop10HolderAccountsPct != null ? [{
+        type: evmRawTop10HolderAccountsPct >= 80 ? "warn" : "ok",
+        title: "Top 10 Holder Accounts",
+        value: `${evmRawTop10HolderAccountsPct.toFixed(1)}% (may include non-wallet accounts)`
       }] : []),
       {
         type: !rep.liq?.any ? "warn" : liqQuality === "tiny" ? "bad" : liqQuality === "low" ? "bad" : liqQuality === "medium" ? "warn" : "ok",
@@ -5922,7 +6187,7 @@ async function qsLiqCheckBasic(net, token, provider) {
         // ✅ NEW: show 24h CEX volume when available, not just yes/no.
         value: cexListed
           ? `${rep.meta?.cexExchanges?.length ? rep.meta.cexExchanges.slice(0,3).join(", ") : "Yes"}${rep.meta?.cexVolume24hUsd ? ` (~$${Math.round(rep.meta.cexVolume24hUsd).toLocaleString()}/24h)` : ""}`
-          : "Not found"
+          : "Not found in tracked sources"
       },
       // ✅ NEW: onChain:true — real deployment block timestamp (explorer's
       // txHash → eth_getTransactionByHash → eth_getBlockByNumber), a
@@ -6013,6 +6278,10 @@ async function qsLiqCheckBasic(net, token, provider) {
           type: goplus.buyTax == null ? "warn" : (() => { const bt2 = goplus.buyTax; if (bt2 > 0.15) return "bad"; if (bt2 > 0.05) return "warn"; return "ok"; })(),
           title: "Buy Tax", value: goplus.buyTax != null ? `${(goplus.buyTax * 100).toFixed(1)}%` : "Unknown"
         },
+        ...(Array.isArray(goplus?.poolFeesPct) && goplus.poolFeesPct.length ? [{
+          type: "ok", title: "DEX Pool Fee",
+          value: goplus.poolFeesPct.slice(0,4).map(v => `${Number(v).toFixed(Number(v)>=1?2:3).replace(/\.?0+$/, "")}%`).join(", ")
+        }] : []),
         ...(goplus?.b20?.available ? [{
           type:(goplus.b20.ownerChangeBalance || goplus.b20.cannotSell) ? "bad" : (goplus.b20.whitelist || goplus.b20.metadataModifiable || goplus.b20.cannotBuy) ? "warn" : "ok",
           title:"Advanced Controls (B20)",
@@ -6325,6 +6594,7 @@ async function qsLiqCheckBasic(net, token, provider) {
     rep.meta.tradingAgeDays = solAgeDays;
     rep.meta.dataBlackout = dataBlackout;
     rep.meta.suspiciousMarketPattern = secureEval.suspiciousMarketPattern === true;
+    rep.meta.suspiciousMarketReason = secureEval.suspiciousMarketReason || null;
     rep.meta.secureEngine = secureEval.version || "protected";
     rep.meta.goplusRaw = gp?.raw || null;
     rep.meta.holdersReturned = solHolders?.holderCount ?? gp?.holdersReturned ?? null;
@@ -6599,7 +6869,7 @@ async function qsLiqCheckBasic(net, token, provider) {
         type: cex?.listed?"ok":"warn", title: "CEX Listed",
         value: cex?.listed
           ? `${cex.exchanges.slice(0,3).join(", ")||"Yes"}${rep.meta?.cexVolume24hUsd ? ` (~$${Math.round(rep.meta.cexVolume24hUsd).toLocaleString()}/24h)` : ""}`
-          : "Not found"
+          : "Not found in tracked sources"
       },
 
       ...(solAgeDays != null ? [{
@@ -6798,9 +7068,9 @@ async function qsLiqCheckBasic(net, token, provider) {
       set("review", c.adminTitle, c.adminWhy);
     } else if (/extreme concentration|very few holders/.test(l)) {
       set("high", c.concentrationTitle, c.concentrationWhy);
-    } else if (/token-account concentration|top token accounts/.test(l)) {
-      // Raw Solana token-account concentration may be a pool/PDA/vault, so
-      // do not explain it as if a small number of human wallets were proven.
+    } else if (/token-account concentration|top token accounts|holder-account concentration|holder accounts/.test(l)) {
+      // Raw account concentration may be a pool/PDA/vault/CEX/protocol, so do
+      // not explain it as if a small number of human wallets were proven.
       set("context", c.genericTitle, c.genericWhy);
     } else if (/largest confirmed wallet|top 10 confirmed wallets|top holder|top holders|owner wallet concentration|owner\/dev wallet holds|dev\/creator wallet holds|few holders/.test(l)) {
       set("review", c.concentrationTitle, c.concentrationWhy);
@@ -6857,9 +7127,10 @@ async function qsLiqCheckBasic(net, token, provider) {
     const suspiciousMarketWarn = rep?.meta?.suspiciousMarketPattern
       ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(255,76,96,.11);border:1px solid rgba(255,76,96,.42);border-radius:10px;color:#ff7d8d;">
            <div style="font-size:12px;font-weight:900;letter-spacing:.01em;">🚨 Suspicious market pattern — strong warning</div>
-           <div style="margin-top:4px;font-size:11px;line-height:1.45;color:var(--muted);">Fresh token + sharp price move + limited liquidity + incomplete holder/creator transparency. Pattern-based warning — not proof of a scam.</div>
+           <div style="margin-top:4px;font-size:11px;line-height:1.45;color:var(--muted);">Fresh token + sharp price move + limited liquidity + ${qsEscapeHtml(rep?.meta?.suspiciousMarketPatternDetail || "incomplete transparency")}. Pattern-based warning — not proof of a scam.</div>
          </div>`
       : "";
+    const scoreReasonSuffix = rep?.meta?.scoreReasonSuffix ? ` — ${qsEscapeHtml(rep.meta.scoreReasonSuffix)}` : "";
 
     // ✅ NEW: compact age badge for the header card — requested so the
     // token's age is visible immediately without scanning down to the
@@ -6883,7 +7154,7 @@ async function qsLiqCheckBasic(net, token, provider) {
       <div class="qs-result-card">
         <div class="qs-result-name">
           ${qsEscapeHtml(sym)}${qsEscapeHtml(nm)}
-          <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}</span>
+          <span class="qs-score-badge ${scoreCls}">${score}/100 · ${qsEscapeHtml(rep.overallText)}${scoreReasonSuffix}</span>
         </div>
         <div class="qs-result-meta">
           <div>Network: <b>${qsEscapeHtml(rep.chainName || rep.net)}</b>${ageBadgeHtml}</div>
