@@ -6915,7 +6915,9 @@ async function passBuyFlow(kind) {
 
     const from = window.wallet.address;
     setPassStatus("Switching to BSC…", "#a87eff");
-    const chainOk = await fwEnsureBsc(rawProvider);
+    // PASS sale is always on BNB Smart Chain, regardless of the network scanned in Firewall.
+    // Use the generic chain switcher directly so other multi-chain revoke flows remain untouched.
+    const chainOk = await fwEnsureChain("bsc", rawProvider);
     if (!chainOk) { setPassStatus("Please switch to BNB Chain.", "#ff9a6b"); return; }
 
     // ── BNB payment ──────────────────────────────────────────────
