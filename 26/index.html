@@ -469,60 +469,249 @@
   @media(prefers-reduced-motion:reduce){.cx-deep-shell *{animation:none!important;transition:none!important}}
 
 
-  /* ── DEEP INTELLIGENCE VISIBILITY v1.2.1 ───────────────
-     Keep Quick Scan instant, but place the protected evidence layer
-     directly in the Results flow where users naturally look next. */
-  #panel-quick .qs-results-card{min-width:0}
-  #panel-quick .qs-results-card .cx-deep-shell{
-    margin:14px 0 16px;padding:19px 20px 18px;border-radius:18px;
+  /* ── QUICK SCAN WORKSPACE v1.3 ───────────────────
+     Scan controls span the full width, the token summary sits immediately
+     below, then Deep Intelligence and the fast risk evidence become two
+     equal-status workspaces. */
+  #panel-quick{
+    max-width:1280px;
+    padding:24px 26px 26px;
+  }
+  #panel-quick .panel-head{
+    margin-bottom:16px;
+    padding-bottom:14px;
+  }
+
+  .qs-scan-console{
+    border:1px solid rgba(255,255,255,.09);
+    border-radius:18px;
+    padding:16px;
+    background:
+      radial-gradient(420px 180px at 10% 0%,rgba(0,229,255,.055),transparent 72%),
+      rgba(255,255,255,.025);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+  }
+  .qs-scan-row{
+    display:grid;
+    grid-template-columns:minmax(180px,220px) minmax(320px,1fr) 160px;
+    gap:10px;
+    align-items:end;
+  }
+  .qs-scan-row .field{margin:0;min-width:0}
+  .qs-scan-field .label{margin-bottom:6px}
+  .qs-scan-row select,.qs-scan-row input{height:42px}
+  .qs-scan-btn-wrap{display:flex;align-items:stretch}
+  .qs-scan-btn-wrap .btn{width:100%;height:42px;padding-inline:18px}
+
+  .qs-share-row{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:7px;
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px solid rgba(255,255,255,.055);
+  }
+  .qs-share-row .btn{
+    flex:0 1 auto;
+    min-width:118px;
+    padding:7px 12px;
+    font-size:10px;
+    letter-spacing:.055em;
+  }
+  .qs-json-inline{
+    margin-inline-start:auto;
+    min-height:30px;
+    padding:0 4px;
+  }
+  .qs-json-inline .small{font-size:10.5px}
+
+  .qs-advanced{
+    margin-top:10px;
+    border:1px solid rgba(255,255,255,.075);
+    border-radius:12px;
+    background:rgba(255,255,255,.018);
+    overflow:hidden;
+  }
+  .qs-advanced > summary{
+    list-style:none;
+    cursor:pointer;
+    user-select:none;
+    padding:9px 11px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    color:rgba(244,246,255,.58);
+    font-size:10.5px;
+    font-weight:800;
+    letter-spacing:.055em;
+    text-transform:uppercase;
+  }
+  .qs-advanced > summary::-webkit-details-marker{display:none}
+  .qs-advanced > summary::after{
+    content:"+";
+    font-family:var(--mono);
+    font-size:13px;
+    color:rgba(0,229,255,.7);
+  }
+  .qs-advanced[open] > summary{
+    color:rgba(0,229,255,.9);
+    border-bottom:1px solid rgba(255,255,255,.055);
+  }
+  .qs-advanced[open] > summary::after{content:"−"}
+  .qs-advanced-body{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:10px;
+    padding:11px;
+  }
+  .qs-advanced-body .field,.qs-advanced-body .api-block{margin:0}
+  .qs-advanced-body .api-block{height:100%}
+
+  #qs-status{
+    margin-top:10px!important;
+    padding:9px 12px;
+    font-size:11px;
+  }
+
+  .qs-summary-wrap{
+    margin:14px 0 16px;
+  }
+  .qs-summary-wrap #qs-out{margin:0!important}
+  .qs-summary-wrap .qs-result-card{
+    margin:0;
+    padding:17px 20px;
+    border-color:rgba(0,229,255,.24);
+    box-shadow:0 12px 32px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.035);
+  }
+  .qs-summary-wrap .qs-result-name{font-size:21px}
+  .qs-summary-wrap .qs-result-meta{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:5px 18px;
+    line-height:1.55;
+  }
+  .qs-summary-wrap .qs-result-meta > div{min-width:0}
+  .qs-summary-wrap .qs-result-meta .mono{word-break:break-all}
+
+  .qs-analysis-layout{
+    display:grid;
+    grid-template-columns:minmax(390px,.86fr) minmax(0,1.14fr);
+    gap:16px;
+    align-items:start;
+  }
+  .qs-intel-column,.qs-evidence-column{min-width:0}
+  .qs-evidence-column{
+    border:1px solid rgba(255,255,255,.085);
+    border-radius:18px;
+    padding:18px;
+    background:
+      radial-gradient(500px 220px at 100% 0%,rgba(124,92,255,.045),transparent 72%),
+      rgba(255,255,255,.024);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+  }
+  .qs-results-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    padding-bottom:12px;
+    margin-bottom:12px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .qs-results-head h3{
+    margin:0 0 3px;
+    font-size:12px;
+  }
+  .qs-results-head .small{font-size:10px;max-width:52ch}
+
+  .qs-intel-column .cx-deep-shell{
+    margin:0;
+    padding:20px;
+    border-radius:19px;
     border-color:rgba(0,229,255,.34);
     background:
-      radial-gradient(460px 230px at 8% 0%,rgba(0,229,255,.13),transparent 68%),
-      radial-gradient(520px 260px at 100% 100%,rgba(124,92,255,.13),transparent 70%),
-      linear-gradient(145deg,rgba(5,16,27,.94),rgba(8,10,25,.92));
-    box-shadow:0 18px 54px rgba(0,0,0,.34),0 0 0 1px rgba(0,229,255,.04),inset 0 1px 0 rgba(255,255,255,.055);
+      radial-gradient(480px 250px at 7% 0%,rgba(0,229,255,.14),transparent 68%),
+      radial-gradient(520px 280px at 100% 100%,rgba(124,92,255,.14),transparent 70%),
+      linear-gradient(145deg,rgba(5,16,27,.96),rgba(8,10,25,.94));
+    box-shadow:0 20px 60px rgba(0,0,0,.38),0 0 0 1px rgba(0,229,255,.035),inset 0 1px 0 rgba(255,255,255,.055);
   }
-  #panel-quick .qs-results-card .cx-deep-shell[data-state="running"]{
-    border-color:rgba(0,229,255,.52);
-    box-shadow:0 20px 62px rgba(0,0,0,.38),0 0 34px rgba(0,229,255,.10),inset 0 1px 0 rgba(255,255,255,.06);
+  .qs-intel-column .cx-deep-shell[data-state="running"]{
+    border-color:rgba(0,229,255,.56);
+    box-shadow:0 22px 66px rgba(0,0,0,.42),0 0 38px rgba(0,229,255,.105),inset 0 1px 0 rgba(255,255,255,.06);
   }
-  #panel-quick .qs-results-card .cx-deep-title{font-size:17px;letter-spacing:-.01em}
-  #panel-quick .qs-results-card .cx-deep-kicker{font-size:9px;letter-spacing:.20em}
-  #panel-quick .qs-results-card .cx-deep-sub{font-size:11.5px;max-width:62ch;color:rgba(244,246,255,.58)}
-  #panel-quick .qs-results-card .cx-deep-badge{font-size:8.5px;padding:5px 9px}
-  #panel-quick .qs-results-card .cx-deep-radar-row{grid-template-columns:88px minmax(0,1fr);gap:16px;margin-top:16px}
-  #panel-quick .qs-results-card .cx-deep-radar{width:84px;height:84px}
-  #panel-quick .qs-results-card .cx-deep-radar-ring.r1{width:78px;height:78px}
-  #panel-quick .qs-results-card .cx-deep-radar-ring.r2{width:57px;height:57px}
-  #panel-quick .qs-results-card .cx-deep-radar-ring.r3{width:34px;height:34px}
-  #panel-quick .qs-results-card .cx-deep-radar-sweep{left:42px;top:42px;width:39px}
-  #panel-quick .qs-results-card .cx-deep-current-stage{font-size:12.5px;min-height:34px}
-  #panel-quick .qs-results-card .cx-deep-progress{height:6px}
-  #panel-quick .qs-results-card .cx-deep-stages{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 8px;margin-top:14px}
-  #panel-quick .qs-results-card .cx-deep-stage{padding:7px 9px;font-size:9.8px;border-color:rgba(255,255,255,.065)}
-  #panel-quick .qs-results-card .cx-deep-verdict{padding:12px 13px}
-  #panel-quick .qs-results-card .cx-deep-verdict-title{font-size:12.5px}
-  #panel-quick .qs-results-card .cx-deep-note{font-size:9.5px}
-  #panel-quick .qs-results-card .cx-deep-signal{padding:10px 11px}
-  #panel-quick .qs-results-card .cx-deep-signal-title{font-size:10.5px}
-  #panel-quick .qs-results-card .cx-deep-signal-detail{font-size:9.4px}
-  #panel-quick .qs-results-card .cx-deep-details summary{padding:10px 11px;font-size:10px}
-  #panel-quick .qs-results-card .cx-deep-kv{font-size:9.2px}
-  #panel-quick .qs-results-card .cx-deep-v.mono{font-size:8.7px}
-  #panel-quick .qs-results-card .cx-deep-action{padding:9px 11px;font-size:9.5px}
-  @media(max-width:900px){
-    #panel-quick .qs-results-card .cx-deep-shell{margin-top:14px;padding:16px}
-    #panel-quick .qs-results-card .cx-deep-radar-row{grid-template-columns:72px minmax(0,1fr)}
-    #panel-quick .qs-results-card .cx-deep-radar{width:68px;height:68px}
-    #panel-quick .qs-results-card .cx-deep-radar-ring.r1{width:64px;height:64px}
-    #panel-quick .qs-results-card .cx-deep-radar-ring.r2{width:47px;height:47px}
-    #panel-quick .qs-results-card .cx-deep-radar-ring.r3{width:28px;height:28px}
-    #panel-quick .qs-results-card .cx-deep-radar-sweep{left:34px;top:34px;width:31px}
+  .qs-intel-column .cx-deep-title{font-size:18px;letter-spacing:-.012em}
+  .qs-intel-column .cx-deep-kicker{font-size:9px;letter-spacing:.20em}
+  .qs-intel-column .cx-deep-sub{font-size:11.5px;line-height:1.5;color:rgba(244,246,255,.59)}
+  .qs-intel-column .cx-deep-badge{font-size:8.5px;padding:5px 9px}
+  .qs-intel-column .cx-deep-radar-row{grid-template-columns:92px minmax(0,1fr);gap:16px;margin-top:17px}
+  .qs-intel-column .cx-deep-radar{width:88px;height:88px}
+  .qs-intel-column .cx-deep-radar-ring.r1{width:82px;height:82px}
+  .qs-intel-column .cx-deep-radar-ring.r2{width:60px;height:60px}
+  .qs-intel-column .cx-deep-radar-ring.r3{width:36px;height:36px}
+  .qs-intel-column .cx-deep-radar-sweep{left:44px;top:44px;width:41px}
+  .qs-intel-column .cx-deep-current-label{font-size:10.5px}
+  .qs-intel-column .cx-deep-current-stage{font-size:12.5px;min-height:34px}
+  .qs-intel-column .cx-deep-progress{height:6px}
+  .qs-intel-column .cx-deep-progress-meta{font-size:8.5px}
+  .qs-intel-column .cx-deep-stages{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 8px;margin-top:15px}
+  .qs-intel-column .cx-deep-stage{padding:7px 9px;font-size:9.8px;border-color:rgba(255,255,255,.065)}
+  .qs-intel-column .cx-deep-verdict{padding:12px 13px}
+  .qs-intel-column .cx-deep-verdict-title{font-size:12.5px}
+  .qs-intel-column .cx-deep-verdict-score{font-size:8.5px}
+  .qs-intel-column .cx-deep-note{font-size:9.4px}
+  .qs-intel-column .cx-deep-signal{padding:10px 11px}
+  .qs-intel-column .cx-deep-signal-title{font-size:10.5px}
+  .qs-intel-column .cx-deep-signal-detail{font-size:9.4px}
+  .qs-intel-column .cx-deep-details summary{padding:10px 11px;font-size:10px}
+  .qs-intel-column .cx-deep-kv{font-size:9.2px}
+  .qs-intel-column .cx-deep-v.mono{font-size:8.7px}
+  .qs-intel-column .cx-deep-action{padding:9px 11px;font-size:9.5px}
+
+  #panel-quick #qs-risk{margin-top:0}
+  #panel-quick #qs-redflagsWrap{margin-top:14px!important}
+  #panel-quick #qs-pairsWrap{margin-top:14px!important}
+
+  @media(min-width:1000px){
+    .qs-intel-column{
+      position:sticky;
+      top:18px;
+      align-self:start;
+    }
+  }
+  @media(max-width:980px){
+    #panel-quick{max-width:920px}
+    .qs-scan-row{grid-template-columns:190px minmax(0,1fr) 140px}
+    .qs-analysis-layout{grid-template-columns:1fr}
+    .qs-intel-column{position:static}
+    .qs-intel-column .cx-deep-shell{padding:18px}
+  }
+  @media(max-width:760px){
+    #panel-quick{padding:20px 16px}
+    .qs-scan-console{padding:13px}
+    .qs-scan-row{grid-template-columns:1fr}
+    .qs-scan-btn-wrap .btn{height:40px}
+    .qs-share-row{display:grid;grid-template-columns:1fr 1fr}
+    .qs-share-row .btn{width:100%;min-width:0}
+    .qs-json-inline{grid-column:1/-1;margin-inline-start:0}
+    .qs-advanced-body{grid-template-columns:1fr}
+    .qs-summary-wrap .qs-result-meta{display:block}
+    .qs-analysis-layout{gap:12px}
+    .qs-evidence-column{padding:14px}
+    .qs-intel-column .cx-deep-radar-row{grid-template-columns:72px minmax(0,1fr)}
+    .qs-intel-column .cx-deep-radar{width:68px;height:68px}
+    .qs-intel-column .cx-deep-radar-ring.r1{width:64px;height:64px}
+    .qs-intel-column .cx-deep-radar-ring.r2{width:47px;height:47px}
+    .qs-intel-column .cx-deep-radar-ring.r3{width:28px;height:28px}
+    .qs-intel-column .cx-deep-radar-sweep{left:34px;top:34px;width:31px}
   }
   @media(max-width:520px){
-    #panel-quick .qs-results-card .cx-deep-title{font-size:15px}
-    #panel-quick .qs-results-card .cx-deep-sub{font-size:10.5px}
-    #panel-quick .qs-results-card .cx-deep-stages{grid-template-columns:1fr}
+    .qs-share-row{grid-template-columns:1fr}
+    .qs-intel-column .cx-deep-title{font-size:16px}
+    .qs-intel-column .cx-deep-sub{font-size:10.5px}
+    .qs-intel-column .cx-deep-stages{grid-template-columns:1fr}
   }
 
   /* ── QUICK SCAN RESULT CARD ──────────────────── */
@@ -1065,10 +1254,11 @@
           <button class="btn-close-modal" id="btnCloseQuick" aria-label="Close">✕</button>
         </div>
       </div>
-      <div class="grid-2">
-        <div class="card qs-input-card">
-          <!-- Network + Address -->
-          <div class="field">
+
+      <!-- Full-width scan console -->
+      <div class="qs-scan-console">
+        <div class="qs-scan-row">
+          <div class="field qs-scan-field">
             <div class="label" data-i18n="net_label">Network</div>
             <select id="qs-net">
               <option value="bsc">BSC (BNB Chain)</option>
@@ -1085,79 +1275,75 @@
               <option value="solana">Solana</option>
             </select>
           </div>
-          <div class="field">
+          <div class="field qs-scan-field">
             <div class="label" data-i18n="addr_label">Token address</div>
             <input id="qs-token" class="mono" placeholder="0x..." />
           </div>
-
-          <!-- ✅ NEW: optional custom Solana RPC — only shown for net=solana.
-               Public Solana RPCs are unreliable for direct browser use (see
-               qsBindSolanaApiBlockToggle below); this gives visitors who
-               want stronger reliability a place to paste their own, e.g. a
-               free Helius API key endpoint. Falls back to the built-in
-               public endpoint automatically if left empty. -->
-          <div class="field" id="qs-solana-rpc-field" style="display:none">
-            <div class="label">Solana RPC <span class="label-muted">(optional — improves reliability, e.g. a free Helius key)</span></div>
-            <div class="input-btn-row">
-              <input id="qs-solana-rpc" class="mono" placeholder="https://mainnet.helius-rpc.com/?api-key=... (optional)" />
-              <button class="btn btn-ghost" id="qs-solana-rpc-save" style="padding:8px 10px;font-size:11px;flex-shrink:0">Save</button>
-            </div>
+          <div class="qs-scan-btn-wrap">
+            <button class="btn btn-primary" id="qs-run" data-i18n="btn_scan">Scan</button>
           </div>
-
-          <!-- API Keys: toggle+select on row 1, input+save on row 2 -->
-          <div class="api-block">
-            <div class="api-block-row1">
-              <label class="toggle">
-                <input type="checkbox" id="api-use">
-                <span class="small">🔑 Explorer API</span>
-              </label>
-              <select id="api-key-select" class="mono api-net-sel">
-                <option value="bscscan">BscScan</option>
-                <option value="unified">Unified</option>
-                <option value="etherscan">Etherscan</option>
-              </select>
-            </div>
-            <div class="api-block-row2">
-              <input id="api-bscscan" class="mono" placeholder="Paste API key…" />
-              <input id="api-unified" class="mono" placeholder="Paste API key…" style="display:none" />
-              <input id="api-etherscan" class="mono" placeholder="Paste API key…" style="display:none" />
-              <button class="btn btn-ghost api-sm-btn" id="api-save">Save</button>
-              <button class="btn btn-ghost api-sm-btn" id="api-clear">×</button>
-            </div>
-          </div>
-
-          <!-- SCAN full-width -->
-          <div style="margin-top:14px">
-            <button class="btn btn-primary rpc-full-btn" id="qs-run" data-i18n="btn_scan">Scan</button>
-          </div>
-          <!-- Secondary: 2-col grid -->
-          <div class="qs-btns-grid">
-            <button class="btn btn-ghost" id="qs-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
-            <button class="btn btn-ghost" id="qs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
-            <button class="btn btn-ghost" id="qs-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
-            <button class="btn btn-ghost" id="qs-share-x" data-i18n="btn_share_x">Share to X</button>
-            <button class="btn btn-ghost" id="qs-share-tg" data-i18n="btn_share_tg">Share to Telegram</button>
-            <button class="btn btn-ghost" id="qs-copy-xtext" data-i18n="btn_copy_xtext">Copy X Text</button>
-          </div>
-          <div style="margin-top:6px;display:flex;align-items:center;gap:6px">
-            <label class="toggle">
-              <input type="checkbox" id="qs-show-json" checked>
-              <span class="small" data-i18n="opt_show_json">Enable JSON report</span>
-            </label>
-          </div>
-          <div id="qs-status" class="status info" style="margin-top:10px;"></div>
-
         </div>
-        <div class="card qs-results-card">
-          <h3 data-i18n="results_title">Results</h3>
-          <div class="small" data-i18n="results_hint">Green / Yellow / Red signals. Not a guarantee — just verifiable on-chain checks.</div>
-          <div id="qs-out" class="status info" style="display:block;margin-top:10px;" data-i18n="qs_ready_html">
-            <strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.
-          </div>
 
-          <!-- CycleX Deep Intelligence — isolated from the existing Quick Scan.
-               Quick Scan remains the authoritative fast score; this layer adds
-               server-side historical, liquidity-ownership and simulation evidence. -->
+        <div class="qs-share-row">
+          <button class="btn btn-ghost" id="qs-copy-link" data-i18n="btn_copy_link">Copy Share Link</button>
+          <button class="btn btn-ghost" id="qs-copy-json" data-i18n="btn_copy_json">Copy JSON</button>
+          <button class="btn btn-ghost" id="qs-copy-md" data-i18n="btn_copy_md">Copy Markdown</button>
+          <button class="btn btn-ghost" id="qs-share-x" data-i18n="btn_share_x">Share to X</button>
+          <button class="btn btn-ghost" id="qs-share-tg" data-i18n="btn_share_tg">Share to Telegram</button>
+          <button class="btn btn-ghost" id="qs-copy-xtext" data-i18n="btn_copy_xtext">Copy X Text</button>
+          <label class="toggle qs-json-inline">
+            <input type="checkbox" id="qs-show-json" checked>
+            <span class="small" data-i18n="opt_show_json">Enable JSON report</span>
+          </label>
+        </div>
+
+        <details class="qs-advanced">
+          <summary><span data-i18n="quick_advanced">Advanced settings</span></summary>
+          <div class="qs-advanced-body">
+            <div class="field" id="qs-solana-rpc-field" style="display:none">
+              <div class="label" data-i18n="quick_solana_rpc_label">Solana RPC <span class="label-muted">(optional — improves reliability)</span></div>
+              <div class="input-btn-row">
+                <input id="qs-solana-rpc" class="mono" placeholder="https://mainnet.helius-rpc.com/?api-key=... (optional)" />
+                <button class="btn btn-ghost" id="qs-solana-rpc-save" style="padding:8px 10px;font-size:11px;flex-shrink:0" data-i18n="btn_save">Save</button>
+              </div>
+            </div>
+
+            <div class="api-block">
+              <div class="api-block-row1">
+                <label class="toggle">
+                  <input type="checkbox" id="api-use">
+                  <span class="small" data-i18n="quick_explorer_api">🔑 Explorer API</span>
+                </label>
+                <select id="api-key-select" class="mono api-net-sel">
+                  <option value="bscscan">BscScan</option>
+                  <option value="unified">Unified</option>
+                  <option value="etherscan">Etherscan</option>
+                </select>
+              </div>
+              <div class="api-block-row2">
+                <input id="api-bscscan" class="mono" placeholder="Paste API key…" />
+                <input id="api-unified" class="mono" placeholder="Paste API key…" style="display:none" />
+                <input id="api-etherscan" class="mono" placeholder="Paste API key…" style="display:none" />
+                <button class="btn btn-ghost api-sm-btn" id="api-save" data-i18n="btn_save">Save</button>
+                <button class="btn btn-ghost api-sm-btn" id="api-clear">×</button>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div id="qs-status" class="status"></div>
+      </div>
+
+      <!-- Full-width fast result summary -->
+      <div class="qs-summary-wrap">
+        <div id="qs-out" class="status info" style="display:block;" data-i18n="qs_ready_html">
+          <strong>Ready.</strong><br>Paste a token address and click <b>Scan</b>.
+        </div>
+      </div>
+
+      <!-- Deep Intelligence + fast risk evidence -->
+      <div class="qs-analysis-layout">
+        <div class="qs-intel-column">
           <div class="cx-deep-shell" id="cx-deep-shell" data-state="idle">
             <div class="cx-deep-head">
               <div class="cx-deep-title-wrap">
@@ -1203,6 +1389,15 @@
               <button type="button" class="cx-deep-action" id="cx-deep-rerun" data-i18n="deep_rerun">Re-run Deep Scan</button>
             </div>
             <div class="cx-deep-source-note" data-i18n="deep_note">Deep Intelligence is an evidence layer. It does not change the existing CycleX Overall Score.</div>
+          </div>
+        </div>
+
+        <div class="qs-evidence-column">
+          <div class="qs-results-head">
+            <div>
+              <h3 data-i18n="results_title">Results</h3>
+              <div class="small" data-i18n="results_hint">Green / Yellow / Red signals. Not a guarantee — just verifiable on-chain checks.</div>
+            </div>
           </div>
           <div id="qs-risk" class="chips-grid"></div>
           <div id="qs-redflagsWrap" style="margin-top:12px;"></div>
@@ -1566,6 +1761,9 @@ const translations = {
     deep_ready: "Runs automatically after a valid Quick Scan.",
     deep_rerun: "Re-run Deep Scan",
     deep_note: "Deep Intelligence is an evidence layer. It does not change the existing CycleX Overall Score.",
+    quick_advanced: "Advanced settings",
+    quick_solana_rpc_label: 'Solana RPC <span class="label-muted">(optional — improves reliability)</span>',
+    quick_explorer_api: "🔑 Explorer API",
     deep_badge_ready: "Ready",
     deep_progress_waiting: "waiting",
     deep_stage_market: "Market structure",
@@ -1944,6 +2142,9 @@ const translations = {
     deep_ready: "有效的快速扫描后会自动运行。",
     deep_rerun: "重新运行深度扫描",
     deep_note: "深度智能是独立的证据层，不会改变现有的 CycleX 总体评分。",
+    quick_advanced: "高级设置",
+    quick_solana_rpc_label: 'Solana RPC <span class="label-muted">（可选 — 提升可靠性）</span>',
+    quick_explorer_api: "🔑 浏览器 API",
     deep_badge_ready: "就绪",
     deep_progress_waiting: "等待中",
     deep_stage_market: "市场结构",
@@ -2322,6 +2523,9 @@ const translations = {
     deep_ready: "يعمل تلقائيًا بعد فحص سريع صالح.",
     deep_rerun: "إعادة الفحص العميق",
     deep_note: "التحليل العميق طبقة أدلة مستقلة ولا يغيّر تقييم CycleX الإجمالي الحالي.",
+    quick_advanced: "إعدادات متقدمة",
+    quick_solana_rpc_label: 'Solana RPC <span class="label-muted">(اختياري — لتحسين الموثوقية)</span>',
+    quick_explorer_api: "🔑 واجهة مستكشف الشبكة",
     deep_badge_ready: "جاهز",
     deep_progress_waiting: "بانتظار البدء",
     deep_stage_market: "هيكل السوق",
@@ -2700,6 +2904,9 @@ const translations = {
     deep_ready: "Запускается автоматически после корректного Quick Scan.",
     deep_rerun: "Запустить Deep Scan снова",
     deep_note: "Deep Intelligence — отдельный слой доказательств и не меняет текущий общий балл CycleX.",
+    quick_advanced: "Расширенные настройки",
+    quick_solana_rpc_label: 'Solana RPC <span class="label-muted">(необязательно — повышает надёжность)</span>',
+    quick_explorer_api: "🔑 API обозревателя",
     deep_badge_ready: "Готово",
     deep_progress_waiting: "ожидание",
     deep_stage_market: "Структура рынка",
