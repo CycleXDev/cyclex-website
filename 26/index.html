@@ -3027,6 +3027,128 @@
     #panel-quick .panel-sub{font-size:11.8px}
   }
 
+
+  /* ================================================================
+     v1.6.4 UI POLISH — Deep tile scale, scan-core sizing, navigation
+     ================================================================ */
+
+  /* Keep the Quick / Deep helper copy on one desktop line when space allows. */
+  #panel-quick .panel-head > div:first-child{
+    flex:1 1 auto;
+    min-width:0;
+  }
+  #panel-quick .panel-sub{
+    max-width:none;
+    white-space:nowrap;
+  }
+
+  /* The scan-core visual must fit its grid column instead of overlapping status text. */
+  .qs-intel-column .cx-deep-radar-row{
+    grid-template-columns:92px minmax(0,1fr);
+    gap:14px;
+  }
+  .qs-intel-column .cx-deep-radar{
+    width:86px;
+    height:86px;
+    flex:0 0 86px;
+  }
+  .qs-intel-column .cx-deep-radar-ring.r1{width:68px;height:68px}
+  .qs-intel-column .cx-deep-radar-ring.r2{width:50px;height:50px}
+  .qs-intel-column .cx-deep-radar-ring.r3{width:30px;height:30px}
+  .qs-intel-column .cx-deep-radar-sweep{left:43px;top:43px;width:39px}
+
+  /* Deep stages: slightly tighter cards, but readable at the same visual scale as Results. */
+  .qs-intel-column .cx-deep-stages{
+    gap:9px 11px!important;
+    margin-top:13px!important;
+  }
+  .qs-intel-column .cx-deep-stage{
+    min-height:72px!important;
+    padding:10px 34px 10px 52px!important;
+    border-radius:12px!important;
+    line-height:1.3;
+  }
+  .qs-intel-column .cx-deep-stage::before{
+    left:14px!important;
+    top:12px!important;
+    font-size:10px!important;
+  }
+  .qs-intel-column .cx-deep-stage::after{
+    left:37px!important;
+    top:10px!important;
+    bottom:10px!important;
+  }
+  .qs-intel-column .cx-deep-stage-dot{
+    top:13px!important;
+    right:12px!important;
+    width:8px!important;
+    height:8px!important;
+  }
+  .qs-intel-column .cx-deep-stage-copy{gap:4px!important}
+  .qs-intel-column .cx-deep-stage-copy > span:first-child{
+    font-size:12px!important;
+    line-height:1.3!important;
+  }
+  .qs-intel-column .cx-deep-stage-reason{
+    font-size:12px!important;
+    line-height:1.32!important;
+    -webkit-line-clamp:2;
+  }
+
+  /* Clicking a Deep stage scrolls its opened explanation to the top of the modal. */
+  .qs-intel-column .cx-deep-details details{scroll-margin-top:18px}
+
+  @media(max-width:900px){
+    #panel-quick .panel-sub{
+      max-width:100%;
+      white-space:normal;
+    }
+    .qs-intel-column .cx-deep-radar-row{
+      grid-template-columns:76px minmax(0,1fr);
+      gap:11px;
+    }
+    .qs-intel-column .cx-deep-radar{
+      width:70px;
+      height:70px;
+      flex-basis:70px;
+    }
+    .qs-intel-column .cx-deep-radar-ring.r1{width:56px;height:56px}
+    .qs-intel-column .cx-deep-radar-ring.r2{width:40px;height:40px}
+    .qs-intel-column .cx-deep-radar-ring.r3{width:24px;height:24px}
+    .qs-intel-column .cx-deep-radar-sweep{left:35px;top:35px;width:32px}
+    .qs-intel-column .cx-deep-stage{
+      min-height:68px!important;
+      padding:10px 32px 10px 48px!important;
+    }
+    .qs-intel-column .cx-deep-stage::before{left:12px!important}
+    .qs-intel-column .cx-deep-stage::after{left:34px!important}
+    .qs-intel-column .cx-deep-stage-copy > span:first-child,
+    .qs-intel-column .cx-deep-stage-reason{font-size:11.5px!important}
+  }
+
+  @media(max-width:520px){
+    .qs-intel-column .cx-deep-radar-row{
+      grid-template-columns:66px minmax(0,1fr);
+      gap:9px;
+      padding:9px;
+    }
+    .qs-intel-column .cx-deep-radar{
+      width:60px;
+      height:60px;
+      flex-basis:60px;
+    }
+    .qs-intel-column .cx-deep-radar-ring.r1{width:48px;height:48px}
+    .qs-intel-column .cx-deep-radar-ring.r2{width:34px;height:34px}
+    .qs-intel-column .cx-deep-radar-ring.r3{width:20px;height:20px}
+    .qs-intel-column .cx-deep-radar-sweep{left:30px;top:30px;width:27px}
+    .qs-intel-column .cx-deep-stage{
+      min-height:64px!important;
+      padding:9px 30px 9px 46px!important;
+    }
+    .qs-intel-column .cx-deep-stage-copy > span:first-child,
+    .qs-intel-column .cx-deep-stage-reason{font-size:11px!important}
+  }
+
 </style>
 </head>
 <body>
@@ -8662,8 +8784,16 @@ async function qsLiqCheckBasic(net, token, provider) {
     if(!detail) return;
     detail.open=true;
     requestAnimationFrame(()=>{
-      const y = window.scrollY + detail.getBoundingClientRect().top - 18;
-      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      const backdrop=cxDeepEl("modalBackdrop");
+      if(backdrop && backdrop.classList.contains("open")){
+        const backdropRect=backdrop.getBoundingClientRect();
+        const detailRect=detail.getBoundingClientRect();
+        const y=backdrop.scrollTop + detailRect.top - backdropRect.top - 18;
+        backdrop.scrollTo({top:Math.max(0,y),behavior:"smooth"});
+      }else{
+        const y=window.scrollY + detail.getBoundingClientRect().top - 18;
+        window.scrollTo({top:Math.max(0,y),behavior:"smooth"});
+      }
     });
   });
 
